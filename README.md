@@ -12,6 +12,17 @@ Keeping track of how these states change is sometimes a major part of video game
 Download the files and use "run.bat". In most modern browsers, executing code directly from local files is blocked for security reasons, so the .bat file opens a temporary local server which runs the program.
 
 ---
+# Working with pull requests
+
+When you are happy with your local changes you can use the `create PR` action
+in this environment to draft a pull request message. Doing so will open a
+dialog summarising the staged commits and asking for a title/body. Confirming
+the dialog does **not** immediately merge anything; it simply prepares the pull
+request text that would be sent to the repository host. You can still make
+additional commits afterwards and re-run the command to update the summary
+before sharing the branch with collaborators.
+
+---
 # How to use
 At its simplest, this is how you'd operate Vibelister: list different character states in the Action view. List different inputs in the Inputs view. Press "generate Interactions" to create a grid which lists Actions times Inputs to let you test each Input with each Action.
 

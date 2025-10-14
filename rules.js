@@ -27,34 +27,38 @@ export function openRulesDialog(model) {
 	}
 	function focusFirst() {
 		const f = getFocusables();
-		(f[0] || box).focus();
+		if (f[0]) {
+			f[0].focus();
+		} else {
+			ov.focus();
+		}
 	}
 	let modalActive = true;
-	function keyShield(e) {
-		if (!modalActive) return;
-		e.stopPropagation();
-		if (e.key === "Tab") {
-			const f = getFocusables();
-			if (!f.length) return;
-			const i = f.indexOf(document.activeElement);
-			const ni = i < 0 ? 0 : e.shiftKey ? (i - 1 + f.length) % f.length : (i + 1) % f.length;
-			e.preventDefault();
-			f[ni].focus();
-			return;
-		}
-		if (e.key === "Escape") {
-			e.preventDefault();
-			close();
-			return;
-		}
-	}
-	ov.addEventListener("keydown", keyShield, true);
-	function close() {
-		modalActive = false;
-		ov.removeEventListener("keydown", keyShield, true);
-		if (ov.parentNode) ov.parentNode.removeChild(ov);
-		sheet && sheet.focus && sheet.focus();
-	}
+        function keyShield(e) {
+                if (!modalActive) return;
+                e.stopPropagation();
+                if (e.key === "Tab") {
+                        const f = getFocusables();
+                        if (!f.length) return;
+                        const i = f.indexOf(document.activeElement);
+                        const ni = i < 0 ? 0 : e.shiftKey ? (i - 1 + f.length) % f.length : (i + 1) % f.length;
+                        e.preventDefault();
+                        f[ni].focus();
+                        return;
+                }
+                if (e.key === "Escape") {
+                        e.preventDefault();
+                        close();
+                        return;
+                }
+        }
+        ov.addEventListener("keydown", keyShield, true);
+        function close() {
+                modalActive = false;
+                ov.removeEventListener("keydown", keyShield, true);
+                if (ov.parentNode) ov.parentNode.removeChild(ov);
+                sheet && sheet.focus && sheet.focus();
+        }
 
 	function h(tag, attrs, children) {
 		const e = document.createElement(tag);
@@ -479,6 +483,6 @@ export function openRulesDialog(model) {
 	}
 
 	document.body.appendChild(ov);
-	focusFirst();
 	render();
+	focusFirst();
 }
