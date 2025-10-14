@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finite-State Notes — Prototype</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="toolbar">
+    <nav class="menubar" role="menubar">
+      <button class="menu-trigger" id="m-file" aria-haspopup="true" aria-expanded="false">File ▾</button>
+      <div class="menu-popup" id="menu-file" role="menu" aria-labelledby="m-file">
+        <button role="menuitem" class="menuitem" id="file-new">New (Ctrl/Cmd+N)</button>
+        <button id="file-open-disk"  class="menuitem">Open… (Ctrl/Cmd+O)</button>
+        <button id="file-save-disk"  class="menuitem">Save (Ctrl/Cmd+S)</button>
+        <button id="file-save-as"    class="menuitem">Save As…</button>
+        <button id="file-export-json" class="menuitem">Export JSON…</button>
+      </div>
+
+      <button class="menu-trigger" id="m-tools" aria-haspopup="true" aria-expanded="false">Tools ▾</button>
+      <div class="menu-popup" id="menu-tools" role="menu" aria-labelledby="m-tools">
+        <button role="menuitem" class="menuitem" id="tools-rules">Modifier Rules...</button>
+        <button role="menuitem" class="menuitem" id="tools-generate">Generate Interactions (Alt+G)</button>
+        <div class="menu-sep"></div>
+        <button role="menuitem" class="menuitem" id="tools-tests">Run Self-Tests (Alt+T)</button>
+      </div>
+
+      <button class="menu-trigger" id="m-view" aria-haspopup="true" aria-expanded="false">View ▾</button>
+      <div class="menu-popup" id="menu-view" role="menu" aria-labelledby="m-view">
+        <button role="menuitemradio" aria-checked="true" class="menuitem" id="view-actions">Actions</button>
+        <button role="menuitemradio" aria-checked="false" class="menuitem" id="view-inputs">Inputs</button>
+        <button role="menuitemradio" aria-checked="false" class="menuitem" id="view-modifiers">Modifiers</button>
+		<button role="menuitemradio" aria-checked="false" class="menuitem" id="view-outcomes">Outcomes</button>
+        <button role="menuitemradio" aria-checked="false" class="menuitem" id="view-interactions">Interactions</button>
+      </div>
+      <input id="project-name" type="text" placeholder="Project name" title="Used for Export / Save As filename">
+    </nav>
+    <span class="status" id="status">Ready</span>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" id="tab-actions" role="tab" aria-selected="true">Actions</button>
+    <button class="tab" id="tab-inputs" role="tab" aria-selected="false">Inputs</button>
+    <button class="tab" id="tab-modifiers" role="tab" aria-selected="false">Modifiers</button>
+	<button class="tab" id="tab-outcomes" role="tab" aria-selected="false">Outcomes</button>
+    <button class="tab" id="tab-interactions" role="tab" aria-selected="false">Interactions</button>
+  </div>
+
+  <div class="grid-wrap" id="gridWrap">
+    <div class="corner">#</div>
+    <div class="col-headers"><div class="col-headers-inner" id="colHdrs"></div></div>
+    <div class="row-headers"><div class="row-headers-inner" id="rowHdrs"></div></div>
+
+    <div class="sheet" id="sheet">
+      <div class="spacer" id="spacer">
+        <div class="cells-layer" id="cells"></div>
+      </div>
+      <div class="drag-line" id="dragLine"></div>
+    </div>
+
+    <textarea class="editor" id="editor"></textarea>
+  </div>
+
+  <!-- Load the application code -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

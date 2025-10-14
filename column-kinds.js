@@ -1,0 +1,267 @@
+// column-kinds.js — Registry of reusable column behaviors
+// Minimal, dependency-light; safe to iterate as we add kinds.
+
+export const STRUCTURED_SCHEMA_VERSION = 1;
+
+function wrapRefPayload(entity, payload) {
+  if (payload == null) return null;
+  if (typeof payload === "number") return { type: entity, data: { id: payload|0 } };
+  if (payload && typeof payload === "object") {
+    if (payload.type && payload.data && typeof payload.data.id === "number") return payload;
+    if (typeof payload.id === "number") return { type: entity, data: { id: payload.id|0 } };
+  }
+  return null;
+}
+
+function wrapOutcomePayload(payload) {
+  if (payload == null) return null;
+  if (typeof payload === "number") return { type: "outcome", data: { outcomeId: payload|0 } };
+  if (payload && typeof payload === "object") {
+    if (payload.type === "outcome" && payload.data && typeof payload.data.outcomeId === "number") return payload;
+    if (typeof payload.outcomeId === "number") return { type: "outcome", data: { outcomeId: payload.outcomeId|0 } };
+  }
+  return null;
+}
+
+// Utility helpers for reference columns (Interactions)
+function resolveEntity(entity, model) {
+  if (entity === "action") return model.actions || [];
+  if (entity === "input") return model.inputs || [];
+  if (entity === "outcome") return model.outcomes || [];
+  return [];
+}
+function nameOf(entity, model, id) {
+  const arr = resolveEntity(entity, model);
+  const it = arr.find(x => (x.id|0) === (id|0));
+  return it ? (it.name || "") : "";
+}
+
+export const ColumnKinds = {
+  text: {
+    get({ row, col } = {}) { return row?.[col.key] ?? ""; },
+    set({ row, col } = {}, v) {
+      if (!row) return;                // tolerate null row (e.g., Interactions)
+      row[col.key] = v ?? "";
+    },
+    beginEdit({ row } = {}) {
+      if (!row) return { handled: true }; // don't open editor on non-row views
+      return { useEditor: true };
+    },
+  },
+
+  checkbox: {
+    get({ row, col } = {}) { return row?.[col.key] ? "✓" : ""; },
+    set({ row, col } = {}, v) {
+      if (!row) return;                // tolerate null row
+      if (v === undefined) row[col.key] = !row[col.key];
+        else row[col.key] = !!v;
+      },
+    beginEdit({ row, col } = {}) {
+      if (!row) return { handled: true };
+      row[col.key] = !row[col.key];
+      return { handled: true };
+    },
+  },
+
+  modTriState: {
+    get({ row, col, MOD } = {}) {
+      const id = Number(String(col.key).split(":")[1] || NaN);
+      const st = ((row?.modSet?.[id]) ?? 0) | 0;
+      return st === MOD.ON ? "✓" : st === MOD.BYPASS ? "◐" : "";
+    },
+    set({ row, col, MOD } = {}, v) {
+      const id = Number(String(col.key).split(":")[1] || NaN);
+      if (!row.modSet) row.modSet = {};
+      const cur = (row.modSet[id] ?? 0) | 0;
+      row.modSet[id] =
+        (v === undefined) ? (cur === MOD.OFF ? MOD.ON : cur === MOD.ON ? MOD.BYPASS : MOD.OFF)
+        : (typeof v === "boolean") ? (v ? MOD.ON : MOD.OFF)
+        : (typeof v === "number") ? Math.max(0, Math.min(2, v|0))
+        : MOD.OFF;
+    },
+    beginEdit(ctx = {}) { this.set(ctx); return { handled: true }; },
+  },
+
+  phases: {
+    get({ row, formatPhasesSpec } = {}) { return formatPhasesSpec(row?.phases); },
+    set({ row, parsePhasesSpec } = {}, v) { row.phases = parsePhasesSpec(v); },
+    beginEdit() { return { useEditor: true }; },
+  },
+
+  outcomeRef: {
+    get({ row, model } = {}) {
+      const id = row?.dualof|0; if (!id) return "";
+      const o = model.outcomes.find(x => x.id === id);
+      return o ? (o.name || "") : "";
+    },
+    set({ row, model } = {}, v) {
+      if (v == null || v === "") { row.dualof = null; return; }
+      if (typeof v === "number") { row.dualof = v|0; return; }
+      if (typeof v === "string") {
+        const name = v.trim().toLowerCase();
+        const found = model.outcomes.find(o => (o.name||"").toLowerCase() === name);
+        row.dualof = found ? (found.id|0) : null;
+      }
+    },
+    beginEdit() { return { useEditor: true }; },
+    applyStructured({ row } = {}, payload) {
+      const wrapped = wrapOutcomePayload(payload);
+      if (wrapped && wrapped.type === "outcome" && typeof wrapped.data?.outcomeId === "number") {
+        row.dualof = wrapped.data.outcomeId|0; return true;
+      }
+      return false;
+    },
+  },
+
+  mirrored: {
+    get({ row } = {}) { return row?.mirrored ? "✓" : ""; },
+    set({ row } = {}, v) { if (!row) return; row.mirrored = (v === undefined) ? !row.mirrored : !!v; },
+    beginEdit({ row } = {}) { if (!row) return { handled: true }; row.mirrored = !row.mirrored; return { handled: true }; },
+  },
+
+  color: {
+    get({ row, col }) { return row?.[col.key] ?? ""; },
+    set({ row, col } = {}, v) { if (!row) return; row[col.key] = v ?? ""; },
+    beginEdit({ paletteAPI } = {}) {
+      if (paletteAPI?.openColor) { paletteAPI.openColor(); return { handled: true }; }
+      return { useEditor: true };
+    },
+  },
+
+  // ===== Interactions-friendly generic reference kinds =====
+  // Read-only reference: displays the name from a stable id stored in row[col.key]
+  refRO: {
+    get(ctx) {
+      const { row, col, model, r, activeView } = ctx;
+      // Prefer per-row storage when available
+      let id = row?.[col.key];
+      let vSig = "";   // will hold variant signature when derived from Interactions
+      let suffix = "";
+      // Interactions view has no per-row object; derive id (and modifier suffix) from pairs
+      if (activeView === 'interactions' && Array.isArray(model?.interactionsPairs)) {
+        const pair = model.interactionsPairs[r];
+        if (pair) {
+          const k = String(col.key || '').toLowerCase();
+          if (k === 'action' || k === 'actionid' || k === 'actionname') {
+            id   = id ?? pair.aId;
+            vSig = String(pair.variantSig || "");
+            // Append modifiers for left-hand action
+            suffix = formatModsFromSig(model, pair.variantSig);
+          } else if (k === 'rhsaction' || k === 'rhsactionid') {
+            id   = id ?? pair.rhsActionId;
+            vSig = String(pair.rhsVariantSig || "");
+            // Append modifiers for right-hand action (AA mode)
+            suffix = formatModsFromSig(model, pair.rhsVariantSig);
+          } else if (k === 'input' || k === 'inputid') {
+             id = id ?? pair.iId;
+           }
+         }
+       }
+       const base = nameOf(col.entity, model, id);
+       return suffix ? (base ? `${base} ${suffix}` : suffix) : base;
+     },
+    // read-only: ignore writes
+    set() { /* no-op */ },
+    // prevent editor from opening on double-click
+    beginEdit() { return { handled: true }; },
+    // structured copy: emit id+name if available
+    getStructured(ctx) {
+      const { row, col, model, r, activeView } = ctx;
+      let id = row?.[col.key];
+      let variantSig = "";
+      if (activeView === 'interactions' && id == null && Array.isArray(model?.interactionsPairs)) {
+        const pair = model.interactionsPairs[r];
+        if (pair) {
+          const k = String(col.key || '').toLowerCase();
+          if (k === 'action' || k === 'actionid' || k === 'actionname') {
+            id = pair.aId; variantSig = String(pair.variantSig || "");
+          } else if (k === 'rhsaction' || k === 'rhsactionid') {
+            id = pair.rhsActionId; variantSig = String(pair.rhsVariantSig || "");
+          } else if (k === 'input' || k === 'inputid') {
+            id = pair.iId;
+          }
+        }
+      }
+      if (id == null) return null;
+      // Only include variantSig when present and meaningful
+      const data = variantSig ? { id, variantSig } : { id };
+      return { type: col.entity, data };
+    },
+  },
+  // Editable reference: opens a palette to pick an entity and stores its stable id
+  refPick: {
+    get({ row, col, model } = {}) { return nameOf(col.entity, model, row?.[col.key]); },
+    set({ row, col } = {}, v) {
+  if (typeof v === "number") { row[col.key] = v|0; return; }
+  if (v == null || v === "") { row[col.key] = null; return; }
+  // Stable-ID fields do not accept free text directly.
+},
+    beginEdit({ paletteAPI, row, col } = {}) {
+      if (paletteAPI?.openReference) { paletteAPI.openReference({ entity: col.entity, target: { row, col } }); return { handled: true }; }
+      return { useEditor: true };
+    },
+    applyStructured({ row, col } = {}, payload) {
+      const wrapped = wrapRefPayload(col.entity, payload);
+      if (wrapped && wrapped.type === col.entity && typeof wrapped.data?.id === "number") {
+        row[col.key] = wrapped.data.id|0; return true;
+      }
+      return false;
+    },
+  },
+
+  // Interactions meta-kind: delegates to interactions.js helpers
+  interactions: {
+    get({ r, c, model, viewDef, getInteractionsCell } = {}) {
+		if (!viewDef || !getInteractionsCell) return "";
+      return getInteractionsCell(model, viewDef(), r, c);
+    },
+    set({ r, c, v, model, viewDef, setInteractionsCell, status } = {}) {
+		if (!viewDef || !setInteractionsCell) return;
+      setInteractionsCell(model, status, viewDef(), r, c, v);
+    },
+    beginEdit() { return { useEditor: true }; },
+    getStructured({ r, c, model, viewDef, getStructuredCellInteractions } = {}) {
+		if (!viewDef || !getStructuredCellInteractions) return null;
+      return getStructuredCellInteractions(model, viewDef(), r, c);
+    },
+    applyStructured(ctx = {}, payload) {
+     const { r, c, viewDef, applyStructuredCellInteractions, model } = ctx || {};
+     if (!viewDef || !applyStructuredCellInteractions) return false;
+     return applyStructuredCellInteractions(null, viewDef(), r, c, payload, model);
+   },
+  },
+};
+
+// Helper: format " (ModA+ModB)" suffix from a '+'-joined variantSig ordered by modifier row order
+function formatModsFromSig(model, sig) {
+  const s = typeof sig === 'string' ? sig : '';
+  if (!s) return '';
+  const ids = s.split('+').filter(Boolean).map(Number);
+  if (!ids.length) return '';
+  const order = new Map();
+  (model.modifiers || []).forEach((m, i) => order.set(m?.id, i));
+  ids.sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
+  const names = ids.map(id => (model.modifiers.find(m => m?.id === id)?.name || '')).filter(Boolean);
+  return names.length ? `(${names.join('+')})` : '';
+}
+
+export function getCellForKind(kind, ctx) {
+  const h = ColumnKinds[kind] || ColumnKinds.text;
+  return h.get(ctx);
+}
+export function setCellForKind(kind, ctx, v) {
+  const h = ColumnKinds[kind] || ColumnKinds.text;
+  return h.set(ctx, v);
+}
+export function beginEditForKind(kind, ctx) {
+  const h = ColumnKinds[kind] || ColumnKinds.text;
+  return h.beginEdit(ctx) || {};
+}
+export function applyStructuredForKind(kind, ctx, payload) {
+  const h = ColumnKinds[kind];
+  return h?.applyStructured ? h.applyStructured(ctx, payload) : false;
+}
+export function getStructuredForKind(kind, ctx) {
+  const h = ColumnKinds[kind];
+  return h?.getStructured ? h.getStructured(ctx) : null;
+}

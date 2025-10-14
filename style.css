@@ -1,0 +1,49 @@
+:root {
+  --row-height: 26px;
+  --header-height: 28px;
+  --grid-font: 12px/1.2 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --tab-h: 36px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: #0f1115; color: #e6e6e6; font: 14px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+
+.toolbar { display: flex; gap: 8px; padding: 10px; border-bottom: 1px solid #2b2f3a; background: #141822; position: sticky; top: 0; z-index: 5; }
+.status { margin-left: auto; opacity: 0.75; font-size: 12px; }
+
+.tabs { display: flex; gap: 6px; padding: 6px 10px; background: #121726; border-bottom: 1px solid #272e40; height: var(--tab-h); align-items: center; }
+.tab { appearance: none; border: 1px solid #2e3550; background: #181e30; color: #cfd6ea; padding: 6px 12px; border-radius: 8px; cursor: pointer; font: 13px/1 system-ui, sans-serif; }
+.tab.active { background: #273152; color: #fff; border-color: #3a4a7d; box-shadow: inset 0 0 0 1px #5164a8; }
+
+.grid-wrap { position: relative; height: calc(100vh - 58px - var(--tab-h)); width: 100vw; overflow: hidden; }
+
+.corner { position: absolute; left: 0; top: 0; width: 50px; height: var(--header-height); background: #1a1e29; border-right: 1px solid #2d3342; border-bottom: 1px solid #2d3342; z-index: 2; display: grid; place-items: center; font: 12px/1 system-ui, sans-serif; color: #aab3c5; }
+.col-headers { position: absolute; left: 50px; right: 0; top: 0; height: var(--header-height); overflow: hidden; background: #1a1e29; border-bottom: 1px solid #2d3342; white-space: nowrap; z-index: 2; }
+.row-headers { position: absolute; left: 0; top: var(--header-height); bottom: 0; width: 50px; overflow: hidden; background: #1a1e29; border-right: 1px solid #2d3342; z-index: 2; }
+
+.sheet { position: absolute; left: 50px; top: var(--header-height); right: 0; bottom: 0; overflow: auto; background: #0f1115; }
+.spacer { position: relative; height: 100%; width: 100%; }
+
+.cells-layer, .col-headers-inner, .row-headers-inner { position: absolute; left: 0; top: 0; will-change: transform; font: var(--grid-font); }
+
+.cell { position: absolute; border: 1px solid #1f2432; border-top: none; border-left: none; padding: 4px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: #11151f; color: #e6e6e6; user-select: none; }
+.cell.alt { background: #121826; }
+.cell.selected { outline: 2px solid #81a1ff; outline-offset: -2px; }
+
+.hdr { position: absolute; height: var(--header-height); border-right: 1px solid #2d3342; display: grid; place-items: center; padding: 0 6px; font: 12px/1 system-ui, sans-serif; color: #aab3c5; background: #1a1e29; user-select: none; }
+.rhdr { position: absolute; width: 50px; height: var(--row-height); border-bottom: 1px solid #2d3342; display: grid; place-items: center; font: 12px/1 system-ui, sans-serif; color: #aab3c5; background: #1a1e29; user-select: none; cursor: grab; }
+
+.editor { position: absolute; min-width: 40px; font: var(--grid-font); padding: 4px 6px; color: #111318; background: #f7f7f7; border: 2px solid #81a1ff; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,.25); z-index: 5; display: none; }
+.hidden { display: none !important; }
+
+/* Drag indicator line when reordering rows */
+.drag-line { position:absolute; left:50px; right:0; height:0; border-top:2px solid #81a1ff; pointer-events:none; z-index:4; display:none; }
+
+/* --- Menubar styles --- */
+.menubar { display:flex; gap:12px; align-items:center; }
+.menu-trigger { background:#1b2130; border:1px solid #32384a; border-radius:8px; padding:6px 10px; color:#eaeaea; cursor:pointer; }
+.menu-trigger[aria-expanded="true"] { background:#273152; border-color:#3a4a7d; }
+.menu-popup { position:absolute; margin-top:6px; background:#0f1320; border:1px solid #303854; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,.35); padding:6px; display:none; min-width:240px; z-index:10; }
+.menu-popup[data-open="true"] { display:block; }
+.menuitem { display:block; width:100%; text-align:left; padding:8px 10px; background:transparent; border:none; color:#e6e6e6; border-radius:8px; cursor:pointer; font:13px/1.2 system-ui, sans-serif; }
+.menuitem:hover, .menuitem:focus { background:#1a2340; outline:none; }
+.menu-sep { height:1px; background:#2b3350; margin:6px 4px; }
