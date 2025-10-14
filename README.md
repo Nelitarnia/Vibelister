@@ -91,4 +91,4 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 # Background
 Vibelister is a spiritual successor to [Movelister](https://github.com/Kazhuu/movelister), an unfinished prototype project from 2020 I made with a [friend](https://github.com/Kazhuu).
 
-The original Movelister was designed as a set of Libreoffice Calc scripts to allow easier creation of systematic character mechanics notes. Vibelister, on the other hand, has been built from the ground up to work as a locally ran browser-based program. It's also mostly "vibe-coded", hence the name. What can I say? I'm terrible at programming, but I have a vision.
+The original Movelister was designed as a set of Libreoffice Calc scripts to allow easier creation of systematic character mechanics notes. Vibelister, on the other hand, has been built from the ground up to work as a locally ran browser-based program. It's also mostly "vibe-coded", hence the name. What can I say? I'm not really a programmer, but I have a vision.
