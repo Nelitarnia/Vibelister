@@ -69,7 +69,4 @@ export function basenameNoExt(name) {
   const i = n.lastIndexOf(".");
   return i > 0 ? n.slice(0, i) : n;
 }
-export function getSuggestedName(projectName = "") {
-  const n = String(projectName || "").trim();
-  return (n ? n : "project") + ".json";
-}
+

@@ -13,7 +13,7 @@ import { canonicalSig, sortIdsByUserOrder, compareVariantSig, modOrderMap, build
 import { Selection, sel, selection, SelectionNS, SelectionCtl, onSelectionChanged, isRowSelected, clearSelection } from "./selection.js";
 import { noteKeyForPair, getInteractionsCell, setInteractionsCell, getStructuredCellInteractions, applyStructuredCellInteractions, clearInteractionsSelection } from "./interactions.js";
 import { UI, PHASE_CAP, MOD, MIN_ROWS, Ids, DEFAULT_OUTCOMES, SCHEMA_VERSION, ROW_HEIGHT, HEADER_HEIGHT } from "../data/constants.js";
-import { clamp, colWidths, colOffsets, visibleCols, visibleRows, parsePhaseKey, parsePhasesSpec, formatPhasesSpec, getPhaseLabel, basenameNoExt, getSuggestedName } from "../data/utils.js";
+import { clamp, colWidths, colOffsets, visibleCols, visibleRows, parsePhaseKey, parsePhasesSpec, formatPhasesSpec, getPhaseLabel, basenameNoExt } from "../data/utils.js";
 onSelectionChanged(() => render());
 
 function initA11y(){
@@ -925,6 +925,10 @@ function updateProjectNameWidget() {
 		});
 		w._bound = true;
 	}
+}
+function getSuggestedName(projectName = "") {
+  const n = String(model.meta.projectName || "").trim();
+  return (n ? n : "project") + ".json";
 }
 
 // Disk-based (lazy-loaded) file operations (Chromium gets FS API, others fallback)
