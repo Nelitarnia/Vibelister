@@ -23,6 +23,12 @@ additional commits afterwards and re-run the command to update the summary
 before sharing the branch with collaborators.
 
 ---
+# Repository organization roadmap
+
+-	A proposed folder structure lives in [`docs/folder-structure.md`](docs/folder-structure.md).
+-	Use it as a guide when you start moving files so the layout change stays incremental and easy to review.
+
+---
 # How to use
 At its simplest, this is how you'd operate Vibelister: list different character states in the Action view. List different inputs in the Inputs view. Press "generate Interactions" to create a grid which lists Actions times Inputs to let you test each Input with each Action.
 
