@@ -1,4 +1,5 @@
 // constants.js
+
 export const UI = Object.freeze({ ROW_HEIGHT: 26, HEADER_HEIGHT: 28 });
 export const PHASE_CAP = 12;
 export const MOD = Object.freeze({ OFF: 0, ON: 1, BYPASS: 2 });

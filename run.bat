@@ -9,4 +9,4 @@ REM --- Give the server a moment to start ---
 timeout /t 2 >nul
 
 REM --- Open the page in your default browser ---
-start "" http://localhost:8000/index.html
+start "" http://localhost:8000/public/index.html

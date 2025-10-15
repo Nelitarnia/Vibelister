@@ -1,19 +1,19 @@
 // App.js - the core of Vibelister, containing imports, wiring and rendering.
 
 // Imports
-import { initGridKeys } from "./grid-keys.js";
-import { initGridMouse } from "./grid-mouse.js";
-import { initRowDrag } from "./drag.js";
-import { initMenus } from "./menus.js";
-import { initPalette } from "./palette.js";
+import { initGridKeys } from "../ui/grid-keys.js";
+import { initGridMouse } from "../ui/grid-mouse.js";
+import { initRowDrag } from "../ui/drag.js";
+import { initMenus } from "../ui/menus.js";
+import { initPalette } from "../ui/palette.js";
 import { isCanonicalStructuredPayload, makeGetStructuredCell, makeApplyStructuredCell } from "./clipboard-codec.js";
-import { getCellForKind, setCellForKind, beginEditForKind, applyStructuredForKind, getStructuredForKind } from "./column-kinds.js";
+import { getCellForKind, setCellForKind, beginEditForKind, applyStructuredForKind, getStructuredForKind } from "../data/column-kinds.js";
 import { VIEWS, rebuildActionColumnsFromModifiers, buildInteractionPhaseColumns } from "./views.js";
-import { canonicalSig, sortIdsByUserOrder, compareVariantSig, modOrderMap, buildInteractionsPairs } from "./variants.js";
+import { canonicalSig, sortIdsByUserOrder, compareVariantSig, modOrderMap, buildInteractionsPairs } from "../data/variants/variants.js";
 import { Selection, sel, selection, SelectionNS, SelectionCtl, onSelectionChanged, isRowSelected, clearSelection } from "./selection.js";
 import { noteKeyForPair, getInteractionsCell, setInteractionsCell, getStructuredCellInteractions, applyStructuredCellInteractions, clearInteractionsSelection } from "./interactions.js";
-import { UI, PHASE_CAP, MOD, MIN_ROWS, Ids, DEFAULT_OUTCOMES, SCHEMA_VERSION, ROW_HEIGHT, HEADER_HEIGHT } from "./constants.js";
-import { clamp, colWidths, colOffsets, visibleCols, visibleRows, parsePhaseKey, parsePhasesSpec, formatPhasesSpec, getPhaseLabel, basenameNoExt, getSuggestedName } from "./utils.js";
+import { UI, PHASE_CAP, MOD, MIN_ROWS, Ids, DEFAULT_OUTCOMES, SCHEMA_VERSION, ROW_HEIGHT, HEADER_HEIGHT } from "../data/constants.js";
+import { clamp, colWidths, colOffsets, visibleCols, visibleRows, parsePhaseKey, parsePhasesSpec, formatPhasesSpec, getPhaseLabel, basenameNoExt, getSuggestedName } from "../data/utils.js";
 onSelectionChanged(() => render());
 
 function initA11y(){
@@ -931,7 +931,7 @@ function updateProjectNameWidget() {
 async function openFromDisk() {
 	menusAPI.closeAllMenus && menusAPI.closeAllMenus();
 	try {
-		const m = await import("./fs.js");
+		const m = await import("../data/fs.js");
 		const { data, name } = await m.openJson();
 		upgradeModelInPlace(data);
 		Object.assign(model, data);
@@ -949,7 +949,7 @@ async function openFromDisk() {
 async function saveToDisk(as = false) {
 	menusAPI.closeAllMenus && menusAPI.closeAllMenus();
 	try {
-		const m = await import("./fs.js");
+		const m = await import("../data/fs.js");
 		const { name } = await m.saveJson(model, { as, suggestedName: getSuggestedName() });
 		status.textContent = as ? `Saved As: ${name}` : `Saved: ${name}`;
 	} catch (e) {
@@ -1052,11 +1052,11 @@ function ensureSeedRows() {
 function runSelfTests() {
   const start = performance.now();
   Promise.all([
-    import("./variants.js"),
+    import("../data/variants/variants.js"),
     import("./interactions.js"),
-    import("./tests.js"),
-    import("./tests-ui.js").catch(() => ({ default: null })),
-    import("./grid-mouse.js"),
+    import("../support/tests/tests.js"),
+    import("../support/tests/tests-ui.js").catch(() => ({ default: null })),
+    import("../ui/grid-mouse.js"),
   ])
     .then(([v, inter, m, uiTests, ui]) => {
       const api = {

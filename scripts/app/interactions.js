@@ -1,7 +1,7 @@
 // interactions.js — Interactions view helpers (notes keys, get/set, clipboard, delete)
 
-import { canonicalSig, sortIdsByUserOrder } from "./variants.js";
-import { parsePhaseKey } from "./utils.js";
+import { canonicalSig, sortIdsByUserOrder } from "../data/variants/variants.js";
+import { parsePhaseKey } from "../data/utils.js";
 import { invertOutcomeId } from "./outcomes.js";
 
 // Key builder

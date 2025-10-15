@@ -1,7 +1,7 @@
 // views.js — view schemas and column builders (pure-ish)
 
-import { PHASE_CAP } from "./constants.js";
-import { getPhaseLabel } from "./utils.js";
+import { PHASE_CAP } from "../data/constants.js";
+import { getPhaseLabel } from "../data/utils.js";
 
 export const VIEWS = {
   actions: {
