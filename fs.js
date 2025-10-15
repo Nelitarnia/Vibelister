@@ -1,4 +1,5 @@
-// Progressive file IO (Chromium gets File System Access; others get input/download fallbacks)
+// fs.js - Pogressive file IO (Chromium gets File System Access; others get input/download fallbacks)
+
 export const hasFS = !!(window.showOpenFilePicker && window.showSaveFilePicker);
 let lastHandle = null;
 

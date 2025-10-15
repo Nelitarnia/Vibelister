@@ -1,4 +1,4 @@
-// Variant engine, split from App.js
+// variants.js - variant engine which generates the list of Actions with modifiers.
 // Self-contained: no imports; operates on provided model via function args
 
 // helpers for ordering

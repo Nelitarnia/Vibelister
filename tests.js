@@ -1,4 +1,5 @@
 // tests.js — pure API consumer; no window/model globals.
+
 export function runSelfTests(api){
   // Prefer the passed API; fall back to globals as a safety net
   const g = (typeof window !== 'undefined') ? window : globalThis;

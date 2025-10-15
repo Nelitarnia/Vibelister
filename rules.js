@@ -1,5 +1,5 @@
-// Rules dialog split from App.js
-// Exported function: openRulesDialog(model)
+// rules.js - contains code for the dialog window where you set Modifier rules.
+
 export function openRulesDialog(model) {
 	const mods = (model.modifiers || []).filter((m) => (m.name || "").trim());
 	const groups = JSON.parse(JSON.stringify(model.modifierGroups || []));

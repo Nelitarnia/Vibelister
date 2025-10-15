@@ -1,10 +1,7 @@
-// grid-keys.js
-import { MIME_CELL, readStructuredFromEvent, writeStructuredToEvent } from "./clipboard-codec.js";
-// Keyboard navigation for the grid + app-level shortcuts.
+// grid-keys.js - Keyboard navigation for the grid + app-level shortcuts.
 // Exported as an initializer so App.js can pass dependencies explicitly.
 
-// Single source of truth for the structured payload MIME
-
+import { MIME_CELL, readStructuredFromEvent, writeStructuredToEvent } from "./clipboard-codec.js";
 
 export function initGridKeys(deps) { // (clipboard-enhanced)
   const {

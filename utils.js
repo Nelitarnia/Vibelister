@@ -1,4 +1,5 @@
-// utils.js
+// utils.js - Various helper functions
+
 export const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
 export function colWidths(columns) {

@@ -1,4 +1,4 @@
-// assert.js
+// assert.js - a short list of debug message templates to use with test suites.
 let FAILS = 0, SECTIONS = 0;
 export const section = (name) => (console.groupCollapsed(`%c${++SECTIONS}. ${name}`, "font-weight:bold"), () => console.groupEnd());
 export const ok  = (cond, msg) => { if (!cond) { FAILS++; console.error('✗', msg); } else console.log('✓', msg); };

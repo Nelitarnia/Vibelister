@@ -1,5 +1,4 @@
-// menus.js
-// Menubar wiring: open/close menus, menu item actions, and view radio updates.
+// menus.js - menubar wiring: open/close menus, menu item actions, and view radio updates.
 // Exported as an initializer so App.js can pass dependencies explicitly.
 
 export function initMenus(deps){

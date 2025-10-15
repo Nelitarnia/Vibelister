@@ -1,4 +1,5 @@
 // views.js — view schemas and column builders (pure-ish)
+
 import { PHASE_CAP } from "./constants.js";
 import { getPhaseLabel } from "./utils.js";
 

@@ -1,3 +1,5 @@
+// App.js - the core of Vibelister, containing imports, wiring and rendering.
+
 // Imports
 import { initGridKeys } from "./grid-keys.js";
 import { initGridMouse } from "./grid-mouse.js";
@@ -102,6 +104,7 @@ const sheet = document.getElementById("sheet"),
     const projectNameEl = document.getElementById(Ids.projectName);
 
 let editing = false;
+
 // Global outside-click (capture) handler to commit the editor once per page load
 document.addEventListener(
   "mousedown",
@@ -155,6 +158,7 @@ function modIdFromKey(k) {
 	const i = s.indexOf(":");
 	return i >= 0 ? Number(s.slice(i + 1)) : NaN;
 }
+
 // User-defined modifier order (row order in Modifiers view)
 function getRowCount() {
 	if (activeView === "interactions") {
@@ -406,7 +410,6 @@ function deleteSelectedRows(options = {}) {
 }
 
 // Generic structured-cell helpers for clipboard (stable ID aware)
-
 const getStructuredCell = makeGetStructuredCell({
   viewDef,
   dataArray,
@@ -700,6 +703,7 @@ function ensureVisible(r, c) {
 	if (ct < sheet.scrollTop) sheet.scrollTop = ct;
 	if (cb > sheet.scrollTop + vh) sheet.scrollTop = cb - vh;
 }
+
 // Edit
 function beginEdit(r, c) {
   if (SelectionNS.setColsAll) SelectionNS.setColsAll(false);
@@ -775,8 +779,6 @@ sheet.addEventListener("scroll", () => {
 	});
 });
 
-// Grid keyboard navigation/edit handler moved to grid-keys.js
-
 // Tabs & views
 const tabActions = document.getElementById(Ids.tabActions),
 	tabInputs = document.getElementById(Ids.tabInputs),
@@ -846,6 +848,7 @@ function toggleInteractionsMode() {
 		status.textContent = `Interactions mode set to ${model.meta.interactionsMode}`;
 	}
 }
+
 // Keyboard: Ctrl+Shift+A toggles Interactions mode
 document.addEventListener('keydown', (e) => {
 	if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
@@ -853,6 +856,7 @@ document.addEventListener('keydown', (e) => {
 		toggleInteractionsMode();
 	}
 });
+
 // Initialize menus module (handles menu triggers & items)
 const menusAPI = initMenus({
   Ids,
@@ -864,6 +868,7 @@ const menusAPI = initMenus({
   runSelfTests,
   model,
 });
+
 // Save/Load/New
 function newProject() {
 	Object.assign(model, {
@@ -887,7 +892,7 @@ function newProject() {
 	updateProjectNameWidget();
 	status.textContent = "New project created (Actions view).";
 }
-// Variant engine moved to variants.js
+
 async function doGenerate() {
 	rebuildActionColumnsFromModifiers(model);
 	const { actionsCount, inputsCount, pairsCount, capped, cappedActions } =
@@ -975,12 +980,12 @@ function cycleView(d) {
 		next = (i + d + ord.length) % ord.length;
 	setActiveView(ord[next]);
 }
-// Shortcut keys moved to grid-keys.js
+
 // Row reorder (drag row headers)
 function isReorderableView() {
 	return activeView === "actions" || activeView === "inputs" || activeView === "modifiers" || activeView === "outcomes";
 }
-// Drag computations moved to drag.js
+
 // Migrations/Seeding
 function upgradeModelInPlace(o) {
 	if (!o.meta) o.meta = { schema: 0, projectName: "", interactionsMode: "AI" };
@@ -1043,8 +1048,6 @@ function ensureSeedRows() {
 	ensureMinRows(model.outcomes, Math.max(DEFAULT_OUTCOMES.length + 10, 20));
 }
 
-// Rules dialog moved to rules.js
-
 // Tests lazy-loader
 function runSelfTests() {
   const start = performance.now();
@@ -1099,6 +1102,7 @@ function runSelfTests() {
       status.textContent = "Self-tests failed to load.";
     });
 };
+
 // Lightweight namespaces (non-invasive, for readability only)
 const ModelNS = { upgradeModelInPlace, ensureSeedRows, ensureMinRows, makeRow };
 const ViewsNS = {

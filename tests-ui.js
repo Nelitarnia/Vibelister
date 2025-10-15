@@ -1,4 +1,5 @@
 // tests-ui.js — interaction tests with a tiny fake DOM
+
 export function runUiTests(ui){
   const log = (...a)=>console.log('[ui-tests]', ...a);
   const ok  = (cond,msg)=>console.assert(!!cond, msg);

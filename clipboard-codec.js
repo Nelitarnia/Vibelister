@@ -1,4 +1,3 @@
-// clipboard-codec.js
 // Single source of truth for structured clipboard payloads.
 // Keeps schema minimal, verifies canonical shape, and provides read/write helpers.
 

@@ -1,4 +1,5 @@
 // grid-mouse.js — central mouse interactions: cell selection & edit gestures (sheet-level)
+
 export function initGridMouse(deps){
   const {
     // layers
