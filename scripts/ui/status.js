@@ -19,6 +19,11 @@ export function initStatusBar(element, opts = {}){
 	);
 	const history = [];
 	let latest = element.textContent || "";
+	const messageEl = document.createElement("span");
+	messageEl.className = "status__text";
+	messageEl.textContent = latest && latest.trim() ? latest : "\u00a0";
+	while (element.firstChild) element.removeChild(element.firstChild);
+	element.appendChild(messageEl);
 	let panel = null;
 	let isOpen = false;
 	let outsideHandler = null;
@@ -149,7 +154,10 @@ export function initStatusBar(element, opts = {}){
 	function set(message, opts = {}){
 		const msg = message == null ? "" : String(message);
 		latest = msg;
-		if (element) element.textContent = msg || "\u00a0";
+		if (messageEl && messageEl.parentNode !== element && element) element.insertBefore(messageEl, element.firstChild);
+		if (messageEl && messageEl.parentNode === element) messageEl.textContent = msg || "\u00a0";
+		else if (messageEl) messageEl.textContent = msg || "\u00a0";
+		else if (element) element.textContent = msg || "\u00a0";
 		const skipHistory = opts.skipHistory ?? (msg.trim() === "");
 		if (!skipHistory){
 			pushHistory({ message: msg, time: opts.time instanceof Date ? opts.time : new Date() });
