@@ -646,17 +646,29 @@ const disposeKeys = initGridKeys({
 
 // Selection-aware setter so palette applies to all selected rows in Interactions
 function setCellSelectionAware(r, c, v) {
-  if (
-    activeView === "interactions" &&
-    selection.rows &&
-    selection.rows.size > 1 &&
-    c === sel.c
-  ) {
-    const rows = Array.from(selection.rows).sort((a, b) => a - b);
+  const rowsSet = selection.rows;
+  const hasMultiSelection = rowsSet && rowsSet.size > 1 && rowsSet.has(r);
+
+  let shouldApplyToSelection = false;
+
+  if (hasMultiSelection) {
+    if (activeView === "interactions" && c === sel.c) {
+      shouldApplyToSelection = true;
+    } else {
+      const vd = viewDef();
+      const col = vd?.columns?.[c];
+      const isColorColumn = String(col?.kind || "").toLowerCase() === "color";
+      if (isColorColumn) shouldApplyToSelection = true;
+    }
+  }
+
+  if (shouldApplyToSelection) {
+    const rows = Array.from(rowsSet).sort((a, b) => a - b);
     for (const rr of rows) setCell(rr, c, v);
     render();
     return;
   }
+
   setCell(r, c, v);
 }
 
