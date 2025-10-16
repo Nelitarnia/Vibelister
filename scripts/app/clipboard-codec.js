@@ -7,9 +7,12 @@ export const MIME_CELL = "application/x-gridcell+json";
 // --- Shape guards -------------------------------------------------------
 export function isCanonicalStructuredPayload(p) {
   return !!(
-    p && typeof p === "object" &&
+    p &&
+    typeof p === "object" &&
     typeof p.type === "string" &&
-    p.data && typeof p.data === "object" && !Array.isArray(p.data)
+    p.data &&
+    typeof p.data === "object" &&
+    !Array.isArray(p.data)
   );
 }
 
@@ -61,7 +64,9 @@ export function stableStringify(x) {
       seen.add(v);
       if (Array.isArray(v)) return "[" + v.map(s).join(",") + "]";
       const keys = Object.keys(v).sort();
-      return "{" + keys.map(k => JSON.stringify(k) + ":" + s(v[k])).join(",") + "}";
+      return (
+        "{" + keys.map((k) => JSON.stringify(k) + ":" + s(v[k])).join(",") + "}"
+      );
     }
     return JSON.stringify(v);
   };
@@ -69,7 +74,8 @@ export function stableStringify(x) {
 }
 
 export function equalStructuredPayload(a, b) {
-  if (!isCanonicalStructuredPayload(a) || !isCanonicalStructuredPayload(b)) return false;
+  if (!isCanonicalStructuredPayload(a) || !isCanonicalStructuredPayload(b))
+    return false;
   return stableStringify(a) === stableStringify(b);
 }
 
@@ -109,23 +115,35 @@ export function canonicalizePayload(p) {
 // keeping dependencies injected (no globals; easy to test).
 
 export function makeGetStructuredCell({
-  viewDef, dataArray, getStructuredForKind, kindCtx, getActiveView,
+  viewDef,
+  dataArray,
+  getStructuredForKind,
+  kindCtx,
+  getActiveView,
   isCanonical = isCanonicalStructuredPayload,
 }) {
   return function getStructuredCell(r, c) {
-    const vd = viewDef(); if (!vd) return null;
-    const col = vd.columns[c]; if (!col) return null;
+    const vd = viewDef();
+    if (!vd) return null;
+    const col = vd.columns[c];
+    if (!col) return null;
     const activeView = getActiveView ? getActiveView() : undefined;
 
     if (activeView === "interactions") {
       const k = String(col?.kind || "");
-      const payload = getStructuredForKind(k || "interactions", kindCtx({ r, c, col, row: null }));
+      const payload = getStructuredForKind(
+        k || "interactions",
+        kindCtx({ r, c, col, row: null }),
+      );
       return isCanonical(payload) ? payload : null;
     }
     if (col && col.kind) {
       const arr = dataArray();
       const row = arr ? arr[r] : null;
-      const payload = getStructuredForKind(col.kind, kindCtx({ r, c, col, row }));
+      const payload = getStructuredForKind(
+        col.kind,
+        kindCtx({ r, c, col, row }),
+      );
       return isCanonical(payload) ? payload : null;
     }
     return null;
@@ -133,12 +151,18 @@ export function makeGetStructuredCell({
 }
 
 export function makeApplyStructuredCell({
-  viewDef, dataArray, applyStructuredForKind, kindCtx, getActiveView,
+  viewDef,
+  dataArray,
+  applyStructuredForKind,
+  kindCtx,
+  getActiveView,
 }) {
   return function applyStructuredCell(r, c, payload) {
     if (!payload || typeof payload !== "object") return false;
-    const vd = viewDef(); if (!vd) return false;
-    const col = vd.columns[c]; if (!col) return false;
+    const vd = viewDef();
+    if (!vd) return false;
+    const col = vd.columns[c];
+    if (!col) return false;
 
     const activeView = getActiveView ? getActiveView() : undefined;
     if (activeView === "interactions") {
