@@ -170,7 +170,8 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
       return true;
     }
     // STRICT: reject plain text pastes for Outcome
-    if (status) status.textContent = "Outcome expects a valid Outcome ID (use the palette or structured paste).";
+	if (status?.set) status.set("Outcome expects a valid Outcome ID (use the palette or structured paste).");
+	else if (status) status.textContent = "Outcome expects a valid Outcome ID (use the palette or structured paste).";
     return false;
   }
 
@@ -189,7 +190,8 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
       }
     }
     // STRICT: reject plain text or malformed objects for End
-   if (status) status.textContent = "End expects an Action ID (use the palette or structured paste).";
+	if (status?.set) status.set("End expects an Action ID (use the palette or structured paste).");
+	else if (status) status.textContent = "End expects an Action ID (use the palette or structured paste).";
   return false;
 }
 }
@@ -372,7 +374,11 @@ export function clearInteractionsSelection(model, viewDef, selection, sel, mode,
 		const key = String(viewDef.columns[sel.c]?.key || "");
 		const pk = parsePhaseKey(key);
 		const isEditable = key === 'notes' || (pk && (pk.field === 'outcome' || pk.field === 'end'));
-		if (!isEditable) { status.textContent = "Nothing to delete here: select an Outcome, End, or Notes cell."; return; }
+		if (!isEditable) {
+			if (status?.set) status.set("Nothing to delete here: select an Outcome, End, or Notes cell.");
+			else if (status) status.textContent = "Nothing to delete here: select an Outcome, End, or Notes cell.";
+			return;
+		}
 		for (const r of rows) {
 			const pair = model.interactionsPairs[r]; if (!pair) continue;
 			const k = noteKeyForPair(pair, pk ? pk.p : undefined);
@@ -383,7 +389,9 @@ export function clearInteractionsSelection(model, viewDef, selection, sel, mode,
 	}
 
 	render();
-	status.textContent = cleared ? `Cleared ${cleared} entr${cleared===1?"y":"ies"} in Interactions.` : 'Nothing to clear.';
+	const clearedMsg = cleared ? `Cleared ${cleared} entr${cleared===1?"y":"ies"} in Interactions.` : "Nothing to clear.";
+	if (status?.set) status.set(clearedMsg);
+	else if (status) status.textContent = clearedMsg;
 }
 
 // Query: is a given Interactions cell editable?
