@@ -82,11 +82,6 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 ## In-progress
 
 - The logic for adding Phase 0 (simultaneous testing) and Outcome mirroring was started but not completed at the present.
-- Tests need to be updated.
-  - Old tests use deprecated code and data structures that should be updated.
-  - New tests should be added to test more features of the program.
-  - Tests should document results in a more consistent way.
-  - Creating a separate "tests-runner" might clean up App.js a bit.
 - Other cleaning up and streamlining around the files.
 - Bug fixes:
   - Edit box is slightly misaligned.
@@ -94,7 +89,7 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 
 ## Ideas for later
 
-- Color-picker + have colors render on different parts of the sheet.
+- Have colors render on different parts of the sheet.
 - Undo/redo.
 - Column resizing.
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
@@ -104,6 +99,7 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
   - Ability to create Action types or categories would likely help guide this feature.
 - Settings screen for customizing various things.
 - Write better instructions for the user, and add helpful tooltips.
+- Cover functionalities not currently covered by adding tests to the test suite.
 - ...And more!
 
 ---

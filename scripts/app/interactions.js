@@ -243,27 +243,6 @@ export function applyStructuredCellInteractions(
   const pk = parsePhaseKey(col.key);
   if (!pk) return false;
 
-  // --- TRACE: see exactly what we are pasting into what ---
-  const _colKey = String(col.key || "");
-  const _kLower = _colKey.toLowerCase();
-  const _pkField = String(pk.field || "").toLowerCase();
-  const _incomingType =
-    payload && payload.type ? String(payload.type).toLowerCase() : null;
-  const _incomingData = payload && payload.data ? payload.data : payload;
-
-  console.debug(
-    "[paste] colKey=",
-    _colKey,
-    "pk.field=",
-    _pkField,
-    "payload.type=",
-    _incomingType,
-    "payload.data keys=",
-    _incomingData && Object.keys(_incomingData),
-    "raw payload=",
-    payload,
-  );
-
   // Normalize to the destination column.
   // Accept:
   //   • Wrapped: { type:'outcome'|'end', data:{...} }

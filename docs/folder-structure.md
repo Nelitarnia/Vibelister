@@ -37,7 +37,6 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── rules.js
 │   │   └── status.js
 │   └── support/
-│       ├── assert.js
 │       └── tests/
 │           ├── specs/
 │           │   ├── assertions.js
