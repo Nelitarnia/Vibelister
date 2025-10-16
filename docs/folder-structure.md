@@ -28,6 +28,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │││└── variants.js
 ││└── utils.js
 │├── ui/
+││├── color-picker.js
 ││├── drag.js
 ││├── grid-keys.js
 ││├── grid-mouse.js
