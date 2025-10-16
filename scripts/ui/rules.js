@@ -475,7 +475,8 @@ export function openRulesDialog(model) {
 			model.modifierGroups = newGroups;
 			model.modifierConstraints = newCons;
 			close();
-			if (status) status.textContent = "Rules saved (validated)";
+			if (status?.set) status.set("Rules saved (validated)");
+			else if (status) status.textContent = "Rules saved (validated)";
 		};
 		foot.appendChild(cancel);
 		foot.appendChild(saveBtn);

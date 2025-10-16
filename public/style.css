@@ -8,7 +8,107 @@
 html, body { height: 100%; margin: 0; background: #0f1115; color: #e6e6e6; font: 14px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
 
 .toolbar { display: flex; gap: 8px; padding: 10px; border-bottom: 1px solid #2b2f3a; background: #141822; position: sticky; top: 0; z-index: 5; }
-.status { margin-left: auto; opacity: 0.75; font-size: 12px; }
+.status {
+	margin-left: auto;
+	opacity: 0.85;
+	font-size: 12px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px;
+	border-radius: 8px;
+	position: relative;
+	transition: background 0.15s ease, opacity 0.15s ease;
+	cursor: default;
+}
+
+.status[data-interactive="true"] {
+	cursor: pointer;
+}
+
+.status[data-interactive="true"]:hover {
+	opacity: 1;
+	background: #1b2130;
+}
+
+.status[data-interactive="true"]:focus-visible {
+	outline: 2px solid #81a1ff;
+	outline-offset: 2px;
+}
+
+.status[data-interactive="true"]::after {
+	content: "\25BE";
+	font-size: 10px;
+	line-height: 1;
+	opacity: 0.7;
+}
+
+.status-history {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 8px);
+	background: #0f1320;
+	border: 1px solid #303854;
+	border-radius: 10px;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+	padding: 10px;
+	width: 320px;
+	max-height: 240px;
+	display: none;
+	flex-direction: column;
+	gap: 8px;
+	z-index: 30;
+}
+
+.status-history[data-open="true"] {
+	display: flex;
+}
+
+.status-history__header {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: #8e96b3;
+}
+
+.status-history__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 180px;
+	overflow-y: auto;
+}
+
+.status-history__item {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px 8px;
+	border-radius: 6px;
+	background: #141a2c;
+	border: 1px solid rgba(129, 161, 255, 0.1);
+}
+
+.status-history__item-time {
+	font-size: 10px;
+	color: #8a92aa;
+}
+
+.status-history__item-text {
+	font-size: 12px;
+	color: #dbe3ff;
+	word-break: break-word;
+}
+
+.status-history__empty {
+	font-size: 12px;
+	color: #8a92aa;
+	padding: 12px 0;
+	text-align: center;
+}
 
 .tabs { display: flex; gap: 6px; padding: 6px 10px; background: #121726; border-bottom: 1px solid #272e40; height: var(--tab-h); align-items: center; }
 .tab { appearance: none; border: 1px solid #2e3550; background: #181e30; color: #cfd6ea; padding: 6px 12px; border-radius: 8px; cursor: pointer; font: 13px/1 system-ui, sans-serif; }

@@ -80,7 +80,8 @@ export function initRowDrag(deps){
     sel.r = target;
     layout(); render();
     const movedLabel = len>1 ? `${len} rows` : `row`;
-    status.textContent=`Reordered ${movedLabel} ${start+1} → ${target+1}`;
+    if (status?.set) status.set(`Reordered ${movedLabel} ${start+1} → ${target+1}`);
+    else if (status) status.textContent=`Reordered ${movedLabel} ${start+1} → ${target+1}`;
     drag=null; moved=false;
   }
 

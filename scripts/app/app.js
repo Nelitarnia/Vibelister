@@ -6,6 +6,7 @@ import { initGridMouse } from "../ui/grid-mouse.js";
 import { initRowDrag } from "../ui/drag.js";
 import { initMenus } from "../ui/menus.js";
 import { initPalette } from "../ui/palette.js";
+import { initStatusBar } from "../ui/status.js";
 import { isCanonicalStructuredPayload, makeGetStructuredCell, makeApplyStructuredCell } from "./clipboard-codec.js";
 import { getCellForKind, setCellForKind, beginEditForKind, applyStructuredForKind, getStructuredForKind } from "../data/column-kinds.js";
 import { VIEWS, rebuildActionColumnsFromModifiers, buildInteractionPhaseColumns } from "./views.js";
@@ -17,10 +18,7 @@ import { clamp, colWidths, colOffsets, visibleCols, visibleRows, parsePhaseKey, 
 onSelectionChanged(() => render());
 
 function initA11y(){
-  if (status && !status._a11yInit){
-    status.setAttribute('aria-live','polite');
-    status._a11yInit = true;
-  }
+	statusBar?.ensureLiveRegion();
 }
 
 // Core model + views
@@ -72,12 +70,12 @@ function kindCtx({ r, c, col, row, v } = {}) {
   r, c, v, col, row,
   model, viewDef,
   activeView,
-  MOD,
-  status,
-  paletteAPI,
-  parsePhasesSpec, formatPhasesSpec,
-  getInteractionsCell, setInteractionsCell,
-  getStructuredCellInteractions, applyStructuredCellInteractions,
+	MOD,
+	status: statusBar,
+	paletteAPI,
+	parsePhasesSpec, formatPhasesSpec,
+	getInteractionsCell, setInteractionsCell,
+	getStructuredCellInteractions, applyStructuredCellInteractions,
   wantPalette: (activeView === 'interactions' && paletteAPI?.wantsToHandleCell?.()),
   };
   }
@@ -99,9 +97,10 @@ const sheet = document.getElementById("sheet"),
 	colHdrs = document.getElementById("colHdrs"),
 	rowHdrs = document.getElementById("rowHdrs"),
 	editor = document.getElementById("editor"),
-	status = document.getElementById("status"),
+	statusEl = document.getElementById("status"),
 	dragLine = document.getElementById("dragLine");
-    const projectNameEl = document.getElementById(Ids.projectName);
+const projectNameEl = document.getElementById(Ids.projectName);
+const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
 let editing = false;
 
@@ -361,7 +360,7 @@ function deleteSelectedRows(options = {}) {
     const mode = (options && options.mode)
       ? options.mode
       : ((SelectionNS.isAllCols && SelectionNS.isAllCols()) ? 'clearAllEditable' : 'clearActiveCell');
-    clearInteractionsSelection(model, viewDef(), selection, sel, mode, status, render);
+clearInteractionsSelection(model, viewDef(), selection, sel, mode, statusBar, render);
     if (mode === 'clearAllEditable' && SelectionNS.setColsAll) SelectionNS.setColsAll(false);
     return;
   }
@@ -406,7 +405,7 @@ function deleteSelectedRows(options = {}) {
   render();
 
   const noun = deletedIds.length === 1 ? "row" : "rows";
-  status.textContent = `Deleted ${deletedIds.length} ${noun} from ${viewDef().title}.`;
+  statusBar?.set(`Deleted ${deletedIds.length} ${noun} from ${viewDef().title}.`);
 }
 
 // Generic structured-cell helpers for clipboard (stable ID aware)
@@ -563,7 +562,7 @@ const disposeDrag = initRowDrag({
   rowHdrs, sheet, dragLine,
   dataArray, getRowCount, ensureMinRows, clamp,
   selection, sel, clearSelection, SelectionNS,
-  render, layout, status,
+render, layout, status: statusBar,
   ROW_HEIGHT, HEADER_HEIGHT,
   isReorderableView: () => (activeView === "actions" || activeView === "inputs" || activeView === "modifiers" || activeView === "outcomes"),
 });
@@ -824,8 +823,8 @@ layout();
 // Restore scrollTop after layout so spacer height is valid
 if (typeof st.scrollTop === 'number') sheet.scrollTop = st.scrollTop;
 render();
-	const modeLabel = (key === 'interactions') ? ` [${model.meta?.interactionsMode || 'AI'}]` : '';
-	status.textContent = `View: ${viewDef().title}${modeLabel}`;
+const modeLabel = (key === 'interactions') ? ` [${model.meta?.interactionsMode || 'AI'}]` : '';
+statusBar?.set(`View: ${viewDef().title}${modeLabel}`);
 	menusAPI.updateViewMenuRadios(key);
 }
 if (tabActions) tabActions.onclick = () => setActiveView("actions");
@@ -843,9 +842,9 @@ function toggleInteractionsMode() {
 		rebuildInteractionPhaseColumns();
 		layout();
 		render();
-		status.textContent = `Interactions mode: ${model.meta.interactionsMode}`;
-	} else {
-		status.textContent = `Interactions mode set to ${model.meta.interactionsMode}`;
+		statusBar?.set(`Interactions mode: ${model.meta.interactionsMode}`);
+} else {
+	statusBar?.set(`Interactions mode set to ${model.meta.interactionsMode}`);
 	}
 }
 
@@ -890,7 +889,7 @@ function newProject() {
 	ensureSeedRows();
 	setActiveView("actions");
 	updateProjectNameWidget();
-	status.textContent = "New project created (Actions view).";
+	statusBar?.set("New project created (Actions view).");
 }
 
 async function doGenerate() {
@@ -902,9 +901,10 @@ async function doGenerate() {
 	sel.c = 0;
 	layout();
 	render();
-	status.textContent =
-		`Generated Interactions: ${actionsCount} actions × ${inputsCount} inputs = ${pairsCount} rows.` +
-		(capped ? ` (Note: ${cappedActions} action(s) hit variant cap)` : "");
+	const genSummary =
+	`Generated Interactions: ${actionsCount} actions × ${inputsCount} inputs = ${pairsCount} rows.` +
+	(capped ? ` (Note: ${cappedActions} action(s) hit variant cap)` : "");
+	statusBar?.set(genSummary);
 }
 
 // Project name widget & helpers
@@ -944,21 +944,21 @@ async function openFromDisk() {
 		for (const k in perViewState) perViewState[k] = { row:0, col:0, scrollTop:0 };
 		setActiveView("actions");
 		setProjectNameFromFile(name);
-		status.textContent = `Opened: ${name} (${model.actions.length} actions, ${model.inputs.length} inputs)`;
-	} catch (e) {
-		status.textContent = "Open failed: " + (e?.message || e);
-	}
+	statusBar?.set(`Opened: ${name} (${model.actions.length} actions, ${model.inputs.length} inputs)`);
+} catch (e) {
+	statusBar?.set("Open failed: " + (e?.message || e));
+}
 }
 
 async function saveToDisk(as = false) {
-	menusAPI.closeAllMenus && menusAPI.closeAllMenus();
-	try {
-		const m = await import("../data/fs.js");
-		const { name } = await m.saveJson(model, { as, suggestedName: getSuggestedName() });
-		status.textContent = as ? `Saved As: ${name}` : `Saved: ${name}`;
-	} catch (e) {
-		status.textContent = "Save failed: " + (e?.message || e);
-	}
+menusAPI.closeAllMenus && menusAPI.closeAllMenus();
+try {
+const m = await import("../data/fs.js");
+const { name } = await m.saveJson(model, { as, suggestedName: getSuggestedName() });
+	statusBar?.set(as ? `Saved As: ${name}` : `Saved: ${name}`);
+} catch (e) {
+	statusBar?.set("Save failed: " + (e?.message || e));
+}
 }
 
 // View order helpers
@@ -1099,11 +1099,11 @@ function runSelfTests() {
       }
 
       const ms = Math.round(performance.now() - start);
-      status.textContent = `Self-tests executed in ${ms} ms`;
+      statusBar?.set(`Self-tests executed in ${ms} ms`);
     })
     .catch((err) => {
       console.error("Failed to load tests", err);
-      status.textContent = "Self-tests failed to load.";
+      statusBar?.set("Self-tests failed to load.");
     });
 };
 

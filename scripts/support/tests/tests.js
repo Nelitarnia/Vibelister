@@ -174,23 +174,23 @@ export function runSelfTests(api){
     ]};
 
     // Attempt free text into outcome → rejected
-    const status = { textContent: '' };
-    setIC(model, status, vd, 0, 2, 'free text');
-    ok(status.textContent.includes('require') || true, 'outcome rejects free text');
+const status = { last: '', set(msg){ this.last = msg || ''; } };
+setIC(model, status, vd, 0, 2, 'free text');
+ok(status.last.includes('require') || true, 'outcome rejects free text');
 
     // Set outcome by stable ID → accepted
-    status.textContent = '';
-    setIC(model, status, vd, 0, 2, O1.id);
-    ok(getIC(model, vd, 0, 2) === 'Cancels', 'outcome accepts stable id');
+status.set('');
+setIC(model, status, vd, 0, 2, O1.id);
+ok(getIC(model, vd, 0, 2) === 'Cancels', 'outcome accepts stable id');
 
-    // End requires stable action id payload; plain string rejected
-    status.textContent = '';
-    setIC(model, status, vd, 0, 3, 'EndString');
-    ok(status.textContent.includes('End cells'), 'end rejects free text');
+// End requires stable action id payload; plain string rejected
+status.set('');
+setIC(model, status, vd, 0, 3, 'EndString');
+ok(status.last.includes('End cells'), 'end rejects free text');
 
-    // Provide proper end payload
-    status.textContent = '';
-    setIC(model, status, vd, 0, 3, { endActionId: A.id, endVariantSig: '' });
+// Provide proper end payload
+status.set('');
+setIC(model, status, vd, 0, 3, { endActionId: A.id, endVariantSig: '' });
     ok(getIC(model, vd, 0, 3) === 'Aim', 'end accepts {endActionId,...}');
   })();
 
