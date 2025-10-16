@@ -176,17 +176,19 @@ const projectNameEl = document.getElementById(Ids.projectName);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
 function getCellRect(r, c) {
-	const vd = viewDef();
-	const cols = vd?.columns || [];
-	if (!Number.isFinite(r) || !Number.isFinite(c))
-		return { left: 0, top: 0, width: 0, height: ROW_HEIGHT };
-	if (c < 0 || c >= cols.length)
-		return { left: 0, top: 0, width: 0, height: ROW_HEIGHT };
-	const geom = getColGeomFor(cols);
-	const left = (geom.offs?.[c] ?? 0) - sheet.scrollLeft;
-	const top = r * ROW_HEIGHT - sheet.scrollTop + HEADER_HEIGHT;
-	const width = geom.widths?.[c] ?? 0;
-	return { left, top, width, height: ROW_HEIGHT };
+  const vd = viewDef();
+  const cols = vd?.columns || [];
+  if (!Number.isFinite(r) || !Number.isFinite(c))
+    return { left: 0, top: 0, width: 0, height: ROW_HEIGHT };
+  if (c < 0 || c >= cols.length)
+    return { left: 0, top: 0, width: 0, height: ROW_HEIGHT };
+  const geom = getColGeomFor(cols);
+  const sheetLeft = sheet ? sheet.offsetLeft || 0 : 0;
+  const sheetTop = sheet ? sheet.offsetTop || HEADER_HEIGHT : HEADER_HEIGHT;
+  const left = sheetLeft + ((geom.offs?.[c] ?? 0) - sheet.scrollLeft);
+  const top = sheetTop + r * ROW_HEIGHT - sheet.scrollTop;
+  const width = geom.widths?.[c] ?? 0;
+  return { left, top, width, height: ROW_HEIGHT };
 }
 
 let editing = false;
@@ -952,14 +954,11 @@ function beginEdit(r, c) {
       return;
     }
   }
-  const { widths, offs } = getColGeomFor(viewDef().columns);
-  const left = offs[c] - sheet.scrollLeft,
-    top = r * ROW_HEIGHT - sheet.scrollTop + HEADER_HEIGHT,
-    w = widths[c];
-  editor.style.left = left + "px";
-  editor.style.top = top + "px";
-  editor.style.width = Math.max(40, w) + "px";
-  editor.style.height = ROW_HEIGHT + "px";
+  const rect = getCellRect(r, c);
+  editor.style.left = rect.left + "px";
+  editor.style.top = rect.top + "px";
+  editor.style.width = Math.max(40, rect.width) + "px";
+  editor.style.height = rect.height + "px";
   editor.value = getCell(r, c);
   editor.style.display = "block";
   editing = true;
@@ -971,9 +970,11 @@ function beginEdit(r, c) {
     paletteAPI.wantsToHandleCell()
   ) {
     paletteAPI.openForCurrentCell(
-      left,
-      r * ROW_HEIGHT - sheet.scrollTop,
-      Math.max(200, w),
+      {
+        left: rect.left,
+        top: rect.top,
+        width: Math.max(200, rect.width),
+      },
       editor.value || "",
     );
     // TODO: enable for other views.
