@@ -3,7 +3,8 @@
 // Usage in App.js:
 //   const palette = initPalette({ ...ctx... });
 //   // In beginEdit():
-//   if (palette.wantsToHandleCell()) palette.openForCurrentCell(left, top, width, editor.value);
+//   if (palette.wantsToHandleCell())
+//     palette.openForCurrentCell({ left, top, width }, editor.value);
 //
 // Modes (built-in):
 //   - 'outcome' → for ^p\\d+:outcome$ and legacy 'result'
@@ -247,7 +248,7 @@ export function initPalette(ctx) {
     return MODE_MAP.some((m) => m.testKey(String(key)));
   }
 
-  function openForCurrentCell(left, top, width, initialText = "") {
+  function openForCurrentCell(arg1, arg2, arg3, arg4) {
     const vd = viewDef();
     if (!vd) return false;
     const key = String(vd.columns?.[sel.c]?.key || "");
@@ -255,8 +256,24 @@ export function initPalette(ctx) {
     if (!mode) return false;
     ensureDOM();
     pal.mode = mode;
+    let left = 0;
+    let top = 0;
+    let width = 0;
+    let initialText = "";
+    if (arg1 && typeof arg1 === "object") {
+      left = Number(arg1.left) || 0;
+      top = Number(arg1.top) || 0;
+      width = Number(arg1.width) || 0;
+      initialText = typeof arg2 === "string" ? arg2 : "";
+    } else {
+      left = Number(arg1) || 0;
+      top = Number(arg2) || 0;
+      width = Number(arg3) || 0;
+      initialText = typeof arg4 === "string" ? arg4 : "";
+      top += HEADER_HEIGHT;
+    }
     pal.left = left;
-    pal.top = top + HEADER_HEIGHT;
+    pal.top = top;
     pal.width = Math.max(200, width);
     Object.assign(pal.el.style, {
       left: pal.left + "px",
