@@ -77,7 +77,6 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 * Other cleaning up and streamlining around the files.
 * Bug fixes:
   * Edit box is slightly misaligned.
-  * Saving fails to use project name.
   * Horizontal select legend is not showing properly.
 
 ## Ideas for later
