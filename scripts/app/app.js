@@ -125,6 +125,7 @@ function rebuildInteractionPhaseColumns() {
     model,
     Selection && Selection.cell ? Selection.cell.r : 0,
   );
+  invalidateViewDef();
 }
 
 function kindCtx({ r, c, col, row, v } = {}) {
@@ -224,13 +225,32 @@ function dataArray() {
   if (activeView === "outcomes") return model.outcomes;
   return [];
 }
+
+// Cache viewDef result to avoid recomputation within a render/layout pass
+let cachedViewDef = null;
+let cachedViewKey = null;
+let cachedViewColumns = null;
+let cachedInteractionsMode = null;
+
 function viewDef() {
   const base = VIEWS[activeView];
   if (!base) return base;
+  const mode = String(model.meta?.interactionsMode || "AI").toUpperCase();
+  const columns = base.columns;
+
+  if (
+    cachedViewDef &&
+    cachedViewKey === activeView &&
+    cachedViewColumns === columns &&
+    (activeView !== "interactions" || cachedInteractionsMode === mode)
+  ) {
+    return cachedViewDef;
+  }
+
+  let result = base;
   if (activeView === "interactions") {
-    const mode = String(model.meta?.interactionsMode || "AI").toUpperCase(); // "AI" | "AA"
-    const cols = Array.isArray(base.columns)
-      ? base.columns.filter((col) => {
+    const cols = Array.isArray(columns)
+      ? columns.filter((col) => {
           if (!col || col.hiddenWhen == null) return true;
           const h = col.hiddenWhen;
           if (Array.isArray(h)) {
@@ -239,10 +259,22 @@ function viewDef() {
           }
           return String(h).toUpperCase() !== mode;
         })
-      : base.columns;
-    return { ...base, columns: cols };
+      : columns;
+    result = { ...base, columns: cols };
   }
-  return base;
+
+  cachedViewDef = result;
+  cachedViewKey = activeView;
+  cachedViewColumns = columns;
+  cachedInteractionsMode = mode;
+  return result;
+}
+
+function invalidateViewDef() {
+  cachedViewDef = null;
+  cachedViewKey = null;
+  cachedViewColumns = null;
+  cachedInteractionsMode = null;
 }
 function isModColumn(c) {
   return !!c && typeof c.key === "string" && c.key.startsWith("mod:");
@@ -514,6 +546,7 @@ function deleteSelectedRows(options = {}) {
       for (const id of deletedIds) delete a.modSet[id];
     }
     rebuildActionColumnsFromModifiers(model);
+    invalidateViewDef();
     sanitizeModifierRulesAfterDeletion(deletedIds);
   }
 
@@ -558,40 +591,6 @@ const applyStructuredCell = makeApplyStructuredCell({
   kindCtx,
   getActiveView: () => activeView,
 });
-
-// Cache viewDef result to avoid recomputation
-let cachedViewDef = null;
-
-function getViewDef() {
-  if (!cachedViewDef) cachedViewDef = computeViewDef();
-  return cachedViewDef;
-}
-
-function computeViewDef() {
-  const base = VIEWS[activeView];
-  if (!base) return base;
-  if (activeView === "interactions") {
-    const mode = String(model.meta?.interactionsMode || "AI").toUpperCase();
-    const cols = Array.isArray(base.columns)
-      ? base.columns.filter((col) => {
-          if (!col || col.hiddenWhen == null) return true;
-          const h = col.hiddenWhen;
-          if (Array.isArray(h)) {
-            const H = h.map((x) => String(x).toUpperCase());
-            return !H.includes(mode);
-          }
-          return String(h).toUpperCase() !== mode;
-        })
-      : base.columns;
-    return { ...base, columns: cols };
-  }
-  return base;
-}
-
-// Invalidate cached viewDef when necessary
-function invalidateViewDef() {
-  cachedViewDef = null;
-}
 
 // Render
 function layout() {
@@ -1042,7 +1041,11 @@ function setActiveView(key) {
   clearSelection();
   if (!(key in VIEWS)) return;
   activeView = key;
-  if (key === "actions") rebuildActionColumnsFromModifiers(model);
+  invalidateViewDef();
+  if (key === "actions") {
+    rebuildActionColumnsFromModifiers(model);
+    invalidateViewDef();
+  }
   if (key === "interactions") {
     rebuildInteractionsInPlace();
     rebuildInteractionPhaseColumns();
@@ -1098,6 +1101,7 @@ if (tabInteractions)
 function toggleInteractionsMode() {
   const cur = (model.meta && model.meta.interactionsMode) || "AI";
   model.meta.interactionsMode = cur === "AI" ? "AA" : "AI";
+  invalidateViewDef();
   if (activeView === "interactions") {
     rebuildInteractionsInPlace();
     rebuildInteractionPhaseColumns();
@@ -1156,6 +1160,7 @@ function newProject() {
 
 async function doGenerate() {
   rebuildActionColumnsFromModifiers(model);
+  invalidateViewDef();
   const { actionsCount, inputsCount, pairsCount, capped, cappedActions } =
     buildInteractionsPairs(model);
   setActiveView("interactions");
