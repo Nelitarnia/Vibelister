@@ -6,6 +6,7 @@ import { initGridMouse } from "../ui/grid-mouse.js";
 import { initRowDrag } from "../ui/drag.js";
 import { initMenus } from "../ui/menus.js";
 import { initPalette } from "../ui/palette.js";
+import { initColorPicker } from "../ui/color-picker.js";
 import { initStatusBar } from "../ui/status.js";
 import {
   isCanonicalStructuredPayload,
@@ -172,6 +173,20 @@ const sheet = document.getElementById("sheet"),
   dragLine = document.getElementById("dragLine");
 const projectNameEl = document.getElementById(Ids.projectName);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
+
+function getCellRect(r, c) {
+	const vd = viewDef();
+	const cols = vd?.columns || [];
+	if (!Number.isFinite(r) || !Number.isFinite(c))
+		return { left: 0, top: 0, width: 0, height: ROW_HEIGHT };
+	if (c < 0 || c >= cols.length)
+		return { left: 0, top: 0, width: 0, height: ROW_HEIGHT };
+	const geom = getColGeomFor(cols);
+	const left = (geom.offs?.[c] ?? 0) - sheet.scrollLeft;
+	const top = r * ROW_HEIGHT - sheet.scrollTop + HEADER_HEIGHT;
+	const width = geom.widths?.[c] ?? 0;
+	return { left, top, width, height: ROW_HEIGHT };
+}
 
 let editing = false;
 
@@ -660,6 +675,16 @@ const paletteAPI = initPalette({
   endEdit,
 });
 
+const colorPickerAPI = initColorPicker({
+  parent: editor?.parentElement || sheet,
+  sheet,
+  sel,
+  getCellRect,
+  getColorValue: (r, c) => getCell(r, c),
+  setColorValue: (r, c, v) => setCellSelectionAware(r, c, v),
+  render,
+});
+
 // Adapter: unify palette entrypoints for refPick columns
 if (!paletteAPI.openReference) {
   paletteAPI.openReference = ({ entity, target }) => {
@@ -675,6 +700,18 @@ if (!paletteAPI.openReference) {
     }
     return undefined; // fall back to text editor if no specific picker exists
   };
+}
+
+if (paletteAPI && colorPickerAPI) {
+  const baseIsOpen =
+    typeof paletteAPI.isOpen === "function"
+      ? paletteAPI.isOpen.bind(paletteAPI)
+      : () => false;
+  if (typeof colorPickerAPI.openColor === "function")
+    paletteAPI.openColor = colorPickerAPI.openColor;
+  if (typeof colorPickerAPI.close === "function")
+    paletteAPI.closeColor = colorPickerAPI.close;
+  paletteAPI.isOpen = () => baseIsOpen() || !!colorPickerAPI.isOpen?.();
 }
 
 // Mouse
@@ -876,6 +913,7 @@ function ensureVisible(r, c) {
 
 // Edit
 function beginEdit(r, c) {
+  if (paletteAPI?.closeColor) paletteAPI.closeColor();
   if (SelectionNS.setColsAll) SelectionNS.setColsAll(false);
   const col = viewDef().columns[c];
   if (activeView === "interactions") {
@@ -952,6 +990,7 @@ function endEdit(commit = true) {
 
 function endEditIfOpen(commit = true) {
   if (editing) endEdit(commit);
+  if (paletteAPI?.closeColor) paletteAPI.closeColor();
 }
 function moveSel(dr, dc, edit = false) {
   // Any keyboard navigation implies single-cell intent → disarm row-wide selection
