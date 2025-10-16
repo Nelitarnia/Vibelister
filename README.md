@@ -84,7 +84,6 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 - The logic for adding Phase 0 (simultaneous testing) and Outcome mirroring was started but not completed at the present.
 - Other cleaning up and streamlining around the files.
 - Bug fixes:
-  - Edit box is slightly misaligned.
   - Horizontal select legend is not showing properly.
 
 ## Ideas for later
