@@ -7,43 +7,52 @@ This document outlines a maintainable directory layout tailored to the current c
 ```
 /
 ├── docs/
-│└── folder-structure.md
+│   └── folder-structure.md
 ├── public/
-│├── index.html
-│└── style.css
+│   ├── index.html
+│   └── style.css
 ├── scripts/
-│├── app/
-││├── app.js
-││├── clipboard-codec.js
-││├── interactions.js
-││├── outcomes.js
-││├── selection.js
-││├── types.js
-││└── views.js
-│├── data/
-││├── column-kinds.js
-││├── constants.js
-││├── fs.js
-││├── variants/
-│││└── variants.js
-││└── utils.js
-│├── ui/
-││├── color-picker.js
-││├── drag.js
-││├── grid-keys.js
-││├── grid-mouse.js
-││├── menus.js
-││├── palette.js
-││└── rules.js
-││└── status.js
-│└── support/
-│├── assert.js
-│└── tests/
-│├── tests-ui.js
-│└── tests.js
+│   ├── app/
+│   │   ├── app.js
+│   │   ├── clipboard-codec.js
+│   │   ├── interactions.js
+│   │   ├── outcomes.js
+│   │   ├── selection.js
+│   │   ├── types.js
+│   │   └── views.js
+│   ├── data/
+│   │   ├── column-kinds.js
+│   │   ├── constants.js
+│   │   ├── fs.js
+│   │   ├── variants/
+│   │   │   └── variants.js
+│   │   └── utils.js
+│   ├── ui/
+│   │   ├── color-picker.js
+│   │   ├── drag.js
+│   │   ├── grid-keys.js
+│   │   ├── grid-mouse.js
+│   │   ├── menus.js
+│   │   ├── palette.js
+│   │   ├── rules.js
+│   │   └── status.js
+│   └── support/
+│       ├── assert.js
+│       └── tests/
+│           ├── specs/
+│           │   ├── assertions.js
+│           │   ├── interactions.js
+│           │   ├── model-fixtures.js
+│           │   ├── model-variants.js
+│           │   └── ui-grid-mouse.js
+│           ├── tests-ui.js
+│           └── tests.js
+├── tests/
+│   └── node.test.js
 ├── README.md
+├── package.json
 ├── run.bat
-└── package.json (future build tooling)
+└── prettierrc.json
 ```
 
 ## Folder breakdown
@@ -84,8 +93,19 @@ This document outlines a maintainable directory layout tailored to the current c
 #### `scripts/support/`
 
 - Offer a home for cross-cutting helpers that are not part of the runtime app bundle, such as lightweight test harnesses.
-- Nest `tests/` underneath to separate reusable assertions (`assert.js`) from actual test suites (`tests.js`, `tests-ui.js`).
+- The `tests/` subtree now keeps reusable spec modules (`specs/`) separate from browser runners (`tests.js`, `tests-ui.js`), ensuring Node and in-app harnesses share the same assertions and fixtures.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.
+
+### `tests/`
+
+- Node's built-in test runner (`node --test`) looks here for CLI-driven specs; `node.test.js` wires the shared suites into the command line workflow.
+- Additional CLI-focused helpers (fixtures, mocks) can live alongside the entrypoint as they evolve.
+
+### Root files
+
+- `package.json` enables the automated test script (`npm test`) and flags the project as an ES module environment.
+- `prettierrc.json` carries formatting conventions; use the provided scripts (`run.bat`, `format.bat`) as convenience wrappers when working on Windows.
+- `README.md` continues to document the project overview, setup steps, and known gaps.
 
 ## Transition tips
 
