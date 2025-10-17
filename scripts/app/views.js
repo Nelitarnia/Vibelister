@@ -10,7 +10,8 @@ export const VIEWS = {
     columns: [
       { key: "name", title: "Action Name", width: 240, kind: "text" },
       { key: "phases", title: "Phases", width: 220, kind: "phases" },
-      { key: "color", title: "Color", width: 60, kind: "color" },
+      { key: "color", title: "Color 1", width: 60, kind: "color" },
+      { key: "color2", title: "Color 2", width: 60, kind: "color" },
       { key: "notes", title: "Other Notes", width: 480, kind: "text" },
     ],
   },
@@ -19,7 +20,8 @@ export const VIEWS = {
     title: "Inputs",
     columns: [
       { key: "name", title: "Input Name", width: 240, kind: "text" },
-      { key: "color", title: "Color", width: 60, kind: "color" },
+      { key: "color", title: "Color 1", width: 60, kind: "color" },
+      { key: "color2", title: "Color 2", width: 60, kind: "color" },
       { key: "notes", title: "Other Notes", width: 480, kind: "text" },
     ],
   },
@@ -28,7 +30,8 @@ export const VIEWS = {
     title: "Modifiers",
     columns: [
       { key: "name", title: "Modifier Name", width: 240, kind: "text" },
-      { key: "color", title: "Color", width: 60, kind: "color" },
+      { key: "color", title: "Color 1", width: 60, kind: "color" },
+      { key: "color2", title: "Color 2", width: 60, kind: "color" },
       { key: "notes", title: "Notes", width: 480, kind: "text" },
     ],
   },
@@ -37,7 +40,8 @@ export const VIEWS = {
     title: "Outcomes",
     columns: [
       { key: "name", title: "Outcome Name", width: 240, kind: "text" },
-      { key: "color", title: "Color", width: 60, kind: "color" },
+      { key: "color", title: "Color 1", width: 60, kind: "color" },
+      { key: "color2", title: "Color 2", width: 60, kind: "color" },
       { key: "mirrored", title: "Mirrored?", width: 80, kind: "checkbox" },
       {
         key: "dualof",
@@ -87,7 +91,8 @@ export function rebuildActionColumnsFromModifiers(model) {
   const left = [
     { key: "name", title: "Action Name", width: 240, kind: "text" },
     { key: "phases", title: "Phases", width: 220, kind: "phases" },
-    { key: "color", title: "Color", width: 60, kind: "color" },
+    { key: "color", title: "Color 1", width: 60, kind: "color" },
+    { key: "color2", title: "Color 2", width: 60, kind: "color" },
   ];
   const mods = (model.modifiers || [])
     .filter((m) => (m.name || "").trim())
