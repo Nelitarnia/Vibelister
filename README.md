@@ -88,7 +88,6 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 
 ## Ideas for later
 
-- Have colors render on different parts of the sheet.
 - Undo/redo.
 - Column resizing.
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
