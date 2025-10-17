@@ -3,7 +3,10 @@
 
 import {
   MIME_CELL,
+  MIME_RANGE,
+  readRangeFromEvent,
   readStructuredFromEvent,
+  writeRangeToEvent,
   writeStructuredToEvent,
 } from "../app/clipboard-codec.js";
 
@@ -278,48 +281,191 @@ export function initGridKeys(deps) {
     return cd && cd.key;
   }
 
+  function getSelectedRowsList() {
+    if (selection && selection.rows && selection.rows.size) {
+      return Array.from(selection.rows).sort((a, b) => a - b);
+    }
+    return [sel.r];
+  }
+
+  function getSelectedColsList() {
+    const cols = (viewDef() && viewDef().columns) || [];
+    if (selection && selection.cols && selection.cols.size) {
+      return Array.from(selection.cols).sort((a, b) => a - b);
+    }
+    if (selection && selection.colsAll) {
+      return cols.map((_, idx) => idx);
+    }
+    return [sel.c];
+  }
+
+  function gatherSelectionData(rows, cols) {
+    const vd = viewDef();
+    const colDefs = (vd && vd.columns) || [];
+    const out = [];
+    let hasStructured = false;
+    for (const r of rows) {
+      const row = [];
+      for (const c of cols) {
+        const col = colDefs[c];
+        const text =
+          typeof getCellText === "function"
+            ? String(getCellText(r, c) ?? "")
+            : "";
+        const structured =
+          typeof getStructuredCell === "function"
+            ? getStructuredCell(r, c)
+            : null;
+        if (structured) hasStructured = true;
+        row.push({
+          text,
+          structured,
+          colKey: col && Object.prototype.hasOwnProperty.call(col, "key")
+            ? col.key
+            : null,
+          colKind: col && Object.prototype.hasOwnProperty.call(col, "kind")
+            ? col.kind
+            : null,
+        });
+      }
+      out.push(row);
+    }
+    return { cells: out, hasStructured };
+  }
+
+  function buildPlainTextFromCells(cells) {
+    return cells
+      .map((row) => row.map((cell) => cell.text ?? "").join("\t"))
+      .join("\n");
+  }
+
+  function makeRangePayloadFromCells(cols, cells) {
+    const vd = viewDef();
+    const colDefs = (vd && vd.columns) || [];
+    const activeView = typeof getActiveView === "function" ? getActiveView() : null;
+    return {
+      view: activeView,
+      columns: cols.map((idx) => {
+        const col = colDefs[idx];
+        return {
+          key: col && Object.prototype.hasOwnProperty.call(col, "key")
+            ? col.key
+            : null,
+          kind:
+            col && Object.prototype.hasOwnProperty.call(col, "kind")
+              ? col.kind
+              : null,
+        };
+      }),
+      cells: cells.map((row) =>
+        row.map((cell) => {
+          const payload = {};
+          if (cell.colKey != null) payload.colKey = cell.colKey;
+          if (cell.colKind != null) payload.colKind = cell.colKind;
+          if (cell.structured) payload.structured = cell.structured;
+          return payload;
+        }),
+      ),
+    };
+  }
+
+  function parsePlainTextMatrix(txt) {
+    const normalized = String(txt || "").replace(/\r\n?/g, "\n");
+    const parts = normalized.split("\n");
+    if (parts.length > 1 && parts[parts.length - 1] === "") parts.pop();
+    const rows = parts.length ? parts : ["" /* ensure at least one row */];
+    return rows.map((row) => row.split("\t"));
+  }
+
+  function computeDestinationIndices(options) {
+    const {
+      sourceCount,
+      selectionSet,
+      anchor,
+      limit,
+      allFlag = false,
+      fullRange = null,
+    } = options;
+    if (!Number.isFinite(sourceCount) || sourceCount <= 0) return [];
+    const last = Math.max(0, (limit || 0) - 1);
+    if (allFlag && Array.isArray(fullRange) && fullRange.length) {
+      const out = [];
+      for (let i = 0; i < sourceCount && i < fullRange.length; i++) {
+        const idx = fullRange[i];
+        if (Number.isFinite(idx) && idx <= last) out.push(idx);
+      }
+      return out;
+    }
+    const sorted =
+      selectionSet && selectionSet.size
+        ? Array.from(selectionSet).sort((a, b) => a - b)
+        : null;
+    if (sorted && sorted.length >= sourceCount) {
+      const out = [];
+      for (let i = 0; i < sourceCount; i++) {
+        const idx = sorted[i];
+        if (Number.isFinite(idx) && idx <= last) out.push(idx);
+      }
+      return out;
+    }
+    const start = sorted && sorted.length ? sorted[0] : anchor;
+    const out = [];
+    const base = Number.isFinite(start) ? start : 0;
+    for (let i = 0; i < sourceCount; i++) {
+      const idx = base + i;
+      if (idx > last) break;
+      if (idx >= 0) out.push(idx);
+    }
+    return out;
+  }
+
+  function columnsCompatible(meta, col) {
+    if (!meta || !col) return false;
+    if (meta.colKey != null && col.key != null && String(meta.colKey) === String(col.key))
+      return true;
+    if (
+      meta.colKind != null &&
+      col.kind != null &&
+      String(meta.colKind) === String(col.kind)
+    )
+      return true;
+    return !meta.colKey && !meta.colKind;
+  }
+
   function onCopy(e) {
     if (document.querySelector('[aria-modal="true"]')) return;
     const ae = document.activeElement;
     if (isTypingInEditable(ae)) return;
     if (gridIsEditing()) return;
 
-    // Always put plain text
-    const text =
-      typeof getCellText === "function"
-        ? String(getCellText(sel.r, sel.c) || "")
-        : "";
+    const rows = getSelectedRowsList();
+    const cols = getSelectedColsList();
+    const { cells, hasStructured } = gatherSelectionData(rows, cols);
+    const text = buildPlainTextFromCells(cells);
     e.preventDefault();
     try {
       e.clipboardData.setData("text/plain", text);
     } catch {}
 
-    // If the cell has a structured payload, add it via codec
-    if (typeof getStructuredCell === "function") {
-      const payload = getStructuredCell(sel.r, sel.c);
-      console.debug(
-        "[copy] types before:",
-        Array.from(e.clipboardData.types || []),
-      );
-      if (writeStructuredToEvent(e, payload)) {
-        console.debug(
-          "[copy] wrote",
-          MIME_CELL,
-          "bytes=",
-          JSON.stringify(payload).length,
-          "payload=",
-          payload,
-        );
-      } else {
-        console.debug(
-          "[copy] no canonical structured payload for this cell; writing text/plain only",
-        );
-      }
-    } else {
-      console.debug(
-        "[copy] no canonical structured payload for this cell; writing text/plain only",
-      );
+    const rangePayload = makeRangePayloadFromCells(cols, cells);
+    const wroteRange = writeRangeToEvent(e, rangePayload);
+    if (hasStructured && rows.length === 1 && cols.length === 1) {
+      const structured = cells[0] && cells[0][0] ? cells[0][0].structured : null;
+      if (structured) writeStructuredToEvent(e, structured);
     }
+
+    console.debug(
+      "[copy] rows=",
+      rows,
+      "cols=",
+      cols,
+      "structured=",
+      hasStructured,
+      "rangeWritten=",
+      wroteRange,
+      "types after=",
+      Array.from(e.clipboardData.types || []),
+    );
   }
 
   function onPaste(e) {
@@ -329,46 +475,118 @@ export function initGridKeys(deps) {
 
     e.preventDefault();
 
-    const rows =
-      selection.rows.size > 1
-        ? Array.from(selection.rows).sort((a, b) => a - b)
-        : [sel.r];
+    const vd = viewDef();
+    const colDefs = (vd && vd.columns) || [];
+    const totalCols = colDefs.length;
+    const rowCount =
+      typeof getRowCount === "function" ? Number(getRowCount()) : null;
+    const rowLimit = Number.isFinite(rowCount) ? rowCount : null;
 
-    // Try structured first via codec (canonical wrapper only)
-    const types = Array.from(e.clipboardData.types || []);
-    console.debug("[paste] types:", types);
-    const payload = readStructuredFromEvent(e);
-    if (payload && typeof applyStructuredCell === "function") {
-      let applied = false;
-      for (const r of rows) {
-        if (applyStructuredCell(r, sel.c, payload)) applied = true;
-      }
-      console.debug(
-        "[paste] structured applied?",
-        applied,
-        "payload=",
-        payload,
-      );
-      if (applied) {
-        render();
-        return;
-      }
-    } else {
-      if (!payload)
-        console.debug(
-          "[paste] no structured payload present in clipboard under",
-          MIME_CELL,
-        );
-      else
-        console.debug(
-          "[paste] structured payload shape not canonical; falling back to text",
-        );
+    const rowsSel = getSelectedRowsList();
+    const colsSel = getSelectedColsList();
+    const rowAnchor = rowsSel.length ? rowsSel[0] : sel.r;
+    const colAnchor = colsSel.length ? colsSel[0] : sel.c;
+
+    const rangePayload = readRangeFromEvent(e);
+    const structuredCells = rangePayload ? rangePayload.cells || [] : [];
+    const structuredHeight = structuredCells.length;
+    const structuredWidth = structuredCells.reduce(
+      (max, row) => Math.max(max, row.length || 0),
+      0,
+    );
+
+    let payload = null;
+    if (!rangePayload) {
+      payload = readStructuredFromEvent(e);
     }
 
-    // Fallback: plain text into all rows
     const txt = e.clipboardData.getData("text/plain") || "";
-    for (const r of rows) setCell(r, sel.c, txt);
-    render();
+    const textMatrix = parsePlainTextMatrix(txt);
+    const textHeight = textMatrix.length;
+    const textWidth = textMatrix.reduce(
+      (max, row) => Math.max(max, row.length || 0),
+      0,
+    );
+
+    const sourceHeight = Math.max(structuredHeight, textHeight, 1);
+    const sourceWidth = Math.max(structuredWidth, textWidth, 1);
+
+    let destRows = computeDestinationIndices({
+      sourceCount: sourceHeight,
+      selectionSet: selection && selection.rows,
+      anchor: rowAnchor,
+      limit: rowLimit != null && rowLimit > 0 ? rowLimit : rowAnchor + sourceHeight,
+    });
+    if (!destRows.length) destRows.push(rowAnchor);
+    if (rowLimit != null) {
+      destRows = destRows.filter((r) => r < rowLimit);
+      if (!destRows.length)
+        destRows.push(Math.max(0, Math.min(rowAnchor, rowLimit - 1)));
+    }
+
+    let destCols = computeDestinationIndices({
+      sourceCount: sourceWidth,
+      selectionSet: selection && selection.cols,
+      anchor: colAnchor,
+      limit: totalCols > 0 ? totalCols : colAnchor + sourceWidth,
+      allFlag: selection && selection.colsAll,
+      fullRange: colDefs.map((_, idx) => idx),
+    });
+    if (!destCols.length) destCols.push(colAnchor);
+    if (totalCols > 0) {
+      destCols = destCols.filter((c) => c < totalCols);
+      if (!destCols.length)
+        destCols.push(Math.max(0, Math.min(colAnchor, totalCols - 1)));
+    }
+
+    console.debug(
+      "[paste] source size=",
+      { h: sourceHeight, w: sourceWidth },
+      "dest rows=",
+      destRows,
+      "dest cols=",
+      destCols,
+      "range?",
+      !!rangePayload,
+    );
+
+    let changed = false;
+
+    for (let i = 0; i < destRows.length; i++) {
+      const r = destRows[i];
+      if (!Number.isFinite(r) || r < 0) continue;
+      if (rowLimit != null && r >= rowLimit) continue;
+      const textRow = textMatrix[i] || [];
+      const structuredRow = structuredCells[i] || [];
+      for (let j = 0; j < destCols.length; j++) {
+        const c = destCols[j];
+        if (!Number.isFinite(c) || c < 0) continue;
+        if (totalCols > 0 && c >= totalCols) continue;
+
+        const textValue =
+          j < textRow.length ? String(textRow[j] ?? "") : "";
+        const meta = structuredRow[j] || null;
+
+        let applied = false;
+        if (meta && meta.structured && typeof applyStructuredCell === "function") {
+          const col = colDefs[c];
+          if (columnsCompatible(meta, col)) {
+            applied = !!applyStructuredCell(r, c, meta.structured);
+          }
+        } else if (payload && typeof applyStructuredCell === "function") {
+          applied = !!applyStructuredCell(r, c, payload);
+        }
+
+        if (!applied && typeof setCell === "function") {
+          setCell(r, c, textValue);
+          changed = true;
+        } else if (applied) {
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) render();
   }
 
   window.addEventListener("copy", onCopy, true);

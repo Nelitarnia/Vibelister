@@ -68,12 +68,20 @@ export function initGridMouse(deps) {
 
     // Selection logic (single or extended)
     if (e.shiftKey) {
-      const a = selection.anchor != null ? selection.anchor : sel.r;
+      const rowAnchor = selection.anchor != null ? selection.anchor : sel.r;
       selection.rows.clear();
-      const lo = Math.min(a, r),
-        hi = Math.max(a, r);
+      const lo = Math.min(rowAnchor, r),
+        hi = Math.max(rowAnchor, r);
       for (let i = lo; i <= hi; i++) selection.rows.add(i);
-      selection.anchor = a;
+      selection.anchor = rowAnchor;
+
+      const colAnchor =
+        typeof selection.colAnchor === "number" ? selection.colAnchor : sel.c;
+      if (selection.cols) selection.cols.clear();
+      const clo = Math.min(colAnchor, c),
+        chi = Math.max(colAnchor, c);
+      for (let i = clo; i <= chi; i++) selection.cols && selection.cols.add(i);
+      selection.colAnchor = colAnchor;
     } else {
       const clickInMulti = selection.rows.size > 1 && selection.rows.has(r);
       if (!clickInMulti) {
@@ -82,6 +90,11 @@ export function initGridMouse(deps) {
         selection.rows.add(r);
         selection.anchor = r;
       }
+      if (selection.cols) {
+        selection.cols.clear();
+        selection.cols.add(c);
+      }
+      selection.colAnchor = c;
     }
     sel.r = r;
     sel.c = c;

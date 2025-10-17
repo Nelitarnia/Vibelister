@@ -4,7 +4,9 @@
 export const Selection = {
   cell: { r: 0, c: 0 },
   anchor: null,
+  colAnchor: null,
   rows: new Set(),
+  cols: new Set(),
   colsAll: false,
 };
 export const sel = Selection.cell; // convenience alias {r,c}
@@ -28,7 +30,9 @@ function emit() {
 export const SelectionNS = {
   clear() {
     selection.rows.clear();
+    selection.cols.clear();
     selection.anchor = null;
+    selection.colAnchor = null;
     selection.colsAll = false;
     emit();
   },
@@ -37,6 +41,8 @@ export const SelectionNS = {
     selection.anchor = r;
     selection.rows.add(r);
     selection.colsAll = false;
+    selection.cols.clear();
+    selection.colAnchor = null;
     emit();
   },
   extendTo(r) {
@@ -47,6 +53,8 @@ export const SelectionNS = {
     for (let i = lo; i <= hi; i++) selection.rows.add(i);
     selection.anchor = a;
     selection.colsAll = false;
+    selection.cols.clear();
+    selection.colAnchor = null;
     emit();
   },
   isSelected(r) {
@@ -82,6 +90,9 @@ export const SelectionCtl = {
     sel.r = r;
     sel.c = c;
     SelectionNS.selectRow(r);
+    selection.cols.clear();
+    selection.cols.add(c);
+    selection.colAnchor = c;
     // SelectionNS.selectRow already emitted
   },
   extendRowsTo(r) {
@@ -96,6 +107,11 @@ export const SelectionCtl = {
   setActiveCell(r, c) {
     sel.r = r;
     sel.c = c;
+    if (!selection.colsAll && (!selection.cols || selection.cols.size <= 1)) {
+      selection.cols.clear();
+      selection.cols.add(c);
+      selection.colAnchor = c;
+    }
     emit();
   },
   armAllCols(v = true) {

@@ -48,13 +48,21 @@ function makeDeps() {
     rowHdrs,
     editor,
     sel: { r: 0, c: 0 },
-    selection: { rows: new Set(), anchor: null, colsAll: false },
+    selection: {
+      rows: new Set(),
+      cols: new Set(),
+      anchor: null,
+      colAnchor: null,
+      colsAll: false,
+    },
     SelectionNS: {
       selectRow(r) {
         deps.selection.rows.clear();
         deps.selection.rows.add(r);
         deps.selection.anchor = r;
         deps.selection.colsAll = false;
+        deps.selection.cols.clear();
+        deps.selection.colAnchor = null;
       },
       extendTo(r) {
         const anchor = deps.selection.anchor ?? deps.sel.r;
@@ -63,9 +71,12 @@ function makeDeps() {
           deps.selection.rows.add(i);
         }
         deps.selection.anchor = anchor;
+        deps.selection.cols.clear();
+        deps.selection.colAnchor = null;
       },
       setColsAll(v) {
         deps.selection.colsAll = !!v;
+        if (v) deps.selection.cols.clear();
       },
       isAllCols() {
         return deps.selection.colsAll;
