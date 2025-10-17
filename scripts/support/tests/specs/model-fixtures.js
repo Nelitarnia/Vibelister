@@ -13,25 +13,39 @@ export function makeModelFixture() {
   };
 
   function addAction(name, modSet = {}) {
-    const row = { id: model.nextId++, name, color: "", notes: "", modSet };
+    const row = {
+      id: model.nextId++,
+      name,
+      color: "",
+      color2: "",
+      notes: "",
+      modSet,
+    };
     model.actions.push(row);
     return row;
   }
 
   function addInput(name) {
-    const row = { id: model.nextId++, name, color: "", notes: "" };
+    const row = { id: model.nextId++, name, color: "", color2: "", notes: "" };
     model.inputs.push(row);
     return row;
   }
 
   function addModifier(name) {
-    const row = { id: model.nextId++, name, color: "", notes: "" };
+    const row = { id: model.nextId++, name, color: "", color2: "", notes: "" };
     model.modifiers.push(row);
     return row;
   }
 
   function addOutcome(name, extra = {}) {
-    const row = { id: model.nextId++, name, ...extra };
+    const row = {
+      id: model.nextId++,
+      name,
+      color: "",
+      color2: "",
+      notes: "",
+      ...extra,
+    };
     model.outcomes.push(row);
     return row;
   }

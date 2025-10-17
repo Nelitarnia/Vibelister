@@ -94,7 +94,7 @@ const model = {
 };
 
 function makeRow() {
-  return { id: model.nextId++, name: "", color: "", notes: "" };
+  return { id: model.nextId++, name: "", color: "", color2: "", notes: "" };
 }
 
 let activeView = "actions";
@@ -774,6 +774,176 @@ const disposeDrag = initRowDrag({
     activeView === "outcomes",
 });
 
+const DEFAULT_CELL_TEXT_COLOR = "#e6e6e6";
+
+function normalizeColorValue(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return trimmed;
+}
+
+function parseHexColor(value) {
+  const s = normalizeColorValue(value);
+  if (!s || s[0] !== "#") return null;
+  const hex = s.slice(1);
+  if (hex.length !== 3 && hex.length !== 6) return null;
+  const expand =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((ch) => ch + ch)
+          .join("")
+      : hex;
+  const r = parseInt(expand.slice(0, 2), 16);
+  const g = parseInt(expand.slice(2, 4), 16);
+  const b = parseInt(expand.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+  return [r, g, b];
+}
+
+function channelToLinear(c) {
+  const s = c / 255;
+  if (s <= 0.03928) return s / 12.92;
+  return Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+function autoTextColor(background, fallback = DEFAULT_CELL_TEXT_COLOR) {
+  const rgb = parseHexColor(background);
+  if (!rgb) return fallback;
+  const [r, g, b] = rgb;
+  const L =
+    0.2126 * channelToLinear(r) +
+    0.7152 * channelToLinear(g) +
+    0.0722 * channelToLinear(b);
+  return L > 0.5 ? "#000000" : "#ffffff";
+}
+
+function getEntityCollection(entity) {
+  const key = String(entity || "").toLowerCase();
+  if (key === "action") return model.actions || [];
+  if (key === "input") return model.inputs || [];
+  if (key === "modifier") return model.modifiers || [];
+  if (key === "outcome") return model.outcomes || [];
+  return null;
+}
+
+function getEntityColorsFromRow(row) {
+  if (!row || typeof row !== "object") return null;
+  const bg = normalizeColorValue(row.color || row.color1 || "");
+  const rawFg = normalizeColorValue(row.color2 || row.fontColor || "");
+  const info = {};
+  if (bg) info.background = bg;
+  if (rawFg) info.foreground = rawFg;
+  if (bg && !rawFg) info.foreground = autoTextColor(bg, DEFAULT_CELL_TEXT_COLOR);
+  return Object.keys(info).length ? info : null;
+}
+
+function getEntityColors(entity, id) {
+  if (id == null) return null;
+  const arr = getEntityCollection(entity);
+  if (!arr || !arr.length) return null;
+  const numId = Number(id);
+  if (!Number.isFinite(numId)) return null;
+  const row = arr.find((x) => (x?.id | 0) === (numId | 0));
+  if (!row) return null;
+  return getEntityColorsFromRow(row);
+}
+
+function computeColorPreviewForColorColumn(row, key) {
+  if (!row || typeof row !== "object") return null;
+  const value = normalizeColorValue(row[key]);
+  if (!value) return null;
+  const info = { title: value };
+  if (String(key) === "color2") {
+    info.foreground = value;
+    const baseBg = normalizeColorValue(row.color);
+    if (baseBg) info.background = baseBg;
+  } else {
+    info.background = value;
+    const textColor = normalizeColorValue(row.color2);
+    info.foreground = textColor || autoTextColor(value, DEFAULT_CELL_TEXT_COLOR);
+    info.textOverride = "";
+  }
+  return info;
+}
+
+function computeCellColors(r, c, col, row) {
+  if (!col) return null;
+  const kind = String(col.kind || "").toLowerCase();
+  if (kind === "color") {
+    if (activeView === "interactions") return null;
+    return computeColorPreviewForColorColumn(row, col.key);
+  }
+
+  if (activeView === "interactions") {
+    const pair = model.interactionsPairs?.[r];
+    if (!pair) return null;
+
+    if (kind === "refro" || kind === "refpick") {
+      const entityKey = String(col.entity || "").toLowerCase();
+      let id = null;
+      if (entityKey === "action") {
+        const keyL = String(col.key || "").toLowerCase();
+        if (keyL === "rhsaction" || keyL === "rhsactionid" || keyL === "rhsactionname")
+          id = pair.rhsActionId;
+        else id = pair.aId;
+      } else if (entityKey === "input") {
+        id = pair.iId;
+      }
+      if (id == null) return null;
+      return getEntityColors(col.entity, id);
+    }
+
+    if (kind === "interactions") {
+      const pk = parsePhaseKey(col.key);
+      if (!pk) return null;
+      const note = model.notes?.[noteKeyForPair(pair, pk.p)] || {};
+      if (pk.field === "outcome") {
+        const info = getEntityColors("outcome", note.outcomeId);
+        return info || null;
+      }
+      if (pk.field === "end") {
+        const info = getEntityColors("action", note.endActionId);
+        return info || null;
+      }
+      return null;
+    }
+
+    return null;
+  }
+
+  if (isModColumn(col)) {
+    const modId = modIdFromKey(col.key);
+    if (!Number.isFinite(modId)) return null;
+    return getEntityColors("modifier", modId);
+  }
+
+  if (kind === "refro" || kind === "refpick") {
+    const id = row?.[col.key];
+    return getEntityColors(col.entity, id);
+  }
+
+  return null;
+}
+
+function applyCellColors(el, info) {
+  if (!info) {
+    el.style.background = "";
+    el.style.color = "";
+    return;
+  }
+  if (Object.prototype.hasOwnProperty.call(info, "background")) {
+    el.style.background = info.background || "";
+  } else {
+    el.style.background = "";
+  }
+  if (Object.prototype.hasOwnProperty.call(info, "foreground")) {
+    el.style.color = info.foreground || "";
+  } else {
+    el.style.color = "";
+  }
+}
+
 function render() {
   const s = perViewState[activeView];
   if (s) {
@@ -862,9 +1032,11 @@ function render() {
     if (d.style.display !== "none") d.style.display = "none";
   }
 
+  const rows = activeView === "interactions" ? null : dataArray();
   let k = 0;
   for (let r = vr.start; r <= vr.end; r++) {
     const top = r * ROW_HEIGHT;
+    const row = rows ? rows[r] : null;
     for (let c = vc.start; c <= vc.end; c++) {
       const left = offs[c],
         w = widths[c];
@@ -877,6 +1049,12 @@ function render() {
       d.dataset.r = r;
       d.dataset.c = c;
       d.textContent = getCell(r, c);
+      const col = cols[c];
+      const colorInfo = computeCellColors(r, c, col, row);
+      if (colorInfo && Object.prototype.hasOwnProperty.call(colorInfo, "textOverride"))
+        d.textContent = colorInfo.textOverride;
+      applyCellColors(d, colorInfo);
+      d.title = colorInfo && colorInfo.title ? colorInfo.title : "";
       if (r % 2 === 1) d.classList.add("alt");
       else d.classList.remove("alt");
       if (r === sel.r && c === sel.c) d.classList.add("selected");
@@ -1330,7 +1508,13 @@ function ensureSeedRows() {
   // Seed outcomes only if empty, using the user's canonical list
   if (!model.outcomes || !model.outcomes.length) {
     for (const name of DEFAULT_OUTCOMES) {
-      model.outcomes.push({ id: model.nextId++, name, color: "", notes: "" });
+      model.outcomes.push({
+        id: model.nextId++,
+        name,
+        color: "",
+        color2: "",
+        notes: "",
+      });
     }
   }
   ensureMinRows(model.outcomes, Math.max(DEFAULT_OUTCOMES.length + 10, 20));
