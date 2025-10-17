@@ -1,23 +1,49 @@
 // fs.js - Pogressive file IO (Chromium gets File System Access; others get input/download fallbacks)
 
 export const hasFS = !!(window.showOpenFilePicker && window.showSaveFilePicker);
-let lastHandle = null;
+const lastHandles = new Map();
+const DEFAULT_HANDLE_KEY = "project";
 
-export async function openJson() {
+function getHandle(key = DEFAULT_HANDLE_KEY) {
+  return lastHandles.get(key) || null;
+}
+
+function setHandle(key, handle) {
+  if (!key) return;
+  if (handle) lastHandles.set(key, handle);
+  else lastHandles.delete(key);
+}
+
+function getTypes(types) {
+  return (
+    types || [
+      { description: "JSON", accept: { "application/json": [".json"] } },
+    ]
+  );
+}
+
+export async function openJson(options = {}) {
+  const {
+    handleKey = DEFAULT_HANDLE_KEY,
+    types = null,
+    accept,
+    excludeAcceptAllOption = false,
+    multiple = false,
+  } = options;
   if (hasFS) {
     const [h] = await showOpenFilePicker({
-      types: [
-        { description: "JSON", accept: { "application/json": [".json"] } },
-      ],
-      excludeAcceptAllOption: false,
-      multiple: false,
+      types: getTypes(types),
+      excludeAcceptAllOption,
+      multiple,
     });
     const file = await h.getFile();
     const text = await file.text();
-    lastHandle = h;
+    setHandle(handleKey, h);
     return { data: JSON.parse(text), name: file.name, handle: h };
   } else {
-    const file = await pickViaInput(".json,application/json");
+    const file = await pickViaInput(
+      accept || ".json,application/json",
+    );
     const text = await file.text();
     return { data: JSON.parse(text), name: file.name, handle: null };
   }
@@ -25,23 +51,28 @@ export async function openJson() {
 
 export async function saveJson(
   data,
-  { as = false, suggestedName = "project.json" } = {},
+  {
+    as = false,
+    suggestedName = "project.json",
+    handleKey = DEFAULT_HANDLE_KEY,
+    types = null,
+  } = {},
 ) {
   const text = JSON.stringify(data);
   if (hasFS) {
-    if (!lastHandle || as) {
-      lastHandle = await showSaveFilePicker({
+    let handle = getHandle(handleKey);
+    if (!handle || as) {
+      handle = await showSaveFilePicker({
         suggestedName,
-        types: [
-          { description: "JSON", accept: { "application/json": [".json"] } },
-        ],
+        types: getTypes(types),
       });
+      setHandle(handleKey, handle);
     }
-    const w = await lastHandle.createWritable();
+    const w = await handle.createWritable();
     await w.write(text);
     await w.close();
-    const file = await lastHandle.getFile();
-    return { name: file.name, handle: lastHandle };
+    const file = await handle.getFile();
+    return { name: file.name, handle };
   } else {
     downloadBlob(new Blob([text], { type: "application/json" }), suggestedName);
     return { name: suggestedName, handle: null };

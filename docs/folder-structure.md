@@ -35,6 +35,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── menus.js
 │   │   ├── palette.js
 │   │   ├── rules.js
+│   │   ├── settings.js
 │   │   └── status.js
 │   └── support/
 │       └── tests/
