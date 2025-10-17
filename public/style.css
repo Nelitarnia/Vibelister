@@ -8,6 +8,8 @@
   --vl-color-toolbar: #141822;
   --vl-color-text: #e6e6e6;
   --vl-color-accent: #273152;
+  --vl-color-cell: #11151f;
+  --vl-color-cell-alt: #121826;
 }
 * {
   box-sizing: border-box;
@@ -251,12 +253,12 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: #11151f;
+  background: var(--vl-color-cell);
   color: var(--vl-color-text);
   user-select: none;
 }
 .cell.alt {
-  background: #121826;
+  background: var(--vl-color-cell-alt);
 }
 .cell.selected {
   outline: 2px solid #81a1ff;

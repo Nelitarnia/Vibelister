@@ -79,6 +79,10 @@ export async function saveJson(
   }
 }
 
+export function forgetHandle(handleKey = DEFAULT_HANDLE_KEY) {
+  setHandle(handleKey, null);
+}
+
 // —— helpers ——
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);

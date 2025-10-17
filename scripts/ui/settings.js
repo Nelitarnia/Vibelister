@@ -6,6 +6,8 @@ const FALLBACK_DEFAULTS = {
     toolbar: "#141822",
     text: "#E6E6E6",
     accent: "#273152",
+    cell: "#11151F",
+    cellAlt: "#121826",
   },
 };
 
@@ -14,6 +16,8 @@ const COLOR_FIELDS = [
   { key: "toolbar", label: "Toolbar background" },
   { key: "text", label: "Primary text" },
   { key: "accent", label: "Accent color" },
+  { key: "cell", label: "Grid cell" },
+  { key: "cellAlt", label: "Alternate grid cell" },
 ];
 
 function clone(obj) {
@@ -48,7 +52,7 @@ function createOverlay() {
     "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;display:grid;place-items:center;padding:20px;";
   const box = document.createElement("div");
   box.style.cssText =
-    "width:min(720px,94vw);max-height:86vh;overflow:auto;background:#0f1320;border:1px solid #303854;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.45);padding:18px;";
+    "width:min(720px,94vw);max-height:86vh;overflow:hidden;background:#0f1320;border:1px solid #303854;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.45);padding:18px;display:flex;flex-direction:column;";
   ov.appendChild(box);
   return { ov, box };
 }
@@ -228,6 +232,10 @@ export async function openSettingsDialog(options = {}) {
           btn.style.width = "32px";
           btn.style.height = "32px";
           btn.style.fontSize = "18px";
+          btn.style.display = "inline-flex";
+          btn.style.alignItems = "center";
+          btn.style.justifyContent = "center";
+          btn.style.padding = "0";
           btn.onclick = close;
           return btn;
         })(),
@@ -263,7 +271,7 @@ export async function openSettingsDialog(options = {}) {
     "div",
     {
       style:
-        "display:flex;flex-direction:column;gap:16px;background:#10172a;border:1px solid #2d3756;border-radius:12px;padding:16px;",
+        "display:flex;flex-direction:column;gap:16px;background:#10172a;border:1px solid #2d3756;border-radius:12px;padding:16px;flex:1 1 auto;overflow:auto;",
     },
     [],
   );
