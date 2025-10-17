@@ -11,12 +11,17 @@ export function initMenus(deps) {
     doGenerate,
     runSelfTests,
     model, // for Rules dialog
+    openSettings,
   } = deps;
 
   const menus = {
     file: {
       trigger: document.getElementById(Ids.mFile),
       popup: document.getElementById(Ids.menuFile),
+    },
+    edit: {
+      trigger: document.getElementById(Ids.mEdit),
+      popup: document.getElementById(Ids.menuEdit),
     },
     tools: {
       trigger: document.getElementById(Ids.mTools),
@@ -50,7 +55,7 @@ export function initMenus(deps) {
   }
 
   // Open/close behavior
-  ["file", "tools", "view"].forEach((k) => {
+  ["file", "edit", "tools", "view"].forEach((k) => {
     menus[k].trigger?.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleMenu(k);
@@ -93,6 +98,14 @@ export function initMenus(deps) {
     closeAllMenus();
     saveToDisk(true);
   }); // export = Save As fallback
+
+  // Edit menu
+  el(Ids.editPreferences)?.addEventListener("click", async () => {
+    closeAllMenus();
+    if (typeof openSettings === "function") {
+      await openSettings();
+    }
+  });
 
   // Tools menu
   el(Ids.toolsGenerate)?.addEventListener("click", () => {

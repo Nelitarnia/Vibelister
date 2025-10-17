@@ -175,6 +175,187 @@ const sheet = document.getElementById("sheet"),
 const projectNameEl = document.getElementById(Ids.projectName);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
+const SETTINGS_STORAGE_KEY = "vl.userSettings";
+const SETTINGS_FILE_NAME = "vibelister-settings.json";
+const SETTINGS_FILE_KIND = "vibelister.settings";
+const SETTINGS_SCHEMA_VERSION = 1;
+const SETTINGS_COLOR_KEYS = [
+  "background",
+  "toolbar",
+  "text",
+  "accent",
+  "cell",
+  "cellAlt",
+];
+const DEFAULT_UI_SETTINGS = {
+  meta: { kind: SETTINGS_FILE_KIND, version: SETTINGS_SCHEMA_VERSION },
+  colors: {
+    background: "#0F1115",
+    toolbar: "#141822",
+    text: "#E6E6E6",
+    accent: "#273152",
+    cell: "#11151F",
+    cellAlt: "#121826",
+  },
+};
+
+function normalizeHexColor(raw, fallback) {
+  if (!raw) return fallback;
+  let s = String(raw).trim();
+  if (!s) return fallback;
+  if (s.startsWith("#")) s = s.slice(1);
+  s = s.replace(/[^0-9a-fA-F]/g, "");
+  if (s.length === 3) s = s.split("").map((ch) => ch + ch).join("");
+  if (s.length !== 6) return fallback;
+  return "#" + s.toUpperCase();
+}
+
+function sanitizeUiSettings(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const colors = src.colors && typeof src.colors === "object" ? src.colors : {};
+  const meta = src.meta && typeof src.meta === "object" ? src.meta : {};
+  const defaults = DEFAULT_UI_SETTINGS.colors;
+  return {
+    meta: {
+      kind: SETTINGS_FILE_KIND,
+      version: Number.isFinite(meta.version)
+        ? meta.version | 0
+        : SETTINGS_SCHEMA_VERSION,
+    },
+    colors: {
+      background: normalizeHexColor(colors.background, defaults.background),
+      toolbar: normalizeHexColor(colors.toolbar, defaults.toolbar),
+      text: normalizeHexColor(colors.text, defaults.text),
+      accent: normalizeHexColor(colors.accent, defaults.accent),
+      cell: normalizeHexColor(colors.cell, defaults.cell),
+      cellAlt: normalizeHexColor(colors.cellAlt, defaults.cellAlt),
+    },
+  };
+}
+
+function isLikelySettingsPayload(raw) {
+  if (!raw || typeof raw !== "object") return false;
+  if (raw.meta && typeof raw.meta === "object") {
+    if (raw.meta.kind === SETTINGS_FILE_KIND) return true;
+  }
+  const colors = raw.colors && typeof raw.colors === "object" ? raw.colors : null;
+  if (!colors) return false;
+  return SETTINGS_COLOR_KEYS.some((key) => typeof colors[key] === "string");
+}
+
+function cloneSettings(settings) {
+  return JSON.parse(JSON.stringify(settings || {}));
+}
+
+function applySanitizedSettings(settings) {
+  const root = document.documentElement;
+  if (!root) return;
+  const colors = (settings && settings.colors) || {};
+  root.style.setProperty("--vl-color-background", colors.background);
+  root.style.setProperty("--vl-color-toolbar", colors.toolbar);
+  root.style.setProperty("--vl-color-text", colors.text);
+  root.style.setProperty("--vl-color-accent", colors.accent);
+  root.style.setProperty("--vl-color-cell", colors.cell);
+  root.style.setProperty("--vl-color-cell-alt", colors.cellAlt);
+}
+
+function persistUserSettings(settings) {
+  try {
+    window.localStorage?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch (_) {}
+}
+
+function loadStoredSettings() {
+  try {
+    const raw = window.localStorage?.getItem(SETTINGS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return sanitizeUiSettings(parsed);
+    }
+  } catch (_) {}
+  return sanitizeUiSettings(DEFAULT_UI_SETTINGS);
+}
+
+function setUserSettings(next) {
+  const sanitized = sanitizeUiSettings(next);
+  applySanitizedSettings(sanitized);
+  persistUserSettings(sanitized);
+  return sanitized;
+}
+
+let userSettings = loadStoredSettings();
+applySanitizedSettings(userSettings);
+
+async function saveSettingsToDisk(settings, { as = false } = {}) {
+  const data = sanitizeUiSettings(settings || userSettings);
+  try {
+    const m = await import("../data/fs.js");
+    const { name } = await m.saveJson(data, {
+      as,
+      suggestedName: SETTINGS_FILE_NAME,
+      handleKey: "settings",
+    });
+    statusBar?.set(as ? `Settings saved as: ${name}` : `Settings saved: ${name}`);
+    return { name, data };
+  } catch (e) {
+    if (e?.name === "AbortError") {
+      statusBar?.set("Settings save cancelled.");
+    } else {
+      statusBar?.set("Save settings failed: " + (e?.message || e));
+    }
+    return null;
+  }
+}
+
+async function loadSettingsFromDisk() {
+  try {
+    const m = await import("../data/fs.js");
+    const { data, name } = await m.openJson({ handleKey: "settings" });
+    if (!isLikelySettingsPayload(data)) {
+      m.forgetHandle?.("settings");
+      statusBar?.set("Not a valid settings file.");
+      return null;
+    }
+    userSettings = setUserSettings(data);
+    statusBar?.set(`Settings loaded: ${name}`);
+    return userSettings;
+  } catch (e) {
+    if (e?.name === "AbortError") {
+      statusBar?.set("Settings load cancelled.");
+    } else {
+      statusBar?.set("Load settings failed: " + (e?.message || e));
+    }
+    return null;
+  }
+}
+
+async function openSettingsDialog() {
+  try {
+    const mod = await import("../ui/settings.js");
+    await mod.openSettingsDialog({
+      settings: cloneSettings(userSettings),
+      defaults: sanitizeUiSettings(DEFAULT_UI_SETTINGS),
+      onApply(settings) {
+        userSettings = setUserSettings(settings);
+        return cloneSettings(userSettings);
+      },
+      onReset() {
+        userSettings = setUserSettings(DEFAULT_UI_SETTINGS);
+        return cloneSettings(userSettings);
+      },
+      onSave(settings, opts = {}) {
+        return saveSettingsToDisk(settings, opts);
+      },
+      onLoad: async () => {
+        const loaded = await loadSettingsFromDisk();
+        return loaded ? cloneSettings(loaded) : null;
+      },
+    });
+  } catch (e) {
+    statusBar?.set("Open settings failed: " + (e?.message || e));
+  }
+}
+
 function getCellRect(r, c) {
   const vd = viewDef();
   const cols = vd?.columns || [];
@@ -1310,6 +1491,7 @@ const menusAPI = initMenus({
   doGenerate,
   runSelfTests,
   model,
+  openSettings: openSettingsDialog,
 });
 
 // Save/Load/New

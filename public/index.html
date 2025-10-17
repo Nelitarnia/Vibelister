@@ -38,6 +38,25 @@
 
         <button
           class="menu-trigger"
+          id="m-edit"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          Edit ▾
+        </button>
+        <div
+          class="menu-popup"
+          id="menu-edit"
+          role="menu"
+          aria-labelledby="m-edit"
+        >
+          <button role="menuitem" class="menuitem" id="edit-preferences">
+            Preferences…
+          </button>
+        </div>
+
+        <button
+          class="menu-trigger"
           id="m-tools"
           aria-haspopup="true"
           aria-expanded="false"

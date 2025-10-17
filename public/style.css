@@ -4,6 +4,12 @@
   --grid-font:
     12px/1.2 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   --tab-h: 36px;
+  --vl-color-background: #0f1115;
+  --vl-color-toolbar: #141822;
+  --vl-color-text: #e6e6e6;
+  --vl-color-accent: #273152;
+  --vl-color-cell: #11151f;
+  --vl-color-cell-alt: #121826;
 }
 * {
   box-sizing: border-box;
@@ -12,8 +18,8 @@ html,
 body {
   height: 100%;
   margin: 0;
-  background: #0f1115;
-  color: #e6e6e6;
+  background: var(--vl-color-background);
+  color: var(--vl-color-text);
   font:
     14px/1.4 system-ui,
     Segoe UI,
@@ -28,7 +34,7 @@ body {
   gap: 8px;
   padding: 10px;
   border-bottom: 1px solid #2b2f3a;
-  background: #141822;
+  background: var(--vl-color-toolbar);
   position: sticky;
   top: 0;
   z-index: 5;
@@ -159,10 +165,10 @@ body {
     sans-serif;
 }
 .tab.active {
-  background: #273152;
+  background: var(--vl-color-accent);
   color: #fff;
-  border-color: #3a4a7d;
-  box-shadow: inset 0 0 0 1px #5164a8;
+  border-color: var(--vl-color-accent);
+  box-shadow: inset 0 0 0 1px var(--vl-color-accent);
 }
 
 .grid-wrap {
@@ -220,7 +226,7 @@ body {
   right: 0;
   bottom: 0;
   overflow: auto;
-  background: #0f1115;
+  background: var(--vl-color-background);
 }
 .spacer {
   position: relative;
@@ -247,12 +253,12 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: #11151f;
-  color: #e6e6e6;
+  background: var(--vl-color-cell);
+  color: var(--vl-color-text);
   user-select: none;
 }
 .cell.alt {
-  background: #121826;
+  background: var(--vl-color-cell-alt);
 }
 .cell.selected {
   outline: 2px solid #81a1ff;
@@ -333,8 +339,8 @@ body {
   cursor: pointer;
 }
 .menu-trigger[aria-expanded="true"] {
-  background: #273152;
-  border-color: #3a4a7d;
+  background: var(--vl-color-accent);
+  border-color: var(--vl-color-accent);
 }
 .menu-popup {
   position: absolute;
@@ -358,7 +364,7 @@ body {
   padding: 8px 10px;
   background: transparent;
   border: none;
-  color: #e6e6e6;
+  color: var(--vl-color-text);
   border-radius: 8px;
   cursor: pointer;
   font:
