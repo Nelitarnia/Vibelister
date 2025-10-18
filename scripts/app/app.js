@@ -61,6 +61,7 @@ import {
   ROW_HEIGHT,
   HEADER_HEIGHT,
 } from "../data/constants.js";
+import { makeRow, insertBlankRows } from "../data/rows.js";
 import {
   clamp,
   colWidths,
@@ -92,10 +93,6 @@ const model = {
   interactionsPairs: [],
   nextId: 1,
 };
-
-function makeRow() {
-  return { id: model.nextId++, name: "", color: "", color2: "", notes: "" };
-}
 
 let activeView = "actions";
 
@@ -716,9 +713,7 @@ function addRows(where) {
   let insertIndex = where === "above" ? minRow : maxRow + 1;
   insertIndex = Math.max(0, Math.min(insertIndex, arr.length));
 
-  const newRows = [];
-  for (let i = 0; i < count; i++) newRows.push(makeRow());
-  if (newRows.length) arr.splice(insertIndex, 0, ...newRows);
+  insertBlankRows(model, arr, insertIndex, count);
 
   if (activeView === "modifiers") {
     rebuildActionColumnsFromModifiers(model);
