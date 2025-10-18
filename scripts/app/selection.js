@@ -115,6 +115,10 @@ export const SelectionCtl = {
     emit();
   },
   armAllCols(v = true) {
+    if (v && selection.rows && selection.rows.size === 0) {
+      selection.rows.add(sel.r);
+      selection.anchor = sel.r;
+    }
     SelectionNS.setColsAll && SelectionNS.setColsAll(!!v);
   },
   clearAllColsFlag() {

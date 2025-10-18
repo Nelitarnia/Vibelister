@@ -68,6 +68,7 @@ export function initGridMouse(deps) {
 
     // Selection logic (single or extended)
     if (e.shiftKey) {
+      if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
       const rowAnchor = selection.anchor != null ? selection.anchor : sel.r;
       selection.rows.clear();
       const lo = Math.min(rowAnchor, r),
