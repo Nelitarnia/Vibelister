@@ -12,6 +12,8 @@ export function initMenus(deps) {
     runSelfTests,
     model, // for Rules dialog
     openSettings,
+    addRowsAbove,
+    addRowsBelow,
   } = deps;
 
   const menus = {
@@ -22,6 +24,10 @@ export function initMenus(deps) {
     edit: {
       trigger: document.getElementById(Ids.mEdit),
       popup: document.getElementById(Ids.menuEdit),
+    },
+    sheet: {
+      trigger: document.getElementById(Ids.mSheet),
+      popup: document.getElementById(Ids.menuSheet),
     },
     tools: {
       trigger: document.getElementById(Ids.mTools),
@@ -55,7 +61,7 @@ export function initMenus(deps) {
   }
 
   // Open/close behavior
-  ["file", "edit", "tools", "view"].forEach((k) => {
+  ["file", "edit", "sheet", "tools", "view"].forEach((k) => {
     menus[k].trigger?.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleMenu(k);
@@ -105,6 +111,16 @@ export function initMenus(deps) {
     if (typeof openSettings === "function") {
       await openSettings();
     }
+  });
+
+  // Sheet menu
+  el(Ids.sheetAddRowsAbove)?.addEventListener("click", () => {
+    closeAllMenus();
+    if (typeof addRowsAbove === "function") addRowsAbove();
+  });
+  el(Ids.sheetAddRowsBelow)?.addEventListener("click", () => {
+    closeAllMenus();
+    if (typeof addRowsBelow === "function") addRowsBelow();
   });
 
   // Tools menu

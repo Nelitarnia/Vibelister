@@ -686,6 +686,73 @@ function sanitizeModifierRulesAfterDeletion(deletedIds) {
   }
 }
 
+function addRows(where) {
+  if (activeView === "interactions") {
+    statusBar?.set("Row insertion is not available in Interactions view.");
+    return;
+  }
+
+  const arr = dataArray();
+  if (!arr) return;
+
+  const rows = selection.rows.size
+    ? Array.from(selection.rows).sort((a, b) => a - b)
+    : [Number.isFinite(sel.r) ? sel.r : 0];
+  const count = rows.length;
+  if (!count) return;
+
+  const normalized = rows
+    .map((r) => (Number.isFinite(r) ? r : 0))
+    .map((r) => (r < 0 ? 0 : r));
+  const minRow = normalized.reduce(
+    (min, r) => (r < min ? r : min),
+    normalized[0] ?? 0,
+  );
+  const maxRow = normalized.reduce(
+    (max, r) => (r > max ? r : max),
+    normalized[0] ?? 0,
+  );
+
+  let insertIndex = where === "above" ? minRow : maxRow + 1;
+  insertIndex = Math.max(0, Math.min(insertIndex, arr.length));
+
+  const newRows = [];
+  for (let i = 0; i < count; i++) newRows.push(makeRow());
+  if (newRows.length) arr.splice(insertIndex, 0, ...newRows);
+
+  if (activeView === "modifiers") {
+    rebuildActionColumnsFromModifiers(model);
+    invalidateViewDef();
+  }
+
+  rebuildInteractionsInPlace();
+  pruneNotesToValidPairs();
+
+  const cols = viewDef().columns || [];
+  const targetCol = cols.length
+    ? Math.max(0, Math.min(sel.c ?? 0, cols.length - 1))
+    : 0;
+
+  SelectionCtl.startSingle(insertIndex, targetCol);
+  if (count > 1) SelectionCtl.extendRowsTo(insertIndex + count - 1);
+  SelectionCtl.clearAllColsFlag?.();
+
+  layout();
+  render();
+
+  const noun = count === 1 ? "row" : "rows";
+  const whereWord = where === "above" ? "above" : "below";
+  statusBar?.set(`Inserted ${count} ${noun} ${whereWord} selection.`);
+}
+
+function addRowsAbove() {
+  addRows("above");
+}
+
+function addRowsBelow() {
+  addRows("below");
+}
+
 function deleteSelectedRows(options = {}) {
   if (activeView === "interactions") {
     const mode =
@@ -1510,6 +1577,8 @@ const menusAPI = initMenus({
   runSelfTests,
   model,
   openSettings: openSettingsDialog,
+  addRowsAbove,
+  addRowsBelow,
 });
 
 // Save/Load/New
