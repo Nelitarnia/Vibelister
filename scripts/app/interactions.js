@@ -429,6 +429,7 @@ export function clearInteractionsSelection(
   mode,
   status,
   render,
+  extras = {},
 ) {
   const rows = selection.rows.size
     ? Array.from(selection.rows).sort((a, b) => a - b)
@@ -522,8 +523,13 @@ export function clearInteractionsSelection(
   const clearedMsg = cleared
     ? `Cleared ${cleared} entr${cleared === 1 ? "y" : "ies"} in Interactions.`
     : "Nothing to clear.";
-  if (status?.set) status.set(clearedMsg);
-  else if (status) status.textContent = clearedMsg;
+  const hint =
+    extras && typeof extras.statusHint === "string"
+      ? extras.statusHint.trim()
+      : "";
+  const message = hint ? `${hint} ${clearedMsg}` : clearedMsg;
+  if (status?.set) status.set(message);
+  else if (status) status.textContent = message;
 }
 
 // Query: is a given Interactions cell editable?

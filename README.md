@@ -29,6 +29,8 @@ Download the files and use "run.bat". In most modern browsers, executing code di
 
 At its simplest, this is how you'd operate Vibelister: list different character states in the Action view. List different inputs in the Inputs view. Press "generate Interactions" to create a grid which lists Actions times Inputs to let you test each Input with each Action.
 
+Every row in the main sheets carries a stable ID behind the scenes. Clearing a cell (Backspace) keeps that ID in place so the row can be renamed or repurposed later, while deleting the row entirely (Delete) retires the ID and scrubs any modifier rules or interaction notes that referenced it. Use row deletion when you truly want to forget an entry; use clear cells when you just need to blank out values.
+
 ## Inputs
 
 List Inputs here. This is mostly self-explanatory, but in many games it is useful to list "external" triggers like hitting a damage wall, ledge or restarting as Inputs as well.

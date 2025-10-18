@@ -23,6 +23,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── data/
 │   │   ├── column-kinds.js
 │   │   ├── constants.js
+│   │   ├── deletion.js
 │   │   ├── fs.js
 │   │   ├── rows.js
 │   │   ├── variants/
@@ -42,6 +43,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │       └── tests/
 │           ├── specs/
 │           │   ├── assertions.js
+│           │   ├── deletion.js
 │           │   ├── interactions.js
 │           │   ├── model-fixtures.js
 │           │   ├── model-variants.js

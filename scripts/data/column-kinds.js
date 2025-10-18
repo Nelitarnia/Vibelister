@@ -59,6 +59,13 @@ export const ColumnKinds = {
       if (!row) return { handled: true }; // don't open editor on non-row views
       return { useEditor: true };
     },
+    clear({ row, col } = {}) {
+      if (!row || !col?.key) return false;
+      const before = row[col.key];
+      const hadValue = !(before == null || before === "");
+      if (hadValue) row[col.key] = "";
+      return hadValue;
+    },
   },
 
   checkbox: {
@@ -74,6 +81,12 @@ export const ColumnKinds = {
       if (!row) return { handled: true };
       row[col.key] = !row[col.key];
       return { handled: true };
+    },
+    clear({ row, col } = {}) {
+      if (!row || !col?.key) return false;
+      const wasTrue = !!row[col.key];
+      if (wasTrue || row[col.key] !== false) row[col.key] = false;
+      return wasTrue;
     },
   },
 
@@ -106,6 +119,18 @@ export const ColumnKinds = {
       this.set(ctx);
       return { handled: true };
     },
+    clear({ row, col } = {}) {
+      if (!row || !col) return false;
+      const id = Number(String(col.key).split(":")[1] || NaN);
+      if (!Number.isFinite(id)) return false;
+      if (!row.modSet || typeof row.modSet !== "object") return false;
+      if (Object.prototype.hasOwnProperty.call(row.modSet, id)) {
+        const before = row.modSet[id];
+        delete row.modSet[id];
+        return before !== undefined && before !== 0;
+      }
+      return false;
+    },
   },
 
   phases: {
@@ -117,6 +142,16 @@ export const ColumnKinds = {
     },
     beginEdit() {
       return { useEditor: true };
+    },
+    clear({ row, parsePhasesSpec } = {}) {
+      if (!row) return false;
+      const current = row.phases;
+      const hadIds = Array.isArray(current?.ids) && current.ids.length > 0;
+      const hadLabels = current?.labels && Object.keys(current.labels).length > 0;
+      row.phases = typeof parsePhasesSpec === "function"
+        ? parsePhasesSpec("")
+        : { ids: [], labels: {} };
+      return hadIds || hadLabels;
     },
   },
 
@@ -159,6 +194,12 @@ export const ColumnKinds = {
       }
       return false;
     },
+    clear({ row } = {}) {
+      if (!row) return false;
+      const hadValue = row.dualof != null;
+      if (hadValue) row.dualof = null;
+      return hadValue;
+    },
   },
 
   mirrored: {
@@ -199,6 +240,13 @@ export const ColumnKinds = {
         return { handled: true };
       }
       return { useEditor: true };
+    },
+    clear({ row, col } = {}) {
+      if (!row || !col?.key) return false;
+      const before = row[col.key];
+      const hadColor = typeof before === "string" && before.trim() !== "";
+      if (hadColor || before !== "") row[col.key] = "";
+      return hadColor;
     },
   },
 
@@ -310,6 +358,12 @@ export const ColumnKinds = {
       }
       return false;
     },
+    clear({ row, col } = {}) {
+      if (!row || !col?.key) return false;
+      const hadValue = row[col.key] != null;
+      if (hadValue) row[col.key] = null;
+      return hadValue;
+    },
   },
 
   // Interactions meta-kind: delegates to interactions.js helpers
@@ -385,4 +439,9 @@ export function applyStructuredForKind(kind, ctx, payload) {
 export function getStructuredForKind(kind, ctx) {
   const h = ColumnKinds[kind];
   return h?.getStructured ? h.getStructured(ctx) : null;
+}
+export function clearCellForKind(kind, ctx) {
+  const h = ColumnKinds[kind] || ColumnKinds.text;
+  if (typeof h.clear === "function") return !!h.clear(ctx);
+  return false;
 }

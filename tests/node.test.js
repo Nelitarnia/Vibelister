@@ -5,6 +5,7 @@ import { getModelVariantTests } from "../scripts/support/tests/specs/model-varia
 import { getInteractionsTests } from "../scripts/support/tests/specs/interactions.js";
 import { getUiGridMouseTests } from "../scripts/support/tests/specs/ui-grid-mouse.js";
 import { getRowInsertionTests } from "../scripts/support/tests/specs/rows.js";
+import { getDeletionTests } from "../scripts/support/tests/specs/deletion.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -22,4 +23,8 @@ for (const spec of getUiGridMouseTests()) {
 
 for (const spec of getRowInsertionTests()) {
   test(`Rows › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getDeletionTests()) {
+  test(`Deletion › ${spec.name}`, () => spec.run(sharedAssert));
 }
