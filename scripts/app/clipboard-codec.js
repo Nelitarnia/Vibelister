@@ -3,6 +3,7 @@
 
 // --- MIME ---------------------------------------------------------------
 export const MIME_CELL = "application/x-gridcell+json";
+export const MIME_RANGE = "application/x-gridrange+json";
 
 // --- Shape guards -------------------------------------------------------
 export function isCanonicalStructuredPayload(p) {
@@ -102,6 +103,79 @@ export function writeStructuredToEvent(evt, payload) {
     return true;
   } catch (_) {
     return false;
+  }
+}
+
+// --- Range clipboard helpers ---------------------------------------------
+function sanitizeRangeCell(cell) {
+  if (!cell || typeof cell !== "object") return {};
+  const out = {};
+  if (Object.prototype.hasOwnProperty.call(cell, "colKey")) {
+    const key = cell.colKey;
+    if (key != null) out.colKey = String(key);
+  }
+  if (Object.prototype.hasOwnProperty.call(cell, "colKind")) {
+    const kind = cell.colKind;
+    if (kind != null) out.colKind = String(kind);
+  }
+  if (Object.prototype.hasOwnProperty.call(cell, "structured")) {
+    const canon = canonicalizePayload(cell.structured);
+    if (canon) out.structured = canon;
+  }
+  return out;
+}
+
+export function sanitizeRangePayload(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  const rows = Array.isArray(payload.cells) ? payload.cells : null;
+  if (!rows || rows.length === 0) return null;
+  const cleanRows = [];
+  for (const row of rows) {
+    if (!Array.isArray(row)) return null;
+    cleanRows.push(row.map((cell) => sanitizeRangeCell(cell)));
+  }
+  const clean = {
+    version: 1,
+    cells: cleanRows,
+  };
+  if (typeof payload.view === "string") clean.view = payload.view;
+  if (Array.isArray(payload.columns)) {
+    clean.columns = payload.columns.map((col) => {
+      const out = {};
+      if (col && Object.prototype.hasOwnProperty.call(col, "key")) {
+        const key = col.key;
+        if (key != null) out.key = String(key);
+      }
+      if (col && Object.prototype.hasOwnProperty.call(col, "kind")) {
+        const kind = col.kind;
+        if (kind != null) out.kind = String(kind);
+      }
+      return out;
+    });
+  }
+  return clean;
+}
+
+export function writeRangeToEvent(evt, payload) {
+  const clean = sanitizeRangePayload(payload);
+  if (!clean) return false;
+  try {
+    const s = JSON.stringify(clean);
+    evt.clipboardData.setData(MIME_RANGE, s);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+export function readRangeFromEvent(evt) {
+  try {
+    const s = evt.clipboardData && evt.clipboardData.getData(MIME_RANGE);
+    if (!s) return null;
+    const p = JSON.parse(s);
+    return sanitizeRangePayload(p);
+  } catch (_) {
+    return null;
   }
 }
 

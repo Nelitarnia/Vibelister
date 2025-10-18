@@ -824,6 +824,7 @@ const disposeKeys = initGridKeys({
   getCellText: (r, c) => getCell(r, c),
   getStructuredCell,
   applyStructuredCell,
+  status: statusBar,
 });
 
 // Selection-aware setter so palette applies to all selected rows in Interactions
@@ -1238,6 +1239,22 @@ function render() {
       d.title = colorInfo && colorInfo.title ? colorInfo.title : "";
       if (r % 2 === 1) d.classList.add("alt");
       else d.classList.remove("alt");
+      const isMultiSelection =
+        (selection.rows && selection.rows.size > 1) ||
+        (selection.cols && selection.cols.size > 1) ||
+        !!selection.colsAll;
+      let inRange = false;
+      if (isMultiSelection) {
+        const inRow = selection.rows && selection.rows.has(r);
+        const inCol = selection.colsAll
+          ? true
+          : selection.cols && selection.cols.size
+            ? selection.cols.has(c)
+            : c === sel.c;
+        inRange = !!(inRow && inCol);
+      }
+      if (inRange) d.classList.add("range-selected");
+      else d.classList.remove("range-selected");
       if (r === sel.r && c === sel.c) d.classList.add("selected");
       else d.classList.remove("selected");
       d.style.opacity = "";
@@ -1367,8 +1384,9 @@ function moveSel(dr, dc, edit = false) {
   // Any keyboard navigation implies single-cell intent → disarm row-wide selection
   if (SelectionNS.setColsAll) SelectionNS.setColsAll(false);
   const maxC = viewDef().columns.length - 1;
-  sel.r = clamp(sel.r + dr, 0, getRowCount() - 1);
-  sel.c = clamp(sel.c + dc, 0, maxC);
+  const nextR = clamp(sel.r + dr, 0, getRowCount() - 1);
+  const nextC = clamp(sel.c + dc, 0, maxC);
+  SelectionCtl.startSingle(nextR, nextC);
   // Persist per-view row/col
   const s = perViewState[activeView];
   if (s) {

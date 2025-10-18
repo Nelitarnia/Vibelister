@@ -181,8 +181,17 @@ export const ColumnKinds = {
       return row?.[col.key] ?? "";
     },
     set({ row, col } = {}, v) {
-      if (!row) return;
-      row[col.key] = v ?? "";
+      if (!row || !col || !col.key) return;
+      if (v == null) {
+        row[col.key] = "";
+        return;
+      }
+      const raw = typeof v === "string" ? v.trim() : "";
+      if (!raw) {
+        row[col.key] = "";
+        return;
+      }
+      if (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw)) row[col.key] = raw;
     },
     beginEdit({ paletteAPI } = {}) {
       if (paletteAPI?.openColor) {
