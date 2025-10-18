@@ -32,6 +32,8 @@ export const Ids = Object.freeze({
   editPreferences: "edit-preferences",
   sheetAddRowsAbove: "sheet-add-rows-above",
   sheetAddRowsBelow: "sheet-add-rows-below",
+  sheetClearCells: "sheet-clear-cells",
+  sheetDeleteRows: "sheet-delete-rows",
   toolsGenerate: "tools-generate",
   toolsTests: "tools-tests",
   toolsRules: "tools-rules",

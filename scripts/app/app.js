@@ -19,6 +19,7 @@ import {
   beginEditForKind,
   applyStructuredForKind,
   getStructuredForKind,
+  clearCellForKind,
 } from "../data/column-kinds.js";
 import {
   VIEWS,
@@ -62,6 +63,7 @@ import {
   HEADER_HEIGHT,
 } from "../data/constants.js";
 import { makeRow, insertBlankRows } from "../data/rows.js";
+import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
 import {
   clamp,
   colWidths,
@@ -612,77 +614,6 @@ function pruneNotesToValidPairs() {
 }
 
 // Remove deleted modifier ids from groups/constraints; drop now-invalid rules.
-function sanitizeModifierRulesAfterDeletion(deletedIds) {
-  if (!deletedIds || !deletedIds.length) return;
-  const del = new Set(deletedIds);
-  // Groups (mutex etc.)
-  if (Array.isArray(model.modifierGroups)) {
-    model.modifierGroups = model.modifierGroups
-      .map((g) => {
-        const ids = Array.isArray(g.ids)
-          ? g.ids.filter((id) => !del.has(id))
-          : Array.isArray(g.members)
-            ? g.members.filter((id) => !del.has(id))
-            : [];
-        const ng = { ...g };
-        if ("ids" in g) ng.ids = ids;
-        if ("members" in g) ng.members = ids;
-        return ng;
-      })
-      .filter((g) => {
-        const ids = Array.isArray(g.ids)
-          ? g.ids
-          : Array.isArray(g.members)
-            ? g.members
-            : [];
-        return ids.length >= 2;
-      });
-  }
-  // Constraints (requires/forbids/etc.)
-  if (Array.isArray(model.modifierConstraints)) {
-    model.modifierConstraints = model.modifierConstraints
-      .map((c) => {
-        const nc = { ...c };
-        for (const k of Object.keys(nc)) {
-          const v = nc[k];
-          if (Array.isArray(v)) {
-            nc[k] = v.filter((x) => typeof x !== "number" || !del.has(x));
-          } else if (typeof v === "number" && del.has(v)) {
-            nc[k] = null;
-          } else if (v && typeof v === "object") {
-            const obj = { ...v };
-            for (const kk of Object.keys(obj)) {
-              const vv = obj[kk];
-              if (typeof vv === "number" && del.has(vv)) obj[kk] = null;
-              else if (Array.isArray(vv))
-                obj[kk] = vv.filter(
-                  (x) => typeof x !== "number" || !del.has(x),
-                );
-            }
-            nc[k] = obj;
-          }
-        }
-        return nc;
-      })
-      .filter((c) => {
-        // Keep constraints that still reference at least two distinct modifier ids
-        const a = c.aId ?? c.a ?? c.left ?? null;
-        const b = c.bId ?? c.b ?? c.right ?? null;
-        if (typeof a === "number" && typeof b === "number" && a !== b)
-          return true;
-        for (const k of Object.keys(c)) {
-          const v = c[k];
-          if (
-            Array.isArray(v) &&
-            v.filter((x) => typeof x === "number").length >= 2
-          )
-            return true;
-        }
-        return false;
-      });
-  }
-}
-
 function addRows(where) {
   if (activeView === "interactions") {
     statusBar?.set("Row insertion is not available in Interactions view.");
@@ -748,14 +679,19 @@ function addRowsBelow() {
   addRows("below");
 }
 
-function deleteSelectedRows(options = {}) {
+function clearSelectedCells(options = {}) {
+  const { mode: requestedMode, reason } = options || {};
+
   if (activeView === "interactions") {
     const mode =
-      options && options.mode
-        ? options.mode
-        : SelectionNS.isAllCols && SelectionNS.isAllCols()
-          ? "clearAllEditable"
-          : "clearActiveCell";
+      requestedMode ||
+      (SelectionNS.isAllCols && SelectionNS.isAllCols()
+        ? "clearAllEditable"
+        : "clearActiveCell");
+    const extras =
+      reason === "deleteAttempt" || reason === "menu"
+        ? { statusHint: "Interactions are generated; rows can't be deleted." }
+        : undefined;
     clearInteractionsSelection(
       model,
       viewDef(),
@@ -764,9 +700,77 @@ function deleteSelectedRows(options = {}) {
       mode,
       statusBar,
       render,
+      extras,
     );
     if (mode === "clearAllEditable" && SelectionNS.setColsAll)
       SelectionNS.setColsAll(false);
+    return;
+  }
+
+  const arr = dataArray();
+  if (!arr || !arr.length) {
+    if (statusBar?.set) statusBar.set("Nothing to clear.");
+    else if (statusBar) statusBar.textContent = "Nothing to clear.";
+    return;
+  }
+
+  const rows =
+    selection.rows.size > 0
+      ? Array.from(selection.rows).sort((a, b) => a - b)
+      : [sel.r];
+  const vd = viewDef();
+  let colsToClear;
+  if (selection.colsAll) colsToClear = vd.columns.map((_, idx) => idx);
+  else if (selection.cols && selection.cols.size)
+    colsToClear = Array.from(selection.cols).sort((a, b) => a - b);
+  else colsToClear = [sel.c];
+
+  colsToClear = colsToClear.filter(
+    (c) => Number.isFinite(c) && c >= 0 && c < vd.columns.length,
+  );
+
+  let cleared = 0;
+  for (const r of rows) {
+    if (!Number.isFinite(r) || r < 0 || r >= arr.length) continue;
+    const row = arr[r];
+    if (!row) continue;
+    for (const c of colsToClear) {
+      const col = vd.columns[c];
+      if (!col) continue;
+      let changed = false;
+      if (col.kind)
+        changed = clearCellForKind(col.kind, kindCtx({ r, c, col, row }));
+      else if (col.key) {
+        const before = row[col.key];
+        const hadValue = !(before == null || before === "");
+        if (hadValue) {
+          row[col.key] = "";
+          changed = true;
+        }
+      }
+      if (changed) cleared++;
+    }
+  }
+
+  if (cleared > 0) {
+    rebuildInteractionsInPlace();
+    pruneNotesToValidPairs();
+    render();
+    const noun = cleared === 1 ? "cell" : "cells";
+    if (statusBar?.set) statusBar.set(`Cleared ${cleared} ${noun}.`);
+    else if (statusBar) statusBar.textContent = `Cleared ${cleared} ${noun}.`;
+  } else if (statusBar) {
+    if (typeof statusBar.set === "function") statusBar.set("Nothing to clear.");
+    else statusBar.textContent = "Nothing to clear.";
+  }
+}
+
+function deleteSelectedRows(options = {}) {
+  if (activeView === "interactions") {
+    clearSelectedCells({
+      mode: options?.mode,
+      reason: options?.reason || "deleteAttempt",
+    });
     return;
   }
 
@@ -792,7 +796,7 @@ function deleteSelectedRows(options = {}) {
     }
     rebuildActionColumnsFromModifiers(model);
     invalidateViewDef();
-    sanitizeModifierRulesAfterDeletion(deletedIds);
+    sanitizeModifierRulesAfterDeletion(model, deletedIds);
   }
 
   // Recompute interactions and prune orphan notes
@@ -879,7 +883,8 @@ const disposeKeys = initGridKeys({
   newProject,
   doGenerate,
   runSelfTests,
-  deleteSelection: deleteSelectedRows,
+  deleteRows: deleteSelectedRows,
+  clearCells: clearSelectedCells,
 
   // clipboard helpers
   model,
@@ -1574,6 +1579,8 @@ const menusAPI = initMenus({
   openSettings: openSettingsDialog,
   addRowsAbove,
   addRowsBelow,
+  clearCells: () => clearSelectedCells({}),
+  deleteRows: () => deleteSelectedRows({ reason: "menu" }),
 });
 
 // Save/Load/New

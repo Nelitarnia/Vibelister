@@ -14,6 +14,8 @@ export function initMenus(deps) {
     openSettings,
     addRowsAbove,
     addRowsBelow,
+    clearCells,
+    deleteRows,
   } = deps;
 
   const menus = {
@@ -121,6 +123,14 @@ export function initMenus(deps) {
   el(Ids.sheetAddRowsBelow)?.addEventListener("click", () => {
     closeAllMenus();
     if (typeof addRowsBelow === "function") addRowsBelow();
+  });
+  el(Ids.sheetClearCells)?.addEventListener("click", () => {
+    closeAllMenus();
+    if (typeof clearCells === "function") clearCells();
+  });
+  el(Ids.sheetDeleteRows)?.addEventListener("click", () => {
+    closeAllMenus();
+    if (typeof deleteRows === "function") deleteRows();
   });
 
   // Tools menu

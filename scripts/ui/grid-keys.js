@@ -42,7 +42,8 @@ export function initGridKeys(deps) {
     doGenerate,
     runSelfTests,
     // deletion
-    deleteSelection,
+    deleteRows,
+    clearCells,
     // NEW: model & cell text getter for clipboard ops
     model,
     getCellText,
@@ -149,23 +150,35 @@ export function initGridKeys(deps) {
       return;
     }
 
-    // Global delete (when not editing a cell)
-    if (
-      !gridIsEditing() &&
-      (e.key === "Delete" ||
-        (e.key === "Backspace" && !e.metaKey && !e.ctrlKey && !e.altKey))
-    ) {
+    const isBackspace =
+      e.key === "Backspace" && !e.metaKey && !e.ctrlKey && !e.altKey;
+    const isDelete = e.key === "Delete";
+
+    if (!gridIsEditing() && isBackspace) {
       e.preventDefault();
-      if (typeof deleteSelection === "function") {
-        if (getActiveView && getActiveView() === "interactions") {
-          // Shift+Delete (or Shift+Backspace) → clear all editable cells in selection
-          // Delete → clear active editable column across selection
-          deleteSelection({
+      if (typeof clearCells === "function") {
+        const mode =
+          getActiveView && getActiveView() === "interactions"
+            ? e.shiftKey
+              ? "clearAllEditable"
+              : "clearActiveCell"
+            : undefined;
+        clearCells({ mode });
+      }
+      return;
+    }
+
+    if (!gridIsEditing() && isDelete) {
+      e.preventDefault();
+      if (getActiveView && getActiveView() === "interactions") {
+        if (typeof clearCells === "function") {
+          clearCells({
             mode: e.shiftKey ? "clearAllEditable" : "clearActiveCell",
+            reason: "deleteAttempt",
           });
-        } else {
-          deleteSelection();
         }
+      } else if (typeof deleteRows === "function") {
+        deleteRows();
       }
       return;
     }
