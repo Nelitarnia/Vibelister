@@ -48,7 +48,9 @@ This document outlines a maintainable directory layout tailored to the current c
 │           │   ├── model-fixtures.js
 │           │   ├── model-variants.js
 │           │   ├── rows.js
+│           │   ├── selection.js
 │           │   └── ui-grid-mouse.js
+│           │   └── ui-row-drag.js
 │           ├── tests-ui.js
 │           └── tests.js
 ├── tests/

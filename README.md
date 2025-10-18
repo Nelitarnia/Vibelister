@@ -85,8 +85,6 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 
 - The logic for adding Phase 0 (simultaneous testing) and Outcome mirroring was started but not completed at the present.
 - Other cleaning up and streamlining around the files.
-- Bug fixes:
-  - Horizontal select legend is not showing properly.
 
 ## Ideas for later
 
@@ -96,7 +94,6 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 - Ability to jump between elements with a stable ID as if they were links for faster navigation.
 - Predictive analysis to auto-fill cells (maybe one day in the future...)
   - Ability to create Action types or categories would likely help guide this feature.
-- More consistent delete functionality (it works differently in Interactions vs other views).
 - Write better instructions for the user, and add helpful tooltips.
 - Cover functionalities not currently covered by adding tests to the test suite.
 - ...And more!
