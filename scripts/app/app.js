@@ -374,6 +374,15 @@ function getCellRect(r, c) {
 
 let editing = false;
 let shiftPressed = false;
+let lastShiftTap = 0;
+const DOUBLE_SHIFT_WINDOW_MS = 350;
+
+function isEditableTarget(el) {
+  if (!el) return false;
+  const tag = (el.tagName || "").toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA") return true;
+  return !!el.isContentEditable;
+}
 
 // Global outside-click (capture) handler to commit the editor once per page load
 document.addEventListener(
@@ -397,9 +406,17 @@ document.addEventListener(
 document.addEventListener(
   "keydown",
   (e) => {
-    if (e.key === "Shift" && !shiftPressed) {
+    if (e.key === "Shift") {
+      const target = e.target;
+      const inEditable = isEditableTarget(target);
+      if (!shiftPressed && !editing && !inEditable) {
+        const now = Date.now();
+        if (lastShiftTap && now - lastShiftTap <= DOUBLE_SHIFT_WINDOW_MS) {
+          SelectionCtl.toggleHorizontalMode?.();
+          lastShiftTap = 0;
+        }
+      }
       shiftPressed = true;
-      SelectionCtl.armAllCols?.(true);
     }
   },
   true,
@@ -410,16 +427,17 @@ document.addEventListener(
   (e) => {
     if (e.key === "Shift") {
       shiftPressed = false;
-      SelectionCtl.clearAllColsFlag?.();
+      const target = e.target;
+      const inEditable = isEditableTarget(target);
+      lastShiftTap = !editing && !inEditable ? Date.now() : 0;
     }
   },
   true,
 );
 
 window.addEventListener("blur", () => {
-  if (!shiftPressed) return;
   shiftPressed = false;
-  SelectionCtl.clearAllColsFlag?.();
+  lastShiftTap = 0;
 });
 
 function dataArray() {
@@ -1560,13 +1578,13 @@ function moveSel(dr, dc, edit = false) {
   const nextR = clamp(sel.r + dr, 0, getRowCount() - 1);
   const nextC = clamp(sel.c + dc, 0, maxC);
   SelectionCtl.startSingle(nextR, nextC);
-  if (shiftPressed) SelectionCtl.armAllCols?.(true);
   // Persist per-view row/col
   const s = perViewState[activeView];
   if (s) {
     s.row = sel.r;
     s.col = sel.c;
   }
+  SelectionCtl.applyHorizontalMode?.();
   ensureVisible(sel.r, sel.c);
   render();
   if (edit) beginEdit(sel.r, sel.c);

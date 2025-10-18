@@ -138,7 +138,10 @@ export function initRowDrag(deps) {
 
     // Disarm row-wide horizontal selection (↔) if armed; this is a vertical intent
     if (SelectionNS && SelectionNS.setColsAll) SelectionNS.setColsAll(false);
-    else if (typeof selection?.colsAll !== "undefined")
+    else if (
+      typeof selection?.colsAll !== "undefined" &&
+      !selection?.horizontalMode
+    )
       selection.colsAll = false;
 
     // Normalize selection (works in *all* views, even when reordering is disabled)
