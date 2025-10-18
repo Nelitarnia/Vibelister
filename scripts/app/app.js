@@ -61,6 +61,7 @@ import {
   ROW_HEIGHT,
   HEADER_HEIGHT,
 } from "../data/constants.js";
+import { makeRow, insertBlankRows } from "../data/rows.js";
 import {
   clamp,
   colWidths,
@@ -92,10 +93,6 @@ const model = {
   interactionsPairs: [],
   nextId: 1,
 };
-
-function makeRow() {
-  return { id: model.nextId++, name: "", color: "", color2: "", notes: "" };
-}
 
 let activeView = "actions";
 
@@ -517,7 +514,7 @@ function setCell(r, c, v) {
 
   // Non-Interactions: ensure row exists
   const arr = dataArray();
-  while (arr.length <= r) arr.push(makeRow());
+  while (arr.length <= r) arr.push(makeRow(model));
   const row = arr[r];
 
   // Kind-backed columns
@@ -549,14 +546,14 @@ function setModForSelection(colIndex, target) {
   let next;
   {
     const r0 = sel.r;
-    while (arr.length <= r0) arr.push(makeRow());
+    while (arr.length <= r0) arr.push(makeRow(model));
     const row0 = arr[r0];
     if (!row0.modSet || typeof row0.modSet !== "object") row0.modSet = {};
     // If undefined → cycle; boolean → ON/OFF; number → clamp handled by kind
     next = target;
   }
   for (const r of rows) {
-    while (arr.length <= r) arr.push(makeRow());
+    while (arr.length <= r) arr.push(makeRow(model));
     const row = arr[r];
     if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
     setCellForKind(
@@ -684,6 +681,71 @@ function sanitizeModifierRulesAfterDeletion(deletedIds) {
         return false;
       });
   }
+}
+
+function addRows(where) {
+  if (activeView === "interactions") {
+    statusBar?.set("Row insertion is not available in Interactions view.");
+    return;
+  }
+
+  const arr = dataArray();
+  if (!arr) return;
+
+  const rows = selection.rows.size
+    ? Array.from(selection.rows).sort((a, b) => a - b)
+    : [Number.isFinite(sel.r) ? sel.r : 0];
+  const count = rows.length;
+  if (!count) return;
+
+  const normalized = rows
+    .map((r) => (Number.isFinite(r) ? r : 0))
+    .map((r) => (r < 0 ? 0 : r));
+  const minRow = normalized.reduce(
+    (min, r) => (r < min ? r : min),
+    normalized[0] ?? 0,
+  );
+  const maxRow = normalized.reduce(
+    (max, r) => (r > max ? r : max),
+    normalized[0] ?? 0,
+  );
+
+  let insertIndex = where === "above" ? minRow : maxRow + 1;
+  insertIndex = Math.max(0, Math.min(insertIndex, arr.length));
+
+  insertBlankRows(model, arr, insertIndex, count);
+
+  if (activeView === "modifiers") {
+    rebuildActionColumnsFromModifiers(model);
+    invalidateViewDef();
+  }
+
+  rebuildInteractionsInPlace();
+  pruneNotesToValidPairs();
+
+  const cols = viewDef().columns || [];
+  const targetCol = cols.length
+    ? Math.max(0, Math.min(sel.c ?? 0, cols.length - 1))
+    : 0;
+
+  SelectionCtl.startSingle(insertIndex, targetCol);
+  if (count > 1) SelectionCtl.extendRowsTo(insertIndex + count - 1);
+  SelectionCtl.clearAllColsFlag?.();
+
+  layout();
+  render();
+
+  const noun = count === 1 ? "row" : "rows";
+  const whereWord = where === "above" ? "above" : "below";
+  statusBar?.set(`Inserted ${count} ${noun} ${whereWord} selection.`);
+}
+
+function addRowsAbove() {
+  addRows("above");
+}
+
+function addRowsBelow() {
+  addRows("below");
 }
 
 function deleteSelectedRows(options = {}) {
@@ -1510,6 +1572,8 @@ const menusAPI = initMenus({
   runSelfTests,
   model,
   openSettings: openSettingsDialog,
+  addRowsAbove,
+  addRowsBelow,
 });
 
 // Save/Load/New
@@ -1698,7 +1762,7 @@ function upgradeModelInPlace(o) {
   o.meta.schema = SCHEMA_VERSION;
 }
 function ensureMinRows(arr, n) {
-  while (arr.length < n) arr.push(makeRow());
+  while (arr.length < n) arr.push(makeRow(model));
 }
 function ensureSeedRows() {
   const N = 20;

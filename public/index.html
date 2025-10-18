@@ -57,6 +57,36 @@
 
         <button
           class="menu-trigger"
+          id="m-sheet"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          Sheet ▾
+        </button>
+        <div
+          class="menu-popup"
+          id="menu-sheet"
+          role="menu"
+          aria-labelledby="m-sheet"
+        >
+          <button
+            role="menuitem"
+            class="menuitem"
+            id="sheet-add-rows-above"
+          >
+            Add rows above
+          </button>
+          <button
+            role="menuitem"
+            class="menuitem"
+            id="sheet-add-rows-below"
+          >
+            Add rows below
+          </button>
+        </div>
+
+        <button
+          class="menu-trigger"
           id="m-tools"
           aria-haspopup="true"
           aria-expanded="false"
