@@ -92,10 +92,9 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 - Column resizing.
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
 - Ability to jump between elements with a stable ID as if they were links for faster navigation.
-- Better selection capabilities (box selection, more consistent horizontal selection, copy-pasting in multiple cells at once).
 - Predictive analysis to auto-fill cells (maybe one day in the future...)
+- More consistent delete functionality (it works differently in Interactions vs other views).
   - Ability to create Action types or categories would likely help guide this feature.
-- Settings screen for customizing various things.
 - Write better instructions for the user, and add helpful tooltips.
 - Cover functionalities not currently covered by adding tests to the test suite.
 - ...And more!
