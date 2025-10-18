@@ -9,6 +9,7 @@ import {
   writeRangeToEvent,
   writeStructuredToEvent,
 } from "../app/clipboard-codec.js";
+import { isInteractionPhaseColumnActiveForRow } from "../app/interactions.js";
 
 export function initGridKeys(deps) {
   // (clipboard-enhanced)
@@ -459,6 +460,17 @@ export function initGridKeys(deps) {
     return rows.map((row) => row.split("\t"));
   }
 
+  function interactionsColumnActiveForRow(r, c) {
+    if (typeof getActiveView === "function" && getActiveView() !== "interactions")
+      return true;
+    try {
+      const vd = viewDef();
+      return isInteractionPhaseColumnActiveForRow(model, vd, r, c);
+    } catch {
+      return true;
+    }
+  }
+
   function computeDestinationIndices(options) {
     const {
       sourceCount,
@@ -607,19 +619,26 @@ export function initGridKeys(deps) {
         destRows.push(Math.max(0, Math.min(rowAnchor, rowLimit - 1)));
     }
 
+    const fullColumnRange = colDefs.map((_, idx) => idx);
     let destCols = computeDestinationIndices({
       sourceCount: sourceWidth,
       selectionSet: selection && selection.cols,
       anchor: colAnchor,
       limit: totalCols > 0 ? totalCols : colAnchor + sourceWidth,
       allFlag: selection && selection.colsAll,
-      fullRange: colDefs.map((_, idx) => idx),
+      fullRange: fullColumnRange,
     });
     if (!destCols.length) destCols.push(colAnchor);
     if (totalCols > 0) {
       destCols = destCols.filter((c) => c < totalCols);
       if (!destCols.length)
         destCols.push(Math.max(0, Math.min(colAnchor, totalCols - 1)));
+    }
+    if (selection && selection.colsAll) {
+      destCols = fullColumnRange.slice(
+        0,
+        totalCols > 0 ? totalCols : fullColumnRange.length,
+      );
     }
 
     console.debug(
@@ -642,16 +661,26 @@ export function initGridKeys(deps) {
       const r = destRows[i];
       if (!Number.isFinite(r) || r < 0) continue;
       if (rowLimit != null && r >= rowLimit) continue;
-      const textRow = textMatrix[i] || [];
-      const structuredRow = structuredCells[i] || [];
+      const textRow =
+        textMatrix[textHeight > 0 ? i % textHeight : 0] || [];
+      const structuredRow =
+        structuredCells[structuredHeight > 0 ? i % structuredHeight : 0] || [];
       for (let j = 0; j < destCols.length; j++) {
         const c = destCols[j];
         if (!Number.isFinite(c) || c < 0) continue;
         if (totalCols > 0 && c >= totalCols) continue;
+        if (selection && selection.colsAll && !interactionsColumnActiveForRow(r, c))
+          continue;
+        const textIndex = textWidth > 0 ? j % textWidth : 0;
+        const structuredIndex = structuredWidth > 0 ? j % structuredWidth : -1;
+        const textValue =
+          textWidth > 0 && textRow.length
+            ? String(textRow[textIndex] ?? "")
+            : "";
+        const meta =
+          structuredIndex >= 0 ? structuredRow[structuredIndex] || null : null;
         attemptedCells++;
 
-        const textValue = j < textRow.length ? String(textRow[j] ?? "") : "";
-        const meta = structuredRow[j] || null;
         const col = colDefs[c];
         const colIsColor = isColorKind(col);
         const normalizedText = colIsColor ? textValue.trim() : textValue;

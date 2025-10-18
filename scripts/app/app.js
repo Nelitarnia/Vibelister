@@ -50,6 +50,7 @@ import {
   getStructuredCellInteractions,
   applyStructuredCellInteractions,
   clearInteractionsSelection,
+  isInteractionPhaseColumnActiveForRow,
 } from "./interactions.js";
 import {
   UI,
@@ -372,6 +373,16 @@ function getCellRect(r, c) {
 }
 
 let editing = false;
+let shiftPressed = false;
+let lastShiftTap = 0;
+const DOUBLE_SHIFT_WINDOW_MS = 350;
+
+function isEditableTarget(el) {
+  if (!el) return false;
+  const tag = (el.tagName || "").toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA") return true;
+  return !!el.isContentEditable;
+}
 
 // Global outside-click (capture) handler to commit the editor once per page load
 document.addEventListener(
@@ -393,12 +404,41 @@ document.addEventListener(
 );
 
 document.addEventListener(
-  "keyup",
+  "keydown",
   (e) => {
-    if (e.key === "Shift") render();
+    if (e.key === "Shift") {
+      const target = e.target;
+      const inEditable = isEditableTarget(target);
+      if (!shiftPressed && !editing && !inEditable) {
+        const now = Date.now();
+        if (lastShiftTap && now - lastShiftTap <= DOUBLE_SHIFT_WINDOW_MS) {
+          SelectionCtl.toggleHorizontalMode?.();
+          lastShiftTap = 0;
+        }
+      }
+      shiftPressed = true;
+    }
   },
   true,
 );
+
+document.addEventListener(
+  "keyup",
+  (e) => {
+    if (e.key === "Shift") {
+      shiftPressed = false;
+      const target = e.target;
+      const inEditable = isEditableTarget(target);
+      lastShiftTap = !editing && !inEditable ? Date.now() : 0;
+    }
+  },
+  true,
+);
+
+window.addEventListener("blur", () => {
+  shiftPressed = false;
+  lastShiftTap = 0;
+});
 
 function dataArray() {
   if (activeView === "actions") return model.actions;
@@ -533,6 +573,55 @@ function setCell(r, c, v) {
 
   // Default assignment (defensive)
   if (col?.key) row[col.key] = v;
+}
+
+function cloneValueForAssignment(value) {
+  if (!value || typeof value !== "object") return value;
+  if (typeof structuredClone === "function") {
+    try {
+      return structuredClone(value);
+    } catch (_) {}
+  }
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    if (Array.isArray(value)) return value.slice();
+    return { ...value };
+  }
+}
+
+function columnsHorizontallyCompatible(sourceCol, targetCol, viewKey) {
+  if (!targetCol) return false;
+  if (sourceCol === targetCol) return true;
+  if (viewKey === "interactions") {
+    const sourcePk = parsePhaseKey(sourceCol?.key);
+    const targetPk = parsePhaseKey(targetCol?.key);
+    if (sourcePk && targetPk) return sourcePk.field === targetPk.field;
+    if (sourceCol?.key === "notes" && targetCol?.key === "notes") return true;
+    return false;
+  }
+  const sourceKind = sourceCol?.kind;
+  const targetKind = targetCol?.kind;
+  if (sourceKind && targetKind && String(sourceKind) === String(targetKind)) return true;
+  if (
+    sourceCol?.key != null &&
+    targetCol?.key != null &&
+    String(sourceCol.key) === String(targetCol.key)
+  )
+    return true;
+  return false;
+}
+
+function getHorizontalTargetColumns(colIndex) {
+  const vd = viewDef();
+  const cols = vd?.columns || [];
+  const sourceCol = cols[colIndex];
+  if (!sourceCol) return [];
+  const out = [];
+  for (let i = 0; i < cols.length; i++) {
+    if (columnsHorizontallyCompatible(sourceCol, cols[i], activeView)) out.push(i);
+  }
+  return out;
 }
 
 // Exact-set helper for modifier columns across a selection
@@ -737,6 +826,12 @@ function clearSelectedCells(options = {}) {
     for (const c of colsToClear) {
       const col = vd.columns[c];
       if (!col) continue;
+      if (
+        selection.colsAll &&
+        activeView === "interactions" &&
+        !isInteractionPhaseColumnActiveForRow(model, vd, r, c, col)
+      )
+        continue;
       let changed = false;
       if (col.kind)
         changed = clearCellForKind(col.kind, kindCtx({ r, c, col, row }));
@@ -898,28 +993,43 @@ const disposeKeys = initGridKeys({
 function setCellSelectionAware(r, c, v) {
   const rowsSet = selection.rows;
   const hasMultiSelection = rowsSet && rowsSet.size > 1 && rowsSet.has(r);
+  const vd = viewDef();
+  const col = vd?.columns?.[c];
+  const isColorColumn = String(col?.kind || "").toLowerCase() === "color";
+  const shouldSpreadDown =
+    hasMultiSelection &&
+    ((activeView === "interactions" && c === sel.c) || isColorColumn);
 
-  let shouldApplyToSelection = false;
+  const targetRows = shouldSpreadDown
+    ? Array.from(rowsSet).sort((a, b) => a - b)
+    : [r];
 
-  if (hasMultiSelection) {
-    if (activeView === "interactions" && c === sel.c) {
-      shouldApplyToSelection = true;
-    } else {
-      const vd = viewDef();
-      const col = vd?.columns?.[c];
-      const isColorColumn = String(col?.kind || "").toLowerCase() === "color";
-      if (isColorColumn) shouldApplyToSelection = true;
-    }
-  }
+  let targetCols = selection.colsAll
+    ? getHorizontalTargetColumns(c)
+    : [c];
+  if (!targetCols || !targetCols.length) targetCols = [c];
 
-  if (shouldApplyToSelection) {
-    const rows = Array.from(rowsSet).sort((a, b) => a - b);
-    for (const rr of rows) setCell(rr, c, v);
-    render();
+  const needsSpread = shouldSpreadDown || selection.colsAll;
+  if (!needsSpread) {
+    setCell(r, c, v);
     return;
   }
 
-  setCell(r, c, v);
+  for (const rr of targetRows) {
+    if (!Number.isFinite(rr)) continue;
+    for (const cc of targetCols) {
+      if (!Number.isFinite(cc)) continue;
+      if (!selection.colsAll && cc !== c) continue;
+      if (
+        selection.colsAll &&
+        activeView === "interactions" &&
+        !isInteractionPhaseColumnActiveForRow(model, vd, rr, cc)
+      )
+        continue;
+      setCell(rr, cc, cloneValueForAssignment(v));
+    }
+  }
+  render();
 }
 
 // Initialize palette (handles both Outcome and End cells)
@@ -1436,8 +1546,22 @@ function endEdit(commit = true) {
       selection.rows.size > 1
         ? Array.from(selection.rows).sort((a, b) => a - b)
         : [sel.r];
+    const vd = viewDef();
+    let targetCols = selection.colsAll
+      ? getHorizontalTargetColumns(sel.c)
+      : [sel.c];
+    if (!targetCols || !targetCols.length) targetCols = [sel.c];
     for (const r of rows) {
-      setCell(r, sel.c, val);
+      for (const cIdx of targetCols) {
+        if (!Number.isFinite(cIdx)) continue;
+        if (
+          selection.colsAll &&
+          activeView === "interactions" &&
+          !isInteractionPhaseColumnActiveForRow(model, vd, r, cIdx)
+        )
+          continue;
+        setCell(r, cIdx, cloneValueForAssignment(val));
+      }
     }
   }
   render();
@@ -1449,7 +1573,7 @@ function endEditIfOpen(commit = true) {
 }
 function moveSel(dr, dc, edit = false) {
   // Any keyboard navigation implies single-cell intent → disarm row-wide selection
-  if (SelectionNS.setColsAll) SelectionNS.setColsAll(false);
+  if (!shiftPressed && SelectionNS.setColsAll) SelectionNS.setColsAll(false);
   const maxC = viewDef().columns.length - 1;
   const nextR = clamp(sel.r + dr, 0, getRowCount() - 1);
   const nextC = clamp(sel.c + dc, 0, maxC);
@@ -1460,6 +1584,7 @@ function moveSel(dr, dc, edit = false) {
     s.row = sel.r;
     s.col = sel.c;
   }
+  SelectionCtl.applyHorizontalMode?.();
   ensureVisible(sel.r, sel.c);
   render();
   if (edit) beginEdit(sel.r, sel.c);

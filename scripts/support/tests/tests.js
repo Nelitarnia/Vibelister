@@ -1,6 +1,7 @@
 import { createBrowserAsserts } from "./specs/assertions.js";
 import { getModelVariantTests } from "./specs/model-variants.js";
 import { getInteractionsTests } from "./specs/interactions.js";
+import { getSelectionTests } from "./specs/selection.js";
 
 export function runSelfTests() {
   const log = (...args) => console.log("[tests]", ...args);
@@ -9,6 +10,7 @@ export function runSelfTests() {
   const suites = [
     { name: "Model variants", tests: getModelVariantTests() },
     { name: "Interactions", tests: getInteractionsTests() },
+    { name: "Selection", tests: getSelectionTests() },
   ];
 
   for (const suite of suites) {

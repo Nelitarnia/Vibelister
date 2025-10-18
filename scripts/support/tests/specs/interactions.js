@@ -3,6 +3,7 @@ import {
   setInteractionsCell,
   getStructuredCellInteractions,
   applyStructuredCellInteractions,
+  isInteractionPhaseColumnActiveForRow,
 } from "../../../app/interactions.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
 import { makeModelFixture } from "./model-fixtures.js";
@@ -124,6 +125,35 @@ export function getInteractionsTests() {
           getInteractionsCell(model, viewDef, 1, 3),
           "Attack",
           "pasted end visible",
+        );
+      },
+    },
+    {
+      name: "phase availability respects action phases",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("Attack");
+        action.phases = { ids: [1], labels: {} };
+        addInput("Light");
+        buildInteractionsPairs(model);
+        const viewDef = {
+          columns: [
+            { key: "p1:outcome" },
+            { key: "p2:outcome" },
+            { key: "p1:end" },
+          ],
+        };
+        assert.ok(
+          isInteractionPhaseColumnActiveForRow(model, viewDef, 0, 0),
+          "phase 1 outcome active",
+        );
+        assert.ok(
+          !isInteractionPhaseColumnActiveForRow(model, viewDef, 0, 1),
+          "phase 2 outcome inactive",
+        );
+        assert.ok(
+          isInteractionPhaseColumnActiveForRow(model, viewDef, 0, 2),
+          "phase 1 end active",
         );
       },
     },

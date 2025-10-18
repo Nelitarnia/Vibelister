@@ -8,6 +8,7 @@ export const Selection = {
   rows: new Set(),
   cols: new Set(),
   colsAll: false,
+  horizontalMode: false,
 };
 export const sel = Selection.cell; // convenience alias {r,c}
 export const selection = Selection; // legacy alias for callers
@@ -33,14 +34,14 @@ export const SelectionNS = {
     selection.cols.clear();
     selection.anchor = null;
     selection.colAnchor = null;
-    selection.colsAll = false;
+    if (!selection.horizontalMode) selection.colsAll = false;
     emit();
   },
   selectRow(r) {
     this.clear();
     selection.anchor = r;
     selection.rows.add(r);
-    selection.colsAll = false;
+    selection.colsAll = !!selection.horizontalMode;
     selection.cols.clear();
     selection.colAnchor = null;
     emit();
@@ -52,7 +53,7 @@ export const SelectionNS = {
       hi = Math.max(a, r);
     for (let i = lo; i <= hi; i++) selection.rows.add(i);
     selection.anchor = a;
-    selection.colsAll = false;
+    selection.colsAll = !!selection.horizontalMode;
     selection.cols.clear();
     selection.colAnchor = null;
     emit();
@@ -61,6 +62,7 @@ export const SelectionNS = {
     return selection.rows.has(r);
   },
   setColsAll(v) {
+    if (!v && selection.horizontalMode) return;
     selection.colsAll = !!v;
     emit();
   },
@@ -115,13 +117,56 @@ export const SelectionCtl = {
     emit();
   },
   armAllCols(v = true) {
-    SelectionNS.setColsAll && SelectionNS.setColsAll(!!v);
+    this.setHorizontalMode?.(v);
   },
   clearAllColsFlag() {
+    if (selection.horizontalMode) return;
     if (SelectionNS.setColsAll) SelectionNS.setColsAll(false);
   },
   isAllCols() {
     return SelectionNS.isAllCols && SelectionNS.isAllCols();
+  },
+  setHorizontalMode(enabled) {
+    const next = !!enabled;
+    if (selection.horizontalMode === next) return;
+    selection.horizontalMode = next;
+    if (next) {
+      if (!selection.rows || selection.rows.size === 0) {
+        selection.rows.add(sel.r);
+        selection.anchor = sel.r;
+      }
+      if (SelectionNS.setColsAll) SelectionNS.setColsAll(true);
+      else {
+        selection.colsAll = true;
+        emit();
+      }
+    } else {
+      if (SelectionNS.setColsAll) SelectionNS.setColsAll(false);
+      else {
+        selection.colsAll = false;
+        emit();
+      }
+    }
+  },
+  toggleHorizontalMode() {
+    this.setHorizontalMode?.(!selection.horizontalMode);
+  },
+  isHorizontalMode() {
+    return !!selection.horizontalMode;
+  },
+  applyHorizontalMode() {
+    if (!selection.horizontalMode) return;
+    let changed = false;
+    if (!selection.rows || selection.rows.size === 0) {
+      selection.rows.add(sel.r);
+      selection.anchor = sel.r;
+      changed = true;
+    }
+    if (!selection.colsAll) {
+      selection.colsAll = true;
+      changed = true;
+    }
+    if (changed) emit();
   },
   selectedRows() {
     return selection.rows.size

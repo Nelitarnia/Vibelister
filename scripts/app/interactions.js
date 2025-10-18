@@ -21,6 +21,30 @@ export function noteKeyForPair(pair, phase) {
   return phase == null ? base : `${base}|p${phase}`;
 }
 
+export function isInteractionPhaseColumnActiveForRow(
+  model,
+  viewDef,
+  r,
+  c,
+  colOverride,
+) {
+  if (!model || !viewDef || !Array.isArray(viewDef.columns)) return true;
+  const col = colOverride || viewDef.columns[c];
+  if (!col) return false;
+  const pk = parsePhaseKey(col.key);
+  if (!pk || (pk.field !== "outcome" && pk.field !== "end")) return true;
+  const pair = Array.isArray(model.interactionsPairs)
+    ? model.interactionsPairs[r]
+    : null;
+  if (!pair) return false;
+  const action = Array.isArray(model.actions)
+    ? model.actions.find((x) => x && x.id === pair.aId)
+    : null;
+  const ids = action?.phases?.ids;
+  if (!Array.isArray(ids) || ids.length === 0) return true;
+  return ids.includes(pk.p);
+}
+
 // Read a cell in Interactions
 export function getInteractionsCell(model, viewDef, r, c) {
   const pair = model.interactionsPairs[r];

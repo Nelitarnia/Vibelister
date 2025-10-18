@@ -63,11 +63,14 @@ export function initGridMouse(deps) {
     if (isEditing() && e.target !== editor) endEdit(true);
 
     // Clicking cells without Shift implies single-cell intent → disarm wide-selection
-    if (!e.shiftKey && selection && selection.colsAll)
-      selection.colsAll = false;
+    if (!e.shiftKey && selection && selection.colsAll) {
+      if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
+      else if (!selection.horizontalMode) selection.colsAll = false;
+    }
 
     // Selection logic (single or extended)
     if (e.shiftKey) {
+      if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
       const rowAnchor = selection.anchor != null ? selection.anchor : sel.r;
       selection.rows.clear();
       const lo = Math.min(rowAnchor, r),
