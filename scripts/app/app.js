@@ -514,7 +514,7 @@ function setCell(r, c, v) {
 
   // Non-Interactions: ensure row exists
   const arr = dataArray();
-  while (arr.length <= r) arr.push(makeRow());
+  while (arr.length <= r) arr.push(makeRow(model));
   const row = arr[r];
 
   // Kind-backed columns
@@ -546,14 +546,14 @@ function setModForSelection(colIndex, target) {
   let next;
   {
     const r0 = sel.r;
-    while (arr.length <= r0) arr.push(makeRow());
+    while (arr.length <= r0) arr.push(makeRow(model));
     const row0 = arr[r0];
     if (!row0.modSet || typeof row0.modSet !== "object") row0.modSet = {};
     // If undefined → cycle; boolean → ON/OFF; number → clamp handled by kind
     next = target;
   }
   for (const r of rows) {
-    while (arr.length <= r) arr.push(makeRow());
+    while (arr.length <= r) arr.push(makeRow(model));
     const row = arr[r];
     if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
     setCellForKind(
@@ -1762,7 +1762,7 @@ function upgradeModelInPlace(o) {
   o.meta.schema = SCHEMA_VERSION;
 }
 function ensureMinRows(arr, n) {
-  while (arr.length < n) arr.push(makeRow());
+  while (arr.length < n) arr.push(makeRow(model));
 }
 function ensureSeedRows() {
   const N = 20;
