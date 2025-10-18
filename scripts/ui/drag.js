@@ -145,12 +145,18 @@ export function initRowDrag(deps) {
       selection.colsAll = false;
 
     // Normalize selection (works in *all* views, even when reordering is disabled)
+    const isAlreadySelected = SelectionNS?.isSelected
+      ? SelectionNS.isSelected(idx)
+      : selection.rows.has(idx);
+
     if (SelectionNS && SelectionNS.selectRow && SelectionNS.extendTo) {
       if (e.shiftKey) {
         if (selection.anchor == null) SelectionNS.selectRow(idx);
         else SelectionNS.extendTo(idx);
-      } else {
+      } else if (!isAlreadySelected || selection.rows.size === 0) {
         SelectionNS.selectRow(idx);
+      } else if (selection.anchor == null) {
+        selection.anchor = idx;
       }
     } else {
       // Legacy fallback
@@ -162,12 +168,12 @@ export function initRowDrag(deps) {
           hi = Math.max(a, idx);
         for (let i = lo; i <= hi; i++) selection.rows.add(i);
         selection.anchor = a;
-      } else {
-        if (!selection.rows.has(idx) || selection.rows.size === 0) {
-          clearSelection();
-          selection.rows.add(idx);
-          selection.anchor = idx;
-        }
+      } else if (!selection.rows.has(idx) || selection.rows.size === 0) {
+        clearSelection();
+        selection.rows.add(idx);
+        selection.anchor = idx;
+      } else if (selection.anchor == null) {
+        selection.anchor = idx;
       }
     }
     sel.r = idx;
