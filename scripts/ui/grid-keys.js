@@ -48,7 +48,76 @@ export function initGridKeys(deps) {
     getCellText,
     getStructuredCell,
     applyStructuredCell,
+    status,
   } = deps;
+
+  function setStatusMessage(message) {
+    if (!message) return;
+    if (status && typeof status.set === "function") {
+      status.set(message);
+    }
+  }
+
+  function formatTypeName(value) {
+    if (value == null) return "";
+    const spaced = String(value)
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[:/_-]+/g, " ")
+      .trim();
+    if (!spaced) return "";
+    return spaced
+      .split(/\s+/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+
+  function describeCellForStatus(cell) {
+    if (!cell || typeof cell !== "object") return "";
+    if (cell.structured && typeof cell.structured.type === "string")
+      return formatTypeName(cell.structured.type);
+    if (cell.colKind) return formatTypeName(cell.colKind);
+    if (cell.colKey) return formatTypeName(cell.colKey);
+    return "";
+  }
+
+  function buildCopyStatus(rows, cols, cells) {
+    const rowCount = rows.length;
+    const colCount = cols.length;
+    const total = rowCount * colCount;
+    if (!total) return "";
+    if (total === 1) {
+      const label = describeCellForStatus(cells[0]?.[0]);
+      return label ? `Copied ${label} cell.` : "Copied cell.";
+    }
+    const typeSet = new Set();
+    for (const row of cells) {
+      for (const cell of row) {
+        const label = describeCellForStatus(cell);
+        if (label) typeSet.add(label);
+      }
+    }
+    let suffix = "";
+    if (typeSet.size) {
+      const list = Array.from(typeSet);
+      const shown = list.slice(0, 3);
+      suffix = ` (types: ${shown.join(", ")}${list.length > 3 ? ", …" : ""})`;
+    }
+    return `Copied ${rowCount}×${colCount} cells${suffix}.`;
+  }
+
+  function isColorKind(col) {
+    const kind = col && col.kind;
+    if (kind == null) return false;
+    return String(kind).toLowerCase() === "color";
+  }
+
+  const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+  function isValidColorValue(value) {
+    if (typeof value !== "string") return false;
+    const trimmed = value.trim();
+    if (trimmed === "") return true; // allow clearing via empty paste
+    return HEX_COLOR_RE.test(trimmed);
+  }
 
   function isTypingInEditable(ae) {
     return (
@@ -466,6 +535,7 @@ export function initGridKeys(deps) {
       "types after=",
       Array.from(e.clipboardData.types || []),
     );
+    setStatusMessage(buildCopyStatus(rows, cols, cells));
   }
 
   function onPaste(e) {
@@ -551,6 +621,9 @@ export function initGridKeys(deps) {
     );
 
     let changed = false;
+    let appliedCount = 0;
+    let rejectedCount = 0;
+    let attemptedCells = 0;
 
     for (let i = 0; i < destRows.length; i++) {
       const r = destRows[i];
@@ -562,31 +635,78 @@ export function initGridKeys(deps) {
         const c = destCols[j];
         if (!Number.isFinite(c) || c < 0) continue;
         if (totalCols > 0 && c >= totalCols) continue;
+        attemptedCells++;
 
-        const textValue =
-          j < textRow.length ? String(textRow[j] ?? "") : "";
+        const textValue = j < textRow.length ? String(textRow[j] ?? "") : "";
         const meta = structuredRow[j] || null;
+        const col = colDefs[c];
+        const colIsColor = isColorKind(col);
+        const normalizedText = colIsColor ? textValue.trim() : textValue;
+        const hasTextGetter = typeof getCellText === "function";
+        const beforeText = hasTextGetter ? String(getCellText(r, c) ?? "") : null;
 
-        let applied = false;
+        let structuredApplied = false;
+        let typeRejected = false;
+
         if (meta && meta.structured && typeof applyStructuredCell === "function") {
-          const col = colDefs[c];
           if (columnsCompatible(meta, col)) {
-            applied = !!applyStructuredCell(r, c, meta.structured);
+            structuredApplied = !!applyStructuredCell(r, c, meta.structured);
+            if (!structuredApplied) typeRejected = true;
+          } else {
+            typeRejected = true;
           }
-        } else if (payload && typeof applyStructuredCell === "function") {
-          applied = !!applyStructuredCell(r, c, payload);
+        } else if (!meta?.structured && payload && typeof applyStructuredCell === "function") {
+          structuredApplied = !!applyStructuredCell(r, c, payload);
+          if (!structuredApplied) typeRejected = true;
         }
 
-        if (!applied && typeof setCell === "function") {
-          setCell(r, c, textValue);
+        if (structuredApplied) {
           changed = true;
-        } else if (applied) {
-          changed = true;
+          appliedCount++;
+        } else if (typeof setCell === "function") {
+          if (colIsColor && normalizedText && !isValidColorValue(normalizedText)) {
+            typeRejected = true;
+          } else {
+            const nextValue = colIsColor ? normalizedText : textValue;
+            const comparableBefore = hasTextGetter ? beforeText : null;
+            const comparableNext = hasTextGetter
+              ? String(nextValue ?? "")
+              : null;
+            if (!hasTextGetter || comparableBefore !== comparableNext) {
+              setCell(r, c, nextValue);
+              const afterText = hasTextGetter
+                ? String(getCellText(r, c) ?? "")
+                : null;
+              if (!hasTextGetter || afterText !== beforeText) {
+                changed = true;
+                appliedCount++;
+              }
+            }
+          }
         }
+
+        if (typeRejected) rejectedCount++;
       }
     }
 
     if (changed) render();
+
+    let pasteMessage = "";
+    if (attemptedCells === 0) pasteMessage = "Nothing to paste.";
+    else if (appliedCount === 0 && rejectedCount === 0)
+      pasteMessage = "Paste made no changes.";
+    else if (appliedCount > 0 && rejectedCount === 0)
+      pasteMessage = `Pasted ${appliedCount} cell${appliedCount === 1 ? "" : "s"}.`;
+    else if (appliedCount > 0 && rejectedCount > 0)
+      pasteMessage = `Pasted ${appliedCount} of ${attemptedCells} cell${
+        attemptedCells === 1 ? "" : "s"
+      } (${rejectedCount} rejected for type mismatch).`;
+    else if (appliedCount === 0 && rejectedCount > 0)
+      pasteMessage = `Paste rejected for ${rejectedCount} cell${
+        rejectedCount === 1 ? "" : "s"
+      }.`;
+
+    setStatusMessage(pasteMessage);
   }
 
   window.addEventListener("copy", onCopy, true);
