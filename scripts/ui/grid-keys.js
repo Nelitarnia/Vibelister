@@ -35,6 +35,7 @@ export function initGridKeys(deps) {
     modIdFromKey,
     setModForSelection,
     setCell,
+    runModelTransaction,
     // app-level actions
     cycleView,
     saveToDisk,
@@ -652,86 +653,114 @@ export function initGridKeys(deps) {
       !!rangePayload,
     );
 
-    let changed = false;
-    let appliedCount = 0;
-    let rejectedCount = 0;
-    let attemptedCells = 0;
+    const performPaste = () => {
+      let changed = false;
+      let appliedCount = 0;
+      let rejectedCount = 0;
+      let attemptedCells = 0;
 
-    for (let i = 0; i < destRows.length; i++) {
-      const r = destRows[i];
-      if (!Number.isFinite(r) || r < 0) continue;
-      if (rowLimit != null && r >= rowLimit) continue;
-      const textRow =
-        textMatrix[textHeight > 0 ? i % textHeight : 0] || [];
-      const structuredRow =
-        structuredCells[structuredHeight > 0 ? i % structuredHeight : 0] || [];
-      for (let j = 0; j < destCols.length; j++) {
-        const c = destCols[j];
-        if (!Number.isFinite(c) || c < 0) continue;
-        if (totalCols > 0 && c >= totalCols) continue;
-        if (selection && selection.colsAll && !interactionsColumnActiveForRow(r, c))
-          continue;
-        const textIndex = textWidth > 0 ? j % textWidth : 0;
-        const structuredIndex = structuredWidth > 0 ? j % structuredWidth : -1;
-        const textValue =
-          textWidth > 0 && textRow.length
-            ? String(textRow[textIndex] ?? "")
-            : "";
-        const meta =
-          structuredIndex >= 0 ? structuredRow[structuredIndex] || null : null;
-        attemptedCells++;
+      for (let i = 0; i < destRows.length; i++) {
+        const r = destRows[i];
+        if (!Number.isFinite(r) || r < 0) continue;
+        if (rowLimit != null && r >= rowLimit) continue;
+        const textRow =
+          textMatrix[textHeight > 0 ? i % textHeight : 0] || [];
+        const structuredRow =
+          structuredCells[structuredHeight > 0 ? i % structuredHeight : 0] || [];
+        for (let j = 0; j < destCols.length; j++) {
+          const c = destCols[j];
+          if (!Number.isFinite(c) || c < 0) continue;
+          if (totalCols > 0 && c >= totalCols) continue;
+          if (
+            selection &&
+            selection.colsAll &&
+            !interactionsColumnActiveForRow(r, c)
+          )
+            continue;
+          const textIndex = textWidth > 0 ? j % textWidth : 0;
+          const structuredIndex = structuredWidth > 0 ? j % structuredWidth : -1;
+          const textValue =
+            textWidth > 0 && textRow.length
+              ? String(textRow[textIndex] ?? "")
+              : "";
+          const meta =
+            structuredIndex >= 0 ? structuredRow[structuredIndex] || null : null;
+          attemptedCells++;
 
-        const col = colDefs[c];
-        const colIsColor = isColorKind(col);
-        const normalizedText = colIsColor ? textValue.trim() : textValue;
-        const hasTextGetter = typeof getCellText === "function";
-        const beforeText = hasTextGetter ? String(getCellText(r, c) ?? "") : null;
+          const col = colDefs[c];
+          const colIsColor = isColorKind(col);
+          const normalizedText = colIsColor ? textValue.trim() : textValue;
+          const hasTextGetter = typeof getCellText === "function";
+          const beforeText = hasTextGetter ? String(getCellText(r, c) ?? "") : null;
 
-        let structuredApplied = false;
-        let typeRejected = false;
+          let structuredApplied = false;
+          let typeRejected = false;
 
-        if (meta && meta.structured && typeof applyStructuredCell === "function") {
-          if (columnsCompatible(meta, col)) {
-            structuredApplied = !!applyStructuredCell(r, c, meta.structured);
+          if (meta && meta.structured && typeof applyStructuredCell === "function") {
+            if (columnsCompatible(meta, col)) {
+              structuredApplied = !!applyStructuredCell(r, c, meta.structured);
+              if (!structuredApplied) typeRejected = true;
+            } else {
+              typeRejected = true;
+            }
+          } else if (
+            !meta?.structured &&
+            payload &&
+            typeof applyStructuredCell === "function"
+          ) {
+            structuredApplied = !!applyStructuredCell(r, c, payload);
             if (!structuredApplied) typeRejected = true;
-          } else {
-            typeRejected = true;
           }
-        } else if (!meta?.structured && payload && typeof applyStructuredCell === "function") {
-          structuredApplied = !!applyStructuredCell(r, c, payload);
-          if (!structuredApplied) typeRejected = true;
-        }
 
-        if (structuredApplied) {
-          changed = true;
-          appliedCount++;
-        } else if (typeof setCell === "function") {
-          if (colIsColor && normalizedText && !isValidColorValue(normalizedText)) {
-            typeRejected = true;
-          } else {
-            const nextValue = colIsColor ? normalizedText : textValue;
-            const comparableBefore = hasTextGetter ? beforeText : null;
-            const comparableNext = hasTextGetter
-              ? String(nextValue ?? "")
-              : null;
-            if (!hasTextGetter || comparableBefore !== comparableNext) {
-              setCell(r, c, nextValue);
-              const afterText = hasTextGetter
-                ? String(getCellText(r, c) ?? "")
+          if (structuredApplied) {
+            changed = true;
+            appliedCount++;
+          } else if (typeof setCell === "function") {
+            if (colIsColor && normalizedText && !isValidColorValue(normalizedText)) {
+              typeRejected = true;
+            } else {
+              const nextValue = colIsColor ? normalizedText : textValue;
+              const comparableBefore = hasTextGetter ? beforeText : null;
+              const comparableNext = hasTextGetter
+                ? String(nextValue ?? "")
                 : null;
-              if (!hasTextGetter || afterText !== beforeText) {
-                changed = true;
-                appliedCount++;
+              if (!hasTextGetter || comparableBefore !== comparableNext) {
+                setCell(r, c, nextValue);
+                const afterText = hasTextGetter
+                  ? String(getCellText(r, c) ?? "")
+                  : null;
+                if (!hasTextGetter || afterText !== beforeText) {
+                  changed = true;
+                  appliedCount++;
+                }
               }
             }
           }
+
+          if (typeRejected) rejectedCount++;
         }
-
-        if (typeRejected) rejectedCount++;
       }
-    }
 
-    if (changed) render();
+      return { changed, appliedCount, rejectedCount, attemptedCells };
+    };
+
+    const summary =
+      typeof runModelTransaction === "function"
+        ? runModelTransaction(
+            "pasteCells",
+            performPaste,
+            { render: (res) => !!res?.changed },
+          )
+        : (() => {
+            const result = performPaste();
+            if (result?.changed) render();
+            return result;
+          })();
+
+    const changed = !!summary?.changed;
+    const appliedCount = summary?.appliedCount ?? 0;
+    const attemptedCells = summary?.attemptedCells ?? 0;
+    const rejectedCount = summary?.rejectedCount ?? 0;
 
     let pasteMessage = "";
     if (attemptedCells === 0) pasteMessage = "Nothing to paste.";

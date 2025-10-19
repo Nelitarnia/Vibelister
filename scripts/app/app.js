@@ -176,7 +176,7 @@ const sheet = document.getElementById("sheet"),
 const projectNameEl = document.getElementById(Ids.projectName);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
-const { runModelMutation } = makeMutationRunner({
+const mutationRunner = makeMutationRunner({
   model,
   rebuildActionColumnsFromModifiers,
   rebuildInteractionsInPlace,
@@ -186,6 +186,8 @@ const { runModelMutation } = makeMutationRunner({
   render,
   status: statusBar,
 });
+
+const { runModelMutation, runModelTransaction } = mutationRunner;
 
 const SETTINGS_STORAGE_KEY = "vl.userSettings";
 const SETTINGS_FILE_NAME = "vibelister-settings.json";
@@ -558,33 +560,50 @@ function setCell(r, c, v) {
   const vd = viewDef();
   const col = vd.columns[c];
 
-  // Interactions: route by kind; default to meta-kind
-  if (activeView === "interactions") {
-    const k = String(col?.kind || "interactions");
-    const ctx = kindCtx({ r, c, col, row: null, v });
-    setCellForKind(k, ctx, v);
-    return;
-  }
+  return runModelMutation(
+    "setCell",
+    () => {
+      // Interactions: route by kind; default to meta-kind
+      if (activeView === "interactions") {
+        const k = String(col?.kind || "interactions");
+        const ctx = kindCtx({ r, c, col, row: null, v });
+        const wrote = setCellForKind(k, ctx, v);
+        return { view: "interactions", changed: wrote !== false, ensuredRows: 0 };
+      }
 
-  // Non-Interactions: ensure row exists
-  const arr = dataArray();
-  while (arr.length <= r) arr.push(makeRow(model));
-  const row = arr[r];
+      // Non-Interactions: ensure row exists
+      const arr = dataArray();
+      const beforeLen = arr.length;
+      while (arr.length <= r) arr.push(makeRow(model));
+      const row = arr[r];
 
-  // Kind-backed columns
-  if (col && col.kind) {
-    setCellForKind(col.kind, kindCtx({ r, c, col, row, v }), v);
-    return;
-  }
+      let changed = false;
 
-  // Actions: phases parser
-  if (activeView === "actions" && col?.key === "phases") {
-    row.phases = parsePhasesSpec(v);
-    return;
-  }
+      // Kind-backed columns
+      if (col && col.kind) {
+        setCellForKind(col.kind, kindCtx({ r, c, col, row, v }), v);
+        changed = true;
+      } else if (activeView === "actions" && col?.key === "phases") {
+        const before = row?.phases;
+        row.phases = parsePhasesSpec(v);
+        changed = changed || before !== row?.phases;
+      } else if (col?.key) {
+        const before = row[col.key];
+        if (before !== v) changed = true;
+        row[col.key] = v;
+      }
 
-  // Default assignment (defensive)
-  if (col?.key) row[col.key] = v;
+      return {
+        view: activeView,
+        changed,
+        ensuredRows: arr.length - beforeLen,
+      };
+    },
+    {
+      layout: (res) => (res?.ensuredRows ?? 0) > 0,
+      render: true,
+    },
+  );
 }
 
 function cloneValueForAssignment(value) {
@@ -1017,6 +1036,7 @@ const disposeKeys = initGridKeys({
   modIdFromKey,
   setModForSelection,
   setCell,
+  runModelTransaction,
 
   // app-level actions
   cycleView,
@@ -1062,21 +1082,26 @@ function setCellSelectionAware(r, c, v) {
     return;
   }
 
-  for (const rr of targetRows) {
-    if (!Number.isFinite(rr)) continue;
-    for (const cc of targetCols) {
-      if (!Number.isFinite(cc)) continue;
-      if (!selection.colsAll && cc !== c) continue;
-      if (
-        selection.colsAll &&
-        activeView === "interactions" &&
-        !isInteractionPhaseColumnActiveForRow(model, vd, rr, cc)
-      )
-        continue;
-      setCell(rr, cc, cloneValueForAssignment(v));
-    }
-  }
-  render();
+  runModelTransaction(
+    "setCellSelectionAware",
+    () => {
+      for (const rr of targetRows) {
+        if (!Number.isFinite(rr)) continue;
+        for (const cc of targetCols) {
+          if (!Number.isFinite(cc)) continue;
+          if (!selection.colsAll && cc !== c) continue;
+          if (
+            selection.colsAll &&
+            activeView === "interactions" &&
+            !isInteractionPhaseColumnActiveForRow(model, vd, rr, cc)
+          )
+            continue;
+          setCell(rr, cc, cloneValueForAssignment(v));
+        }
+      }
+    },
+    { render: true },
+  );
 }
 
 // Initialize palette (handles both Outcome and End cells)
@@ -1590,29 +1615,36 @@ function endEdit(commit = true) {
   editing = false;
 
   if (commit) {
-    const rows =
-      selection.rows.size > 1
-        ? Array.from(selection.rows).sort((a, b) => a - b)
-        : [sel.r];
-    const vd = viewDef();
-    let targetCols = selection.colsAll
-      ? getHorizontalTargetColumns(sel.c)
-      : [sel.c];
-    if (!targetCols || !targetCols.length) targetCols = [sel.c];
-    for (const r of rows) {
-      for (const cIdx of targetCols) {
-        if (!Number.isFinite(cIdx)) continue;
-        if (
-          selection.colsAll &&
-          activeView === "interactions" &&
-          !isInteractionPhaseColumnActiveForRow(model, vd, r, cIdx)
-        )
-          continue;
-        setCell(r, cIdx, cloneValueForAssignment(val));
-      }
-    }
+    runModelTransaction(
+      "endEditCommit",
+      () => {
+        const rows =
+          selection.rows.size > 1
+            ? Array.from(selection.rows).sort((a, b) => a - b)
+            : [sel.r];
+        const vd = viewDef();
+        let targetCols = selection.colsAll
+          ? getHorizontalTargetColumns(sel.c)
+          : [sel.c];
+        if (!targetCols || !targetCols.length) targetCols = [sel.c];
+        for (const r of rows) {
+          for (const cIdx of targetCols) {
+            if (!Number.isFinite(cIdx)) continue;
+            if (
+              selection.colsAll &&
+              activeView === "interactions" &&
+              !isInteractionPhaseColumnActiveForRow(model, vd, r, cIdx)
+            )
+              continue;
+            setCell(r, cIdx, cloneValueForAssignment(val));
+          }
+        }
+      },
+      { render: true },
+    );
+  } else {
+    render();
   }
-  render();
 }
 
 function endEditIfOpen(commit = true) {
