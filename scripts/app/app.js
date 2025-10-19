@@ -1362,6 +1362,7 @@ const paletteAPI = initPalette({
   HEADER_HEIGHT,
   ROW_HEIGHT,
   endEdit,
+  moveSelectionForTab: advanceSelectionAfterPaletteTab,
 });
 
 const colorPickerAPI = initColorPicker({
@@ -1925,6 +1926,30 @@ function endEdit(commit = true) {
 function endEditIfOpen(commit = true) {
   if (editing) endEdit(commit);
   if (paletteAPI?.closeColor) paletteAPI.closeColor();
+}
+function advanceSelectionAfterPaletteTab(shift) {
+  const cols = viewDef()?.columns || [];
+  if (!cols.length) return;
+  const maxC = cols.length - 1;
+  let nextR = sel.r;
+  let nextC = sel.c;
+  if (shift) {
+    if (nextC > 0) nextC--;
+    else {
+      nextC = maxC;
+      nextR = Math.max(0, nextR - 1);
+    }
+  } else {
+    if (nextC < maxC) nextC++;
+    else {
+      nextC = 0;
+      nextR = Math.min(getRowCount() - 1, nextR + 1);
+    }
+  }
+  sel.r = nextR;
+  sel.c = nextC;
+  ensureVisible(sel.r, sel.c);
+  render();
 }
 function moveSel(dr, dc, edit = false) {
   // Any keyboard navigation implies single-cell intent → disarm row-wide selection

@@ -24,6 +24,7 @@ export function initPalette(ctx) {
     render,
     HEADER_HEIGHT,
     endEdit,
+    moveSelectionForTab,
   } = ctx;
 
   // ---------- Helpers shared by modes ----------
@@ -473,6 +474,22 @@ export function initPalette(ctx) {
       else {
         close();
         endEdit(false);
+      }
+      return;
+    }
+
+    if (e.key === "Tab") {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      const n = pal.items.length;
+      if (n) pick(pal.selIndex >= 0 ? pal.selIndex : 0);
+      else {
+        close();
+        endEdit(false);
+      }
+      if (typeof moveSelectionForTab === "function") {
+        moveSelectionForTab(e.shiftKey);
       }
       return;
     }
