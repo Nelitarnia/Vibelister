@@ -148,6 +148,62 @@ export function getUndoTests() {
       },
     },
     {
+      name: "selection-aware cell edits capture undo entries",
+      run(assert) {
+        const log = [];
+        const { model, addAction } = makeModelFixture();
+        const row = addAction("One");
+        const runner = createRunner(model, log);
+
+        const findRow = () => model.actions.find((r) => r.id === row.id);
+
+        runner.runModelTransaction(
+          "setCellSelectionAware",
+          () => {
+            const current = findRow();
+            const before = current?.name;
+            if (current) current.name = "Palette";
+            const changed = before !== current?.name;
+            return {
+              changedCells: changed ? 1 : 0,
+              touchedRows: changed ? [0] : [],
+              touchedCols: changed ? [0] : [],
+              view: "actions",
+            };
+          },
+          {
+            render: true,
+            undo: {
+              label: "cell edit",
+              shouldRecord: (res) => (res?.changedCells ?? 0) > 0,
+              captureAttachments: () => ({
+                view: "actions",
+                row: 0,
+                col: 0,
+                columnTitle: "Name",
+              }),
+              applyAttachments: () => {},
+              makeStatus: ({ direction, context }) =>
+                `${direction}:${context?.result?.changedCells ?? 0}`,
+            },
+          },
+        );
+
+        assert.strictEqual(findRow()?.name, "Palette", "cell edit applied");
+        const stateAfterEdit = runner.getUndoState();
+        assert.ok(stateAfterEdit.canUndo, "undo recorded for palette edit");
+        assert.strictEqual(stateAfterEdit.undoLabel, "cell edit", "labeled as cell edit");
+
+        assert.strictEqual(runner.undo(), true, "undo succeeds");
+        assert.strictEqual(findRow()?.name, "One", "name restored after undo");
+        assert.strictEqual(log.at(-1), "undo:1", "status reflects undo direction");
+
+        assert.strictEqual(runner.redo(), true, "redo succeeds");
+        assert.strictEqual(findRow()?.name, "Palette", "name restored after redo");
+        assert.strictEqual(log.at(-1), "redo:1", "status reflects redo direction");
+      },
+    },
+    {
       name: "redo history is cleared after new change",
       run(assert) {
         const { model, addAction } = makeModelFixture();

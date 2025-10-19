@@ -1307,12 +1307,6 @@ function setCellSelectionAware(r, c, v) {
   let targetCols = selection.colsAll ? getHorizontalTargetColumns(c) : [c];
   if (!targetCols || !targetCols.length) targetCols = [c];
 
-  const needsSpread = shouldSpreadDown || selection.colsAll;
-  if (!needsSpread) {
-    setCell(r, c, v);
-    return;
-  }
-
   runModelTransaction(
     "setCellSelectionAware",
     () => {
