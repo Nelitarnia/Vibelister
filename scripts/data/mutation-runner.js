@@ -1,6 +1,73 @@
 // mutation-runner.js
 // Centralized helper for executing model mutations with consistent side effects.
 
+function cloneValue(value, seen = new WeakMap()) {
+  if (value == null || typeof value !== "object") return value;
+  if (seen.has(value)) return seen.get(value);
+  if (value instanceof Date) return new Date(value.getTime());
+  if (value instanceof Map) {
+    const copy = new Map();
+    seen.set(value, copy);
+    for (const [key, val] of value.entries()) {
+      copy.set(cloneValue(key, seen), cloneValue(val, seen));
+    }
+    return copy;
+  }
+  if (value instanceof Set) {
+    const copy = new Set();
+    seen.set(value, copy);
+    for (const item of value.values()) {
+      copy.add(cloneValue(item, seen));
+    }
+    return copy;
+  }
+  if (Array.isArray(value)) {
+    const arr = new Array(value.length);
+    seen.set(value, arr);
+    for (let i = 0; i < value.length; i++) {
+      if (i in value) arr[i] = cloneValue(value[i], seen);
+    }
+    return arr;
+  }
+  const copy = {};
+  seen.set(value, copy);
+  for (const key of Object.keys(value)) {
+    copy[key] = cloneValue(value[key], seen);
+  }
+  return copy;
+}
+
+export function snapshotModel(model, options = {}) {
+  if (!model || typeof model !== "object") {
+    throw new Error("snapshotModel requires a model object");
+  }
+
+  const { includeDerived = true, includeNotes = true, label, attachments } = options || {};
+  const cloned = cloneValue(model);
+
+  if (!includeDerived) {
+    cloned.interactionsPairs = [];
+  }
+
+  if (!includeNotes) {
+    cloned.notes = {};
+  }
+
+  if (!Number.isFinite(cloned.nextId)) {
+    cloned.nextId = 1;
+  }
+
+  const snapshot = { model: cloned };
+
+  if (label != null) snapshot.label = String(label);
+
+  if (attachments && typeof attachments === "object") {
+    snapshot.attachments = cloneValue(attachments);
+  }
+
+  return snapshot;
+}
+
 export function makeMutationRunner(deps) {
   const {
     model,
@@ -224,11 +291,16 @@ export function makeMutationRunner(deps) {
     return commitTransaction(tx, result);
   }
 
+  function captureModelSnapshot(options) {
+    return snapshotModel(model, options);
+  }
+
   return {
     runModelMutation,
     beginTransaction,
     commitTransaction,
     runModelTransaction,
+    captureModelSnapshot,
   };
 }
 
