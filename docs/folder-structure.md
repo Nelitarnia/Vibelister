@@ -25,6 +25,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── constants.js
 │   │   ├── deletion.js
 │   │   ├── fs.js
+│   │   ├── mutation-runner.js
 │   │   ├── rows.js
 │   │   ├── variants/
 │   │   │   └── variants.js
@@ -88,6 +89,7 @@ This document outlines a maintainable directory layout tailored to the current c
 #### `scripts/data/`
 
 - Group modules that define data shapes, constants, and persistence helpers.
+- `mutation-runner.js` centralizes layout/render/derived rebuild side effects for core model mutations.
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
 - `variants.js` merits its own subfolder (`variants/`) because it describes sizable domain data; additional variant files can join it without clutter.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
