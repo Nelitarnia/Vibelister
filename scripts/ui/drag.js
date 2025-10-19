@@ -17,6 +17,7 @@ export function initRowDrag(deps) {
     SelectionNS,
     render,
     layout,
+    runModelMutation,
     status,
     ROW_HEIGHT,
     HEADER_HEIGHT,
@@ -106,21 +107,52 @@ export function initRowDrag(deps) {
       return;
     }
 
-    const block = arr.splice(start, len);
-    if (target > start) target -= len;
-    arr.splice(target, 0, ...block);
+    const performReorder = () => {
+      const block = arr.splice(start, len);
+      let dest = target;
+      if (dest > start) dest -= len;
+      arr.splice(dest, 0, ...block);
+      return { start, len, target: dest };
+    };
 
-    clearSelection();
-    for (let i = 0; i < len; i++) selection.rows.add(target + i);
-    selection.anchor = target;
-    sel.r = target;
-    layout();
-    render();
-    const movedLabel = len > 1 ? `${len} rows` : `row`;
-    if (status?.set)
-      status.set(`Reordered ${movedLabel} ${start + 1} → ${target + 1}`);
-    else if (status)
-      status.textContent = `Reordered ${movedLabel} ${start + 1} → ${target + 1}`;
+    if (typeof runModelMutation === "function") {
+      runModelMutation(
+        "reorderRows",
+        performReorder,
+        {
+          after: (res) => {
+            const dest = res?.target ?? target;
+            const span = res?.len ?? len;
+            clearSelection();
+            for (let i = 0; i < span; i++) selection.rows.add(dest + i);
+            selection.anchor = dest;
+            sel.r = dest;
+          },
+          layout: true,
+          render: true,
+          status: (res) => {
+            const dest = res?.target ?? target;
+            const span = res?.len ?? len;
+            const from = res?.start ?? start;
+            const movedLabel = span > 1 ? `${span} rows` : `row`;
+            return `Reordered ${movedLabel} ${from + 1} → ${dest + 1}`;
+          },
+        },
+      );
+    } else {
+      const { target: dest } = performReorder();
+      clearSelection();
+      for (let i = 0; i < len; i++) selection.rows.add(dest + i);
+      selection.anchor = dest;
+      sel.r = dest;
+      layout();
+      render();
+      const movedLabel = len > 1 ? `${len} rows` : `row`;
+      if (status?.set)
+        status.set(`Reordered ${movedLabel} ${start + 1} → ${dest + 1}`);
+      else if (status)
+        status.textContent = `Reordered ${movedLabel} ${start + 1} → ${dest + 1}`;
+    }
     drag = null;
     moved = false;
   }

@@ -8,6 +8,7 @@ import { getUiRowDragTests } from "../scripts/support/tests/specs/ui-row-drag.js
 import { getRowInsertionTests } from "../scripts/support/tests/specs/rows.js";
 import { getDeletionTests } from "../scripts/support/tests/specs/deletion.js";
 import { getSelectionTests } from "../scripts/support/tests/specs/selection.js";
+import { getModelSnapshotTests } from "../scripts/support/tests/specs/model-snapshot.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -21,6 +22,10 @@ for (const spec of getInteractionsTests()) {
 
 for (const spec of getSelectionTests()) {
   test(`Selection › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getModelSnapshotTests()) {
+  test(`Model snapshot › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getUiGridMouseTests()) {

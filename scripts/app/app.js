@@ -65,6 +65,7 @@ import {
 } from "../data/constants.js";
 import { makeRow, insertBlankRows } from "../data/rows.js";
 import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
+import { makeMutationRunner } from "../data/mutation-runner.js";
 import {
   clamp,
   colWidths,
@@ -174,6 +175,19 @@ const sheet = document.getElementById("sheet"),
   dragLine = document.getElementById("dragLine");
 const projectNameEl = document.getElementById(Ids.projectName);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
+
+const mutationRunner = makeMutationRunner({
+  model,
+  rebuildActionColumnsFromModifiers,
+  rebuildInteractionsInPlace,
+  pruneNotesToValidPairs,
+  invalidateViewDef,
+  layout,
+  render,
+  status: statusBar,
+});
+
+const { runModelMutation, runModelTransaction } = mutationRunner;
 
 const SETTINGS_STORAGE_KEY = "vl.userSettings";
 const SETTINGS_FILE_NAME = "vibelister-settings.json";
@@ -546,33 +560,50 @@ function setCell(r, c, v) {
   const vd = viewDef();
   const col = vd.columns[c];
 
-  // Interactions: route by kind; default to meta-kind
-  if (activeView === "interactions") {
-    const k = String(col?.kind || "interactions");
-    const ctx = kindCtx({ r, c, col, row: null, v });
-    setCellForKind(k, ctx, v);
-    return;
-  }
+  return runModelMutation(
+    "setCell",
+    () => {
+      // Interactions: route by kind; default to meta-kind
+      if (activeView === "interactions") {
+        const k = String(col?.kind || "interactions");
+        const ctx = kindCtx({ r, c, col, row: null, v });
+        const wrote = setCellForKind(k, ctx, v);
+        return { view: "interactions", changed: wrote !== false, ensuredRows: 0 };
+      }
 
-  // Non-Interactions: ensure row exists
-  const arr = dataArray();
-  while (arr.length <= r) arr.push(makeRow(model));
-  const row = arr[r];
+      // Non-Interactions: ensure row exists
+      const arr = dataArray();
+      const beforeLen = arr.length;
+      while (arr.length <= r) arr.push(makeRow(model));
+      const row = arr[r];
 
-  // Kind-backed columns
-  if (col && col.kind) {
-    setCellForKind(col.kind, kindCtx({ r, c, col, row, v }), v);
-    return;
-  }
+      let changed = false;
 
-  // Actions: phases parser
-  if (activeView === "actions" && col?.key === "phases") {
-    row.phases = parsePhasesSpec(v);
-    return;
-  }
+      // Kind-backed columns
+      if (col && col.kind) {
+        setCellForKind(col.kind, kindCtx({ r, c, col, row, v }), v);
+        changed = true;
+      } else if (activeView === "actions" && col?.key === "phases") {
+        const before = row?.phases;
+        row.phases = parsePhasesSpec(v);
+        changed = changed || before !== row?.phases;
+      } else if (col?.key) {
+        const before = row[col.key];
+        if (before !== v) changed = true;
+        row[col.key] = v;
+      }
 
-  // Default assignment (defensive)
-  if (col?.key) row[col.key] = v;
+      return {
+        view: activeView,
+        changed,
+        ensuredRows: arr.length - beforeLen,
+      };
+    },
+    {
+      layout: (res) => (res?.ensuredRows ?? 0) > 0,
+      render: true,
+    },
+  );
 }
 
 function cloneValueForAssignment(value) {
@@ -633,27 +664,33 @@ function setModForSelection(colIndex, target) {
     selection.rows.size > 1
       ? Array.from(selection.rows).sort((a, b) => a - b)
       : [sel.r];
-  // Determine the next state from the active row using the kind handler
-  let next;
-  {
-    const r0 = sel.r;
-    while (arr.length <= r0) arr.push(makeRow(model));
-    const row0 = arr[r0];
-    if (!row0.modSet || typeof row0.modSet !== "object") row0.modSet = {};
-    // If undefined → cycle; boolean → ON/OFF; number → clamp handled by kind
-    next = target;
-  }
-  for (const r of rows) {
-    while (arr.length <= r) arr.push(makeRow(model));
-    const row = arr[r];
-    if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
-    setCellForKind(
-      "modTriState",
-      kindCtx({ r, c: colIndex, col, row, v: next }),
-      next,
-    );
-  }
-  render();
+  runModelMutation(
+    "setModForSelection",
+    () => {
+      // Determine the next state from the active row using the kind handler
+      let next;
+      {
+        const r0 = sel.r;
+        while (arr.length <= r0) arr.push(makeRow(model));
+        const row0 = arr[r0];
+        if (!row0.modSet || typeof row0.modSet !== "object") row0.modSet = {};
+        // If undefined → cycle; boolean → ON/OFF; number → clamp handled by kind
+        next = target;
+      }
+      for (const r of rows) {
+        while (arr.length <= r) arr.push(makeRow(model));
+        const row = arr[r];
+        if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
+        setCellForKind(
+          "modTriState",
+          kindCtx({ r, c: colIndex, col, row, v: next }),
+          next,
+        );
+      }
+      return { rowsUpdated: rows.length };
+    },
+    { render: true },
+  );
 }
 
 // Deletion & regeneration helpers
@@ -733,31 +770,42 @@ function addRows(where) {
   let insertIndex = where === "above" ? minRow : maxRow + 1;
   insertIndex = Math.max(0, Math.min(insertIndex, arr.length));
 
-  insertBlankRows(model, arr, insertIndex, count);
-
-  if (activeView === "modifiers") {
-    rebuildActionColumnsFromModifiers(model);
-    invalidateViewDef();
-  }
-
-  rebuildInteractionsInPlace();
-  pruneNotesToValidPairs();
-
-  const cols = viewDef().columns || [];
-  const targetCol = cols.length
-    ? Math.max(0, Math.min(sel.c ?? 0, cols.length - 1))
-    : 0;
-
-  SelectionCtl.startSingle(insertIndex, targetCol);
-  if (count > 1) SelectionCtl.extendRowsTo(insertIndex + count - 1);
-  SelectionCtl.clearAllColsFlag?.();
-
-  layout();
-  render();
-
-  const noun = count === 1 ? "row" : "rows";
   const whereWord = where === "above" ? "above" : "below";
-  statusBar?.set(`Inserted ${count} ${noun} ${whereWord} selection.`);
+
+  runModelMutation(
+    "addRows",
+    () => {
+      insertBlankRows(model, arr, insertIndex, count);
+      return {
+        insertIndex,
+        count,
+        whereWord,
+        requiresModifiersRebuild: activeView === "modifiers" && count > 0,
+      };
+    },
+    {
+      rebuildActionColumns: (res) => res?.requiresModifiersRebuild,
+      rebuildInteractions: true,
+      pruneNotes: true,
+      after: (res) => {
+        const cols = viewDef().columns || [];
+        const targetCol = cols.length
+          ? Math.max(0, Math.min(sel.c ?? 0, cols.length - 1))
+          : 0;
+
+        SelectionCtl.startSingle(res.insertIndex, targetCol);
+        if (res.count > 1)
+          SelectionCtl.extendRowsTo(res.insertIndex + res.count - 1);
+        SelectionCtl.clearAllColsFlag?.();
+      },
+      layout: true,
+      render: true,
+      status: (res) => {
+        const noun = res.count === 1 ? "row" : "rows";
+        return `Inserted ${res.count} ${noun} ${res.whereWord} selection.`;
+      },
+    },
+  );
 }
 
 function addRowsAbove() {
@@ -818,46 +866,53 @@ function clearSelectedCells(options = {}) {
     (c) => Number.isFinite(c) && c >= 0 && c < vd.columns.length,
   );
 
-  let cleared = 0;
-  for (const r of rows) {
-    if (!Number.isFinite(r) || r < 0 || r >= arr.length) continue;
-    const row = arr[r];
-    if (!row) continue;
-    for (const c of colsToClear) {
-      const col = vd.columns[c];
-      if (!col) continue;
-      if (
-        selection.colsAll &&
-        activeView === "interactions" &&
-        !isInteractionPhaseColumnActiveForRow(model, vd, r, c, col)
-      )
-        continue;
-      let changed = false;
-      if (col.kind)
-        changed = clearCellForKind(col.kind, kindCtx({ r, c, col, row }));
-      else if (col.key) {
-        const before = row[col.key];
-        const hadValue = !(before == null || before === "");
-        if (hadValue) {
-          row[col.key] = "";
-          changed = true;
+  runModelMutation(
+    "clearSelectedCells",
+    () => {
+      let cleared = 0;
+      for (const r of rows) {
+        if (!Number.isFinite(r) || r < 0 || r >= arr.length) continue;
+        const row = arr[r];
+        if (!row) continue;
+        for (const c of colsToClear) {
+          const col = vd.columns[c];
+          if (!col) continue;
+          if (
+            selection.colsAll &&
+            activeView === "interactions" &&
+            !isInteractionPhaseColumnActiveForRow(model, vd, r, c, col)
+          )
+            continue;
+          let changed = false;
+          if (col.kind)
+            changed = clearCellForKind(col.kind, kindCtx({ r, c, col, row }));
+          else if (col.key) {
+            const before = row[col.key];
+            const hadValue = !(before == null || before === "");
+            if (hadValue) {
+              row[col.key] = "";
+              changed = true;
+            }
+          }
+          if (changed) cleared++;
         }
       }
-      if (changed) cleared++;
-    }
-  }
-
-  if (cleared > 0) {
-    rebuildInteractionsInPlace();
-    pruneNotesToValidPairs();
-    render();
-    const noun = cleared === 1 ? "cell" : "cells";
-    if (statusBar?.set) statusBar.set(`Cleared ${cleared} ${noun}.`);
-    else if (statusBar) statusBar.textContent = `Cleared ${cleared} ${noun}.`;
-  } else if (statusBar) {
-    if (typeof statusBar.set === "function") statusBar.set("Nothing to clear.");
-    else statusBar.textContent = "Nothing to clear.";
-  }
+      return { cleared };
+    },
+    {
+      rebuildInteractions: (res) => (res?.cleared ?? 0) > 0,
+      pruneNotes: (res) => (res?.cleared ?? 0) > 0,
+      render: (res) => (res?.cleared ?? 0) > 0,
+      status: (res) => {
+        const cleared = res?.cleared ?? 0;
+        if (cleared > 0) {
+          const noun = cleared === 1 ? "cell" : "cells";
+          return `Cleared ${cleared} ${noun}.`;
+        }
+        return "Nothing to clear.";
+      },
+    },
+  );
 }
 
 function deleteSelectedRows(options = {}) {
@@ -876,45 +931,56 @@ function deleteSelectedRows(options = {}) {
   const rows = selection.rows.size > 0 ? Array.from(selection.rows) : [sel.r];
   rows.sort((a, b) => b - a); // delete bottom-up
 
-  const deletedIds = [];
-  for (const r of rows) {
-    const row = arr[r];
-    if (!row) continue;
-    deletedIds.push(row.id);
-    arr.splice(r, 1);
-  }
+  runModelMutation(
+    "deleteSelectedRows",
+    () => {
+      const deletedIds = [];
+      for (const r of rows) {
+        const row = arr[r];
+        if (!row) continue;
+        deletedIds.push(row.id);
+        arr.splice(r, 1);
+      }
 
-  if (activeView === "modifiers" && deletedIds.length) {
-    for (const a of model.actions) {
-      if (!a.modSet) continue;
-      for (const id of deletedIds) delete a.modSet[id];
-    }
-    rebuildActionColumnsFromModifiers(model);
-    invalidateViewDef();
-    sanitizeModifierRulesAfterDeletion(model, deletedIds);
-  }
+      const needsModifierRebuild =
+        activeView === "modifiers" && deletedIds.length > 0;
+      if (needsModifierRebuild) {
+        for (const a of model.actions) {
+          if (!a.modSet) continue;
+          for (const id of deletedIds) delete a.modSet[id];
+        }
+      }
 
-  // Recompute interactions and prune orphan notes
-  rebuildInteractionsInPlace();
-  pruneNotesToValidPairs();
+      const last = Math.max(
+        0,
+        Math.min(arr.length - 1, rows[rows.length - 1] ?? 0),
+      );
 
-  // Reset selection to a sane row
-  const last = Math.max(
-    0,
-    Math.min(arr.length - 1, rows[rows.length - 1] ?? 0),
-  );
-  selection.rows.clear();
-  selection.rows.add(last);
-  selection.anchor = last;
-  sel.r = last;
-  sel.c = Math.min(sel.c, Math.max(0, viewDef().columns.length - 1));
-
-  layout();
-  render();
-
-  const noun = deletedIds.length === 1 ? "row" : "rows";
-  statusBar?.set(
-    `Deleted ${deletedIds.length} ${noun} from ${viewDef().title}.`,
+      return { deletedIds, needsModifierRebuild, last };
+    },
+    {
+      rebuildActionColumns: (res) => res?.needsModifierRebuild,
+      rebuildInteractions: true,
+      pruneNotes: true,
+      after: (res) => {
+        const last = res?.last ?? 0;
+        if (res?.needsModifierRebuild && res?.deletedIds?.length) {
+          sanitizeModifierRulesAfterDeletion(model, res.deletedIds);
+        }
+        selection.rows.clear();
+        selection.rows.add(last);
+        selection.anchor = last;
+        sel.r = last;
+        sel.c = Math.min(sel.c, Math.max(0, viewDef().columns.length - 1));
+      },
+      layout: true,
+      render: true,
+      status: (res) => {
+        const count = res?.deletedIds?.length ?? 0;
+        const noun = count === 1 ? "row" : "rows";
+        return `Deleted ${count} ${noun} from ${viewDef().title}.`;
+      },
+    },
   );
 }
 
@@ -970,6 +1036,7 @@ const disposeKeys = initGridKeys({
   modIdFromKey,
   setModForSelection,
   setCell,
+  runModelTransaction,
 
   // app-level actions
   cycleView,
@@ -1015,21 +1082,26 @@ function setCellSelectionAware(r, c, v) {
     return;
   }
 
-  for (const rr of targetRows) {
-    if (!Number.isFinite(rr)) continue;
-    for (const cc of targetCols) {
-      if (!Number.isFinite(cc)) continue;
-      if (!selection.colsAll && cc !== c) continue;
-      if (
-        selection.colsAll &&
-        activeView === "interactions" &&
-        !isInteractionPhaseColumnActiveForRow(model, vd, rr, cc)
-      )
-        continue;
-      setCell(rr, cc, cloneValueForAssignment(v));
-    }
-  }
-  render();
+  runModelTransaction(
+    "setCellSelectionAware",
+    () => {
+      for (const rr of targetRows) {
+        if (!Number.isFinite(rr)) continue;
+        for (const cc of targetCols) {
+          if (!Number.isFinite(cc)) continue;
+          if (!selection.colsAll && cc !== c) continue;
+          if (
+            selection.colsAll &&
+            activeView === "interactions" &&
+            !isInteractionPhaseColumnActiveForRow(model, vd, rr, cc)
+          )
+            continue;
+          setCell(rr, cc, cloneValueForAssignment(v));
+        }
+      }
+    },
+    { render: true },
+  );
 }
 
 // Initialize palette (handles both Outcome and End cells)
@@ -1123,6 +1195,7 @@ const disposeDrag = initRowDrag({
   SelectionNS,
   render,
   layout,
+  runModelMutation,
   status: statusBar,
   ROW_HEIGHT,
   HEADER_HEIGHT,
@@ -1542,29 +1615,36 @@ function endEdit(commit = true) {
   editing = false;
 
   if (commit) {
-    const rows =
-      selection.rows.size > 1
-        ? Array.from(selection.rows).sort((a, b) => a - b)
-        : [sel.r];
-    const vd = viewDef();
-    let targetCols = selection.colsAll
-      ? getHorizontalTargetColumns(sel.c)
-      : [sel.c];
-    if (!targetCols || !targetCols.length) targetCols = [sel.c];
-    for (const r of rows) {
-      for (const cIdx of targetCols) {
-        if (!Number.isFinite(cIdx)) continue;
-        if (
-          selection.colsAll &&
-          activeView === "interactions" &&
-          !isInteractionPhaseColumnActiveForRow(model, vd, r, cIdx)
-        )
-          continue;
-        setCell(r, cIdx, cloneValueForAssignment(val));
-      }
-    }
+    runModelTransaction(
+      "endEditCommit",
+      () => {
+        const rows =
+          selection.rows.size > 1
+            ? Array.from(selection.rows).sort((a, b) => a - b)
+            : [sel.r];
+        const vd = viewDef();
+        let targetCols = selection.colsAll
+          ? getHorizontalTargetColumns(sel.c)
+          : [sel.c];
+        if (!targetCols || !targetCols.length) targetCols = [sel.c];
+        for (const r of rows) {
+          for (const cIdx of targetCols) {
+            if (!Number.isFinite(cIdx)) continue;
+            if (
+              selection.colsAll &&
+              activeView === "interactions" &&
+              !isInteractionPhaseColumnActiveForRow(model, vd, r, cIdx)
+            )
+              continue;
+            setCell(r, cIdx, cloneValueForAssignment(val));
+          }
+        }
+      },
+      { render: true },
+    );
+  } else {
+    render();
   }
-  render();
 }
 
 function endEditIfOpen(commit = true) {
