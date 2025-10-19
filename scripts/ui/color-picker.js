@@ -174,15 +174,29 @@ export function initColorPicker(ctx = {}) {
       if (!normalized) return;
       state.current = normalized;
       updateInputs(normalized);
-      applyColor(normalized);
+      applyColor(normalized, { recordRecent: false });
     });
 
     hexInput.addEventListener("input", () => {
       if (isSyncing) return;
-      const normalized = normalizeColor(hexInput.value);
-      if (!normalized) return;
-      state.current = normalized;
-      updateInputs(normalized);
+      const sanitized = sanitizeHexInputValue(hexInput.value);
+      if (hexInput.value !== sanitized) {
+        const caret = hexInput.selectionStart;
+        hexInput.value = sanitized;
+        if (typeof caret === "number") {
+          const nextPos = Math.min(sanitized.length, caret);
+          window.requestAnimationFrame(() => {
+            hexInput.selectionStart = hexInput.selectionEnd = nextPos;
+          });
+        }
+      }
+      const digits = sanitized.replace(/^#/, "");
+      if (digits.length === 6) {
+        const normalized = normalizeColor(sanitized);
+        if (!normalized) return;
+        state.current = normalized;
+        updateInputs(normalized);
+      }
     });
 
     hexInput.addEventListener("keydown", (e) => {
@@ -192,7 +206,7 @@ export function initColorPicker(ctx = {}) {
         if (!normalized) return;
         state.current = normalized;
         updateInputs(normalized);
-        applyColor(normalized, true);
+        applyColor(normalized, { closeAfter: true, recordRecent: true });
       }
     });
 
@@ -202,12 +216,12 @@ export function initColorPicker(ctx = {}) {
       if (!normalized) return;
       state.current = normalized;
       updateInputs(normalized);
-      applyColor(normalized, true);
+      applyColor(normalized, { closeAfter: true, recordRecent: true });
     };
 
     clearBtn.onclick = (e) => {
       e.preventDefault();
-      applyColor("", true);
+      applyColor("", { closeAfter: true, recordRecent: false });
     };
   }
 
@@ -277,6 +291,19 @@ export function initColorPicker(ctx = {}) {
     return "#" + s.toUpperCase();
   }
 
+  function sanitizeHexInputValue(raw) {
+    if (!raw) return "";
+    let value = String(raw).trim();
+    if (!value) return "";
+    const hasHash = value.startsWith("#");
+    const digits = value
+      .replace(/[^0-9a-fA-F]/g, "")
+      .slice(0, 6)
+      .toUpperCase();
+    if (!digits) return hasHash ? "#" : "";
+    return `#${digits}`;
+  }
+
   function saveRecents() {
     try {
       window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(recentColors));
@@ -319,7 +346,7 @@ export function initColorPicker(ctx = {}) {
         e.preventDefault();
         state.current = color;
         updateInputs(color);
-        applyColor(color, true);
+        applyColor(color, { closeAfter: true, recordRecent: true });
       };
       recentWrap.appendChild(swatch);
     });
@@ -334,14 +361,15 @@ export function initColorPicker(ctx = {}) {
     isSyncing = false;
   }
 
-  function applyColor(raw, closeAfter = false) {
+  function applyColor(raw, options = {}) {
     if (!state.target) return;
+    const { closeAfter = false, recordRecent = false } = options;
     const color = normalizeColor(raw);
     const valueToSet = color || "";
     setColorValue(state.target.r, state.target.c, valueToSet);
     render();
     if (color) {
-      pushRecent(color);
+      if (recordRecent) pushRecent(color);
       state.current = color;
     } else {
       state.current = "";
