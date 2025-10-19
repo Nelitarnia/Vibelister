@@ -118,6 +118,12 @@ export function initGridKeys(deps) {
   }
 
   const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+  function isColorPickerContext(ae) {
+    const root = document.getElementById("vlColorPicker");
+    if (!root || root.getAttribute("data-open") !== "true") return false;
+    return !!(ae && root.contains(ae));
+  }
   function isValidColorValue(value) {
     if (typeof value !== "string") return false;
     const trimmed = value.trim();
@@ -146,6 +152,7 @@ export function initGridKeys(deps) {
   function onGridKeyDown(e) {
     if (document.querySelector('[aria-modal="true"]')) return; // respect modals
     const ae = document.activeElement;
+    if (isColorPickerContext(ae)) return;
     if (isTypingInEditable(ae)) return;
 
     // Clear multi-selection with Escape when not editing

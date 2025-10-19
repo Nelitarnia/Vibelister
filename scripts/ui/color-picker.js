@@ -363,6 +363,7 @@ export function initColorPicker(ctx = {}) {
     state.current = initial;
     updateInputs(initial);
     root.style.display = "block";
+    root.setAttribute("data-open", "true");
     positionPicker(rect);
     state.isOpen = true;
     window.requestAnimationFrame(() => {
@@ -393,6 +394,7 @@ export function initColorPicker(ctx = {}) {
   function close() {
     if (!state.isOpen || !root) return;
     root.style.display = "none";
+    root.removeAttribute("data-open");
     state.isOpen = false;
     state.target = null;
   }
