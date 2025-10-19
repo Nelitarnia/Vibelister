@@ -53,6 +53,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │           │   ├── selection.js
 │           │   └── ui-grid-mouse.js
 │           │   └── ui-row-drag.js
+│           │   └── undo.js
 │           ├── tests-ui.js
 │           └── tests.js
 ├── tests/

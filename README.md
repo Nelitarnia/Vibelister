@@ -73,9 +73,13 @@ Yes, combinatorial explosion is real, and you might end up with monstrous Modifi
 
 It's good practice to give short names to Modifiers since horizontal space may be scarce in the Interactions-view.
 
-## Interactions
+## Other features
 
 Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to Actions vs Actions (AA) comparing in Interactions-view.
+
+On any columns where you paste stable ID Actions (like "End" in Interactions), you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed".
+
+The program has an Undo/Redo feature which activates whenever the core model is changed, activated with Ctrl+z / Ctlr+y.
 
 ---
 
@@ -86,11 +90,20 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 - The logic for adding Phase 0 (simultaneous testing) and Outcome mirroring was started but not completed at the present.
 - Other cleaning up and streamlining around the files.
 
+## Known bugs
+
+- Drop-down palettes at the bottom of the screen in Interactions-view go partially out of screen.
+- Drop down menu text for undo/redo loses the "ctrl+z" / "ctrl+y" hotkey instruction at runtime.
+
 ## Ideas for later
 
-- Undo/redo.
 - Column resizing.
+- Drag 'n' drop box select?
+- Ability to create multi-selection with keyboard alone.
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
+- option to show canonical ID in a column for debugging purposes.
+- Action-specific "required" rule for modifiers.
+  - This might add to the "tristate boolean" on Modifier columns, or possibly become a part of the Modifier rules dialogue.
 - Ability to jump between elements with a stable ID as if they were links for faster navigation.
 - Predictive analysis to auto-fill cells (maybe one day in the future...)
   - Ability to create Action types or categories would likely help guide this feature.
@@ -104,4 +117,4 @@ Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to A
 
 Vibelister is a spiritual successor to [Movelister](https://github.com/Kazhuu/movelister), an unfinished prototype project from 2020 I made with a [friend](https://github.com/Kazhuu).
 
-The original Movelister was designed as a set of Libreoffice Calc scripts to allow easier creation of systematic character mechanics notes. Vibelister, on the other hand, has been built from the ground up to work as a locally ran browser-based program. It's also mostly "vibe-coded", hence the name. What can I say? I'm not really a programmer, but I have a vision.
+The original Movelister was designed as a set of Libreoffice Calc scripts to allow easier creation of systematic character mechanics notes. Vibelister, on the other hand, has been built from the ground up to work as a locally ran browser-based program. It's also mostly "vibe-coded", hence the name. What can I say? I'm not much of a programmer, but I have a vision.
