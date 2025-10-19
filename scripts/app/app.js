@@ -174,7 +174,126 @@ const sheet = document.getElementById("sheet"),
   statusEl = document.getElementById("status"),
   dragLine = document.getElementById("dragLine");
 const projectNameEl = document.getElementById(Ids.projectName);
+const undoMenuItem = document.getElementById(Ids.editUndo);
+const redoMenuItem = document.getElementById(Ids.editRedo);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
+
+function describeAttachmentLocation(att, includeColumn = true) {
+  if (!att || typeof att !== "object") return "";
+  const parts = [];
+  const viewLabel = att.viewTitle || (att.view ? String(att.view) : "");
+  if (viewLabel) parts.push(viewLabel);
+  if (Number.isFinite(att.row)) parts.push(`row ${att.row + 1}`);
+  if (includeColumn) {
+    const columnLabel = att.columnTitle || att.columnKey || "";
+    if (columnLabel) parts.push(columnLabel);
+  }
+  return parts.join(" · ");
+}
+
+function captureUndoAttachment() {
+  const vd = viewDef();
+  const cols = vd?.columns || [];
+  const col = cols[sel.c] || null;
+  return {
+    view: activeView,
+    viewTitle: vd?.title || VIEWS[activeView]?.title || activeView,
+    row: Number.isFinite(sel.r) ? sel.r : 0,
+    col: Number.isFinite(sel.c) ? sel.c : 0,
+    columnKey: col?.key || null,
+    columnTitle:
+      (col && (col.title || col.label || col.name)) ||
+      (col && typeof col.key === "string" ? col.key : ""),
+  };
+}
+
+function applyUndoAttachment(att) {
+  if (!att) return;
+  if (att.view && att.view !== activeView) {
+    setActiveView(att.view);
+  }
+  const row = Number.isFinite(att.row) ? att.row : 0;
+  const col = Number.isFinite(att.col) ? att.col : 0;
+  SelectionCtl.startSingle(row, col);
+  ensureVisible(row, col);
+}
+
+function makeUndoConfig(options = {}) {
+  const {
+    label,
+    shouldRecord,
+    makeStatus,
+    includeLocation = true,
+    includeColumn = true,
+    snapshotOptions,
+  } = options;
+
+  const capture = includeLocation ? () => captureUndoAttachment() : null;
+  const apply = includeLocation ? (att) => applyUndoAttachment(att) : null;
+
+  return {
+    label,
+    snapshotOptions,
+    shouldRecord: (result, ctx) => {
+      if (typeof shouldRecord === "function") return !!shouldRecord(result, ctx);
+      return true;
+    },
+    captureAttachments: capture
+      ? () => {
+          const att = capture();
+          if (!includeColumn && att) {
+            return { ...att, columnTitle: "", columnKey: att.columnKey };
+          }
+          return att;
+        }
+      : undefined,
+    applyAttachments: apply
+      ? (att, _direction) => {
+          apply(att);
+        }
+      : undefined,
+    makeStatus: ({ direction, label: lbl, context }) => {
+      if (typeof makeStatus === "function") {
+        return makeStatus(direction, lbl, context);
+      }
+      if (!includeLocation) {
+        return direction === "undo"
+          ? `Undid ${lbl || "change"}.`
+          : `Redid ${lbl || "change"}.`;
+      }
+      const attachment =
+        direction === "undo"
+          ? context.beforeAttachments
+          : context.afterAttachments;
+      const location = describeAttachmentLocation(attachment, includeColumn);
+      const verb = direction === "undo" ? "Undid" : "Redid";
+      if (location) return `${verb} ${lbl || "change"} at ${location}.`;
+      return `${verb} ${lbl || "change"}.`;
+    },
+  };
+}
+
+function updateUndoUI(state = {}) {
+  const { canUndo, canRedo, undoLabel, redoLabel } = state;
+  const formatLabel = (value) => {
+    if (!value) return "";
+    const text = String(value).trim();
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+  if (undoMenuItem) {
+    undoMenuItem.disabled = !canUndo;
+    const base = "Undo";
+    const formatted = formatLabel(undoLabel);
+    undoMenuItem.textContent = formatted ? `${base} ${formatted}` : base;
+  }
+  if (redoMenuItem) {
+    redoMenuItem.disabled = !canRedo;
+    const base = "Redo";
+    const formatted = formatLabel(redoLabel);
+    redoMenuItem.textContent = formatted ? `${base} ${formatted}` : base;
+  }
+}
 
 const mutationRunner = makeMutationRunner({
   model,
@@ -185,9 +304,14 @@ const mutationRunner = makeMutationRunner({
   layout,
   render,
   status: statusBar,
+  historyLimit: 200,
+  onHistoryChange: updateUndoUI,
 });
 
-const { runModelMutation, runModelTransaction } = mutationRunner;
+const { runModelMutation, runModelTransaction, undo, redo, getUndoState, clearHistory } =
+  mutationRunner;
+
+updateUndoUI(getUndoState());
 
 const SETTINGS_STORAGE_KEY = "vl.userSettings";
 const SETTINGS_FILE_NAME = "vibelister-settings.json";
@@ -703,9 +827,15 @@ function setModForSelection(colIndex, target) {
           next,
         );
       }
-      return { rowsUpdated: rows.length };
+      return { rowsUpdated: rows.length, view: activeView };
     },
-    { render: true },
+    {
+      render: true,
+      undo: makeUndoConfig({
+        label: "modifier edit",
+        shouldRecord: (res) => (res?.rowsUpdated ?? 0) > 0,
+      }),
+    },
   );
 }
 
@@ -820,6 +950,24 @@ function addRows(where) {
         const noun = res.count === 1 ? "row" : "rows";
         return `Inserted ${res.count} ${noun} ${res.whereWord} selection.`;
       },
+      undo: makeUndoConfig({
+        label: "insert rows",
+        includeColumn: false,
+        shouldRecord: (res) => (res?.count ?? 0) > 0,
+        makeStatus: (direction, _label, context) => {
+          const res = context?.result || {};
+          const count = res.count ?? 0;
+          const noun = count === 1 ? "row" : "rows";
+          const attachment =
+            direction === "undo"
+              ? context?.beforeAttachments
+              : context?.afterAttachments;
+          const location = describeAttachmentLocation(attachment, false);
+          const verb = direction === "undo" ? "Undid" : "Redid";
+          const where = location ? ` at ${location}` : "";
+          return `${verb} insertion of ${count} ${noun}${where}.`;
+        },
+      }),
     },
   );
 }
@@ -845,15 +993,44 @@ function clearSelectedCells(options = {}) {
       reason === "deleteAttempt" || reason === "menu"
         ? { statusHint: "Interactions are generated; rows can't be deleted." }
         : undefined;
-    clearInteractionsSelection(
-      model,
-      viewDef(),
-      selection,
-      sel,
-      mode,
-      statusBar,
-      render,
-      extras,
+    runModelMutation(
+      "clearInteractionsSelection",
+      () =>
+        clearInteractionsSelection(
+          model,
+          viewDef(),
+          selection,
+          sel,
+          mode,
+          statusBar,
+          render,
+          extras,
+        ),
+      {
+        render: (res) => (res?.cleared ?? 0) > 0,
+        status: (res) => res?.message,
+        undo: makeUndoConfig({
+          label: "clear interactions",
+          shouldRecord: (res) => (res?.cleared ?? 0) > 0,
+          makeStatus: (direction, _label, context) => {
+            const res = context?.result || {};
+            const cleared = res.cleared ?? 0;
+            const noun = cleared === 1 ? "entry" : "entries";
+            const attachment =
+              direction === "undo"
+                ? context?.beforeAttachments
+                : context?.afterAttachments;
+            const location = describeAttachmentLocation(attachment, true);
+            const verb = direction === "undo" ? "Undid" : "Redid";
+            if (cleared > 0) {
+              return `${verb} Interactions clear of ${cleared} ${noun}${
+                location ? ` at ${location}` : ""
+              }.`;
+            }
+            return `${verb} Interactions clear operation.`;
+          },
+        }),
+      },
     );
     if (mode === "clearAllEditable" && SelectionNS.setColsAll)
       SelectionNS.setColsAll(false);
@@ -927,6 +1104,24 @@ function clearSelectedCells(options = {}) {
         }
         return "Nothing to clear.";
       },
+      undo: makeUndoConfig({
+        label: "clear cells",
+        shouldRecord: (res) => (res?.cleared ?? 0) > 0,
+        makeStatus: (direction, _label, context) => {
+          const res = context?.result || {};
+          const cleared = res.cleared ?? 0;
+          const noun = cleared === 1 ? "cell" : "cells";
+          const attachment =
+            direction === "undo"
+              ? context?.beforeAttachments
+              : context?.afterAttachments;
+          const location = describeAttachmentLocation(attachment, true);
+          const verb = direction === "undo" ? "Undid" : "Redid";
+          return `${verb} clear of ${cleared} ${noun}${
+            location ? ` at ${location}` : ""
+          }.`;
+        },
+      }),
     },
   );
 }
@@ -996,6 +1191,25 @@ function deleteSelectedRows(options = {}) {
         const noun = count === 1 ? "row" : "rows";
         return `Deleted ${count} ${noun} from ${viewDef().title}.`;
       },
+      undo: makeUndoConfig({
+        label: "delete rows",
+        includeColumn: false,
+        shouldRecord: (res) => (res?.deletedIds?.length ?? 0) > 0,
+        makeStatus: (direction, _label, context) => {
+          const res = context?.result || {};
+          const count = res.deletedIds?.length ?? 0;
+          const noun = count === 1 ? "row" : "rows";
+          const attachment =
+            direction === "undo"
+              ? context?.beforeAttachments
+              : context?.afterAttachments;
+          const location = describeAttachmentLocation(attachment, false);
+          const verb = direction === "undo" ? "Undid" : "Redid";
+          return `${verb} deletion of ${count} ${noun}${
+            location ? ` at ${location}` : ""
+          }.`;
+        },
+      }),
     },
   );
 }
@@ -1070,6 +1284,8 @@ const disposeKeys = initGridKeys({
   getStructuredCell,
   applyStructuredCell,
   status: statusBar,
+  undo,
+  redo,
 });
 
 // Selection-aware setter so palette applies to all selected rows in Interactions
@@ -1099,6 +1315,9 @@ function setCellSelectionAware(r, c, v) {
   runModelTransaction(
     "setCellSelectionAware",
     () => {
+      let changedCells = 0;
+      const touchedRows = new Set();
+      const touchedCols = new Set();
       for (const rr of targetRows) {
         if (!Number.isFinite(rr)) continue;
         for (const cc of targetCols) {
@@ -1110,11 +1329,28 @@ function setCellSelectionAware(r, c, v) {
             !isInteractionPhaseColumnActiveForRow(model, vd, rr, cc)
           )
             continue;
-          setCell(rr, cc, cloneValueForAssignment(v));
+          const result = setCell(rr, cc, cloneValueForAssignment(v));
+          if (result && result.changed) {
+            changedCells++;
+            touchedRows.add(rr);
+            touchedCols.add(cc);
+          }
         }
       }
+      return {
+        changedCells,
+        touchedRows: Array.from(touchedRows).sort((a, b) => a - b),
+        touchedCols: Array.from(touchedCols).sort((a, b) => a - b),
+        view: activeView,
+      };
     },
-    { render: true },
+    {
+      render: true,
+      undo: makeUndoConfig({
+        label: "cell edit",
+        shouldRecord: (res) => (res?.changedCells ?? 0) > 0,
+      }),
+    },
   );
 }
 
@@ -1218,6 +1454,7 @@ const disposeDrag = initRowDrag({
     activeView === "inputs" ||
     activeView === "modifiers" ||
     activeView === "outcomes",
+  makeUndoConfig,
 });
 
 const DEFAULT_CELL_TEXT_COLOR = "#e6e6e6";
@@ -1641,6 +1878,9 @@ function endEdit(commit = true) {
     runModelTransaction(
       "endEditCommit",
       () => {
+        let changedCells = 0;
+        const touchedRows = new Set();
+        const touchedCols = new Set();
         const rows =
           selection.rows.size > 1
             ? Array.from(selection.rows).sort((a, b) => a - b)
@@ -1659,11 +1899,28 @@ function endEdit(commit = true) {
               !isInteractionPhaseColumnActiveForRow(model, vd, r, cIdx)
             )
               continue;
-            setCell(r, cIdx, cloneValueForAssignment(val));
+            const result = setCell(r, cIdx, cloneValueForAssignment(val));
+            if (result && result.changed) {
+              changedCells++;
+              touchedRows.add(r);
+              touchedCols.add(cIdx);
+            }
           }
         }
+        return {
+          changedCells,
+          touchedRows: Array.from(touchedRows).sort((a, b) => a - b),
+          touchedCols: Array.from(touchedCols).sort((a, b) => a - b),
+          view: activeView,
+        };
       },
-      { render: true },
+      {
+        render: true,
+        undo: makeUndoConfig({
+          label: "cell edit",
+          shouldRecord: (res) => (res?.changedCells ?? 0) > 0,
+        }),
+      },
     );
   } else {
     render();
@@ -1809,6 +2066,9 @@ const menusAPI = initMenus({
   addRowsBelow,
   clearCells: () => clearSelectedCells({}),
   deleteRows: () => deleteSelectedRows({ reason: "menu" }),
+  undo,
+  redo,
+  getUndoState,
 });
 
 // Save/Load/New
@@ -1825,6 +2085,7 @@ function newProject() {
     interactionsPairs: [],
     nextId: 1,
   });
+  clearHistory();
   // Reset per-view state for a clean slate
   for (const k in perViewState)
     perViewState[k] = { row: 0, col: 0, scrollTop: 0 };
@@ -1885,6 +2146,7 @@ async function openFromDisk() {
     const { data, name } = await m.openJson();
     upgradeModelInPlace(data);
     Object.assign(model, data);
+    clearHistory();
     ensureSeedRows();
     // Reset per-view state to top-of-sheet when opening a file
     for (const k in perViewState)

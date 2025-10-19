@@ -16,6 +16,9 @@ export function initMenus(deps) {
     addRowsBelow,
     clearCells,
     deleteRows,
+    undo,
+    redo,
+    getUndoState,
   } = deps;
 
   const menus = {
@@ -54,6 +57,7 @@ export function initMenus(deps) {
     const open = m.popup.getAttribute("data-open") === "true";
     closeAllMenus();
     if (!open) {
+      if (key === "edit") refreshUndoMenu();
       const r = m.trigger.getBoundingClientRect();
       m.popup.style.left = r.left + "px";
       m.popup.style.top = r.bottom + "px";
@@ -84,6 +88,38 @@ export function initMenus(deps) {
 
   // Helpers
   const el = (id) => document.getElementById(id);
+  const undoItem = el(Ids.editUndo);
+  const redoItem = el(Ids.editRedo);
+
+  function refreshUndoMenu() {
+    if (typeof getUndoState !== "function") return;
+    let state = null;
+    try {
+      state = getUndoState();
+    } catch (_) {
+      state = null;
+    }
+    const formatLabel = (value) => {
+      if (!value) return "";
+      const text = String(value).trim();
+      if (!text) return "";
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    };
+    const undoLabel = state?.undoLabel ? String(state.undoLabel) : "";
+    if (undoItem) {
+      undoItem.disabled = !(state?.canUndo);
+      const formatted = formatLabel(undoLabel);
+      undoItem.textContent = formatted ? `Undo ${formatted}` : "Undo";
+    }
+    const redoLabel = state?.redoLabel ? String(state.redoLabel) : "";
+    if (redoItem) {
+      redoItem.disabled = !(state?.canRedo);
+      const formatted = formatLabel(redoLabel);
+      redoItem.textContent = formatted ? `Redo ${formatted}` : "Redo";
+    }
+  }
+
+  refreshUndoMenu();
 
   // File menu
   el(Ids.fileNew)?.addEventListener("click", () => {
@@ -106,6 +142,15 @@ export function initMenus(deps) {
     closeAllMenus();
     saveToDisk(true);
   }); // export = Save As fallback
+
+  undoItem?.addEventListener("click", () => {
+    closeAllMenus();
+    if (typeof undo === "function") undo();
+  });
+  redoItem?.addEventListener("click", () => {
+    closeAllMenus();
+    if (typeof redo === "function") redo();
+  });
 
   // Edit menu
   el(Ids.editPreferences)?.addEventListener("click", async () => {

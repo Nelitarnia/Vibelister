@@ -52,6 +52,8 @@ export function initGridKeys(deps) {
     getStructuredCell,
     applyStructuredCell,
     status,
+    undo,
+    redo,
   } = deps;
 
   function setStatusMessage(message) {
@@ -183,6 +185,29 @@ export function initGridKeys(deps) {
         deleteRows();
       }
       return;
+    }
+
+    const metaLike = e.metaKey || e.ctrlKey;
+    if (metaLike && !e.altKey) {
+      const keyLower = String(e.key || "").toLowerCase();
+      if (keyLower === "z") {
+        if (!gridIsEditing()) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            if (typeof redo === "function") redo();
+          } else if (typeof undo === "function") {
+            undo();
+          }
+        }
+        return;
+      }
+      if (keyLower === "y") {
+        if (!gridIsEditing()) {
+          e.preventDefault();
+          if (typeof redo === "function") redo();
+        }
+        return;
+      }
     }
 
     // In-cell editing mode

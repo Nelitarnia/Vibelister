@@ -9,6 +9,7 @@ import { getRowInsertionTests } from "../scripts/support/tests/specs/rows.js";
 import { getDeletionTests } from "../scripts/support/tests/specs/deletion.js";
 import { getSelectionTests } from "../scripts/support/tests/specs/selection.js";
 import { getModelSnapshotTests } from "../scripts/support/tests/specs/model-snapshot.js";
+import { getUndoTests } from "../scripts/support/tests/specs/undo.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -42,4 +43,8 @@ for (const spec of getRowInsertionTests()) {
 
 for (const spec of getDeletionTests()) {
   test(`Deletion › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getUndoTests()) {
+  test(`Undo › ${spec.name}`, () => spec.run(sharedAssert));
 }

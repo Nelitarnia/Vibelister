@@ -73,6 +73,27 @@ export function snapshotModel(model, options = {}) {
   return snapshot;
 }
 
+export function restoreModelSnapshot(target, snapshot) {
+  if (!target || typeof target !== "object") return false;
+  if (!snapshot || typeof snapshot !== "object") return false;
+  const source = snapshot.model;
+  if (!source || typeof source !== "object") return false;
+
+  const cloned = cloneValue(source);
+
+  for (const key of Object.keys(target)) {
+    if (!Object.prototype.hasOwnProperty.call(cloned, key)) {
+      delete target[key];
+    }
+  }
+
+  for (const key of Object.keys(cloned)) {
+    target[key] = cloned[key];
+  }
+
+  return true;
+}
+
 export function makeMutationRunner(deps) {
   const {
     model,
@@ -83,7 +104,25 @@ export function makeMutationRunner(deps) {
     layout,
     render,
     status,
+    historyLimit: historyLimitInput,
+    onHistoryChange,
   } = deps || {};
+
+  const history = [];
+  const future = [];
+  const historyLimit = Number.isFinite(historyLimitInput)
+    ? Math.max(0, historyLimitInput | 0)
+    : 100;
+
+  function notifyHistoryChange() {
+    if (typeof onHistoryChange === "function") {
+      try {
+        onHistoryChange(getUndoState());
+      } catch (_) {
+        /* ignore listener errors */
+      }
+    }
+  }
 
   function createEffectTracker() {
     return {
@@ -253,6 +292,7 @@ export function makeMutationRunner(deps) {
     }
 
     flushEffects(tx.effects, afterCallbacks);
+    finalizeTransactionUndo(tx, result);
     return result;
   }
 
@@ -263,7 +303,130 @@ export function makeMutationRunner(deps) {
     }
   }
 
+  function normalizeUndoOptions(label, undoOptions) {
+    if (!undoOptions) return null;
+    let config = null;
+    if (undoOptions === true) config = {};
+    else if (typeof undoOptions === "string") config = { label: undoOptions };
+    else if (typeof undoOptions === "function") config = { label: undoOptions };
+    else if (typeof undoOptions === "object") config = { ...undoOptions };
+    if (!config) return null;
+    if (!config.label) config.label = label || "change";
+    const shouldRecord =
+      typeof config.shouldRecord === "function"
+        ? config.shouldRecord
+        : () => true;
+    const captureAttachments =
+      typeof config.captureAttachments === "function"
+        ? config.captureAttachments
+        : null;
+    const applyAttachments =
+      typeof config.applyAttachments === "function"
+        ? config.applyAttachments
+        : null;
+    const makeStatus =
+      typeof config.makeStatus === "function"
+        ? config.makeStatus
+        : ({ direction, label: lbl }) =>
+            direction === "undo"
+              ? `Undid ${lbl || "change"}.`
+              : `Redid ${lbl || "change"}.`;
+    const snapshotOptions =
+      config.snapshotOptions && typeof config.snapshotOptions === "object"
+        ? { ...config.snapshotOptions }
+        : undefined;
+    return {
+      label: config.label,
+      shouldRecord,
+      captureAttachments,
+      applyAttachments,
+      makeStatus,
+      snapshotOptions,
+    };
+  }
+
+  function prepareUndoContext(label, options, force = false) {
+    const undoConfig = normalizeUndoOptions(label, options?.undo);
+    if (!undoConfig) return null;
+    if (currentTransaction && !force) return null;
+    let beforeSnapshot = null;
+    let beforeAttachments = null;
+    try {
+      beforeSnapshot = captureModelSnapshot(undoConfig.snapshotOptions);
+      if (undoConfig.captureAttachments)
+        beforeAttachments = undoConfig.captureAttachments("before", {
+          label: undoConfig.label,
+        });
+    } catch (_) {
+      beforeSnapshot = null;
+      beforeAttachments = null;
+    }
+    return {
+      config: undoConfig,
+      beforeSnapshot,
+      beforeAttachments,
+      fallbackLabel: label,
+    };
+  }
+
+  function finalizeUndoContext(context, result) {
+    if (!context) return;
+    const { config, beforeSnapshot, beforeAttachments, fallbackLabel } = context;
+    if (!beforeSnapshot || typeof config?.shouldRecord !== "function") return;
+
+    let afterSnapshot = null;
+    let afterAttachments = null;
+    let label =
+      typeof config.label === "function"
+        ? config.label(result, {
+            beforeAttachments,
+            fallbackLabel,
+          })
+        : config.label;
+    if (!label) label = fallbackLabel || "change";
+    const ctx = {
+      label,
+      result,
+      beforeAttachments,
+    };
+    if (!config.shouldRecord(result, ctx)) return;
+    try {
+      afterSnapshot = captureModelSnapshot(config.snapshotOptions);
+      if (config.captureAttachments)
+      afterAttachments = config.captureAttachments("after", ctx);
+    } catch (_) {
+      afterSnapshot = null;
+    }
+    if (!afterSnapshot) return;
+
+    ctx.afterAttachments = afterAttachments;
+
+    const entry = {
+      label,
+      beforeSnapshot,
+      afterSnapshot,
+      beforeAttachments,
+      afterAttachments,
+      applyAttachments: config.applyAttachments,
+      makeStatus: config.makeStatus,
+      context: ctx,
+    };
+    history.push(entry);
+    if (historyLimit > 0 && history.length > historyLimit) {
+      history.splice(0, history.length - historyLimit);
+    }
+    future.length = 0;
+    notifyHistoryChange();
+  }
+
+  function finalizeTransactionUndo(tx, result) {
+    if (!tx?.undoContext) return;
+    finalizeUndoContext(tx.undoContext, result);
+    tx.undoContext = null;
+  }
+
   function runModelMutation(_label, mutate, options = {}) {
+    const undoContext = prepareUndoContext(_label, options);
     if (typeof mutate !== "function") return undefined;
 
     const result = mutate();
@@ -285,11 +448,16 @@ export function makeMutationRunner(deps) {
     recordEffects(effects, options, result);
     flushEffects(effects, afterCallbacks);
 
+    finalizeUndoContext(undoContext, result);
+
     return result;
   }
 
   function runModelTransaction(label, mutate, options = {}) {
     const tx = beginTransaction(label, options);
+    if (!tx.parent) {
+      tx.undoContext = prepareUndoContext(label, options, true);
+    }
     let result;
     try {
       result = typeof mutate === "function" ? mutate() : undefined;
@@ -304,11 +472,91 @@ export function makeMutationRunner(deps) {
     return snapshotModel(model, options);
   }
 
+  function getUndoState() {
+    return {
+      canUndo: history.length > 0,
+      canRedo: future.length > 0,
+      undoLabel: history.length ? history[history.length - 1].label || "" : "",
+      redoLabel: future.length ? future[future.length - 1].label || "" : "",
+    };
+  }
+
+  function performUndoLike(entry, direction) {
+    if (!entry) return false;
+    const snapshot = direction === "undo" ? entry.beforeSnapshot : entry.afterSnapshot;
+    const restored = restoreModelSnapshot(model, snapshot);
+    if (!restored) return false;
+
+    if (direction === "undo") future.push(entry);
+    else history.push(entry);
+
+    if (typeof entry.applyAttachments === "function") {
+      const attachments = direction === "undo"
+        ? entry.beforeAttachments
+        : entry.afterAttachments;
+      try {
+        entry.applyAttachments(attachments, direction, entry.context);
+      } catch (_) {
+        /* ignore attachment errors */
+      }
+    }
+
+    invalidateViewDef?.();
+    layout?.();
+    render?.();
+
+    try {
+      const message = entry.makeStatus?.({
+        direction,
+        label: entry.label,
+        context: entry.context,
+      });
+      applyStatus(message);
+    } catch (_) {
+      /* ignore status errors */
+    }
+
+    notifyHistoryChange();
+    return true;
+  }
+
+  function undo() {
+    if (!history.length) {
+      applyStatus("Nothing to undo.");
+      return false;
+    }
+    const entry = history.pop();
+    const worked = performUndoLike(entry, "undo");
+    if (!worked && entry) future.push(entry);
+    return worked;
+  }
+
+  function redo() {
+    if (!future.length) {
+      applyStatus("Nothing to redo.");
+      return false;
+    }
+    const entry = future.pop();
+    const worked = performUndoLike(entry, "redo");
+    if (!worked && entry) history.push(entry);
+    return worked;
+  }
+
+  function clearHistory() {
+    history.length = 0;
+    future.length = 0;
+    notifyHistoryChange();
+  }
+
   return {
     runModelMutation,
     beginTransaction,
     commitTransaction,
     runModelTransaction,
     captureModelSnapshot,
+    getUndoState,
+    undo,
+    redo,
+    clearHistory,
   };
 }
