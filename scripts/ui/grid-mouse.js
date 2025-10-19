@@ -39,6 +39,11 @@ export function initGridMouse(deps) {
     if (!Number.isFinite(r) || !Number.isFinite(c)) return;
     const col = viewDef().columns[c];
 
+    // Ensure the sheet regains focus so keyboard shortcuts go to the grid.
+    if (sheet && typeof sheet.focus === "function") {
+      sheet.focus({ preventScroll: true });
+    }
+
     // Handle double-click first: begin edit on non-mod columns; ignore on mod columns
     if (e.detail === 2) {
       if (!isModColumn(col)) {
