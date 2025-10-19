@@ -166,6 +166,7 @@ export function initColorPicker(ctx = {}) {
     root.appendChild(recentWrap);
 
     parent.appendChild(root);
+    root.addEventListener("keydown", onRootKeyDown);
 
     colorInput.addEventListener("input", () => {
       if (isSyncing) return;
@@ -222,6 +223,41 @@ export function initColorPicker(ctx = {}) {
       fontSize: "12px",
       fontWeight: "500",
     };
+  }
+
+  function getFocusableElements() {
+    if (!root) return [];
+    const candidates = Array.from(
+      root.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    return candidates.filter(
+      (el) =>
+        !el.hasAttribute("disabled") &&
+        el.getAttribute("aria-hidden") !== "true" &&
+        el.tabIndex !== -1,
+    );
+  }
+
+  function focusElement(el) {
+    if (!el) return;
+    try {
+      el.focus();
+      if (typeof el.select === "function") el.select();
+    } catch (_) {}
+  }
+
+  function cycleFocus(forward) {
+    const focusables = getFocusableElements();
+    if (!focusables.length) return;
+    let idx = focusables.indexOf(document.activeElement);
+    if (idx === -1) idx = forward ? 0 : focusables.length - 1;
+    else {
+      idx = (idx + (forward ? 1 : -1) + focusables.length) % focusables.length;
+    }
+    const target = focusables[idx];
+    focusElement(target);
   }
 
   function normalizeColor(raw) {
@@ -327,6 +363,7 @@ export function initColorPicker(ctx = {}) {
     state.current = initial;
     updateInputs(initial);
     root.style.display = "block";
+    root.setAttribute("data-open", "true");
     positionPicker(rect);
     state.isOpen = true;
     window.requestAnimationFrame(() => {
@@ -357,6 +394,7 @@ export function initColorPicker(ctx = {}) {
   function close() {
     if (!state.isOpen || !root) return;
     root.style.display = "none";
+    root.removeAttribute("data-open");
     state.isOpen = false;
     state.target = null;
   }
@@ -373,6 +411,15 @@ export function initColorPicker(ctx = {}) {
       ev.preventDefault();
       ev.stopPropagation();
       close();
+    }
+  }
+
+  function onRootKeyDown(ev) {
+    if (!state.isOpen) return;
+    if (ev.key === "Tab") {
+      ev.preventDefault();
+      ev.stopPropagation();
+      cycleFocus(!ev.shiftKey);
     }
   }
 
