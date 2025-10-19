@@ -22,6 +22,7 @@ export function initRowDrag(deps) {
     ROW_HEIGHT,
     HEADER_HEIGHT,
     isReorderableView,
+    makeUndoConfig,
   } = deps;
 
   // Configurable constants (potentially user-tweakable later)
@@ -134,6 +135,23 @@ export function initRowDrag(deps) {
           const movedLabel = span > 1 ? `${span} rows` : `row`;
           return `Reordered ${movedLabel} ${from + 1} → ${dest + 1}`;
         },
+        undo:
+          typeof makeUndoConfig === "function"
+            ? makeUndoConfig({
+                label: "row reorder",
+                includeColumn: false,
+                shouldRecord: (res) => (res?.len ?? len) > 0,
+                makeStatus: (direction, _label, context) => {
+                  const res = context?.result || {};
+                  const span = res.len ?? len;
+                  const movedLabel = span > 1 ? `${span} rows` : "row";
+                  const from = res.start != null ? res.start + 1 : start + 1;
+                  const to = res.target != null ? res.target + 1 : target + 1;
+                  const verb = direction === "undo" ? "Undid" : "Redid";
+                  return `${verb} reorder of ${movedLabel} (${from} → ${to}).`;
+                },
+              })
+            : undefined,
       });
     } else {
       const { target: dest } = performReorder();
