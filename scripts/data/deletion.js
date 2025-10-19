@@ -34,8 +34,8 @@ export function sanitizeModifierRulesAfterDeletion(model, deletedIds) {
         for (const key of Object.keys(next)) {
           const value = next[key];
           if (Array.isArray(value)) {
-            next[key] = value.filter((item) =>
-              typeof item !== "number" || !del.has(item),
+            next[key] = value.filter(
+              (item) => typeof item !== "number" || !del.has(item),
             );
           } else if (typeof value === "number" && del.has(value)) {
             next[key] = null;

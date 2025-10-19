@@ -116,29 +116,25 @@ export function initRowDrag(deps) {
     };
 
     if (typeof runModelMutation === "function") {
-      runModelMutation(
-        "reorderRows",
-        performReorder,
-        {
-          after: (res) => {
-            const dest = res?.target ?? target;
-            const span = res?.len ?? len;
-            clearSelection();
-            for (let i = 0; i < span; i++) selection.rows.add(dest + i);
-            selection.anchor = dest;
-            sel.r = dest;
-          },
-          layout: true,
-          render: true,
-          status: (res) => {
-            const dest = res?.target ?? target;
-            const span = res?.len ?? len;
-            const from = res?.start ?? start;
-            const movedLabel = span > 1 ? `${span} rows` : `row`;
-            return `Reordered ${movedLabel} ${from + 1} → ${dest + 1}`;
-          },
+      runModelMutation("reorderRows", performReorder, {
+        after: (res) => {
+          const dest = res?.target ?? target;
+          const span = res?.len ?? len;
+          clearSelection();
+          for (let i = 0; i < span; i++) selection.rows.add(dest + i);
+          selection.anchor = dest;
+          sel.r = dest;
         },
-      );
+        layout: true,
+        render: true,
+        status: (res) => {
+          const dest = res?.target ?? target;
+          const span = res?.len ?? len;
+          const from = res?.start ?? start;
+          const movedLabel = span > 1 ? `${span} rows` : `row`;
+          return `Reordered ${movedLabel} ${from + 1} → ${dest + 1}`;
+        },
+      });
     } else {
       const { target: dest } = performReorder();
       clearSelection();

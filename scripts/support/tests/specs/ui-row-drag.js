@@ -111,8 +111,16 @@ export function getUiRowDragTests() {
           [1, 2, 3],
           "multi-row selection should remain intact",
         );
-        assert.strictEqual(sel.r, 2, "active row should move to the clicked header");
-        assert.strictEqual(renderCount, 1, "render should run once for the click");
+        assert.strictEqual(
+          sel.r,
+          2,
+          "active row should move to the clicked header",
+        );
+        assert.strictEqual(
+          renderCount,
+          1,
+          "render should run once for the click",
+        );
       },
     },
   ];

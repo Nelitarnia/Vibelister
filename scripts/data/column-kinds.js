@@ -147,10 +147,12 @@ export const ColumnKinds = {
       if (!row) return false;
       const current = row.phases;
       const hadIds = Array.isArray(current?.ids) && current.ids.length > 0;
-      const hadLabels = current?.labels && Object.keys(current.labels).length > 0;
-      row.phases = typeof parsePhasesSpec === "function"
-        ? parsePhasesSpec("")
-        : { ids: [], labels: {} };
+      const hadLabels =
+        current?.labels && Object.keys(current.labels).length > 0;
+      row.phases =
+        typeof parsePhasesSpec === "function"
+          ? parsePhasesSpec("")
+          : { ids: [], labels: {} };
       return hadIds || hadLabels;
     },
   },

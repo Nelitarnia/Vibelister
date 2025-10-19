@@ -25,7 +25,10 @@ export function getSelectionTests() {
         SelectionCtl.setHorizontalMode(true);
         assert.strictEqual(Selection.horizontalMode, true);
         assert.strictEqual(Selection.colsAll, true);
-        assert.ok(Selection.rows.has(2), "row selection should include active row");
+        assert.ok(
+          Selection.rows.has(2),
+          "row selection should include active row",
+        );
 
         SelectionNS.setColsAll(false);
         assert.strictEqual(
@@ -43,7 +46,10 @@ export function getSelectionTests() {
         SelectionCtl.setHorizontalMode(false);
         assert.strictEqual(Selection.horizontalMode, false);
         assert.strictEqual(Selection.colsAll, false);
-        assert.ok(Selection.rows.has(2), "row membership remains after disabling mode");
+        assert.ok(
+          Selection.rows.has(2),
+          "row membership remains after disabling mode",
+        );
       },
     },
     {

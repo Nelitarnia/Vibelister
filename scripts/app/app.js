@@ -219,7 +219,11 @@ function normalizeHexColor(raw, fallback) {
   if (!s) return fallback;
   if (s.startsWith("#")) s = s.slice(1);
   s = s.replace(/[^0-9a-fA-F]/g, "");
-  if (s.length === 3) s = s.split("").map((ch) => ch + ch).join("");
+  if (s.length === 3)
+    s = s
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
   if (s.length !== 6) return fallback;
   return "#" + s.toUpperCase();
 }
@@ -252,7 +256,8 @@ function isLikelySettingsPayload(raw) {
   if (raw.meta && typeof raw.meta === "object") {
     if (raw.meta.kind === SETTINGS_FILE_KIND) return true;
   }
-  const colors = raw.colors && typeof raw.colors === "object" ? raw.colors : null;
+  const colors =
+    raw.colors && typeof raw.colors === "object" ? raw.colors : null;
   if (!colors) return false;
   return SETTINGS_COLOR_KEYS.some((key) => typeof colors[key] === "string");
 }
@@ -275,7 +280,10 @@ function applySanitizedSettings(settings) {
 
 function persistUserSettings(settings) {
   try {
-    window.localStorage?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    window.localStorage?.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify(settings),
+    );
   } catch (_) {}
 }
 
@@ -309,7 +317,9 @@ async function saveSettingsToDisk(settings, { as = false } = {}) {
       suggestedName: SETTINGS_FILE_NAME,
       handleKey: "settings",
     });
-    statusBar?.set(as ? `Settings saved as: ${name}` : `Settings saved: ${name}`);
+    statusBar?.set(
+      as ? `Settings saved as: ${name}` : `Settings saved: ${name}`,
+    );
     return { name, data };
   } catch (e) {
     if (e?.name === "AbortError") {
@@ -568,7 +578,11 @@ function setCell(r, c, v) {
         const k = String(col?.kind || "interactions");
         const ctx = kindCtx({ r, c, col, row: null, v });
         const wrote = setCellForKind(k, ctx, v);
-        return { view: "interactions", changed: wrote !== false, ensuredRows: 0 };
+        return {
+          view: "interactions",
+          changed: wrote !== false,
+          ensuredRows: 0,
+        };
       }
 
       // Non-Interactions: ensure row exists
@@ -633,7 +647,8 @@ function columnsHorizontallyCompatible(sourceCol, targetCol, viewKey) {
   }
   const sourceKind = sourceCol?.kind;
   const targetKind = targetCol?.kind;
-  if (sourceKind && targetKind && String(sourceKind) === String(targetKind)) return true;
+  if (sourceKind && targetKind && String(sourceKind) === String(targetKind))
+    return true;
   if (
     sourceCol?.key != null &&
     targetCol?.key != null &&
@@ -650,7 +665,8 @@ function getHorizontalTargetColumns(colIndex) {
   if (!sourceCol) return [];
   const out = [];
   for (let i = 0; i < cols.length; i++) {
-    if (columnsHorizontallyCompatible(sourceCol, cols[i], activeView)) out.push(i);
+    if (columnsHorizontallyCompatible(sourceCol, cols[i], activeView))
+      out.push(i);
   }
   return out;
 }
@@ -1071,9 +1087,7 @@ function setCellSelectionAware(r, c, v) {
     ? Array.from(rowsSet).sort((a, b) => a - b)
     : [r];
 
-  let targetCols = selection.colsAll
-    ? getHorizontalTargetColumns(c)
-    : [c];
+  let targetCols = selection.colsAll ? getHorizontalTargetColumns(c) : [c];
   if (!targetCols || !targetCols.length) targetCols = [c];
 
   const needsSpread = shouldSpreadDown || selection.colsAll;
@@ -1266,7 +1280,8 @@ function getEntityColorsFromRow(row) {
   const info = {};
   if (bg) info.background = bg;
   if (rawFg) info.foreground = rawFg;
-  if (bg && !rawFg) info.foreground = autoTextColor(bg, DEFAULT_CELL_TEXT_COLOR);
+  if (bg && !rawFg)
+    info.foreground = autoTextColor(bg, DEFAULT_CELL_TEXT_COLOR);
   return Object.keys(info).length ? info : null;
 }
 
@@ -1293,7 +1308,8 @@ function computeColorPreviewForColorColumn(row, key) {
   } else {
     info.background = value;
     const textColor = normalizeColorValue(row.color2);
-    info.foreground = textColor || autoTextColor(value, DEFAULT_CELL_TEXT_COLOR);
+    info.foreground =
+      textColor || autoTextColor(value, DEFAULT_CELL_TEXT_COLOR);
     info.textOverride = "";
   }
   return info;
@@ -1316,7 +1332,11 @@ function computeCellColors(r, c, col, row) {
       let id = null;
       if (entityKey === "action") {
         const keyL = String(col.key || "").toLowerCase();
-        if (keyL === "rhsaction" || keyL === "rhsactionid" || keyL === "rhsactionname")
+        if (
+          keyL === "rhsaction" ||
+          keyL === "rhsactionid" ||
+          keyL === "rhsactionname"
+        )
           id = pair.rhsActionId;
         else id = pair.aId;
       } else if (entityKey === "input") {
@@ -1483,7 +1503,10 @@ function render() {
       d.textContent = getCell(r, c);
       const col = cols[c];
       const colorInfo = computeCellColors(r, c, col, row);
-      if (colorInfo && Object.prototype.hasOwnProperty.call(colorInfo, "textOverride"))
+      if (
+        colorInfo &&
+        Object.prototype.hasOwnProperty.call(colorInfo, "textOverride")
+      )
         d.textContent = colorInfo.textOverride;
       applyCellColors(d, colorInfo);
       d.title = colorInfo && colorInfo.title ? colorInfo.title : "";

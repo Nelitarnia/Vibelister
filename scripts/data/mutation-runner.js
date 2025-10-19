@@ -42,7 +42,12 @@ export function snapshotModel(model, options = {}) {
     throw new Error("snapshotModel requires a model object");
   }
 
-  const { includeDerived = true, includeNotes = true, label, attachments } = options || {};
+  const {
+    includeDerived = true,
+    includeNotes = true,
+    label,
+    attachments,
+  } = options || {};
   const cloned = cloneValue(model);
 
   if (!includeDerived) {
@@ -140,7 +145,9 @@ export function makeMutationRunner(deps) {
     if (options.status != null) {
       try {
         const message =
-          typeof options.status === "function" ? options.status(result) : options.status;
+          typeof options.status === "function"
+            ? options.status(result)
+            : options.status;
         if (message != null) target.statusMessage = message;
       } catch (_) {
         /* swallow status errors */
@@ -153,11 +160,13 @@ export function makeMutationRunner(deps) {
     target.rebuildActionColumns =
       target.rebuildActionColumns || source.rebuildActionColumns;
     target.invalidateView = target.invalidateView || source.invalidateView;
-    target.rebuildInteractions = target.rebuildInteractions || source.rebuildInteractions;
+    target.rebuildInteractions =
+      target.rebuildInteractions || source.rebuildInteractions;
     target.pruneNotes = target.pruneNotes || source.pruneNotes;
     target.layout = target.layout || source.layout;
     target.render = target.render || source.render;
-    if (source.statusMessage != null) target.statusMessage = source.statusMessage;
+    if (source.statusMessage != null)
+      target.statusMessage = source.statusMessage;
   }
 
   function flushEffects(effects, afterCallbacks) {
@@ -303,4 +312,3 @@ export function makeMutationRunner(deps) {
     captureModelSnapshot,
   };
 }
-

@@ -83,7 +83,7 @@ function makeDeps() {
       },
     },
     isEditing: () => false,
-    beginEdit: (r, c) => deps._began = [r, c],
+    beginEdit: (r, c) => (deps._began = [r, c]),
     endEdit: () => {},
     render: () => deps._rendered++,
     ensureVisible: () => {},

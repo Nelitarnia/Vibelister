@@ -12,7 +12,11 @@ export function getRowInsertionTests() {
 
         const inserted = insertBlankRows(model, target, 0, 2);
 
-        assert.strictEqual(target.length, 2, "array length reflects inserted rows");
+        assert.strictEqual(
+          target.length,
+          2,
+          "array length reflects inserted rows",
+        );
         assert.strictEqual(inserted.length, 2, "helper returns inserted rows");
         assert.deepStrictEqual(
           target.slice(0, 2),
@@ -39,7 +43,10 @@ export function getRowInsertionTests() {
           "every inserted row receives a unique id",
         );
         for (const id of ids) {
-          assert.ok(!existingIds.has(id), "id was not reused from earlier rows");
+          assert.ok(
+            !existingIds.has(id),
+            "id was not reused from earlier rows",
+          );
         }
         assert.ok(
           ids.every((id) => typeof id === "number" && Number.isFinite(id)),

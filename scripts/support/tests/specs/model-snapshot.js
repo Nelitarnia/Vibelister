@@ -28,9 +28,19 @@ export function getModelSnapshotTests() {
         const snapshot = snapshotModel(model);
 
         assert.ok(snapshot.model !== model, "model object cloned");
-        assert.deepStrictEqual(snapshot.model, model, "snapshot matches original structure");
-        assert.ok(snapshot.model.actions !== model.actions, "actions array cloned");
-        assert.ok(snapshot.model.actions[0] !== model.actions[0], "row objects cloned");
+        assert.deepStrictEqual(
+          snapshot.model,
+          model,
+          "snapshot matches original structure",
+        );
+        assert.ok(
+          snapshot.model.actions !== model.actions,
+          "actions array cloned",
+        );
+        assert.ok(
+          snapshot.model.actions[0] !== model.actions[0],
+          "row objects cloned",
+        );
 
         model.actions[0].name = "mutated";
         assert.ok(
@@ -71,7 +81,11 @@ export function getModelSnapshotTests() {
           "derived pairs omitted",
         );
         assert.deepStrictEqual(snapshot.model.notes, {}, "notes omitted");
-        assert.strictEqual(snapshot.model.nextId, 1, "invalid nextId normalized");
+        assert.strictEqual(
+          snapshot.model.nextId,
+          1,
+          "invalid nextId normalized",
+        );
       },
     },
     {
@@ -87,7 +101,10 @@ export function getModelSnapshotTests() {
         });
 
         assert.strictEqual(snapshot.label, "before edit", "label stored");
-        assert.ok(snapshot.attachments !== attachments, "attachments cloned from input");
+        assert.ok(
+          snapshot.attachments !== attachments,
+          "attachments cloned from input",
+        );
         assert.deepStrictEqual(
           snapshot.attachments,
           { selection: { view: "actions", row: 3 } },

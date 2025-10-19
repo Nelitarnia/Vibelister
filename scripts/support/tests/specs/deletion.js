@@ -48,7 +48,11 @@ export function getDeletionTests() {
         );
 
         const [complex, sparse] = model.modifierConstraints;
-        assert.strictEqual(complex.left, modA.id, "complex constraint keeps left id");
+        assert.strictEqual(
+          complex.left,
+          modA.id,
+          "complex constraint keeps left id",
+        );
         assert.strictEqual(
           complex.right,
           modC.id,

@@ -404,12 +404,14 @@ export function initGridKeys(deps) {
         row.push({
           text,
           structured,
-          colKey: col && Object.prototype.hasOwnProperty.call(col, "key")
-            ? col.key
-            : null,
-          colKind: col && Object.prototype.hasOwnProperty.call(col, "kind")
-            ? col.kind
-            : null,
+          colKey:
+            col && Object.prototype.hasOwnProperty.call(col, "key")
+              ? col.key
+              : null,
+          colKind:
+            col && Object.prototype.hasOwnProperty.call(col, "kind")
+              ? col.kind
+              : null,
         });
       }
       out.push(row);
@@ -426,15 +428,17 @@ export function initGridKeys(deps) {
   function makeRangePayloadFromCells(cols, cells) {
     const vd = viewDef();
     const colDefs = (vd && vd.columns) || [];
-    const activeView = typeof getActiveView === "function" ? getActiveView() : null;
+    const activeView =
+      typeof getActiveView === "function" ? getActiveView() : null;
     return {
       view: activeView,
       columns: cols.map((idx) => {
         const col = colDefs[idx];
         return {
-          key: col && Object.prototype.hasOwnProperty.call(col, "key")
-            ? col.key
-            : null,
+          key:
+            col && Object.prototype.hasOwnProperty.call(col, "key")
+              ? col.key
+              : null,
           kind:
             col && Object.prototype.hasOwnProperty.call(col, "kind")
               ? col.kind
@@ -462,7 +466,10 @@ export function initGridKeys(deps) {
   }
 
   function interactionsColumnActiveForRow(r, c) {
-    if (typeof getActiveView === "function" && getActiveView() !== "interactions")
+    if (
+      typeof getActiveView === "function" &&
+      getActiveView() !== "interactions"
+    )
       return true;
     try {
       const vd = viewDef();
@@ -516,7 +523,11 @@ export function initGridKeys(deps) {
 
   function columnsCompatible(meta, col) {
     if (!meta || !col) return false;
-    if (meta.colKey != null && col.key != null && String(meta.colKey) === String(col.key))
+    if (
+      meta.colKey != null &&
+      col.key != null &&
+      String(meta.colKey) === String(col.key)
+    )
       return true;
     if (
       meta.colKind != null &&
@@ -545,7 +556,8 @@ export function initGridKeys(deps) {
     const rangePayload = makeRangePayloadFromCells(cols, cells);
     const wroteRange = writeRangeToEvent(e, rangePayload);
     if (hasStructured && rows.length === 1 && cols.length === 1) {
-      const structured = cells[0] && cells[0][0] ? cells[0][0].structured : null;
+      const structured =
+        cells[0] && cells[0][0] ? cells[0][0].structured : null;
       if (structured) writeStructuredToEvent(e, structured);
     }
 
@@ -611,7 +623,8 @@ export function initGridKeys(deps) {
       sourceCount: sourceHeight,
       selectionSet: selection && selection.rows,
       anchor: rowAnchor,
-      limit: rowLimit != null && rowLimit > 0 ? rowLimit : rowAnchor + sourceHeight,
+      limit:
+        rowLimit != null && rowLimit > 0 ? rowLimit : rowAnchor + sourceHeight,
     });
     if (!destRows.length) destRows.push(rowAnchor);
     if (rowLimit != null) {
@@ -663,10 +676,10 @@ export function initGridKeys(deps) {
         const r = destRows[i];
         if (!Number.isFinite(r) || r < 0) continue;
         if (rowLimit != null && r >= rowLimit) continue;
-        const textRow =
-          textMatrix[textHeight > 0 ? i % textHeight : 0] || [];
+        const textRow = textMatrix[textHeight > 0 ? i % textHeight : 0] || [];
         const structuredRow =
-          structuredCells[structuredHeight > 0 ? i % structuredHeight : 0] || [];
+          structuredCells[structuredHeight > 0 ? i % structuredHeight : 0] ||
+          [];
         for (let j = 0; j < destCols.length; j++) {
           const c = destCols[j];
           if (!Number.isFinite(c) || c < 0) continue;
@@ -678,25 +691,34 @@ export function initGridKeys(deps) {
           )
             continue;
           const textIndex = textWidth > 0 ? j % textWidth : 0;
-          const structuredIndex = structuredWidth > 0 ? j % structuredWidth : -1;
+          const structuredIndex =
+            structuredWidth > 0 ? j % structuredWidth : -1;
           const textValue =
             textWidth > 0 && textRow.length
               ? String(textRow[textIndex] ?? "")
               : "";
           const meta =
-            structuredIndex >= 0 ? structuredRow[structuredIndex] || null : null;
+            structuredIndex >= 0
+              ? structuredRow[structuredIndex] || null
+              : null;
           attemptedCells++;
 
           const col = colDefs[c];
           const colIsColor = isColorKind(col);
           const normalizedText = colIsColor ? textValue.trim() : textValue;
           const hasTextGetter = typeof getCellText === "function";
-          const beforeText = hasTextGetter ? String(getCellText(r, c) ?? "") : null;
+          const beforeText = hasTextGetter
+            ? String(getCellText(r, c) ?? "")
+            : null;
 
           let structuredApplied = false;
           let typeRejected = false;
 
-          if (meta && meta.structured && typeof applyStructuredCell === "function") {
+          if (
+            meta &&
+            meta.structured &&
+            typeof applyStructuredCell === "function"
+          ) {
             if (columnsCompatible(meta, col)) {
               structuredApplied = !!applyStructuredCell(r, c, meta.structured);
               if (!structuredApplied) typeRejected = true;
@@ -716,7 +738,11 @@ export function initGridKeys(deps) {
             changed = true;
             appliedCount++;
           } else if (typeof setCell === "function") {
-            if (colIsColor && normalizedText && !isValidColorValue(normalizedText)) {
+            if (
+              colIsColor &&
+              normalizedText &&
+              !isValidColorValue(normalizedText)
+            ) {
               typeRejected = true;
             } else {
               const nextValue = colIsColor ? normalizedText : textValue;
@@ -746,11 +772,9 @@ export function initGridKeys(deps) {
 
     const summary =
       typeof runModelTransaction === "function"
-        ? runModelTransaction(
-            "pasteCells",
-            performPaste,
-            { render: (res) => !!res?.changed },
-          )
+        ? runModelTransaction("pasteCells", performPaste, {
+            render: (res) => !!res?.changed,
+          })
         : (() => {
             const result = performPaste();
             if (result?.changed) render();

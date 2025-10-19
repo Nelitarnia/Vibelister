@@ -41,9 +41,7 @@ export async function openJson(options = {}) {
     setHandle(handleKey, h);
     return { data: JSON.parse(text), name: file.name, handle: h };
   } else {
-    const file = await pickViaInput(
-      accept || ".json,application/json",
-    );
+    const file = await pickViaInput(accept || ".json,application/json");
     const text = await file.text();
     return { data: JSON.parse(text), name: file.name, handle: null };
   }

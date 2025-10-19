@@ -26,7 +26,12 @@ export function getInteractionsTests() {
       name: "stable ids required for outcome and end cells",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        const status = { last: "", set(msg) { this.last = msg || ""; } };
+        const status = {
+          last: "",
+          set(msg) {
+            this.last = msg || "";
+          },
+        };
         const action = addAction("Aim");
         addInput("Tap");
         const outcome = addOutcome("Cancels");
@@ -49,10 +54,7 @@ export function getInteractionsTests() {
 
         status.set("");
         setInteractionsCell(model, status, viewDef, 0, 3, "EndString");
-        assert.ok(
-          status.last.includes("End"),
-          "free text end rejected",
-        );
+        assert.ok(status.last.includes("End"), "free text end rejected");
 
         status.set("");
         setInteractionsCell(model, status, viewDef, 0, 3, {
@@ -77,18 +79,23 @@ export function getInteractionsTests() {
         const viewDef = makeInteractionsView();
 
         setInteractionsCell(model, { set() {} }, viewDef, 0, 2, outcome.id);
-        setInteractionsCell(
+        setInteractionsCell(model, { set() {} }, viewDef, 0, 3, {
+          endActionId: action.id,
+          endVariantSig: "",
+        });
+
+        const payloadOutcome = getStructuredCellInteractions(
           model,
-          { set() {} },
           viewDef,
           0,
-          3,
-          { endActionId: action.id, endVariantSig: "" },
+          2,
         );
-
-        const payloadOutcome = getStructuredCellInteractions(model, viewDef, 0, 2);
         const payloadEnd = getStructuredCellInteractions(model, viewDef, 0, 3);
-        assert.strictEqual(payloadOutcome?.type, "outcome", "structured outcome type");
+        assert.strictEqual(
+          payloadOutcome?.type,
+          "outcome",
+          "structured outcome type",
+        );
         assert.strictEqual(payloadOutcome?.data?.outcomeId, outcome.id);
         assert.strictEqual(payloadEnd?.type, "end", "structured end type");
         assert.strictEqual(payloadEnd?.data?.endActionId, action.id);
@@ -97,7 +104,8 @@ export function getInteractionsTests() {
         buildInteractionsPairs(model);
 
         const applyOutcome = applyStructuredCellInteractions(
-          (r, c, v) => setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
+          (r, c, v) =>
+            setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
           viewDef,
           1,
           2,
@@ -107,7 +115,8 @@ export function getInteractionsTests() {
         assert.ok(applyOutcome, "outcome payload applied");
 
         const applyEnd = applyStructuredCellInteractions(
-          (r, c, v) => setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
+          (r, c, v) =>
+            setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
           viewDef,
           1,
           3,
@@ -167,11 +176,7 @@ export function getInteractionsTests() {
         addInput("Up");
         buildInteractionsPairs(model);
         const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p1:end" },
-          ],
+          columns: [{ key: "action" }, { key: "input" }, { key: "p1:end" }],
         };
 
         setInteractionsCell(model, { set() {} }, viewDef, 0, 2, {

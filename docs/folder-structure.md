@@ -47,6 +47,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │           │   ├── deletion.js
 │           │   ├── interactions.js
 │           │   ├── model-fixtures.js
+│           │   ├── model-snapshot.js
 │           │   ├── model-variants.js
 │           │   ├── rows.js
 │           │   ├── selection.js

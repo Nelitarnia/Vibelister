@@ -60,7 +60,9 @@ export function getModelVariantTests() {
       run(assert) {
         const { model, addAction, addInput, addModifier, groupExact } =
           makeModelFixture();
-        const mods = ["a", "b", "c", "d", "e"].map((n) => addModifier("mod " + n));
+        const mods = ["a", "b", "c", "d", "e"].map((n) =>
+          addModifier("mod " + n),
+        );
         const [ma, mb, mc, md, me] = mods;
         groupExact(1, [ma, mb], { required: true, name: "G1" });
         groupExact(2, [mc, md, me], { required: true, name: "G2" });

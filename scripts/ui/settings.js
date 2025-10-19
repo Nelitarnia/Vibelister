@@ -30,7 +30,11 @@ function normalizeColor(raw, fallback) {
   if (!s) return fallback;
   if (s.startsWith("#")) s = s.slice(1);
   s = s.replace(/[^0-9a-fA-F]/g, "");
-  if (s.length === 3) s = s.split("").map((ch) => ch + ch).join("");
+  if (s.length === 3)
+    s = s
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
   if (s.length !== 6) return fallback;
   return "#" + s.toUpperCase();
 }
@@ -88,7 +92,9 @@ function trapFocus(overlay, box, onClose) {
       const f = getFocusables(box);
       if (!f.length) return;
       const i = f.indexOf(document.activeElement);
-      const next = e.shiftKey ? (i - 1 + f.length) % f.length : (i + 1) % f.length;
+      const next = e.shiftKey
+        ? (i - 1 + f.length) % f.length
+        : (i + 1) % f.length;
       e.preventDefault();
       f[next].focus();
     }
@@ -213,7 +219,8 @@ export async function openSettingsDialog(options = {}) {
       }
     (children || []).forEach((child) => {
       if (child == null) return;
-      if (typeof child === "string") el.appendChild(document.createTextNode(child));
+      if (typeof child === "string")
+        el.appendChild(document.createTextNode(child));
       else el.appendChild(child);
     });
     return el;
@@ -224,7 +231,9 @@ export async function openSettingsDialog(options = {}) {
     { style: "display:flex;align-items:center;gap:12px;margin-bottom:12px;" },
     [
       h("h2", { style: "margin:0;font-size:20px;" }, ["Settings"]),
-      h("span", { style: "opacity:0.7;font-size:12px;" }, ["Customize the interface colors."]),
+      h("span", { style: "opacity:0.7;font-size:12px;" }, [
+        "Customize the interface colors.",
+      ]),
       h("div", { style: "margin-left:auto;" }, [
         (() => {
           const btn = h("button", { type: "button" }, ["×"]);
@@ -251,11 +260,9 @@ export async function openSettingsDialog(options = {}) {
     },
     [
       (() => {
-        const btn = h(
-          "button",
-          { type: "button", class: "settings-tab" },
-          ["UI"],
-        );
+        const btn = h("button", { type: "button", class: "settings-tab" }, [
+          "UI",
+        ]);
         Object.assign(btn.style, buttonStyle({ emphasis: true }));
         btn.style.fontWeight = "600";
         btn.setAttribute("aria-current", "page");
@@ -279,7 +286,8 @@ export async function openSettingsDialog(options = {}) {
   const colorSection = h(
     "div",
     { style: "display:flex;flex-direction:column;gap:14px;" },
-    [h("h3", { style: "margin:0;font-size:16px;" }, ["UI colors"])]);
+    [h("h3", { style: "margin:0;font-size:16px;" }, ["UI colors"])],
+  );
 
   COLOR_FIELDS.forEach(({ key, label }) => {
     const row = h(
