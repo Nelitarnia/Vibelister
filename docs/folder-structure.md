@@ -19,6 +19,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── outcomes.js
 │   │   ├── selection.js
 │   │   ├── types.js
+│   │   ├── user-settings.js
 │   │   └── views.js
 │   ├── data/
 │   │   ├── column-kinds.js
