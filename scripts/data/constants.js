@@ -48,7 +48,7 @@ export const Ids = Object.freeze({
 });
 
 export const DEFAULT_OUTCOMES = [
-  "Undecided",
+  "Uncertain",
   "No effect",
   "Impossible",
   "Prereq",

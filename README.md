@@ -39,7 +39,7 @@ List Inputs here. This is mostly self-explanatory, but in many games it is usefu
 
 Outcomes view contains formal results of your observation. The default Outcomes are as follows:
 
-- "Undecided" is used when the result is indeterminant or random.
+- "Uncertain" is used when the result is indeterminant or random.
 - "No Effect" means that nothing observably changed as a result of the Input.
 - "Impossible" is for interactions which are not possible to test.
 - "Prereq" means that the input is already in use as a part of the Action's setup.
@@ -81,6 +81,8 @@ On any columns where you paste stable ID Actions (like "End" in Interactions), y
 
 The program has an Undo/Redo feature which activates whenever the core model is changed, activated with Ctrl+z / Ctlr+y.
 
+It's possible to save / load project files in .json-format. Note: on Firefox and Safari (which don't have the File System Access API), regular "Save" and "Save as..." instead default to "Export as JSON".
+
 ---
 
 # To do
@@ -97,16 +99,20 @@ The program has an Undo/Redo feature which activates whenever the core model is 
 
 ## Ideas for later
 
-- Column resizing.
+- Column resizing (and saving changed column sizes as a part of your project file).
 - Drag 'n' drop box select?
 - Ability to create multi-selection with keyboard alone.
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
-- option to show canonical ID in a column for debugging purposes.
+- Being able to clean up your project file after larger refactoring.
+- option to show the canonical IDs of data elements for debugging purposes.
 - Action-specific "required" rule for modifiers.
   - This might add to the "tristate boolean" on Modifier columns, or possibly become a part of the Modifier rules dialogue.
+- Giving custom Phase rules to modified Actions.
+- Giving "tags" to cells (such as: "to test") and ability to quickly navigate between them.
 - Ability to jump between elements with a stable ID as if they were links for faster navigation.
 - Predictive analysis to auto-fill cells (maybe one day in the future...)
   - Ability to create Action types or categories would likely help guide this feature.
+- Exporting or importing files in more formats.
 - Write better instructions for the user, and add helpful tooltips.
 - Cover functionalities not currently covered by adding tests to the test suite.
 - ...And more!
