@@ -1267,6 +1267,7 @@ const disposeKeys = initGridKeys({
   setModForSelection,
   setCell,
   runModelTransaction,
+  makeUndoConfig,
 
   // app-level actions
   cycleView,

@@ -64,6 +64,90 @@ export function getUndoTests() {
       },
     },
     {
+      name: "paste transactions record undo entries",
+      run(assert) {
+        const log = [];
+        const { model, addAction } = makeModelFixture();
+        const rowA = addAction("One");
+        const rowB = addAction("Two");
+        const runner = createRunner(model, log);
+
+        const findRow = (row) => model.actions.find((r) => r.id === row.id);
+
+        runner.runModelMutation(
+          "editRowA",
+          () => {
+            const current = findRow(rowA);
+            const before = current?.name;
+            if (current) current.name = "Edited";
+            const changed = before !== current?.name;
+            return { before, after: current?.name, changed };
+          },
+          {
+            undo: {
+              label: "cell edit",
+              shouldRecord: (res) => !!res?.changed,
+              captureAttachments: () => null,
+              makeStatus: ({ direction }) => direction,
+            },
+          },
+        );
+
+        runner.runModelTransaction(
+          "pasteCells",
+          () => {
+            const current = findRow(rowB);
+            const before = current?.name;
+            if (current) current.name = "Pasted";
+            const changed = before !== current?.name;
+            return {
+              changed,
+              appliedCount: changed ? 1 : 0,
+              attemptedCells: 1,
+              rejectedCount: 0,
+            };
+          },
+          {
+            render: (res) => !!res?.changed,
+            undo: {
+              label: "paste",
+              shouldRecord: (res) => !!res?.changed,
+              captureAttachments: () => null,
+              makeStatus: ({ direction, context }) =>
+                `${direction}:${context?.result?.appliedCount ?? 0}`,
+            },
+          },
+        );
+
+        assert.strictEqual(findRow(rowA)?.name, "Edited", "row A retains edit");
+        assert.strictEqual(findRow(rowB)?.name, "Pasted", "row B reflects paste");
+
+        const stateAfterPaste = runner.getUndoState();
+        assert.ok(stateAfterPaste.canUndo, "undo available after paste");
+        assert.strictEqual(stateAfterPaste.undoLabel, "paste", "paste at top of history");
+
+        assert.strictEqual(runner.undo(), true, "undo succeeds");
+        assert.strictEqual(findRow(rowB)?.name, "Two", "row B reverted after undo");
+        assert.strictEqual(
+          findRow(rowA)?.name,
+          "Edited",
+          "row A edit preserved after undoing paste",
+        );
+        assert.strictEqual(log.at(-1), "undo:1", "status message indicates undo");
+
+        const stateAfterUndo = runner.getUndoState();
+        assert.strictEqual(stateAfterUndo.undoLabel, "cell edit", "prior entry exposed");
+        assert.ok(stateAfterUndo.canRedo, "redo available after undo");
+
+        assert.strictEqual(runner.redo(), true, "redo succeeds");
+        assert.strictEqual(findRow(rowB)?.name, "Pasted", "row B restored after redo");
+        assert.strictEqual(log.at(-1), "redo:1", "status message indicates redo");
+
+        const stateAfterRedo = runner.getUndoState();
+        assert.strictEqual(stateAfterRedo.undoLabel, "paste", "paste restored to top");
+      },
+    },
+    {
       name: "redo history is cleared after new change",
       run(assert) {
         const { model, addAction } = makeModelFixture();

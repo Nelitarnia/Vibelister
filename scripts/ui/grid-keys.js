@@ -36,6 +36,7 @@ export function initGridKeys(deps) {
     setModForSelection,
     setCell,
     runModelTransaction,
+    makeUndoConfig,
     // app-level actions
     cycleView,
     saveToDisk,
@@ -795,10 +796,19 @@ export function initGridKeys(deps) {
       return { changed, appliedCount, rejectedCount, attemptedCells };
     };
 
+    const useUndoConfig =
+      typeof makeUndoConfig === "function"
+        ? makeUndoConfig({
+            label: "paste",
+            shouldRecord: (res) => !!res?.changed,
+          })
+        : undefined;
+
     const summary =
       typeof runModelTransaction === "function"
         ? runModelTransaction("pasteCells", performPaste, {
             render: (res) => !!res?.changed,
+            undo: useUndoConfig,
           })
         : (() => {
             const result = performPaste();
