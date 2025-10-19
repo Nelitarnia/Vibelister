@@ -179,12 +179,16 @@ export function initColorPicker(ctx = {}) {
 
     hexInput.addEventListener("input", () => {
       if (isSyncing) return;
-      const sanitized = sanitizeHexInputValue(hexInput.value);
-      if (hexInput.value !== sanitized) {
+      const rawValue = hexInput.value;
+      const sanitized = sanitizeHexInputValue(rawValue);
+      if (rawValue !== sanitized) {
         const caret = hexInput.selectionStart;
         hexInput.value = sanitized;
         if (typeof caret === "number") {
-          const nextPos = Math.min(sanitized.length, caret);
+          const insertedHash =
+            sanitized.startsWith("#") && !rawValue.startsWith("#");
+          const desiredCaret = insertedHash ? caret + 1 : caret;
+          const nextPos = Math.min(sanitized.length, Math.max(0, desiredCaret));
           window.requestAnimationFrame(() => {
             hexInput.selectionStart = hexInput.selectionEnd = nextPos;
           });
