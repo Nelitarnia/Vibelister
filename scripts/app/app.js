@@ -87,6 +87,7 @@ import {
   getPhaseLabel,
   basenameNoExt,
 } from "../data/utils.js";
+import { createEditingController } from "./editing-shortcuts.js";
 onSelectionChanged(() => render());
 
 function initA11y() {
@@ -309,90 +310,6 @@ async function openSettingsDialog() {
     statusBar?.set("Open settings failed: " + (e?.message || e));
   }
 }
-
-function getCellRect(r, c) {
-  const vd = viewDef();
-  const cols = vd?.columns || [];
-  if (!Number.isFinite(r) || !Number.isFinite(c))
-    return { left: 0, top: 0, width: 0, height: ROW_HEIGHT };
-  if (c < 0 || c >= cols.length)
-    return { left: 0, top: 0, width: 0, height: ROW_HEIGHT };
-  const geom = getColGeomFor(cols);
-  const sheetLeft = sheet ? sheet.offsetLeft || 0 : 0;
-  const sheetTop = sheet ? sheet.offsetTop || HEADER_HEIGHT : HEADER_HEIGHT;
-  const left = sheetLeft + ((geom.offs?.[c] ?? 0) - sheet.scrollLeft);
-  const top = sheetTop + r * ROW_HEIGHT - sheet.scrollTop;
-  const width = geom.widths?.[c] ?? 0;
-  return { left, top, width, height: ROW_HEIGHT };
-}
-
-let editing = false;
-let shiftPressed = false;
-let lastShiftTap = 0;
-const DOUBLE_SHIFT_WINDOW_MS = 350;
-
-function isEditableTarget(el) {
-  if (!el) return false;
-  const tag = (el.tagName || "").toUpperCase();
-  if (tag === "INPUT" || tag === "TEXTAREA") return true;
-  return !!el.isContentEditable;
-}
-
-// Global outside-click (capture) handler to commit the editor once per page load
-document.addEventListener(
-  "mousedown",
-  (e) => {
-    if (!editing) return;
-    const inSheet = !!(
-      sheet &&
-      (e.target === sheet || sheet.contains(e.target))
-    );
-    if (inSheet) return;
-    try {
-      if (paletteAPI?.isOpen?.()) return;
-    } catch (_) {}
-    if (e.target === editor) return;
-    endEdit(true);
-  },
-  true,
-);
-
-document.addEventListener(
-  "keydown",
-  (e) => {
-    if (e.key === "Shift") {
-      const target = e.target;
-      const inEditable = isEditableTarget(target);
-      if (!shiftPressed && !editing && !inEditable) {
-        const now = Date.now();
-        if (lastShiftTap && now - lastShiftTap <= DOUBLE_SHIFT_WINDOW_MS) {
-          SelectionCtl.toggleHorizontalMode?.();
-          lastShiftTap = 0;
-        }
-      }
-      shiftPressed = true;
-    }
-  },
-  true,
-);
-
-document.addEventListener(
-  "keyup",
-  (e) => {
-    if (e.key === "Shift") {
-      shiftPressed = false;
-      const target = e.target;
-      const inEditable = isEditableTarget(target);
-      lastShiftTap = !editing && !inEditable ? Date.now() : 0;
-    }
-  },
-  true,
-);
-
-window.addEventListener("blur", () => {
-  shiftPressed = false;
-  lastShiftTap = 0;
-});
 
 function isModColumn(c) {
   return !!c && typeof c.key === "string" && c.key.startsWith("mod:");
@@ -982,7 +899,7 @@ function layout() {
 }
 const disposeKeys = initGridKeys({
   // state & selectors
-  isEditing: () => editing,
+  isEditing,
   getActiveView: () => activeView,
   selection,
   sel,
@@ -1152,7 +1069,7 @@ const disposeMouse = initGridMouse({
   sel,
   selection,
   SelectionNS,
-  isEditing: () => editing,
+  isEditing,
   beginEdit,
   endEdit,
   render,
@@ -1541,165 +1458,48 @@ function ensureVisible(r, c) {
   if (cb > sheet.scrollTop + vh) sheet.scrollTop = cb - vh;
 }
 
+const editingController = createEditingController({
+  sheet,
+  editor,
+  selection,
+  sel,
+  SelectionNS,
+  SelectionCtl,
+  viewDef,
+  dataArray,
+  getRowCount,
+  getColGeomFor,
+  ROW_HEIGHT,
+  HEADER_HEIGHT,
+  beginEditForKind,
+  kindCtx,
+  getCell,
+  setCell,
+  runModelTransaction,
+  makeUndoConfig,
+  isInteractionPhaseColumnActiveForRow,
+  model,
+  cloneValueForAssignment,
+  getHorizontalTargetColumns,
+  ensureVisible,
+  render,
+  updateSelectionSnapshot,
+  getActiveView: () => activeView,
+  getPaletteAPI: () => paletteAPI,
+});
+
+const {
+  beginEdit,
+  endEdit,
+  endEditIfOpen,
+  moveSel,
+  advanceSelectionAfterPaletteTab,
+  getCellRect,
+  isEditing,
+} = editingController;
+
 // Edit
-function beginEdit(r, c) {
-  if (paletteAPI?.closeColor) paletteAPI.closeColor();
-  if (SelectionNS.setColsAll) SelectionNS.setColsAll(false);
-  const col = viewDef().columns[c];
-  if (activeView === "interactions") {
-    const k = String(col?.kind || "");
-    const kindToUse = k || "interactions";
-    const res = beginEditForKind(kindToUse, kindCtx({ r, c, col, row: null }));
-    if (res?.handled) {
-      render();
-      return;
-    }
-    if (!res?.useEditor) {
-      render();
-      return;
-    }
-  } else if (col && col.kind) {
-    const arr = dataArray();
-    const row = arr ? arr[r] : null;
-    const res = beginEditForKind(col.kind, kindCtx({ r, c, col, row }));
-    if (res?.handled) {
-      render();
-      return;
-    }
-    if (!res?.useEditor) {
-      render();
-      return;
-    }
-  }
-  const rect = getCellRect(r, c);
-  editor.style.left = rect.left + "px";
-  editor.style.top = rect.top + "px";
-  editor.style.width = Math.max(40, rect.width) + "px";
-  editor.style.height = rect.height + "px";
-  editor.value = getCell(r, c);
-  editor.style.display = "block";
-  editing = true;
-  // If palette-capable cell, open the universal palette next to the editor
-  if (
-    activeView === "interactions" &&
-    paletteAPI &&
-    paletteAPI.wantsToHandleCell &&
-    paletteAPI.wantsToHandleCell()
-  ) {
-    paletteAPI.openForCurrentCell(
-      {
-        left: rect.left,
-        top: rect.top,
-        width: Math.max(200, rect.width),
-      },
-      editor.value || "",
-    );
-    // TODO: enable for other views.
-  }
-  editor.focus();
-  editor.select();
-}
-function endEdit(commit = true) {
-  if (!editing) return;
-  const val = editor.value;
-  editor.style.display = "none";
-  editing = false;
 
-  if (commit) {
-    runModelTransaction(
-      "endEditCommit",
-      () => {
-        let changedCells = 0;
-        const touchedRows = new Set();
-        const touchedCols = new Set();
-        const rows =
-          selection.rows.size > 1
-            ? Array.from(selection.rows).sort((a, b) => a - b)
-            : [sel.r];
-        const vd = viewDef();
-        let targetCols = selection.colsAll
-          ? getHorizontalTargetColumns(sel.c)
-          : [sel.c];
-        if (!targetCols || !targetCols.length) targetCols = [sel.c];
-        for (const r of rows) {
-          for (const cIdx of targetCols) {
-            if (!Number.isFinite(cIdx)) continue;
-            if (
-              selection.colsAll &&
-              activeView === "interactions" &&
-              !isInteractionPhaseColumnActiveForRow(model, vd, r, cIdx)
-            )
-              continue;
-            const result = setCell(r, cIdx, cloneValueForAssignment(val));
-            if (result && result.changed) {
-              changedCells++;
-              touchedRows.add(r);
-              touchedCols.add(cIdx);
-            }
-          }
-        }
-        return {
-          changedCells,
-          touchedRows: Array.from(touchedRows).sort((a, b) => a - b),
-          touchedCols: Array.from(touchedCols).sort((a, b) => a - b),
-          view: activeView,
-        };
-      },
-      {
-        render: true,
-        undo: makeUndoConfig({
-          label: "cell edit",
-          shouldRecord: (res) => (res?.changedCells ?? 0) > 0,
-        }),
-      },
-    );
-  } else {
-    render();
-  }
-}
-
-function endEditIfOpen(commit = true) {
-  if (editing) endEdit(commit);
-  if (paletteAPI?.closeColor) paletteAPI.closeColor();
-}
-function advanceSelectionAfterPaletteTab(shift) {
-  const cols = viewDef()?.columns || [];
-  if (!cols.length) return;
-  const maxC = cols.length - 1;
-  let nextR = sel.r;
-  let nextC = sel.c;
-  if (shift) {
-    if (nextC > 0) nextC--;
-    else {
-      nextC = maxC;
-      nextR = Math.max(0, nextR - 1);
-    }
-  } else {
-    if (nextC < maxC) nextC++;
-    else {
-      nextC = 0;
-      nextR = Math.min(getRowCount() - 1, nextR + 1);
-    }
-  }
-  sel.r = nextR;
-  sel.c = nextC;
-  ensureVisible(sel.r, sel.c);
-  render();
-}
-function moveSel(dr, dc, edit = false) {
-  // Any keyboard navigation implies single-cell intent → disarm row-wide selection
-  if (!shiftPressed && SelectionNS.setColsAll) SelectionNS.setColsAll(false);
-  const maxC = viewDef().columns.length - 1;
-  const nextR = clamp(sel.r + dr, 0, getRowCount() - 1);
-  const nextC = clamp(sel.c + dc, 0, maxC);
-  SelectionCtl.startSingle(nextR, nextC);
-  // Persist per-view row/col
-  updateSelectionSnapshot({ row: sel.r, col: sel.c });
-  SelectionCtl.applyHorizontalMode?.();
-  ensureVisible(sel.r, sel.c);
-  render();
-  if (edit) beginEdit(sel.r, sel.c);
-}
 sheet.addEventListener("scroll", () => {
   // Persist scroll per view, then render on next frame
   updateScrollSnapshot(sheet.scrollTop | 0);
