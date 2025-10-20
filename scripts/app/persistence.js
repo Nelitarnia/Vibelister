@@ -1,4 +1,9 @@
-import { DEFAULT_OUTCOMES, MOD, SCHEMA_VERSION } from "../data/constants.js";
+import {
+  DEFAULT_OUTCOMES,
+  DEFAULT_OUTCOME_COLORS,
+  MOD,
+  SCHEMA_VERSION,
+} from "../data/constants.js";
 import { makeRow } from "../data/rows.js";
 
 export function createPersistenceController({
@@ -24,11 +29,12 @@ export function createPersistenceController({
     ensureMinRows(model.modifiers, N);
     if (!model.outcomes || !model.outcomes.length) {
       for (const name of DEFAULT_OUTCOMES) {
+        const { color = "", color2 = "" } = DEFAULT_OUTCOME_COLORS[name] || {};
         model.outcomes.push({
           id: model.nextId++,
           name,
-          color: "",
-          color2: "",
+          color,
+          color2,
           notes: "",
         });
       }

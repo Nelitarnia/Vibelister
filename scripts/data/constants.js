@@ -58,6 +58,17 @@ export const DEFAULT_OUTCOMES = [
   "Follows",
 ];
 
+export const DEFAULT_OUTCOME_COLORS = Object.freeze({
+  Uncertain: Object.freeze({ color: "#EAEBF0", color2: "#4B4B4B" }),
+  "No effect": Object.freeze({ color: "#4F4F4F", color2: "#FFFFFF" }),
+  Impossible: Object.freeze({ color: "#32333A", color2: "#C5C5CB" }),
+  Prereq: Object.freeze({ color: "#4F5E56", color2: "#ADCDB9" }),
+  Mutual: Object.freeze({ color: "#6967CD", color2: "#F4F4F4" }),
+  Cancels: Object.freeze({ color: "#991114", color2: "#FFFFFF" }),
+  Buffers: Object.freeze({ color: "#EA8015", color2: "#000000" }),
+  Follows: Object.freeze({ color: "#C88F57", color2: "#000000" }),
+});
+
 export const SCHEMA_VERSION = 1;
 
 // Back-compat bindings (import directly where needed)
