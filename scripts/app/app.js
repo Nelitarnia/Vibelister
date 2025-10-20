@@ -68,21 +68,20 @@ import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
 import { createHistoryController } from "./history.js";
 import {
   clamp,
-  colWidths,
-  colOffsets,
-  visibleCols,
-  visibleRows,
   parsePhaseKey,
   parsePhasesSpec,
   formatPhasesSpec,
-  getPhaseLabel,
   basenameNoExt,
+  visibleCols,
+  visibleRows,
+  colOffsets,
+  colWidths,
 } from "../data/utils.js";
 import { createEditingController } from "./editing-shortcuts.js";
 import { createPersistenceController } from "./persistence.js";
 import { createSettingsController } from "./settings-controller.js";
 import { createGridCommands } from "./grid-commands.js";
-onSelectionChanged(() => render());
+import { createGridRenderer } from "./grid-renderer.js";
 
 function initA11y() {
   statusBar?.ensureLiveRegion();
@@ -107,17 +106,6 @@ let paletteAPI = null;
 let menusAPI = null;
 
 // Grid & helpers
-// Column geometry cache keyed by current columns reference
-let _colGeomCache = { key: null, widths: null, offs: null, stamp: 0 };
-function getColGeomFor(columns) {
-  const key = columns || null;
-  if (_colGeomCache.key === key && _colGeomCache.widths && _colGeomCache.offs)
-    return _colGeomCache;
-  const widths = colWidths(columns || []);
-  const offs = colOffsets(widths);
-  _colGeomCache = { key, widths, offs, stamp: (_colGeomCache.stamp | 0) + 1 };
-  return _colGeomCache;
-}
 const sheet = document.getElementById("sheet"),
   cellsLayer = document.getElementById("cells"),
   spacer = document.getElementById("spacer"),
@@ -164,6 +152,38 @@ const {
   updateSelectionSnapshot,
   updateScrollSnapshot,
 } = viewState;
+
+const {
+  render,
+  layout,
+  ensureVisible,
+  getColGeomFor,
+} = createGridRenderer({
+  sheet,
+  cellsLayer,
+  spacer,
+  colHdrs,
+  rowHdrs,
+  selection,
+  SelectionNS,
+  sel,
+  getActiveView: () => activeView,
+  viewDef,
+  dataArray,
+  getRowCount,
+  getCell,
+  isRowSelected,
+  model,
+  rebuildInteractionPhaseColumns,
+  noteKeyForPair,
+  parsePhaseKey,
+  ROW_HEIGHT,
+  updateSelectionSnapshot,
+  isModColumn,
+  modIdFromKey,
+});
+
+onSelectionChanged(() => render());
 
 const {
   makeUndoConfig,
@@ -384,16 +404,6 @@ const applyStructuredCell = makeApplyStructuredCell({
   getActiveView: () => activeView,
 });
 
-// Render
-function layout() {
-  const cols = viewDef().columns;
-  const { widths } = getColGeomFor(cols);
-  const totalW = widths.reduce((a, b) => a + b, 0),
-    totalH = getRowCount() * ROW_HEIGHT;
-  spacer.style.width = totalW + "px";
-  spacer.style.height = totalH + "px";
-}
-
 const editingController = createEditingController({
   sheet,
   editor,
@@ -605,355 +615,6 @@ const disposeDrag = initRowDrag({
     activeView === "outcomes",
   makeUndoConfig,
 });
-
-const DEFAULT_CELL_TEXT_COLOR = "#e6e6e6";
-
-function normalizeColorValue(value) {
-  if (typeof value !== "string") return "";
-  const trimmed = value.trim();
-  return trimmed;
-}
-
-function parseHexColor(value) {
-  const s = normalizeColorValue(value);
-  if (!s || s[0] !== "#") return null;
-  const hex = s.slice(1);
-  if (hex.length !== 3 && hex.length !== 6) return null;
-  const expand =
-    hex.length === 3
-      ? hex
-          .split("")
-          .map((ch) => ch + ch)
-          .join("")
-      : hex;
-  const r = parseInt(expand.slice(0, 2), 16);
-  const g = parseInt(expand.slice(2, 4), 16);
-  const b = parseInt(expand.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
-  return [r, g, b];
-}
-
-function channelToLinear(c) {
-  const s = c / 255;
-  if (s <= 0.03928) return s / 12.92;
-  return Math.pow((s + 0.055) / 1.055, 2.4);
-}
-
-function autoTextColor(background, fallback = DEFAULT_CELL_TEXT_COLOR) {
-  const rgb = parseHexColor(background);
-  if (!rgb) return fallback;
-  const [r, g, b] = rgb;
-  const L =
-    0.2126 * channelToLinear(r) +
-    0.7152 * channelToLinear(g) +
-    0.0722 * channelToLinear(b);
-  return L > 0.5 ? "#000000" : "#ffffff";
-}
-
-function getEntityCollection(entity) {
-  const key = String(entity || "").toLowerCase();
-  if (key === "action") return model.actions || [];
-  if (key === "input") return model.inputs || [];
-  if (key === "modifier") return model.modifiers || [];
-  if (key === "outcome") return model.outcomes || [];
-  return null;
-}
-
-function getEntityColorsFromRow(row) {
-  if (!row || typeof row !== "object") return null;
-  const bg = normalizeColorValue(row.color || row.color1 || "");
-  const rawFg = normalizeColorValue(row.color2 || row.fontColor || "");
-  const info = {};
-  if (bg) info.background = bg;
-  if (rawFg) info.foreground = rawFg;
-  if (bg && !rawFg)
-    info.foreground = autoTextColor(bg, DEFAULT_CELL_TEXT_COLOR);
-  return Object.keys(info).length ? info : null;
-}
-
-function getEntityColors(entity, id) {
-  if (id == null) return null;
-  const arr = getEntityCollection(entity);
-  if (!arr || !arr.length) return null;
-  const numId = Number(id);
-  if (!Number.isFinite(numId)) return null;
-  const row = arr.find((x) => (x?.id | 0) === (numId | 0));
-  if (!row) return null;
-  return getEntityColorsFromRow(row);
-}
-
-function computeColorPreviewForColorColumn(row, key) {
-  if (!row || typeof row !== "object") return null;
-  const value = normalizeColorValue(row[key]);
-  if (!value) return null;
-  const info = { title: value };
-  if (String(key) === "color2") {
-    info.foreground = value;
-    const baseBg = normalizeColorValue(row.color);
-    if (baseBg) info.background = baseBg;
-  } else {
-    info.background = value;
-    const textColor = normalizeColorValue(row.color2);
-    info.foreground =
-      textColor || autoTextColor(value, DEFAULT_CELL_TEXT_COLOR);
-    info.textOverride = "";
-  }
-  return info;
-}
-
-function computeCellColors(r, c, col, row) {
-  if (!col) return null;
-  const kind = String(col.kind || "").toLowerCase();
-  if (kind === "color") {
-    if (activeView === "interactions") return null;
-    return computeColorPreviewForColorColumn(row, col.key);
-  }
-
-  if (activeView === "interactions") {
-    const pair = model.interactionsPairs?.[r];
-    if (!pair) return null;
-
-    if (kind === "refro" || kind === "refpick") {
-      const entityKey = String(col.entity || "").toLowerCase();
-      let id = null;
-      if (entityKey === "action") {
-        const keyL = String(col.key || "").toLowerCase();
-        if (
-          keyL === "rhsaction" ||
-          keyL === "rhsactionid" ||
-          keyL === "rhsactionname"
-        )
-          id = pair.rhsActionId;
-        else id = pair.aId;
-      } else if (entityKey === "input") {
-        id = pair.iId;
-      }
-      if (id == null) return null;
-      return getEntityColors(col.entity, id);
-    }
-
-    if (kind === "interactions") {
-      const pk = parsePhaseKey(col.key);
-      if (!pk) return null;
-      const note = model.notes?.[noteKeyForPair(pair, pk.p)] || {};
-      if (pk.field === "outcome") {
-        const info = getEntityColors("outcome", note.outcomeId);
-        return info || null;
-      }
-      if (pk.field === "end") {
-        const info = getEntityColors("action", note.endActionId);
-        return info || null;
-      }
-      return null;
-    }
-
-    return null;
-  }
-
-  if (isModColumn(col)) {
-    const modId = modIdFromKey(col.key);
-    if (!Number.isFinite(modId)) return null;
-    return getEntityColors("modifier", modId);
-  }
-
-  if (kind === "refro" || kind === "refpick") {
-    const id = row?.[col.key];
-    return getEntityColors(col.entity, id);
-  }
-
-  return null;
-}
-
-function applyCellColors(el, info) {
-  if (!info) {
-    el.style.background = "";
-    el.style.color = "";
-    return;
-  }
-  if (Object.prototype.hasOwnProperty.call(info, "background")) {
-    el.style.background = info.background || "";
-  } else {
-    el.style.background = "";
-  }
-  if (Object.prototype.hasOwnProperty.call(info, "foreground")) {
-    el.style.color = info.foreground || "";
-  } else {
-    el.style.color = "";
-  }
-}
-
-function render() {
-  updateSelectionSnapshot({ row: sel.r, col: sel.c });
-  if (activeView === "interactions") {
-    rebuildInteractionPhaseColumns();
-  }
-  const vw = sheet.clientWidth,
-    vh = sheet.clientHeight;
-  const sl = sheet.scrollLeft,
-    st = sheet.scrollTop;
-
-  // Use geometry cache keyed by current columns identity
-  const cols = viewDef().columns;
-  const { widths, offs } = getColGeomFor(cols);
-  const vc = visibleCols(offs, sl, vw, cols.length),
-    vr = visibleRows(st, vh, ROW_HEIGHT, getRowCount());
-
-  colHdrs.style.transform = `translateX(${-sl}px)`;
-  rowHdrs.style.transform = `translateY(${-st}px)`;
-
-  // Column headers
-  colHdrs.innerHTML = "";
-  const hf = document.createDocumentFragment();
-  for (let c = vc.start; c <= vc.end; c++) {
-    const d = document.createElement("div");
-    d.className = "hdr";
-    d.style.left = offs[c] + "px";
-    d.style.width = widths[c] + "px";
-    d.style.top = "0px";
-    const col = cols[c];
-    const t = col.title;
-    let tooltip = t;
-    if (activeView === "interactions") {
-      const mode = (model.meta && model.meta.interactionsMode) || "AI";
-      tooltip = `${t} — Interactions Mode: ${mode}`;
-    }
-    d.textContent = t;
-    d.title = tooltip;
-    hf.appendChild(d);
-  }
-  colHdrs.appendChild(hf);
-
-  // Row headers
-  rowHdrs.innerHTML = "";
-  const rf = document.createDocumentFragment();
-  for (let r = vr.start; r <= vr.end; r++) {
-    const d = document.createElement("div");
-    d.className = "rhdr";
-    const top = r * ROW_HEIGHT;
-    d.style.top = top + "px";
-    d.dataset.r = r;
-    let label = String(r + 1);
-    {
-      const colsAll =
-        (SelectionNS && SelectionNS.isAllCols && SelectionNS.isAllCols()) ||
-        !!selection.colsAll;
-      if (isRowSelected(r) && colsAll) label += " ↔";
-    }
-    d.textContent = label;
-    if (isRowSelected(r)) {
-      d.style.background = "#26344d";
-      d.style.color = "#e6eefc";
-    }
-    rf.appendChild(d);
-  }
-  rowHdrs.appendChild(rf);
-
-  // Cells — pooled rendering to avoid create/destroy churn
-  const visibleColsCount = vc.end - vc.start + 1;
-  const visibleRowsCount = vr.end - vr.start + 1;
-  const need = visibleColsCount * visibleRowsCount;
-
-  window.__cellPool = window.__cellPool || [];
-  const cellPool = window.__cellPool;
-  while (cellPool.length < need) {
-    const d = document.createElement("div");
-    d.className = "cell";
-    cellsLayer.appendChild(d);
-    cellPool.push(d);
-  }
-  for (let i = need; i < cellPool.length; i++) {
-    const d = cellPool[i];
-    if (d.style.display !== "none") d.style.display = "none";
-  }
-
-  const rows = activeView === "interactions" ? null : dataArray();
-  let k = 0;
-  for (let r = vr.start; r <= vr.end; r++) {
-    const top = r * ROW_HEIGHT;
-    const row = rows ? rows[r] : null;
-    for (let c = vc.start; c <= vc.end; c++) {
-      const left = offs[c],
-        w = widths[c];
-      const d = cellPool[k++];
-      if (d.style.display !== "") d.style.display = "";
-      d.style.left = left + "px";
-      d.style.top = top + "px";
-      d.style.width = w + "px";
-      d.style.height = ROW_HEIGHT + "px";
-      d.dataset.r = r;
-      d.dataset.c = c;
-      d.textContent = getCell(r, c);
-      const col = cols[c];
-      const colorInfo = computeCellColors(r, c, col, row);
-      if (
-        colorInfo &&
-        Object.prototype.hasOwnProperty.call(colorInfo, "textOverride")
-      )
-        d.textContent = colorInfo.textOverride;
-      applyCellColors(d, colorInfo);
-      d.title = colorInfo && colorInfo.title ? colorInfo.title : "";
-      if (r % 2 === 1) d.classList.add("alt");
-      else d.classList.remove("alt");
-      const isMultiSelection =
-        (selection.rows && selection.rows.size > 1) ||
-        (selection.cols && selection.cols.size > 1) ||
-        !!selection.colsAll;
-      let inRange = false;
-      if (isMultiSelection) {
-        const inRow = selection.rows && selection.rows.has(r);
-        const inCol = selection.colsAll
-          ? true
-          : selection.cols && selection.cols.size
-            ? selection.cols.has(c)
-            : c === sel.c;
-        inRange = !!(inRow && inCol);
-      }
-      if (inRange) d.classList.add("range-selected");
-      else d.classList.remove("range-selected");
-      if (r === sel.r && c === sel.c) d.classList.add("selected");
-      else d.classList.remove("selected");
-      d.style.opacity = "";
-      if (activeView === "interactions") {
-        const colKey = cols[c] && cols[c].key;
-        if (colKey) {
-          const s = String(colKey);
-          const i = s.indexOf(":");
-          if (s[0] === "p" && i > 1) {
-            const pNum = Number(s.slice(1, i));
-            const field = s.slice(i + 1);
-            if (
-              (field === "outcome" || field === "end") &&
-              Number.isFinite(pNum)
-            ) {
-              const pair = model.interactionsPairs[r];
-              if (pair) {
-                const a = model.actions.find((x) => x.id === pair.aId);
-                const ids = a && a.phases && a.phases.ids ? a.phases.ids : [];
-                if (ids.length && ids.indexOf(pNum) === -1) {
-                  d.style.opacity = "0.6";
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-function ensureVisible(r, c) {
-  const { offs } = getColGeomFor(viewDef().columns);
-  const vw = sheet.clientWidth,
-    vh = sheet.clientHeight,
-    cl = offs[c],
-    cr = offs[c + 1],
-    ct = r * ROW_HEIGHT,
-    cb = ct + ROW_HEIGHT;
-  if (cl < sheet.scrollLeft) sheet.scrollLeft = cl;
-  if (cr > sheet.scrollLeft + vw) sheet.scrollLeft = cr - vw;
-  if (ct < sheet.scrollTop) sheet.scrollTop = ct;
-  if (cb > sheet.scrollTop + vh) sheet.scrollTop = cb - vh;
-}
 
 // Edit
 
