@@ -434,6 +434,26 @@ const {
   isEditing,
 } = editingController;
 
+const {
+  newProject,
+  openFromDisk,
+  saveToDisk,
+  ensureMinRows,
+  ensureSeedRows,
+  upgradeModelInPlace,
+} = createPersistenceController({
+  model,
+  statusBar,
+  clearHistory,
+  resetAllViewState,
+  sel,
+  setActiveView,
+  updateProjectNameWidget,
+  setProjectNameFromFile,
+  getSuggestedName,
+  closeMenus: () => menusAPI?.closeAllMenus?.(),
+});
+
 const disposeKeys = initGridKeys({
   // state & selectors
   isEditing,
@@ -1078,26 +1098,6 @@ function getSuggestedName() {
   const n = String(model.meta.projectName || "").trim();
   return (n ? n : "project") + ".json";
 }
-
-const {
-  newProject,
-  openFromDisk,
-  saveToDisk,
-  ensureMinRows,
-  ensureSeedRows,
-  upgradeModelInPlace,
-} = createPersistenceController({
-  model,
-  statusBar,
-  clearHistory,
-  resetAllViewState,
-  sel,
-  setActiveView,
-  updateProjectNameWidget,
-  setProjectNameFromFile,
-  getSuggestedName,
-  closeMenus: () => menusAPI?.closeAllMenus?.(),
-});
 
 // Initialize menus module (handles menu triggers & items)
 menusAPI = initMenus({
