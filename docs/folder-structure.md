@@ -15,6 +15,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── app/
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
+│   │   ├── history.js
 │   │   ├── interactions.js
 │   │   ├── outcomes.js
 │   │   ├── selection.js
@@ -88,6 +89,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - House entry points and cross-cutting application logic.
 - `app.js` stays the primary bootstrap file, while `interactions.js`, `outcomes.js`, `selection.js`, `types.js`, and `views.js` remain close by.
 - `clipboard-codec.js` lives here because it bridges app state with external data.
+- `history.js` wraps undo/redo wiring so the entry point just injects dependencies and consumes the resulting API.
 
 #### `scripts/data/`
 

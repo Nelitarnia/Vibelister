@@ -73,7 +73,7 @@ import {
 } from "../data/constants.js";
 import { makeRow, insertBlankRows } from "../data/rows.js";
 import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
-import { makeMutationRunner } from "../data/mutation-runner.js";
+import { createHistoryController, describeAttachmentLocation } from "./history.js";
 import {
   clamp,
   colWidths,
@@ -186,140 +186,34 @@ const undoMenuItem = document.getElementById(Ids.editUndo);
 const redoMenuItem = document.getElementById(Ids.editRedo);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
-function describeAttachmentLocation(att, includeColumn = true) {
-  if (!att || typeof att !== "object") return "";
-  const parts = [];
-  const viewLabel = att.viewTitle || (att.view ? String(att.view) : "");
-  if (viewLabel) parts.push(viewLabel);
-  if (Number.isFinite(att.row)) parts.push(`row ${att.row + 1}`);
-  if (includeColumn) {
-    const columnLabel = att.columnTitle || att.columnKey || "";
-    if (columnLabel) parts.push(columnLabel);
-  }
-  return parts.join(" · ");
-}
-
-function captureUndoAttachment() {
-  const vd = viewDef();
-  const cols = vd?.columns || [];
-  const col = cols[sel.c] || null;
-  return {
-    view: activeView,
-    viewTitle: vd?.title || VIEWS[activeView]?.title || activeView,
-    row: Number.isFinite(sel.r) ? sel.r : 0,
-    col: Number.isFinite(sel.c) ? sel.c : 0,
-    columnKey: col?.key || null,
-    columnTitle:
-      (col && (col.title || col.label || col.name)) ||
-      (col && typeof col.key === "string" ? col.key : ""),
-  };
-}
-
-function applyUndoAttachment(att) {
-  if (!att) return;
-  if (att.view && att.view !== activeView) {
-    setActiveView(att.view);
-  }
-  const row = Number.isFinite(att.row) ? att.row : 0;
-  const col = Number.isFinite(att.col) ? att.col : 0;
-  SelectionCtl.startSingle(row, col);
-  ensureVisible(row, col);
-}
-
-function makeUndoConfig(options = {}) {
-  const {
-    label,
-    shouldRecord,
-    makeStatus,
-    includeLocation = true,
-    includeColumn = true,
-    snapshotOptions,
-  } = options;
-
-  const capture = includeLocation ? () => captureUndoAttachment() : null;
-  const apply = includeLocation ? (att) => applyUndoAttachment(att) : null;
-
-  return {
-    label,
-    snapshotOptions,
-    shouldRecord: (result, ctx) => {
-      if (typeof shouldRecord === "function") return !!shouldRecord(result, ctx);
-      return true;
-    },
-    captureAttachments: capture
-      ? () => {
-          const att = capture();
-          if (!includeColumn && att) {
-            return { ...att, columnTitle: "", columnKey: att.columnKey };
-          }
-          return att;
-        }
-      : undefined,
-    applyAttachments: apply
-      ? (att, _direction) => {
-          apply(att);
-        }
-      : undefined,
-    makeStatus: ({ direction, label: lbl, context }) => {
-      if (typeof makeStatus === "function") {
-        return makeStatus(direction, lbl, context);
-      }
-      if (!includeLocation) {
-        return direction === "undo"
-          ? `Undid ${lbl || "change"}.`
-          : `Redid ${lbl || "change"}.`;
-      }
-      const attachment =
-        direction === "undo"
-          ? context.beforeAttachments
-          : context.afterAttachments;
-      const location = describeAttachmentLocation(attachment, includeColumn);
-      const verb = direction === "undo" ? "Undid" : "Redid";
-      if (location) return `${verb} ${lbl || "change"} at ${location}.`;
-      return `${verb} ${lbl || "change"}.`;
-    },
-  };
-}
-
-function updateUndoUI(state = {}) {
-  const { canUndo, canRedo, undoLabel, redoLabel } = state;
-  const formatLabel = (value) => {
-    if (!value) return "";
-    const text = String(value).trim();
-    if (!text) return "";
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  };
-  if (undoMenuItem) {
-    undoMenuItem.disabled = !canUndo;
-    const base = "Undo";
-    const formatted = formatLabel(undoLabel);
-    undoMenuItem.textContent = formatted ? `${base} ${formatted}` : base;
-  }
-  if (redoMenuItem) {
-    redoMenuItem.disabled = !canRedo;
-    const base = "Redo";
-    const formatted = formatLabel(redoLabel);
-    redoMenuItem.textContent = formatted ? `${base} ${formatted}` : base;
-  }
-}
-
-const mutationRunner = makeMutationRunner({
+const {
+  makeUndoConfig,
+  runModelMutation,
+  runModelTransaction,
+  undo,
+  redo,
+  getUndoState,
+  clearHistory,
+} = createHistoryController({
   model,
+  viewDef,
+  getActiveView: () => activeView,
+  setActiveView,
+  selectionCursor: sel,
+  SelectionCtl,
+  ensureVisible,
+  VIEWS,
+  statusBar,
+  undoMenuItem,
+  redoMenuItem,
   rebuildActionColumnsFromModifiers,
   rebuildInteractionsInPlace,
   pruneNotesToValidPairs,
   invalidateViewDef,
   layout,
   render,
-  status: statusBar,
   historyLimit: 200,
-  onHistoryChange: updateUndoUI,
 });
-
-const { runModelMutation, runModelTransaction, undo, redo, getUndoState, clearHistory } =
-  mutationRunner;
-
-updateUndoUI(getUndoState());
 
 function applySanitizedSettings(settings) {
   const root = document.documentElement;
