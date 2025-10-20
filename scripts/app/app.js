@@ -65,7 +65,7 @@ import {
 } from "../data/constants.js";
 import { makeRow, insertBlankRows } from "../data/rows.js";
 import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
-import { createHistoryController, describeAttachmentLocation } from "./history.js";
+import { createHistoryController } from "./history.js";
 import {
   clamp,
   colWidths,
@@ -81,6 +81,7 @@ import {
 import { createEditingController } from "./editing-shortcuts.js";
 import { createPersistenceController } from "./persistence.js";
 import { createSettingsController } from "./settings-controller.js";
+import { createGridCommands } from "./grid-commands.js";
 onSelectionChanged(() => render());
 
 function initA11y() {
@@ -193,6 +194,42 @@ const {
   historyLimit: 200,
 });
 
+const {
+  cloneValueForAssignment,
+  getHorizontalTargetColumns,
+  setModForSelection,
+  addRowsAbove,
+  addRowsBelow,
+  clearSelectedCells,
+  deleteSelectedRows,
+  setCellSelectionAware,
+} = createGridCommands({
+  getActiveView: () => activeView,
+  viewDef,
+  dataArray,
+  selection,
+  SelectionNS,
+  SelectionCtl,
+  sel,
+  model,
+  statusBar,
+  runModelMutation,
+  runModelTransaction,
+  makeUndoConfig,
+  clearInteractionsSelection,
+  isInteractionPhaseColumnActiveForRow,
+  clearCellForKind,
+  setCellForKind,
+  kindCtx,
+  makeRow,
+  insertBlankRows,
+  sanitizeModifierRulesAfterDeletion,
+  setCell,
+  render,
+  isModColumn,
+  parsePhaseKey,
+});
+
 function isModColumn(c) {
   return !!c && typeof c.key === "string" && c.key.startsWith("mod:");
 }
@@ -282,101 +319,6 @@ function setCell(r, c, v) {
   );
 }
 
-function cloneValueForAssignment(value) {
-  if (!value || typeof value !== "object") return value;
-  if (typeof structuredClone === "function") {
-    try {
-      return structuredClone(value);
-    } catch (_) {}
-  }
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch (_) {
-    if (Array.isArray(value)) return value.slice();
-    return { ...value };
-  }
-}
-
-function columnsHorizontallyCompatible(sourceCol, targetCol, viewKey) {
-  if (!targetCol) return false;
-  if (sourceCol === targetCol) return true;
-  if (viewKey === "interactions") {
-    const sourcePk = parsePhaseKey(sourceCol?.key);
-    const targetPk = parsePhaseKey(targetCol?.key);
-    if (sourcePk && targetPk) return sourcePk.field === targetPk.field;
-    if (sourceCol?.key === "notes" && targetCol?.key === "notes") return true;
-    return false;
-  }
-  const sourceKind = sourceCol?.kind;
-  const targetKind = targetCol?.kind;
-  if (sourceKind && targetKind && String(sourceKind) === String(targetKind))
-    return true;
-  if (
-    sourceCol?.key != null &&
-    targetCol?.key != null &&
-    String(sourceCol.key) === String(targetCol.key)
-  )
-    return true;
-  return false;
-}
-
-function getHorizontalTargetColumns(colIndex) {
-  const vd = viewDef();
-  const cols = vd?.columns || [];
-  const sourceCol = cols[colIndex];
-  if (!sourceCol) return [];
-  const out = [];
-  for (let i = 0; i < cols.length; i++) {
-    if (columnsHorizontallyCompatible(sourceCol, cols[i], activeView))
-      out.push(i);
-  }
-  return out;
-}
-
-// Exact-set helper for modifier columns across a selection
-function setModForSelection(colIndex, target) {
-  const col = viewDef().columns[colIndex];
-  if (!isModColumn(col)) return;
-  const arr = dataArray();
-  const rows =
-    selection.rows.size > 1
-      ? Array.from(selection.rows).sort((a, b) => a - b)
-      : [sel.r];
-  runModelMutation(
-    "setModForSelection",
-    () => {
-      // Determine the next state from the active row using the kind handler
-      let next;
-      {
-        const r0 = sel.r;
-        while (arr.length <= r0) arr.push(makeRow(model));
-        const row0 = arr[r0];
-        if (!row0.modSet || typeof row0.modSet !== "object") row0.modSet = {};
-        // If undefined → cycle; boolean → ON/OFF; number → clamp handled by kind
-        next = target;
-      }
-      for (const r of rows) {
-        while (arr.length <= r) arr.push(makeRow(model));
-        const row = arr[r];
-        if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
-        setCellForKind(
-          "modTriState",
-          kindCtx({ r, c: colIndex, col, row, v: next }),
-          next,
-        );
-      }
-      return { rowsUpdated: rows.length, view: activeView };
-    },
-    {
-      render: true,
-      undo: makeUndoConfig({
-        label: "modifier edit",
-        shouldRecord: (res) => (res?.rowsUpdated ?? 0) > 0,
-      }),
-    },
-  );
-}
-
 // Deletion & regeneration helpers
 function rebuildInteractionsInPlace() {
   // Rebuild pairs without changing the active view or selection
@@ -424,334 +366,6 @@ function pruneNotesToValidPairs() {
 }
 
 // Remove deleted modifier ids from groups/constraints; drop now-invalid rules.
-function addRows(where) {
-  if (activeView === "interactions") {
-    statusBar?.set("Row insertion is not available in Interactions view.");
-    return;
-  }
-
-  const arr = dataArray();
-  if (!arr) return;
-
-  const rows = selection.rows.size
-    ? Array.from(selection.rows).sort((a, b) => a - b)
-    : [Number.isFinite(sel.r) ? sel.r : 0];
-  const count = rows.length;
-  if (!count) return;
-
-  const normalized = rows
-    .map((r) => (Number.isFinite(r) ? r : 0))
-    .map((r) => (r < 0 ? 0 : r));
-  const minRow = normalized.reduce(
-    (min, r) => (r < min ? r : min),
-    normalized[0] ?? 0,
-  );
-  const maxRow = normalized.reduce(
-    (max, r) => (r > max ? r : max),
-    normalized[0] ?? 0,
-  );
-
-  let insertIndex = where === "above" ? minRow : maxRow + 1;
-  insertIndex = Math.max(0, Math.min(insertIndex, arr.length));
-
-  const whereWord = where === "above" ? "above" : "below";
-
-  runModelMutation(
-    "addRows",
-    () => {
-      insertBlankRows(model, arr, insertIndex, count);
-      return {
-        insertIndex,
-        count,
-        whereWord,
-        requiresModifiersRebuild: activeView === "modifiers" && count > 0,
-      };
-    },
-    {
-      rebuildActionColumns: (res) => res?.requiresModifiersRebuild,
-      rebuildInteractions: true,
-      pruneNotes: true,
-      after: (res) => {
-        const cols = viewDef().columns || [];
-        const targetCol = cols.length
-          ? Math.max(0, Math.min(sel.c ?? 0, cols.length - 1))
-          : 0;
-
-        SelectionCtl.startSingle(res.insertIndex, targetCol);
-        if (res.count > 1)
-          SelectionCtl.extendRowsTo(res.insertIndex + res.count - 1);
-        SelectionCtl.clearAllColsFlag?.();
-      },
-      layout: true,
-      render: true,
-      status: (res) => {
-        const noun = res.count === 1 ? "row" : "rows";
-        return `Inserted ${res.count} ${noun} ${res.whereWord} selection.`;
-      },
-      undo: makeUndoConfig({
-        label: "insert rows",
-        includeColumn: false,
-        shouldRecord: (res) => (res?.count ?? 0) > 0,
-        makeStatus: (direction, _label, context) => {
-          const res = context?.result || {};
-          const count = res.count ?? 0;
-          const noun = count === 1 ? "row" : "rows";
-          const attachment =
-            direction === "undo"
-              ? context?.beforeAttachments
-              : context?.afterAttachments;
-          const location = describeAttachmentLocation(attachment, false);
-          const verb = direction === "undo" ? "Undid" : "Redid";
-          const where = location ? ` at ${location}` : "";
-          return `${verb} insertion of ${count} ${noun}${where}.`;
-        },
-      }),
-    },
-  );
-}
-
-function addRowsAbove() {
-  addRows("above");
-}
-
-function addRowsBelow() {
-  addRows("below");
-}
-
-function clearSelectedCells(options = {}) {
-  const { mode: requestedMode, reason } = options || {};
-
-  if (activeView === "interactions") {
-    const mode =
-      requestedMode ||
-      (SelectionNS.isAllCols && SelectionNS.isAllCols()
-        ? "clearAllEditable"
-        : "clearActiveCell");
-    const extras =
-      reason === "deleteAttempt" || reason === "menu"
-        ? { statusHint: "Interactions are generated; rows can't be deleted." }
-        : undefined;
-    runModelMutation(
-      "clearInteractionsSelection",
-      () =>
-        clearInteractionsSelection(
-          model,
-          viewDef(),
-          selection,
-          sel,
-          mode,
-          statusBar,
-          render,
-          extras,
-        ),
-      {
-        render: (res) => (res?.cleared ?? 0) > 0,
-        status: (res) => res?.message,
-        undo: makeUndoConfig({
-          label: "clear interactions",
-          shouldRecord: (res) => (res?.cleared ?? 0) > 0,
-          makeStatus: (direction, _label, context) => {
-            const res = context?.result || {};
-            const cleared = res.cleared ?? 0;
-            const noun = cleared === 1 ? "entry" : "entries";
-            const attachment =
-              direction === "undo"
-                ? context?.beforeAttachments
-                : context?.afterAttachments;
-            const location = describeAttachmentLocation(attachment, true);
-            const verb = direction === "undo" ? "Undid" : "Redid";
-            if (cleared > 0) {
-              return `${verb} Interactions clear of ${cleared} ${noun}${
-                location ? ` at ${location}` : ""
-              }.`;
-            }
-            return `${verb} Interactions clear operation.`;
-          },
-        }),
-      },
-    );
-    if (mode === "clearAllEditable" && SelectionNS.setColsAll)
-      SelectionNS.setColsAll(false);
-    return;
-  }
-
-  const arr = dataArray();
-  if (!arr || !arr.length) {
-    if (statusBar?.set) statusBar.set("Nothing to clear.");
-    else if (statusBar) statusBar.textContent = "Nothing to clear.";
-    return;
-  }
-
-  const rows =
-    selection.rows.size > 0
-      ? Array.from(selection.rows).sort((a, b) => a - b)
-      : [sel.r];
-  const vd = viewDef();
-  let colsToClear;
-  if (selection.colsAll) colsToClear = vd.columns.map((_, idx) => idx);
-  else if (selection.cols && selection.cols.size)
-    colsToClear = Array.from(selection.cols).sort((a, b) => a - b);
-  else colsToClear = [sel.c];
-
-  colsToClear = colsToClear.filter(
-    (c) => Number.isFinite(c) && c >= 0 && c < vd.columns.length,
-  );
-
-  runModelMutation(
-    "clearSelectedCells",
-    () => {
-      let cleared = 0;
-      for (const r of rows) {
-        if (!Number.isFinite(r) || r < 0 || r >= arr.length) continue;
-        const row = arr[r];
-        if (!row) continue;
-        for (const c of colsToClear) {
-          const col = vd.columns[c];
-          if (!col) continue;
-          if (
-            selection.colsAll &&
-            activeView === "interactions" &&
-            !isInteractionPhaseColumnActiveForRow(model, vd, r, c, col)
-          )
-            continue;
-          let changed = false;
-          if (col.kind)
-            changed = clearCellForKind(col.kind, kindCtx({ r, c, col, row }));
-          else if (col.key) {
-            const before = row[col.key];
-            const hadValue = !(before == null || before === "");
-            if (hadValue) {
-              row[col.key] = "";
-              changed = true;
-            }
-          }
-          if (changed) cleared++;
-        }
-      }
-      return { cleared };
-    },
-    {
-      rebuildInteractions: (res) => (res?.cleared ?? 0) > 0,
-      pruneNotes: (res) => (res?.cleared ?? 0) > 0,
-      render: (res) => (res?.cleared ?? 0) > 0,
-      status: (res) => {
-        const cleared = res?.cleared ?? 0;
-        if (cleared > 0) {
-          const noun = cleared === 1 ? "cell" : "cells";
-          return `Cleared ${cleared} ${noun}.`;
-        }
-        return "Nothing to clear.";
-      },
-      undo: makeUndoConfig({
-        label: "clear cells",
-        shouldRecord: (res) => (res?.cleared ?? 0) > 0,
-        makeStatus: (direction, _label, context) => {
-          const res = context?.result || {};
-          const cleared = res.cleared ?? 0;
-          const noun = cleared === 1 ? "cell" : "cells";
-          const attachment =
-            direction === "undo"
-              ? context?.beforeAttachments
-              : context?.afterAttachments;
-          const location = describeAttachmentLocation(attachment, true);
-          const verb = direction === "undo" ? "Undid" : "Redid";
-          return `${verb} clear of ${cleared} ${noun}${
-            location ? ` at ${location}` : ""
-          }.`;
-        },
-      }),
-    },
-  );
-}
-
-function deleteSelectedRows(options = {}) {
-  if (activeView === "interactions") {
-    clearSelectedCells({
-      mode: options?.mode,
-      reason: options?.reason || "deleteAttempt",
-    });
-    return;
-  }
-
-  // Non-interactions views: delete whole rows as before
-  const arr = dataArray();
-  if (!arr || !arr.length) return;
-
-  const rows = selection.rows.size > 0 ? Array.from(selection.rows) : [sel.r];
-  rows.sort((a, b) => b - a); // delete bottom-up
-
-  runModelMutation(
-    "deleteSelectedRows",
-    () => {
-      const deletedIds = [];
-      for (const r of rows) {
-        const row = arr[r];
-        if (!row) continue;
-        deletedIds.push(row.id);
-        arr.splice(r, 1);
-      }
-
-      const needsModifierRebuild =
-        activeView === "modifiers" && deletedIds.length > 0;
-      if (needsModifierRebuild) {
-        for (const a of model.actions) {
-          if (!a.modSet) continue;
-          for (const id of deletedIds) delete a.modSet[id];
-        }
-      }
-
-      const last = Math.max(
-        0,
-        Math.min(arr.length - 1, rows[rows.length - 1] ?? 0),
-      );
-
-      return { deletedIds, needsModifierRebuild, last };
-    },
-    {
-      rebuildActionColumns: (res) => res?.needsModifierRebuild,
-      rebuildInteractions: true,
-      pruneNotes: true,
-      after: (res) => {
-        const last = res?.last ?? 0;
-        if (res?.needsModifierRebuild && res?.deletedIds?.length) {
-          sanitizeModifierRulesAfterDeletion(model, res.deletedIds);
-        }
-        selection.rows.clear();
-        selection.rows.add(last);
-        selection.anchor = last;
-        sel.r = last;
-        sel.c = Math.min(sel.c, Math.max(0, viewDef().columns.length - 1));
-      },
-      layout: true,
-      render: true,
-      status: (res) => {
-        const count = res?.deletedIds?.length ?? 0;
-        const noun = count === 1 ? "row" : "rows";
-        return `Deleted ${count} ${noun} from ${viewDef().title}.`;
-      },
-      undo: makeUndoConfig({
-        label: "delete rows",
-        includeColumn: false,
-        shouldRecord: (res) => (res?.deletedIds?.length ?? 0) > 0,
-        makeStatus: (direction, _label, context) => {
-          const res = context?.result || {};
-          const count = res.deletedIds?.length ?? 0;
-          const noun = count === 1 ? "row" : "rows";
-          const attachment =
-            direction === "undo"
-              ? context?.beforeAttachments
-              : context?.afterAttachments;
-          const location = describeAttachmentLocation(attachment, false);
-          const verb = direction === "undo" ? "Undid" : "Redid";
-          return `${verb} deletion of ${count} ${noun}${
-            location ? ` at ${location}` : ""
-          }.`;
-        },
-      }),
-    },
-  );
-}
-
 // Generic structured-cell helpers for clipboard (stable ID aware)
 const getStructuredCell = makeGetStructuredCell({
   viewDef,
@@ -867,66 +481,6 @@ const disposeKeys = initGridKeys({
   undo,
   redo,
 });
-
-// Selection-aware setter so palette applies to all selected rows in Interactions
-function setCellSelectionAware(r, c, v) {
-  const rowsSet = selection.rows;
-  const hasMultiSelection = rowsSet && rowsSet.size > 1 && rowsSet.has(r);
-  const vd = viewDef();
-  const col = vd?.columns?.[c];
-  const isColorColumn = String(col?.kind || "").toLowerCase() === "color";
-  const shouldSpreadDown =
-    hasMultiSelection &&
-    ((activeView === "interactions" && c === sel.c) || isColorColumn);
-
-  const targetRows = shouldSpreadDown
-    ? Array.from(rowsSet).sort((a, b) => a - b)
-    : [r];
-
-  let targetCols = selection.colsAll ? getHorizontalTargetColumns(c) : [c];
-  if (!targetCols || !targetCols.length) targetCols = [c];
-
-  runModelTransaction(
-    "setCellSelectionAware",
-    () => {
-      let changedCells = 0;
-      const touchedRows = new Set();
-      const touchedCols = new Set();
-      for (const rr of targetRows) {
-        if (!Number.isFinite(rr)) continue;
-        for (const cc of targetCols) {
-          if (!Number.isFinite(cc)) continue;
-          if (!selection.colsAll && cc !== c) continue;
-          if (
-            selection.colsAll &&
-            activeView === "interactions" &&
-            !isInteractionPhaseColumnActiveForRow(model, vd, rr, cc)
-          )
-            continue;
-          const result = setCell(rr, cc, cloneValueForAssignment(v));
-          if (result && result.changed) {
-            changedCells++;
-            touchedRows.add(rr);
-            touchedCols.add(cc);
-          }
-        }
-      }
-      return {
-        changedCells,
-        touchedRows: Array.from(touchedRows).sort((a, b) => a - b),
-        touchedCols: Array.from(touchedCols).sort((a, b) => a - b),
-        view: activeView,
-      };
-    },
-    {
-      render: true,
-      undo: makeUndoConfig({
-        label: "cell edit",
-        shouldRecord: (res) => (res?.changedCells ?? 0) > 0,
-      }),
-    },
-  );
-}
 
 // Initialize palette (handles both Outcome and End cells)
 paletteAPI = initPalette({
