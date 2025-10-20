@@ -214,6 +214,7 @@ export function initPalette(ctx) {
     // MRU per mode
     recent: new Map(), // modeName -> Array<item>
     showRecent: false,
+    prefillActive: false,
   };
 
   function ensureDOM() {
@@ -287,15 +288,19 @@ export function initPalette(ctx) {
     pal.showRecent = false;
 
     // Initialize query
-    const initialQuery = mode.parseInitial(initialText);
+    const initialQueryRaw = mode.parseInitial(initialText);
+    const initialQuery =
+      typeof initialQueryRaw === "string"
+        ? initialQueryRaw
+        : String(initialQueryRaw || "");
     pal.query = initialQuery;
+    pal.prefillActive = initialQuery.length > 0;
     if (mode.consumeTyping) {
       try {
         editor.value = "";
       } catch (_) {}
     } else if (editor) {
-      const queryText =
-        typeof initialQuery === "string" ? initialQuery : String(initialQuery || "");
+      const queryText = initialQuery;
       try {
         editor.value = queryText;
       } catch (_) {}
@@ -326,6 +331,7 @@ export function initPalette(ctx) {
     pal.selIndex = -1;
     pal.query = "";
     pal.mode = null;
+    pal.prefillActive = false;
   }
 
   function refilter() {
@@ -450,6 +456,7 @@ export function initPalette(ctx) {
     if (!pal.isOpen) return;
     const mode = pal.mode;
     if (!mode) return;
+    pal.prefillActive = false;
     pal.query = editor.value;
     if (mode.consumeTyping) {
       try {
@@ -465,6 +472,47 @@ export function initPalette(ctx) {
     if (!pal.isOpen) return;
     const mode = pal.mode;
     if (!mode) return;
+
+    if (pal.prefillActive) {
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === "Backspace" || e.key === "Delete") {
+          e.preventDefault();
+          pal.prefillActive = false;
+          pal.query = "";
+          if (!mode.consumeTyping) {
+            try {
+              editor.value = "";
+            } catch (_) {}
+          }
+          refilter();
+          return;
+        }
+        if (e.key.length === 1) {
+          e.preventDefault();
+          const ch = e.key;
+          pal.prefillActive = false;
+          if (mode.consumeTyping) {
+            pal.query = ch;
+            refilter();
+          } else {
+            try {
+              editor.value = ch;
+            } catch (_) {}
+            pal.query = ch;
+            refilter();
+            setTimeout(() => {
+              if (!pal.isOpen) return;
+              try {
+                const pos = editor.value.length;
+                editor.setSelectionRange(pos, pos);
+              } catch (_) {}
+            }, 0);
+          }
+          return;
+        }
+      }
+      pal.prefillActive = false;
+    }
 
     if (e.key === "Escape") {
       e.preventDefault();
