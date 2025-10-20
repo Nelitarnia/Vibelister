@@ -75,11 +75,13 @@ It's good practice to give short names to Modifiers since horizontal space may b
 
 ## Other features
 
+If you double tap Shift, you can change between normal selection mode and a horizontal selection mode which highlights and envelopes the entire row at once.
+
 Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to Actions vs Actions (AA) comparing in Interactions-view.
 
 On any columns where you paste stable ID Actions (like "End" in Interactions), you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed".
 
-The program has an Undo/Redo feature which activates whenever the core model is changed, activated with Ctrl+z / Ctlr+y.
+You can undo any action which changes the core data model (editing cells, reordering rows, etc.) with Ctrl+z / Ctlr+y.
 
 It's possible to save / load project files in .json-format. Note: on Firefox and Safari (which don't have the File System Access API), regular "Save" and "Save as..." instead default to "Export as JSON".
 
@@ -96,15 +98,17 @@ It's possible to save / load project files in .json-format. Note: on Firefox and
 
 - Drop-down palettes at the bottom of the screen in Interactions-view go partially out of screen.
 - Drop down menu text for undo/redo loses the "ctrl+z" / "ctrl+y" hotkey instruction at runtime.
+- Ctrl+arrow keys shortcut to move between tabs stops working sometimes.
 
 ## Ideas for later
 
 - Column resizing (and saving changed column sizes as a part of your project file).
+- Freezing certain columns so that they always stay visible (like in Libreoffice Calc, etc.)
 - Drag 'n' drop box select?
 - Ability to create multi-selection with keyboard alone.
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
 - Being able to clean up your project file after larger refactoring.
-- option to show the canonical IDs of data elements for debugging purposes.
+- Option to show the canonical IDs of data elements for debugging purposes.
 - Action-specific "required" rule for modifiers.
   - This might add to the "tristate boolean" on Modifier columns, or possibly become a part of the Modifier rules dialogue.
 - Giving custom Phase rules to modified Actions.
