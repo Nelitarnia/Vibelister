@@ -67,7 +67,6 @@ import {
   MOD,
   MIN_ROWS,
   Ids,
-  DEFAULT_OUTCOMES,
   SCHEMA_VERSION,
   ROW_HEIGHT,
   HEADER_HEIGHT,
@@ -88,6 +87,7 @@ import {
   basenameNoExt,
 } from "../data/utils.js";
 import { createEditingController } from "./editing-shortcuts.js";
+import { createPersistenceController } from "./persistence.js";
 onSelectionChanged(() => render());
 
 function initA11y() {
@@ -110,6 +110,7 @@ const model = {
 
 let activeView = "actions";
 let paletteAPI = null;
+let menusAPI = null;
 
 // Grid & helpers
 // Column geometry cache keyed by current columns reference
@@ -1569,7 +1570,7 @@ function setActiveView(key) {
   const modeLabel =
     key === "interactions" ? ` [${model.meta?.interactionsMode || "AI"}]` : "";
   statusBar?.set(`View: ${viewDef().title}${modeLabel}`);
-  menusAPI.updateViewMenuRadios(key);
+  menusAPI?.updateViewMenuRadios?.(key);
 }
 if (tabActions) tabActions.onclick = () => setActiveView("actions");
 if (tabInputs) tabInputs.onclick = () => setActiveView("inputs");
@@ -1601,51 +1602,6 @@ document.addEventListener("keydown", (e) => {
     toggleInteractionsMode();
   }
 });
-
-// Initialize menus module (handles menu triggers & items)
-const menusAPI = initMenus({
-  Ids,
-  setActiveView,
-  newProject,
-  openFromDisk,
-  saveToDisk,
-  doGenerate,
-  runSelfTests,
-  model,
-  openSettings: openSettingsDialog,
-  addRowsAbove,
-  addRowsBelow,
-  clearCells: () => clearSelectedCells({}),
-  deleteRows: () => deleteSelectedRows({ reason: "menu" }),
-  undo,
-  redo,
-  getUndoState,
-});
-
-// Save/Load/New
-function newProject() {
-  Object.assign(model, {
-    meta: { schema: SCHEMA_VERSION, projectName: "", interactionsMode: "AI" },
-    actions: [],
-    inputs: [],
-    modifiers: [],
-    outcomes: [],
-    modifierGroups: [],
-    modifierConstraints: [],
-    notes: {},
-    interactionsPairs: [],
-    nextId: 1,
-  });
-  clearHistory();
-  // Reset per-view state for a clean slate
-  resetAllViewState();
-  sel.r = 0;
-  sel.c = 0;
-  ensureSeedRows();
-  setActiveView("actions");
-  updateProjectNameWidget();
-  statusBar?.set("New project created (Actions view).");
-}
 
 async function doGenerate() {
   rebuildActionColumnsFromModifiers(model);
@@ -1683,46 +1639,50 @@ function updateProjectNameWidget() {
     w._bound = true;
   }
 }
-function getSuggestedName(projectName = "") {
+function getSuggestedName() {
   const n = String(model.meta.projectName || "").trim();
   return (n ? n : "project") + ".json";
 }
 
-// Disk-based (lazy-loaded) file operations (Chromium gets FS API, others fallback)
-async function openFromDisk() {
-  menusAPI.closeAllMenus && menusAPI.closeAllMenus();
-  try {
-    const m = await import("../data/fs.js");
-    const { data, name } = await m.openJson();
-    upgradeModelInPlace(data);
-    Object.assign(model, data);
-    clearHistory();
-    ensureSeedRows();
-    // Reset per-view state to top-of-sheet when opening a file
-    resetAllViewState();
-    setActiveView("actions");
-    setProjectNameFromFile(name);
-    statusBar?.set(
-      `Opened: ${name} (${model.actions.length} actions, ${model.inputs.length} inputs)`,
-    );
-  } catch (e) {
-    statusBar?.set("Open failed: " + (e?.message || e));
-  }
-}
+const {
+  newProject,
+  openFromDisk,
+  saveToDisk,
+  ensureMinRows,
+  ensureSeedRows,
+  upgradeModelInPlace,
+} = createPersistenceController({
+  model,
+  statusBar,
+  clearHistory,
+  resetAllViewState,
+  sel,
+  setActiveView,
+  updateProjectNameWidget,
+  setProjectNameFromFile,
+  getSuggestedName,
+  closeMenus: () => menusAPI?.closeAllMenus?.(),
+});
 
-async function saveToDisk(as = false) {
-  menusAPI.closeAllMenus && menusAPI.closeAllMenus();
-  try {
-    const m = await import("../data/fs.js");
-    const { name } = await m.saveJson(model, {
-      as,
-      suggestedName: getSuggestedName(),
-    });
-    statusBar?.set(as ? `Saved As: ${name}` : `Saved: ${name}`);
-  } catch (e) {
-    statusBar?.set("Save failed: " + (e?.message || e));
-  }
-}
+// Initialize menus module (handles menu triggers & items)
+menusAPI = initMenus({
+  Ids,
+  setActiveView,
+  newProject,
+  openFromDisk,
+  saveToDisk,
+  doGenerate,
+  runSelfTests,
+  model,
+  openSettings: openSettingsDialog,
+  addRowsAbove,
+  addRowsBelow,
+  clearCells: () => clearSelectedCells({}),
+  deleteRows: () => deleteSelectedRows({ reason: "menu" }),
+  undo,
+  redo,
+  getUndoState,
+});
 
 // View order helpers
 function getViewOrder() {
@@ -1756,78 +1716,6 @@ function isReorderableView() {
     activeView === "modifiers" ||
     activeView === "outcomes"
   );
-}
-
-// Migrations/Seeding
-function upgradeModelInPlace(o) {
-  if (!o.meta) o.meta = { schema: 0, projectName: "", interactionsMode: "AI" };
-  if (typeof o.meta.projectName !== "string") o.meta.projectName = "";
-  if (
-    !("interactionsMode" in o.meta) ||
-    (o.meta.interactionsMode !== "AI" && o.meta.interactionsMode !== "AA")
-  ) {
-    o.meta.interactionsMode = "AI";
-  }
-  if (!Array.isArray(o.actions)) o.actions = [];
-  if (!Array.isArray(o.inputs)) o.inputs = [];
-  if (!Array.isArray(o.modifiers)) o.modifiers = [];
-  if (!Array.isArray(o.outcomes)) o.outcomes = [];
-  if (!Array.isArray(o.modifierGroups)) o.modifierGroups = [];
-  if (!Array.isArray(o.modifierConstraints)) o.modifierConstraints = [];
-  if (!o.notes || typeof o.notes !== "object") o.notes = {};
-  if (!Array.isArray(o.interactionsPairs)) o.interactionsPairs = [];
-  let maxId = 0;
-  for (const r of o.actions) {
-    if (typeof r.id !== "number") r.id = ++maxId;
-    else maxId = Math.max(maxId, r.id);
-    if (!r.modSet || typeof r.modSet !== "object") r.modSet = {};
-    // Migrate boolean modSet → numeric tri-state 0/1/2
-    for (const k in r.modSet) {
-      const v = r.modSet[k];
-      if (v === true) r.modSet[k] = MOD.ON;
-      else if (v === false || v == null) r.modSet[k] = MOD.OFF;
-      else if (typeof v === "number")
-        r.modSet[k] = Math.max(0, Math.min(2, v | 0));
-      else r.modSet[k] = MOD.OFF;
-    }
-  }
-  for (const r of o.inputs) {
-    if (typeof r.id !== "number") r.id = ++maxId;
-    else maxId = Math.max(maxId, r.id);
-  }
-  for (const r of o.modifiers) {
-    if (typeof r.id !== "number") r.id = ++maxId;
-    else maxId = Math.max(maxId, r.id);
-  }
-  for (const r of o.outcomes) {
-    if (typeof r.id !== "number") r.id = ++maxId;
-    else maxId = Math.max(maxId, r.id);
-  }
-  if (!Number.isFinite(o.nextId)) o.nextId = maxId + 1;
-  else o.nextId = Math.max(o.nextId, maxId + 1);
-  o.meta.schema = SCHEMA_VERSION;
-}
-function ensureMinRows(arr, n) {
-  while (arr.length < n) arr.push(makeRow(model));
-}
-function ensureSeedRows() {
-  const N = 20;
-  ensureMinRows(model.actions, N);
-  ensureMinRows(model.inputs, N);
-  ensureMinRows(model.modifiers, N);
-  // Seed outcomes only if empty, using the user's canonical list
-  if (!model.outcomes || !model.outcomes.length) {
-    for (const name of DEFAULT_OUTCOMES) {
-      model.outcomes.push({
-        id: model.nextId++,
-        name,
-        color: "",
-        color2: "",
-        notes: "",
-      });
-    }
-  }
-  ensureMinRows(model.outcomes, Math.max(DEFAULT_OUTCOMES.length + 10, 20));
 }
 
 // Tests lazy-loader
