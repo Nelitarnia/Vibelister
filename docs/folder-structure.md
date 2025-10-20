@@ -15,13 +15,23 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── app/
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
+│   │   ├── grid-commands.js
+│   │   ├── grid-renderer.js
+│   │   ├── diagnostics.js
+│   │   ├── history.js
+│   │   ├── editing-shortcuts.js
+│   │   ├── persistence.js
+│   │   ├── settings-controller.js
+│   │   ├── view-state.js
 │   │   ├── interactions.js
 │   │   ├── outcomes.js
 │   │   ├── selection.js
 │   │   ├── types.js
+│   │   ├── user-settings.js
 │   │   └── views.js
 │   ├── data/
 │   │   ├── column-kinds.js
+│   │   ├── color-utils.js
 │   │   ├── constants.js
 │   │   ├── deletion.js
 │   │   ├── fs.js
@@ -87,6 +97,14 @@ This document outlines a maintainable directory layout tailored to the current c
 - House entry points and cross-cutting application logic.
 - `app.js` stays the primary bootstrap file, while `interactions.js`, `outcomes.js`, `selection.js`, `types.js`, and `views.js` remain close by.
 - `clipboard-codec.js` lives here because it bridges app state with external data.
+- `history.js` wraps undo/redo wiring so the entry point just injects dependencies and consumes the resulting API.
+- `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
+- `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
+- `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
+- `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
+- `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.
+- `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
+- `view-state.js` owns per-view selection snapshots and cached column layouts so `app.js` only orchestrates switching and rendering logic.
 
 #### `scripts/data/`
 
@@ -95,6 +113,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
 - `variants.js` merits its own subfolder (`variants/`) because it describes sizable domain data; additional variant files can join it without clutter.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
+- `color-utils.js` offers shared normalization and contrast helpers so rendering modules and pickers reuse consistent color logic.
 
 #### `scripts/ui/`
 
