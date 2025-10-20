@@ -51,6 +51,7 @@ import {
   isRowSelected,
   clearSelection,
 } from "./selection.js";
+import { createViewStateController } from "./view-state.js";
 import {
   noteKeyForPair,
   getInteractionsCell,
@@ -107,59 +108,7 @@ const model = {
 };
 
 let activeView = "actions";
-
-// Per-view UI state
-const perViewState = {
-  actions: { row: 0, col: 0, scrollTop: 0 },
-  inputs: { row: 0, col: 0, scrollTop: 0 },
-  modifiers: { row: 0, col: 0, scrollTop: 0 },
-  outcomes: { row: 0, col: 0, scrollTop: 0 },
-  interactions: { row: 0, col: 0, scrollTop: 0 },
-};
-function saveCurrentViewState() {
-  const s = perViewState[activeView];
-  if (!s) return;
-  s.row = sel.r | 0;
-  s.col = sel.c | 0;
-  s.scrollTop = sheet.scrollTop | 0;
-}
-function restoreViewState(key) {
-  const s = perViewState[key];
-  if (!s) return { row: 0, col: 0, scrollTop: 0 };
-  return s;
-}
-
-function rebuildInteractionPhaseColumns() {
-  VIEWS.interactions.columns = buildInteractionPhaseColumns(
-    model,
-    Selection && Selection.cell ? Selection.cell.r : 0,
-  );
-  invalidateViewDef();
-}
-
-function kindCtx({ r, c, col, row, v } = {}) {
-  return {
-    r,
-    c,
-    v,
-    col,
-    row,
-    model,
-    viewDef,
-    activeView,
-    MOD,
-    status: statusBar,
-    paletteAPI,
-    parsePhasesSpec,
-    formatPhasesSpec,
-    getInteractionsCell,
-    setInteractionsCell,
-    getStructuredCellInteractions,
-    applyStructuredCellInteractions,
-    wantPalette:
-      activeView === "interactions" && paletteAPI?.wantsToHandleCell?.(),
-  };
-}
+let paletteAPI = null;
 
 // Grid & helpers
 // Column geometry cache keyed by current columns reference
@@ -185,6 +134,38 @@ const projectNameEl = document.getElementById(Ids.projectName);
 const undoMenuItem = document.getElementById(Ids.editUndo);
 const redoMenuItem = document.getElementById(Ids.editRedo);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
+
+const viewState = createViewStateController({
+  getActiveView: () => activeView,
+  model,
+  VIEWS,
+  buildInteractionPhaseColumns,
+  Selection,
+  MIN_ROWS,
+  MOD,
+  statusBar,
+  getPaletteAPI: () => paletteAPI,
+  parsePhasesSpec,
+  formatPhasesSpec,
+  getInteractionsCell,
+  setInteractionsCell,
+  getStructuredCellInteractions,
+  applyStructuredCellInteractions,
+});
+
+const {
+  saveCurrentViewState,
+  restoreViewState,
+  resetAllViewState,
+  viewDef,
+  invalidateViewDef,
+  rebuildInteractionPhaseColumns,
+  kindCtx,
+  dataArray,
+  getRowCount,
+  updateSelectionSnapshot,
+  updateScrollSnapshot,
+} = viewState;
 
 const {
   makeUndoConfig,
@@ -413,64 +394,6 @@ window.addEventListener("blur", () => {
   lastShiftTap = 0;
 });
 
-function dataArray() {
-  if (activeView === "actions") return model.actions;
-  if (activeView === "inputs") return model.inputs;
-  if (activeView === "modifiers") return model.modifiers;
-  if (activeView === "outcomes") return model.outcomes;
-  return [];
-}
-
-// Cache viewDef result to avoid recomputation within a render/layout pass
-let cachedViewDef = null;
-let cachedViewKey = null;
-let cachedViewColumns = null;
-let cachedInteractionsMode = null;
-
-function viewDef() {
-  const base = VIEWS[activeView];
-  if (!base) return base;
-  const mode = String(model.meta?.interactionsMode || "AI").toUpperCase();
-  const columns = base.columns;
-
-  if (
-    cachedViewDef &&
-    cachedViewKey === activeView &&
-    cachedViewColumns === columns &&
-    (activeView !== "interactions" || cachedInteractionsMode === mode)
-  ) {
-    return cachedViewDef;
-  }
-
-  let result = base;
-  if (activeView === "interactions") {
-    const cols = Array.isArray(columns)
-      ? columns.filter((col) => {
-          if (!col || col.hiddenWhen == null) return true;
-          const h = col.hiddenWhen;
-          if (Array.isArray(h)) {
-            const H = h.map((x) => String(x).toUpperCase());
-            return !H.includes(mode);
-          }
-          return String(h).toUpperCase() !== mode;
-        })
-      : columns;
-    result = { ...base, columns: cols };
-  }
-
-  cachedViewDef = result;
-  cachedViewKey = activeView;
-  cachedViewColumns = columns;
-  cachedInteractionsMode = mode;
-  return result;
-}
-
-function invalidateViewDef() {
-  cachedViewDef = null;
-  cachedViewKey = null;
-  cachedViewColumns = null;
-  cachedInteractionsMode = null;
-}
 function isModColumn(c) {
   return !!c && typeof c.key === "string" && c.key.startsWith("mod:");
 }
@@ -481,15 +404,6 @@ function modIdFromKey(k) {
 }
 
 // User-defined modifier order (row order in Modifiers view)
-function getRowCount() {
-  if (activeView === "interactions") {
-    const len = model.interactionsPairs ? model.interactionsPairs.length : 0;
-    return Math.max(len + 1, MIN_ROWS.interactionsBase);
-  }
-  const len = dataArray().length;
-  return Math.max(len + MIN_ROWS.pad, MIN_ROWS.floor);
-}
-
 function getCell(r, c) {
   const vd = viewDef();
   const col = vd.columns[c];
@@ -1175,7 +1089,7 @@ function setCellSelectionAware(r, c, v) {
 }
 
 // Initialize palette (handles both Outcome and End cells)
-const paletteAPI = initPalette({
+paletteAPI = initPalette({
   editor,
   sheet,
   getActiveView: () => activeView,
@@ -1455,11 +1369,7 @@ function applyCellColors(el, info) {
 }
 
 function render() {
-  const s = perViewState[activeView];
-  if (s) {
-    s.row = sel.r;
-    s.col = sel.c;
-  }
+  updateSelectionSnapshot({ row: sel.r, col: sel.c });
   if (activeView === "interactions") {
     rebuildInteractionPhaseColumns();
   }
@@ -1784,11 +1694,7 @@ function moveSel(dr, dc, edit = false) {
   const nextC = clamp(sel.c + dc, 0, maxC);
   SelectionCtl.startSingle(nextR, nextC);
   // Persist per-view row/col
-  const s = perViewState[activeView];
-  if (s) {
-    s.row = sel.r;
-    s.col = sel.c;
-  }
+  updateSelectionSnapshot({ row: sel.r, col: sel.c });
   SelectionCtl.applyHorizontalMode?.();
   ensureVisible(sel.r, sel.c);
   render();
@@ -1796,8 +1702,7 @@ function moveSel(dr, dc, edit = false) {
 }
 sheet.addEventListener("scroll", () => {
   // Persist scroll per view, then render on next frame
-  const s = perViewState[activeView];
-  if (s) s.scrollTop = sheet.scrollTop | 0;
+  updateScrollSnapshot(sheet.scrollTop | 0);
   window.requestAnimationFrame(() => {
     render();
   });
@@ -1812,7 +1717,7 @@ const tabActions = document.getElementById(Ids.tabActions),
 function setActiveView(key) {
   endEditIfOpen(true);
   // Save state of current view before switching
-  saveCurrentViewState();
+  saveCurrentViewState({ sel, sheet });
   clearSelection();
   if (!(key in VIEWS)) return;
   activeView = key;
@@ -1932,8 +1837,7 @@ function newProject() {
   });
   clearHistory();
   // Reset per-view state for a clean slate
-  for (const k in perViewState)
-    perViewState[k] = { row: 0, col: 0, scrollTop: 0 };
+  resetAllViewState();
   sel.r = 0;
   sel.c = 0;
   ensureSeedRows();
@@ -1994,8 +1898,7 @@ async function openFromDisk() {
     clearHistory();
     ensureSeedRows();
     // Reset per-view state to top-of-sheet when opening a file
-    for (const k in perViewState)
-      perViewState[k] = { row: 0, col: 0, scrollTop: 0 };
+    resetAllViewState();
     setActiveView("actions");
     setProjectNameFromFile(name);
     statusBar?.set(
