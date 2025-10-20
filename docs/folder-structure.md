@@ -18,6 +18,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── history.js
 │   │   ├── editing-shortcuts.js
 │   │   ├── persistence.js
+│   │   ├── settings-controller.js
 │   │   ├── view-state.js
 │   │   ├── interactions.js
 │   │   ├── outcomes.js
@@ -95,6 +96,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `history.js` wraps undo/redo wiring so the entry point just injects dependencies and consumes the resulting API.
 - `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
 - `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.
+- `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
 - `view-state.js` owns per-view selection snapshots and cached column layouts so `app.js` only orchestrates switching and rendering logic.
 
 #### `scripts/data/`
