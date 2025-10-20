@@ -897,6 +897,47 @@ function layout() {
   spacer.style.width = totalW + "px";
   spacer.style.height = totalH + "px";
 }
+
+const editingController = createEditingController({
+  sheet,
+  editor,
+  selection,
+  sel,
+  SelectionNS,
+  SelectionCtl,
+  viewDef,
+  dataArray,
+  getRowCount,
+  getColGeomFor,
+  ROW_HEIGHT,
+  HEADER_HEIGHT,
+  beginEditForKind,
+  kindCtx,
+  getCell,
+  setCell,
+  runModelTransaction,
+  makeUndoConfig,
+  isInteractionPhaseColumnActiveForRow,
+  model,
+  cloneValueForAssignment,
+  getHorizontalTargetColumns,
+  ensureVisible,
+  render,
+  updateSelectionSnapshot,
+  getActiveView: () => activeView,
+  getPaletteAPI: () => paletteAPI,
+});
+
+const {
+  beginEdit,
+  endEdit,
+  endEditIfOpen,
+  moveSel,
+  advanceSelectionAfterPaletteTab,
+  getCellRect,
+  isEditing,
+} = editingController;
+
 const disposeKeys = initGridKeys({
   // state & selectors
   isEditing,
@@ -1457,46 +1498,6 @@ function ensureVisible(r, c) {
   if (ct < sheet.scrollTop) sheet.scrollTop = ct;
   if (cb > sheet.scrollTop + vh) sheet.scrollTop = cb - vh;
 }
-
-const editingController = createEditingController({
-  sheet,
-  editor,
-  selection,
-  sel,
-  SelectionNS,
-  SelectionCtl,
-  viewDef,
-  dataArray,
-  getRowCount,
-  getColGeomFor,
-  ROW_HEIGHT,
-  HEADER_HEIGHT,
-  beginEditForKind,
-  kindCtx,
-  getCell,
-  setCell,
-  runModelTransaction,
-  makeUndoConfig,
-  isInteractionPhaseColumnActiveForRow,
-  model,
-  cloneValueForAssignment,
-  getHorizontalTargetColumns,
-  ensureVisible,
-  render,
-  updateSelectionSnapshot,
-  getActiveView: () => activeView,
-  getPaletteAPI: () => paletteAPI,
-});
-
-const {
-  beginEdit,
-  endEdit,
-  endEditIfOpen,
-  moveSel,
-  advanceSelectionAfterPaletteTab,
-  getCellRect,
-  isEditing,
-} = editingController;
 
 // Edit
 
