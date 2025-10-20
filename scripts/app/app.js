@@ -537,6 +537,7 @@ paletteAPI = initPalette({
   ROW_HEIGHT,
   endEdit,
   moveSelectionForTab: advanceSelectionAfterPaletteTab,
+  moveSelectionForEnter: () => moveSel(1, 0, false),
 });
 
 const colorPickerAPI = initColorPicker({

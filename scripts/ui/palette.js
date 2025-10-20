@@ -25,6 +25,7 @@ export function initPalette(ctx) {
     HEADER_HEIGHT,
     endEdit,
     moveSelectionForTab,
+    moveSelectionForEnter,
   } = ctx;
 
   // ---------- Helpers shared by modes ----------
@@ -286,11 +287,31 @@ export function initPalette(ctx) {
     pal.showRecent = false;
 
     // Initialize query
-    pal.query = mode.parseInitial(initialText);
+    const initialQuery = mode.parseInitial(initialText);
+    pal.query = initialQuery;
     if (mode.consumeTyping) {
       try {
         editor.value = "";
       } catch (_) {}
+    } else if (editor) {
+      const queryText =
+        typeof initialQuery === "string" ? initialQuery : String(initialQuery || "");
+      try {
+        editor.value = queryText;
+      } catch (_) {}
+      pal.query = queryText;
+      if (editor.select) {
+        setTimeout(() => {
+          if (!pal.isOpen) return;
+          try {
+            editor.setSelectionRange(0, editor.value.length);
+          } catch (_) {
+            try {
+              editor.select();
+            } catch (_) {}
+          }
+        }, 0);
+      }
     }
 
     refilter();
@@ -470,7 +491,12 @@ export function initPalette(ctx) {
       e.stopPropagation();
       e.stopImmediatePropagation?.();
       const n = pal.items.length;
-      if (n) pick(pal.selIndex >= 0 ? pal.selIndex : 0);
+      if (n) {
+        pick(pal.selIndex >= 0 ? pal.selIndex : 0);
+        if (typeof moveSelectionForEnter === "function") {
+          moveSelectionForEnter();
+        }
+      }
       else {
         close();
         endEdit(false);
