@@ -17,6 +17,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── clipboard-codec.js
 │   │   ├── grid-commands.js
 │   │   ├── grid-renderer.js
+│   │   ├── diagnostics.js
 │   │   ├── history.js
 │   │   ├── editing-shortcuts.js
 │   │   ├── persistence.js
@@ -100,6 +101,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
+- `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
 - `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.
 - `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
 - `view-state.js` owns per-view selection snapshots and cached column layouts so `app.js` only orchestrates switching and rendering logic.
