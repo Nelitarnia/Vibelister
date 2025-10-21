@@ -181,6 +181,93 @@ export function getStructuredCellInteractions(model, viewDef, r, c) {
   return null;
 }
 
+function mirrorAaPhase0Outcome(model, pair, phase) {
+  if (
+    !model ||
+    !pair ||
+    phase !== 0 ||
+    String(pair.kind || "").toUpperCase() !== "AA" ||
+    typeof pair.aId !== "number" ||
+    typeof pair.rhsActionId !== "number"
+  ) {
+    return false;
+  }
+  const notes = model.notes;
+  if (!notes || typeof notes !== "object") return false;
+
+  const sourceKey = noteKeyForPair(pair, phase);
+  const sourceNote = notes[sourceKey];
+  const mirrorPair = {
+    kind: "AA",
+    aId: pair.rhsActionId,
+    rhsActionId: pair.aId,
+    variantSig: pair.rhsVariantSig || "",
+    rhsVariantSig: pair.variantSig || "",
+  };
+  const mirrorKey = noteKeyForPair(mirrorPair, 0);
+  if (mirrorKey === sourceKey) return false;
+
+  let valueType = null;
+  let value = null;
+  if (sourceNote && typeof sourceNote === "object") {
+    if (typeof sourceNote.outcomeId === "number") {
+      valueType = "number";
+      value = sourceNote.outcomeId;
+    } else if (typeof sourceNote.result === "string") {
+      valueType = "string";
+      value = sourceNote.result;
+    }
+  }
+
+  const clearMirror = () => {
+    const mnote = notes[mirrorKey];
+    if (!mnote || typeof mnote !== "object") return false;
+    let changed = false;
+    if ("outcomeId" in mnote) {
+      delete mnote.outcomeId;
+      changed = true;
+    }
+    if ("result" in mnote) {
+      delete mnote.result;
+      changed = true;
+    }
+    if (!Object.keys(mnote).length) delete notes[mirrorKey];
+    return changed;
+  };
+
+  if (valueType === "number") {
+    const mirroredId = invertOutcomeId(model, value);
+    if (mirroredId == null) return clearMirror();
+    const mnote = notes[mirrorKey] || (notes[mirrorKey] = {});
+    let changed = false;
+    if (mnote.outcomeId !== mirroredId) {
+      mnote.outcomeId = mirroredId;
+      changed = true;
+    }
+    if ("result" in mnote) {
+      delete mnote.result;
+      changed = true;
+    }
+    return changed;
+  }
+
+  if (valueType === "string") {
+    const mnote = notes[mirrorKey] || (notes[mirrorKey] = {});
+    let changed = false;
+    if (mnote.result !== value) {
+      mnote.result = value;
+      changed = true;
+    }
+    if ("outcomeId" in mnote) {
+      delete mnote.outcomeId;
+      changed = true;
+    }
+    return changed;
+  }
+
+  return clearMirror();
+}
+
 // Write a cell in Interactions (strict stable-ID policy for ouctome/end)
 export function setInteractionsCell(model, status, viewDef, r, c, value) {
   const pair = model.interactionsPairs[r];
@@ -208,11 +295,15 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
   if (pk.field === "outcome") {
     if (value == null || value === "") {
       if ("outcomeId" in note) delete note.outcomeId;
+      if ("result" in note) delete note.result;
       if (Object.keys(note).length === 0) delete model.notes[k];
+      mirrorAaPhase0Outcome(model, pair, pk.p);
       return true;
     }
     if (typeof value === "number") {
       note.outcomeId = value;
+      if ("result" in note) delete note.result;
+      mirrorAaPhase0Outcome(model, pair, pk.p);
       return true;
     }
     // STRICT: reject plain text pastes for Outcome
@@ -349,41 +440,10 @@ export function applyStructuredCellInteractions(
     return wrote;
   }
 
-  // Best-effort AA Phase 0 mirroring after Outcome write (IDs only)
-  try {
-    if (wrote && pk.field === "outcome") {
-      const pair = model.interactionsPairs && model.interactionsPairs[r];
-      if (pair && String(pair.kind).toUpperCase() === "AA" && pk.p === 0) {
-        const k = noteKeyForPair(pair, pk.p);
-        const note = model.notes[k] || {};
-        const val = typeof note.outcomeId === "number" ? note.outcomeId : null;
-        if (val != null) {
-          const inv = invertOutcomeId(model, val);
-          if (inv != null) {
-            const mirrorPair = {
-              kind: "AA",
-              aId: pair.rhsActionId,
-              rhsActionId: pair.aId,
-              variantSig: pair.rhsVariantSig || "",
-              rhsVariantSig: pair.variantSig || "",
-            };
-            const mk = noteKeyForPair(mirrorPair, 0);
-            const mnote = model.notes[mk] || (model.notes[mk] = {});
-            const empty = !("outcomeId" in mnote) && !("result" in mnote);
-            if (empty) {
-              if (typeof inv === "number") {
-                mnote.outcomeId = inv;
-                if ("result" in mnote) delete mnote.result;
-              } else if (typeof inv === "string") {
-                mnote.result = inv;
-                if ("outcomeId" in mnote) delete mnote.outcomeId;
-              }
-            }
-          }
-        }
-      }
-    }
-  } catch (_) {}
+  if (wrote && pk.field === "outcome") {
+    const pair = model.interactionsPairs && model.interactionsPairs[r];
+    mirrorAaPhase0Outcome(model, pair, pk.p);
+  }
 
   return wrote;
 }

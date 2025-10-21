@@ -1,4 +1,5 @@
 import {
+  noteKeyForPair,
   getInteractionsCell,
   setInteractionsCell,
   getStructuredCellInteractions,
@@ -134,6 +135,62 @@ export function getInteractionsTests() {
           getInteractionsCell(model, viewDef, 1, 3),
           "Attack",
           "pasted end visible",
+        );
+      },
+    },
+    {
+      name: "AA phase 0 palette edits mirror and clear",
+      run(assert) {
+        const { model, addAction, addOutcome } = makeModelFixture();
+        model.meta.interactionsMode = "AA";
+        const left = addAction("Left");
+        const right = addAction("Right");
+        const win = addOutcome("Win");
+        const lose = addOutcome("Lose");
+        win.dualof = lose.id;
+        lose.dualof = win.id;
+        buildInteractionsPairs(model);
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "rhsaction" },
+            { key: "p0:outcome" },
+          ],
+        };
+        const row = model.interactionsPairs.findIndex(
+          (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
+        );
+        const mirrorRow = model.interactionsPairs.findIndex(
+          (pair) => pair.aId === right.id && pair.rhsActionId === left.id,
+        );
+        assert.ok(row >= 0 && mirrorRow >= 0, "expected AA pairs present");
+        const status = { set() {} };
+
+        setInteractionsCell(model, status, viewDef, row, 2, win.id);
+        assert.strictEqual(
+          getInteractionsCell(model, viewDef, mirrorRow, 2),
+          "Lose",
+          "mirrored row reflects inverted outcome",
+        );
+        const mirrorKey = noteKeyForPair(
+          model.interactionsPairs[mirrorRow],
+          0,
+        );
+        assert.strictEqual(
+          model.notes[mirrorKey]?.outcomeId,
+          lose.id,
+          "mirrored note stores inverted outcome id",
+        );
+
+        setInteractionsCell(model, status, viewDef, row, 2, null);
+        assert.strictEqual(
+          getInteractionsCell(model, viewDef, mirrorRow, 2),
+          "",
+          "clearing source row clears mirrored cell",
+        );
+        assert.ok(
+          !model.notes[mirrorKey],
+          "mirrored note entry removed when source cleared",
         );
       },
     },
