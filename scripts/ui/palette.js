@@ -58,6 +58,7 @@ export function initPalette(ctx) {
     model,
     setCell,
     render,
+    getCellRect,
     HEADER_HEIGHT,
     endEdit,
     moveSelectionForTab,
@@ -114,7 +115,8 @@ export function initPalette(ctx) {
   const MODE_MAP = [
     {
       name: "outcome",
-      testKey: (key) => key === "result" || /^p\d+:outcome$/.test(key),
+      testKey: (key) =>
+        key === "result" || key === "dualof" || /^p\d+:outcome$/.test(key),
       consumeTyping: true, // mimic old Outcome behavior
       filterFn: (name, q) => name.toLowerCase().startsWith(q), // startsWith
       domId: "universalPalette", // one element for all modes
@@ -293,6 +295,7 @@ export function initPalette(ctx) {
     recent: new Map(), // modeName -> Array<item>
     showRecent: false,
     prefillActive: false,
+    ownsEditor: false,
   };
 
   function ensureDOM() {
@@ -401,6 +404,97 @@ export function initPalette(ctx) {
     return true;
   }
 
+  function openOutcome(target = {}) {
+    const t = target || {};
+    const rowIndex = Number.isFinite(t.r) ? t.r : Number.isFinite(sel?.r) ? sel.r : NaN;
+    const colIndex = Number.isFinite(t.c) ? t.c : Number.isFinite(sel?.c) ? sel.c : NaN;
+    const rect =
+      typeof getCellRect === "function" &&
+      Number.isFinite(rowIndex) &&
+      Number.isFinite(colIndex)
+        ? getCellRect(rowIndex, colIndex)
+        : null;
+
+    const resolveOutcomeName = (rawId) => {
+      const id = Number(rawId);
+      if (!Number.isFinite(id)) return "";
+      const rows = Array.isArray(model?.outcomes) ? model.outcomes : [];
+      const match = rows.find((row) => (row?.id | 0) === (id | 0));
+      return match ? match.name || "" : "";
+    };
+
+    let initialText =
+      typeof t.initialText === "string" ? t.initialText : "";
+    if (!initialText) {
+      const colKey = t.col?.key || "dualof";
+      const fromRow =
+        t.row && colKey && typeof t.row[colKey] === "number" ? t.row[colKey] : null;
+      const rows = Array.isArray(model?.outcomes) ? model.outcomes : [];
+      const modelRow =
+        Number.isFinite(rowIndex) && rowIndex >= 0 && rowIndex < rows.length
+          ? rows[rowIndex]
+          : null;
+      const storedId =
+        fromRow != null
+          ? fromRow
+          : modelRow && typeof modelRow[colKey] === "number"
+            ? modelRow[colKey]
+            : null;
+      if (storedId != null) initialText = resolveOutcomeName(storedId);
+    }
+    if (!initialText && editor) {
+      try {
+        initialText = editor.value || "";
+      } catch (_) {
+        initialText = "";
+      }
+    }
+
+    const editorWasVisible = !!(editor && editor.style.display !== "none");
+    if (editor) {
+      if (rect) {
+        editor.style.left = rect.left + "px";
+        editor.style.top = rect.top + "px";
+        editor.style.width = Math.max(40, rect.width || 0) + "px";
+        editor.style.height = (rect.height || 24) + "px";
+      }
+      editor.value = initialText;
+      editor.style.display = "block";
+    }
+    pal.ownsEditor = !!editor && !editorWasVisible;
+
+    if (editor && !editorWasVisible) {
+      try {
+        editor.focus({ preventScroll: true });
+      } catch (_) {
+        try {
+          editor.focus();
+        } catch (_) {}
+      }
+      try {
+        editor.select();
+      } catch (_) {}
+    }
+
+    const opened = rect
+      ? openForCurrentCell(
+          {
+            left: rect.left,
+            top: rect.top,
+            width: Math.max(200, rect.width || 0),
+          },
+          initialText,
+        )
+      : openForCurrentCell(undefined, undefined, undefined, initialText);
+
+    if (!opened && pal.ownsEditor && editor) {
+      editor.style.display = "none";
+      pal.ownsEditor = false;
+    }
+
+    return opened;
+  }
+
   function close() {
     if (!pal.el) return;
     pal.el.style.display = "none";
@@ -410,6 +504,10 @@ export function initPalette(ctx) {
     pal.query = "";
     pal.mode = null;
     pal.prefillActive = false;
+    if (pal.ownsEditor && editor) {
+      editor.style.display = "none";
+    }
+    pal.ownsEditor = false;
   }
 
   function refilter() {
@@ -701,6 +799,7 @@ export function initPalette(ctx) {
   return {
     wantsToHandleCell,
     openForCurrentCell,
+    openOutcome,
     close,
     isOpen: () => pal.isOpen,
   };
