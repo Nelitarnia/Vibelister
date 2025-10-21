@@ -18,21 +18,33 @@ import { MOD } from "../data/constants.js";
 const MOD_STATE_OPTIONS = [
   {
     value: MOD.OFF,
+    sigil: "✕",
     label: "Off",
     description: "Hide this modifier for the action.",
-    keywords: ["off", "0", "disable", "none", "hide"],
+    keywords: ["off", "0", "disable", "none", "hide", "✕", "x", "cross"],
   },
   {
     value: MOD.ON,
+    sigil: "✓",
     label: "On",
     description: "Mark this modifier as compatible.",
-    keywords: ["on", "1", "enable", "yes", "show", "active"],
+    keywords: ["on", "1", "enable", "yes", "show", "active", "✓", "check"],
   },
   {
     value: MOD.BYPASS,
+    sigil: "◐",
     label: "Bypass",
     description: "Allow the modifier without filtering by it.",
-    keywords: ["bypass", "2", "skip", "allow", "inherit", "optional"],
+    keywords: [
+      "bypass",
+      "2",
+      "skip",
+      "allow",
+      "inherit",
+      "optional",
+      "◐",
+      "partial",
+    ],
   },
 ];
 
@@ -161,7 +173,7 @@ export function initPalette(ctx) {
           if (!lower) return true;
           return opt.keywords.some((kw) => kw.includes(lower));
         }).map((opt) => ({
-          display: opt.label,
+          display: opt.sigil ? `${opt.sigil} ${opt.label}` : opt.label,
           description: opt.description,
           data: { value: opt.value },
           isCurrent: opt.value === current,

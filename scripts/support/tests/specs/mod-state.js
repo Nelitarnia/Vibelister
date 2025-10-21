@@ -35,6 +35,53 @@ export function getModStateTests() {
           MOD.OFF,
           "off string should clear modifier",
         );
+
+        ColumnKinds.modState.set({ row, col, MOD }, "✕");
+        assert.strictEqual(
+          row.modSet[7],
+          MOD.OFF,
+          "cross glyph should map to OFF",
+        );
+      },
+    },
+    {
+      name: "explicit off renders with sigil while empty cells stay blank",
+      run(assert) {
+        const row = { modSet: {} };
+        const col = { key: "mod:9", kind: "modState" };
+
+        assert.strictEqual(
+          ColumnKinds.modState.get({ row, col, MOD }),
+          "",
+          "cells without explicit value should render blank",
+        );
+
+        ColumnKinds.modState.set({ row, col, MOD }, MOD.OFF);
+        assert.ok(
+          Object.prototype.hasOwnProperty.call(row.modSet, 9),
+          "setting OFF should store explicit value",
+        );
+        assert.strictEqual(
+          ColumnKinds.modState.get({ row, col, MOD }),
+          "✕",
+          "explicit OFF should render with cross sigil",
+        );
+
+        ColumnKinds.modState.set({ row, col, MOD }, "");
+        assert.strictEqual(
+          ColumnKinds.modState.get({ row, col, MOD }),
+          "",
+          "blank input should clear explicit modifier state",
+        );
+        assert.ok(
+          !Object.prototype.hasOwnProperty.call(row.modSet || {}, 9),
+          "clearing should remove explicit entry",
+        );
+        assert.strictEqual(
+          ColumnKinds.modState.getStructured({ row, col, MOD }),
+          null,
+          "cleared cells should omit structured payload",
+        );
       },
     },
     {
