@@ -46,6 +46,84 @@ function nameOf(entity, model, id) {
   return it ? it.name || "" : "";
 }
 
+const DEFAULT_MOD_ENUM = Object.freeze({ OFF: 0, ON: 1, BYPASS: 2 });
+
+function getModEnum(MOD) {
+  if (!MOD || typeof MOD !== "object") return DEFAULT_MOD_ENUM;
+  const off = Number.isFinite(MOD.OFF) ? Number(MOD.OFF) : DEFAULT_MOD_ENUM.OFF;
+  const on = Number.isFinite(MOD.ON) ? Number(MOD.ON) : DEFAULT_MOD_ENUM.ON;
+  const bypass = Number.isFinite(MOD.BYPASS)
+    ? Number(MOD.BYPASS)
+    : DEFAULT_MOD_ENUM.BYPASS;
+  return { OFF: off, ON: on, BYPASS: bypass };
+}
+
+function parseModColumnId(col) {
+  const key = String(col?.key || "");
+  const idx = key.indexOf(":");
+  if (idx < 0) return NaN;
+  return Number(key.slice(idx + 1));
+}
+
+function normalizeModState(raw, mod, current) {
+  if (raw === undefined) {
+    if (current === mod.OFF) return mod.ON;
+    if (current === mod.ON) return mod.BYPASS;
+    return mod.OFF;
+  }
+  if (typeof raw === "boolean") return raw ? mod.ON : mod.OFF;
+  if (typeof raw === "number") {
+    const clamped = Math.max(mod.OFF, Math.min(mod.BYPASS, raw | 0));
+    if (clamped === mod.OFF || clamped === mod.ON || clamped === mod.BYPASS)
+      return clamped;
+    return mod.OFF;
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return mod.OFF;
+    if (
+      trimmed === "✕" ||
+      trimmed === "✖" ||
+      trimmed === "✗" ||
+      trimmed === "✘" ||
+      trimmed === "×"
+    )
+      return mod.OFF;
+    if (trimmed === "✓" || trimmed === "✔" || trimmed === "☑") return mod.ON;
+    if (trimmed === "◐" || trimmed === "◑" || trimmed === "◓" || trimmed === "◎")
+      return mod.BYPASS;
+    const normalized = trimmed.toLowerCase();
+    if (
+      normalized === "0" ||
+      normalized === "off" ||
+      normalized === "false" ||
+      normalized.startsWith("off") ||
+      normalized === "x"
+    )
+      return mod.OFF;
+    if (
+      normalized === "1" ||
+      normalized === "on" ||
+      normalized === "true" ||
+      normalized.startsWith("on")
+    )
+      return mod.ON;
+    if (
+      normalized === "2" ||
+      normalized === "bypass" ||
+      normalized.startsWith("by") ||
+      normalized.startsWith("pass") ||
+      normalized.startsWith("skip") ||
+      normalized.startsWith("allow") ||
+      normalized.startsWith("inherit")
+    )
+      return mod.BYPASS;
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed)) return normalizeModState(parsed, mod, current);
+  }
+  return mod.OFF;
+}
+
 export const ColumnKinds = {
   text: {
     get({ row, col } = {}) {
@@ -90,44 +168,81 @@ export const ColumnKinds = {
     },
   },
 
-  modTriState: {
+  modState: {
     get({ row, col, MOD } = {}) {
-      const id = Number(String(col.key).split(":")[1] || NaN);
-      const st = (row?.modSet?.[id] ?? 0) | 0;
-      return st === MOD.ON ? "✓" : st === MOD.BYPASS ? "◐" : "";
+      const mod = getModEnum(MOD);
+      const id = parseModColumnId(col);
+      if (!Number.isFinite(id)) return "";
+      const modSet = row?.modSet;
+      const hasExplicit =
+        modSet && Object.prototype.hasOwnProperty.call(modSet, id);
+      const raw = hasExplicit ? modSet[id] : undefined;
+      const st = Number(raw ?? mod.OFF) | 0;
+      if (!hasExplicit) return "";
+      if (st === mod.ON) return "✓";
+      if (st === mod.BYPASS) return "◐";
+      if (st === mod.OFF) return "✕";
+      return "";
     },
     set({ row, col, MOD } = {}, v) {
-      const id = Number(String(col.key).split(":")[1] || NaN);
-      if (!row.modSet) row.modSet = {};
-      const cur = (row.modSet[id] ?? 0) | 0;
-      row.modSet[id] =
-        v === undefined
-          ? cur === MOD.OFF
-            ? MOD.ON
-            : cur === MOD.ON
-              ? MOD.BYPASS
-              : MOD.OFF
-          : typeof v === "boolean"
-            ? v
-              ? MOD.ON
-              : MOD.OFF
-            : typeof v === "number"
-              ? Math.max(0, Math.min(2, v | 0))
-              : MOD.OFF;
+      if (!row || !col) return;
+      const mod = getModEnum(MOD);
+      const id = parseModColumnId(col);
+      if (!Number.isFinite(id)) return;
+      if (v === null) {
+        if (row.modSet && typeof row.modSet === "object") delete row.modSet[id];
+        return;
+      }
+      if (typeof v === "string" && v.trim() === "") {
+        if (row.modSet && typeof row.modSet === "object") delete row.modSet[id];
+        return;
+      }
+      if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
+      const cur = Number(row.modSet[id] ?? mod.OFF) | 0;
+      const next = normalizeModState(v, mod, cur);
+      row.modSet[id] = next;
     },
-    beginEdit(ctx = {}) {
-      this.set(ctx);
-      return { handled: true };
+    beginEdit() {
+      return { useEditor: true };
     },
-    clear({ row, col } = {}) {
+    getStructured({ row, col, MOD } = {}) {
+      const mod = getModEnum(MOD);
+      const id = parseModColumnId(col);
+      if (!Number.isFinite(id)) return null;
+      const modSet = row?.modSet;
+      if (!modSet || !Object.prototype.hasOwnProperty.call(modSet, id))
+        return null;
+      const raw = modSet[id];
+      const value =
+        typeof raw === "number"
+          ? normalizeModState(raw, mod, mod.OFF)
+          : mod.OFF;
+      return { type: "modifierState", data: { value } };
+    },
+    applyStructured({ row, col, MOD } = {}, payload) {
+      if (!row || !col || !payload || typeof payload !== "object") return false;
+      if (payload.type !== "modifierState") return false;
+      const mod = getModEnum(MOD);
+      const id = parseModColumnId(col);
+      if (!Number.isFinite(id)) return false;
+      if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
+      const hasValue =
+        payload.data && Object.prototype.hasOwnProperty.call(payload.data, "value");
+      if (!hasValue) return false;
+      const current = Number(row.modSet[id] ?? mod.OFF) | 0;
+      const next = normalizeModState(payload.data.value, mod, current);
+      row.modSet[id] = next;
+      return true;
+    },
+    clear({ row, col, MOD } = {}) {
       if (!row || !col) return false;
-      const id = Number(String(col.key).split(":")[1] || NaN);
+      const mod = getModEnum(MOD);
+      const id = parseModColumnId(col);
       if (!Number.isFinite(id)) return false;
       if (!row.modSet || typeof row.modSet !== "object") return false;
       if (Object.prototype.hasOwnProperty.call(row.modSet, id)) {
-        const before = row.modSet[id];
         delete row.modSet[id];
-        return before !== undefined && before !== 0;
+        return true;
       }
       return false;
     },

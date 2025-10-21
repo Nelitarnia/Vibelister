@@ -1,3 +1,5 @@
+import { MOD } from "../data/constants.js";
+
 // palette.js — one elegant, configurable dropdown for stable-ID cells.
 //
 // Usage in App.js:
@@ -9,8 +11,42 @@
 // Modes (built-in):
 //   - 'outcome' → for ^p\\d+:outcome$ and legacy 'result'
 //   - 'end'     → for ^p\\d+:end$ (Action + optional variant)
+//   - 'modifierState' → for Actions view modifier compatibility columns
 //
 // You can add more modes later by extending MODE_MAP.
+
+const MOD_STATE_OPTIONS = [
+  {
+    value: MOD.OFF,
+    sigil: "✕",
+    label: "Off",
+    description: "Hide this modifier for the action.",
+    keywords: ["off", "0", "disable", "none", "hide", "✕", "x", "cross"],
+  },
+  {
+    value: MOD.ON,
+    sigil: "✓",
+    label: "On",
+    description: "Mark this modifier as compatible.",
+    keywords: ["on", "1", "enable", "yes", "show", "active", "✓", "check"],
+  },
+  {
+    value: MOD.BYPASS,
+    sigil: "◐",
+    label: "Bypass",
+    description: "Allow the modifier without filtering by it.",
+    keywords: [
+      "bypass",
+      "2",
+      "skip",
+      "allow",
+      "inherit",
+      "optional",
+      "◐",
+      "partial",
+    ],
+  },
+];
 
 export function initPalette(ctx) {
   const {
@@ -106,6 +142,48 @@ export function initPalette(ctx) {
         render();
       },
       recentKeyOf: (it) => `o:${it.data.outcomeId}`,
+    },
+    {
+      name: "modifierState",
+      testKey: (key) => /^mod:\d+$/.test(String(key || "")),
+      consumeTyping: false,
+      filterFn: () => true,
+      domId: "universalPalette",
+      parseInitial: () => "",
+      parseQuery: (raw) => ({ q: String(raw || "").trim().toLowerCase() }),
+      makeItems: (model, parsed, extras = {}) => {
+        const q = parsed.q || "";
+        const { sel, viewDef } = extras;
+        const vd = typeof viewDef === "function" ? viewDef() : null;
+        const col = vd?.columns?.[sel?.c];
+        const key = String(col?.key || "");
+        const id = Number(key.split(":")[1] || NaN);
+        const rowIndex = Number(sel?.r);
+        const actions = Array.isArray(model?.actions) ? model.actions : [];
+        let current = MOD.OFF;
+        if (Number.isFinite(rowIndex) && rowIndex >= 0 && rowIndex < actions.length) {
+          const row = actions[rowIndex];
+          if (row && Number.isFinite(id)) {
+            const raw = row.modSet?.[id];
+            if (typeof raw === "number") current = raw | 0;
+          }
+        }
+        const lower = q.toLowerCase();
+        return MOD_STATE_OPTIONS.filter((opt) => {
+          if (!lower) return true;
+          return opt.keywords.some((kw) => kw.includes(lower));
+        }).map((opt) => ({
+          display: opt.sigil ? `${opt.sigil} ${opt.label}` : opt.label,
+          description: opt.description,
+          data: { value: opt.value },
+          isCurrent: opt.value === current,
+        }));
+      },
+      commit: (it) => {
+        setCell(sel.r, sel.c, Number(it.data.value));
+        render();
+      },
+      recentKeyOf: (it) => `m:${it.data.value}`,
     },
     {
       name: "end",
@@ -341,7 +419,11 @@ export function initPalette(ctx) {
     let items = mode.makeItems(model, parsed, { sel, viewDef, getActiveView });
     items = items || [];
     if (!items.length) pal.selIndex = -1;
-    else if (pal.selIndex < 0 || pal.selIndex >= items.length) pal.selIndex = 0;
+    else {
+      const preferred = items.findIndex((it) => it && it.isCurrent);
+      if (preferred >= 0) pal.selIndex = preferred;
+      else if (pal.selIndex < 0 || pal.selIndex >= items.length) pal.selIndex = 0;
+    }
     pal.items = items;
     renderList(false);
   }
@@ -402,15 +484,33 @@ export function initPalette(ctx) {
       }
       pal.items.forEach((it, idx) => {
         const item = document.createElement("div");
-        item.textContent = it.display || "";
         item.dataset.index = String(idx);
         item.style.padding = "6px 10px";
         item.style.cursor = "pointer";
         item.className = "pal-item";
+        if (it.description) {
+          item.style.display = "flex";
+          item.style.flexDirection = "column";
+          item.style.gap = "2px";
+        }
         if (idx === pal.selIndex) {
           item.style.background = "#374151";
           item.setAttribute("aria-selected", "true");
         } else item.removeAttribute("aria-selected");
+
+        if (it.description) {
+          const label = document.createElement("div");
+          label.textContent = it.display || "";
+          label.style.fontWeight = "600";
+          const desc = document.createElement("div");
+          desc.textContent = it.description;
+          desc.style.opacity = "0.72";
+          desc.style.fontSize = "11px";
+          item.appendChild(label);
+          item.appendChild(desc);
+        } else {
+          item.textContent = it.display || "";
+        }
 
         item.onmouseenter = () => {
           if (Date.now() < pal.lockHoverUntil) return;

@@ -140,8 +140,7 @@ export function createViewStateController(options = {}) {
       setInteractionsCell,
       getStructuredCellInteractions,
       applyStructuredCellInteractions,
-      wantPalette:
-        activeView === "interactions" && paletteAPI?.wantsToHandleCell?.(),
+      wantPalette: !!paletteAPI?.wantsToHandleCell?.(),
     };
   }
 

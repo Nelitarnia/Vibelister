@@ -111,12 +111,7 @@ export function createEditingController({
       editor.style.display = "block";
     }
     editing = true;
-    if (
-      activeView === "interactions" &&
-      palette &&
-      palette.wantsToHandleCell &&
-      palette.wantsToHandleCell()
-    ) {
+    if (palette && palette.wantsToHandleCell && palette.wantsToHandleCell()) {
       palette.openForCurrentCell(
         {
           left: rect.left,

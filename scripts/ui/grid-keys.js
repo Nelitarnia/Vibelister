@@ -11,6 +11,52 @@ import {
 } from "../app/clipboard-codec.js";
 import { isInteractionPhaseColumnActiveForRow } from "../app/interactions.js";
 
+export function computeDestinationIndices(options = {}) {
+  const {
+    sourceCount,
+    selectionSet,
+    anchor,
+    limit,
+    allFlag = false,
+    fullRange = null,
+  } = options;
+  if (!Number.isFinite(sourceCount) || sourceCount <= 0) return [];
+  const last = Math.max(0, (limit || 0) - 1);
+  if (allFlag && Array.isArray(fullRange) && fullRange.length) {
+    const out = [];
+    for (let i = 0; i < sourceCount && i < fullRange.length; i++) {
+      const idx = fullRange[i];
+      if (Number.isFinite(idx) && idx <= last) out.push(idx);
+    }
+    return out;
+  }
+  const sorted =
+    selectionSet && selectionSet.size
+      ? Array.from(selectionSet).sort((a, b) => a - b)
+      : null;
+  let pruned = null;
+  if (sorted && sorted.length) {
+    pruned = [];
+    for (const idx of sorted) {
+      if (Number.isFinite(idx) && idx <= last) pruned.push(idx);
+    }
+    if (pruned.length >= sourceCount) return pruned;
+  }
+  let start = null;
+  if (pruned && pruned.length) start = pruned[0];
+  else if (sorted && sorted.length) start = sorted[0];
+  else if (Number.isFinite(anchor)) start = anchor;
+  else start = 0;
+  const base = Number.isFinite(start) ? start : 0;
+  const out = [];
+  for (let i = 0; i < sourceCount; i++) {
+    const idx = base + i;
+    if (idx > last) break;
+    if (idx >= 0) out.push(idx);
+  }
+  return out;
+}
+
 export function initGridKeys(deps) {
   // (clipboard-enhanced)
   const {
@@ -220,9 +266,10 @@ export function initGridKeys(deps) {
 
     // In-cell editing mode
     if (gridIsEditing()) {
+      let keyDef;
       // If editing the Interactions → Outcome cell, defer Enter/Escape to the palette handler in App.js
       try {
-        const keyDef = viewDef().columns[sel.c];
+        keyDef = viewDef().columns[sel.c];
         const cellKey = keyDef && keyDef.key;
         if (
           getActiveView() === "interactions" &&
@@ -236,6 +283,9 @@ export function initGridKeys(deps) {
           return;
         }
       } catch {}
+      if (getActiveView() === "actions" && isModColumn(keyDef)) {
+        return;
+      }
 
       if (e.key === "Enter") {
         e.preventDefault();
@@ -276,24 +326,14 @@ export function initGridKeys(deps) {
       return;
     }
 
-    // ----- MODIFIER COLUMNS: handle first (tri-state) -----
+    // ----- MODIFIER COLUMNS: keyboard shortcuts -----
     const col = viewDef().columns[sel.c];
     if (getActiveView() === "actions" && isModColumn(col)) {
-      // Cycle: OFF→ON→BYPASS→OFF on Enter / Space / X / F2
-      if (
-        e.key === " " ||
-        e.key.toLowerCase() === "x" ||
-        e.key === "Enter" ||
-        e.key === "F2"
-      ) {
+      if (e.key === " ") {
         e.preventDefault();
-        if (selection.rows.size > 1)
-          setModForSelection(sel.c, undefined); // batch cycle using active row's next
-        else setCell(sel.r, sel.c, undefined); // single cycle
-        render();
+        beginEdit(sel.r, sel.c);
         return;
       }
-      // Optional explicit sets: Alt+0/1/2 → OFF/ON/BYPASS
       if (e.altKey && (e.key === "0" || e.key === "1" || e.key === "2")) {
         e.preventDefault();
         const target = Number(e.key);
@@ -510,48 +550,6 @@ export function initGridKeys(deps) {
     } catch {
       return true;
     }
-  }
-
-  function computeDestinationIndices(options) {
-    const {
-      sourceCount,
-      selectionSet,
-      anchor,
-      limit,
-      allFlag = false,
-      fullRange = null,
-    } = options;
-    if (!Number.isFinite(sourceCount) || sourceCount <= 0) return [];
-    const last = Math.max(0, (limit || 0) - 1);
-    if (allFlag && Array.isArray(fullRange) && fullRange.length) {
-      const out = [];
-      for (let i = 0; i < sourceCount && i < fullRange.length; i++) {
-        const idx = fullRange[i];
-        if (Number.isFinite(idx) && idx <= last) out.push(idx);
-      }
-      return out;
-    }
-    const sorted =
-      selectionSet && selectionSet.size
-        ? Array.from(selectionSet).sort((a, b) => a - b)
-        : null;
-    if (sorted && sorted.length >= sourceCount) {
-      const out = [];
-      for (let i = 0; i < sourceCount; i++) {
-        const idx = sorted[i];
-        if (Number.isFinite(idx) && idx <= last) out.push(idx);
-      }
-      return out;
-    }
-    const start = sorted && sorted.length ? sorted[0] : anchor;
-    const out = [];
-    const base = Number.isFinite(start) ? start : 0;
-    for (let i = 0; i < sourceCount; i++) {
-      const idx = base + i;
-      if (idx > last) break;
-      if (idx >= 0) out.push(idx);
-    }
-    return out;
   }
 
   function columnsCompatible(meta, col) {

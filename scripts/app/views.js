@@ -86,7 +86,7 @@ export const VIEWS = {
   },
 };
 
-// Rebuild Actions view columns to include one tri-state column per modifier
+// Rebuild Actions view columns to include one tri-state palette column per modifier
 export function rebuildActionColumnsFromModifiers(model) {
   const left = [
     { key: "name", title: "Action Name", width: 240, kind: "text" },
@@ -102,7 +102,7 @@ export function rebuildActionColumnsFromModifiers(model) {
       width: 80,
       isMod: true,
       modId: m.id,
-      kind: "modTriState",
+      kind: "modState",
     }));
   const right = [
     { key: "notes", title: "Other Notes", width: 480, kind: "text" },

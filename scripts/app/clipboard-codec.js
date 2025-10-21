@@ -30,6 +30,7 @@ export function sanitizeStructuredPayload(payload) {
     input: ["id"],
     outcome: ["outcomeId"],
     end: ["endActionId", "endVariantSig"],
+    modifierState: ["value"],
   };
 
   const allowed = ALLOW[type] || [];
@@ -52,6 +53,11 @@ export function sanitizeStructuredPayload(payload) {
   if (type === "input" && typeof out.data.id !== "number") return null;
   if (type === "outcome" && typeof out.data.outcomeId !== "number") return null;
   if (type === "end" && typeof out.data.endActionId !== "number") return null;
+  if (type === "modifierState") {
+    const value = Number(out.data.value);
+    if (!Number.isFinite(value)) return null;
+    out.data.value = value;
+  }
 
   return out;
 }

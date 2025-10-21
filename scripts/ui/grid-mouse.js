@@ -19,7 +19,6 @@ export function initGridMouse(deps) {
     // view helpers
     viewDef,
     isModColumn,
-    setModForSelection,
   } = deps;
 
   // Robust hit-testing: accept .cell OR any element with data-r/data-c inside the sheet
@@ -44,20 +43,15 @@ export function initGridMouse(deps) {
       sheet.focus({ preventScroll: true });
     }
 
-    // Handle double-click first: begin edit on non-mod columns; ignore on mod columns
+    // Handle double-click first: begin edit on the clicked cell
     if (e.detail === 2) {
-      if (!isModColumn(col)) {
-        // Ensure selection points to this cell, then edit
-        sel.r = r;
-        sel.c = c;
-        ensureVisible(r, c);
-        if (isEditing() && e.target !== editor) endEdit(true);
-        e.preventDefault();
-        beginEdit(r, c);
-      } else {
-        // Mod columns: do not open editor on double-click; also suppress unintended toggles
-        e.preventDefault();
-      }
+      // Ensure selection points to this cell, then edit
+      sel.r = r;
+      sel.c = c;
+      ensureVisible(r, c);
+      if (isEditing() && e.target !== editor) endEdit(true);
+      e.preventDefault();
+      beginEdit(r, c);
       return;
     }
 
@@ -109,10 +103,6 @@ export function initGridMouse(deps) {
     ensureVisible(r, c);
     render();
 
-    // Modifiers: single-click to cycle; Shift+click still only extends selection
-    if (!e.shiftKey && isModColumn(col)) {
-      setModForSelection(c);
-    }
   }
 
   function onCellDblClick(e) {

@@ -109,7 +109,7 @@ export function createGridCommands(deps = {}) {
           const row = arr[r];
           if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
           setCellForKind?.(
-            "modTriState",
+            "modState",
             kindCtx?.({ r, c: colIndex, col, row, v: next }),
             next,
           );
@@ -452,16 +452,53 @@ export function createGridCommands(deps = {}) {
     const col = vd?.columns?.[c];
     const activeView = currentView();
     const isColorColumn = String(col?.kind || "").toLowerCase() === "color";
+    const isModColumnKind = typeof isModColumn === "function" ? isModColumn(col) : false;
     const shouldSpreadDown =
       hasMultiSelection &&
-      ((activeView === "interactions" && c === sel?.c) || isColorColumn);
+      ((activeView === "interactions" && c === sel?.c) ||
+        isColorColumn ||
+        isModColumnKind);
 
     const targetRows = shouldSpreadDown
       ? Array.from(rowsSet).sort((a, b) => a - b)
       : [r];
 
-    let targetCols = selection?.colsAll ? getHorizontalTargetColumns(c) : [c];
+    const compatCols = selection?.colsAll
+      ? getHorizontalTargetColumns(c)
+      : typeof getHorizontalTargetColumns === "function"
+        ? getHorizontalTargetColumns(c)
+        : null;
+
+    let targetCols;
+    const hasExplicitColumnRange =
+      selection?.cols &&
+      selection.cols.size > 1 &&
+      selection.cols.has(c) &&
+      !selection.colsAll;
+
+    if (selection?.colsAll) {
+      targetCols = compatCols && compatCols.length ? compatCols.slice() : [c];
+    } else if (hasExplicitColumnRange) {
+      const selectedCols = Array.from(selection.cols).sort((a, b) => a - b);
+      const filtered =
+        compatCols && compatCols.length
+          ? selectedCols.filter((idx) => compatCols.includes(idx))
+          : selectedCols;
+      const set = new Set(filtered.length ? filtered : [c]);
+      set.add(c);
+      targetCols = Array.from(set);
+    } else {
+      targetCols = [c];
+    }
+
     if (!targetCols || !targetCols.length) targetCols = [c];
+    const uniqueCols = new Set();
+    for (const colIndex of targetCols) {
+      if (Number.isFinite(colIndex)) uniqueCols.add(colIndex);
+    }
+    targetCols = uniqueCols.size
+      ? Array.from(uniqueCols).sort((a, b) => a - b)
+      : [c];
 
     runModelTransaction?.(
       "setCellSelectionAware",
@@ -469,11 +506,18 @@ export function createGridCommands(deps = {}) {
         let changedCells = 0;
         const touchedRows = new Set();
         const touchedCols = new Set();
+        const selectedColsSet = selection?.cols;
+
         for (const rr of targetRows) {
           if (!Number.isFinite(rr)) continue;
           for (const cc of targetCols) {
             if (!Number.isFinite(cc)) continue;
-            if (!selection?.colsAll && cc !== c) continue;
+            if (
+              !selection?.colsAll &&
+              cc !== c &&
+              !(selectedColsSet && selectedColsSet.has(cc))
+            )
+              continue;
             if (
               selection?.colsAll &&
               activeView === "interactions" &&

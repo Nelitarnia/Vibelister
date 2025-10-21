@@ -116,7 +116,7 @@ export function getUiGridMouseTests() {
       },
     },
     {
-      name: "double-click on modifier column is suppressed",
+      name: "double-click on modifier column begins edit",
       run(assert) {
         const deps = makeDeps();
         initGridMouse(deps);
@@ -128,11 +128,11 @@ export function getUiGridMouseTests() {
           preventDefault() {},
           target: cell,
         });
-        assert.strictEqual(deps._began, null);
+        assert.deepStrictEqual(deps._began, [3, 1]);
       },
     },
     {
-      name: "single click toggles modifier across selection",
+      name: "single click on modifier column only updates selection",
       run(assert) {
         const deps = makeDeps();
         deps.selection.rows = new Set([2, 3, 4]);
@@ -147,7 +147,7 @@ export function getUiGridMouseTests() {
           target: cell,
           shiftKey: false,
         });
-        assert.strictEqual(deps._toggled, 1);
+        assert.strictEqual(deps._toggled, null);
       },
     },
     {
