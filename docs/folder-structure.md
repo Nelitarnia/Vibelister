@@ -15,19 +15,19 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── app/
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
+│   │   ├── editing-shortcuts.js
 │   │   ├── grid-commands.js
 │   │   ├── grid-renderer.js
 │   │   ├── diagnostics.js
 │   │   ├── history.js
-│   │   ├── editing-shortcuts.js
-│   │   ├── persistence.js
-│   │   ├── settings-controller.js
-│   │   ├── view-state.js
 │   │   ├── interactions.js
 │   │   ├── outcomes.js
+│   │   ├── persistence.js
 │   │   ├── selection.js
+│   │   ├── settings-controller.js
 │   │   ├── types.js
 │   │   ├── user-settings.js
+│   │   ├── view-state.js
 │   │   └── views.js
 │   ├── data/
 │   │   ├── column-kinds.js
@@ -55,7 +55,9 @@ This document outlines a maintainable directory layout tailored to the current c
 │           ├── specs/
 │           │   ├── assertions.js
 │           │   ├── deletion.js
+│           │   ├── grid-keys.js
 │           │   ├── interactions.js
+│           │   ├── mod-state.js
 │           │   ├── model-fixtures.js
 │           │   ├── model-snapshot.js
 │           │   ├── model-variants.js
