@@ -5,31 +5,54 @@ export const STRUCTURED_SCHEMA_VERSION = 1;
 
 function wrapRefPayload(entity, payload) {
   if (payload == null) return null;
-  if (typeof payload === "number")
-    return { type: entity, data: { id: payload | 0 } };
-  if (payload && typeof payload === "object") {
-    if (payload.type && payload.data && typeof payload.data.id === "number")
-      return payload;
-    if (typeof payload.id === "number")
-      return { type: entity, data: { id: payload.id | 0 } };
-  }
-  return null;
-}
 
-function wrapOutcomePayload(payload) {
-  if (payload == null) return null;
-  if (typeof payload === "number")
-    return { type: "outcome", data: { outcomeId: payload | 0 } };
-  if (payload && typeof payload === "object") {
-    if (
-      payload.type === "outcome" &&
-      payload.data &&
-      typeof payload.data.outcomeId === "number"
-    )
-      return payload;
-    if (typeof payload.outcomeId === "number")
-      return { type: "outcome", data: { outcomeId: payload.outcomeId | 0 } };
+  const typeName = String(entity ?? "");
+  const normalizedType = typeName.toLowerCase();
+  const altIdKey = normalizedType === "outcome" ? "outcomeId" : null;
+
+  const wrap = (id, extras) => {
+    const data = { id: id | 0 };
+    if (extras && typeof extras === "object") {
+      for (const [key, value] of Object.entries(extras)) {
+        if (key === "id" || key === altIdKey) continue;
+        data[key] = value;
+      }
+    }
+    return { type: typeName, data };
+  };
+
+  if (typeof payload === "number") return wrap(payload);
+
+  if (typeof payload === "object") {
+    const rawType = payload.type ? String(payload.type).toLowerCase() : null;
+    if (rawType && rawType !== normalizedType) return null;
+
+    const data =
+      payload.data && typeof payload.data === "object" ? payload.data : null;
+    const extras = data ? { ...data } : null;
+
+    const candidates = [];
+    if (data && typeof data.id === "number") candidates.push(data.id);
+    if (data && altIdKey && typeof data[altIdKey] === "number")
+      candidates.push(data[altIdKey]);
+    if (typeof payload.id === "number") candidates.push(payload.id);
+    if (altIdKey && typeof payload[altIdKey] === "number")
+      candidates.push(payload[altIdKey]);
+    if (!data && Number.isFinite(payload.data)) candidates.push(payload.data);
+
+    for (const candidate of candidates) {
+      if (Number.isFinite(candidate)) {
+        return wrap(candidate, extras);
+      }
+    }
+
+    if (!data) {
+      if (typeof payload.id === "number") return wrap(payload.id);
+      if (altIdKey && typeof payload[altIdKey] === "number")
+        return wrap(payload[altIdKey]);
+    }
   }
+
   return null;
 }
 
@@ -274,53 +297,6 @@ export const ColumnKinds = {
     },
   },
 
-  outcomeRef: {
-    get({ row, model } = {}) {
-      const id = row?.dualof | 0;
-      if (!id) return "";
-      const o = model.outcomes.find((x) => x.id === id);
-      return o ? o.name || "" : "";
-    },
-    set({ row, model } = {}, v) {
-      if (v == null || v === "") {
-        row.dualof = null;
-        return;
-      }
-      if (typeof v === "number") {
-        row.dualof = v | 0;
-        return;
-      }
-      if (typeof v === "string") {
-        const name = v.trim().toLowerCase();
-        const found = model.outcomes.find(
-          (o) => (o.name || "").toLowerCase() === name,
-        );
-        row.dualof = found ? found.id | 0 : null;
-      }
-    },
-    beginEdit() {
-      return { useEditor: true };
-    },
-    applyStructured({ row } = {}, payload) {
-      const wrapped = wrapOutcomePayload(payload);
-      if (
-        wrapped &&
-        wrapped.type === "outcome" &&
-        typeof wrapped.data?.outcomeId === "number"
-      ) {
-        row.dualof = wrapped.data.outcomeId | 0;
-        return true;
-      }
-      return false;
-    },
-    clear({ row } = {}) {
-      if (!row) return false;
-      const hadValue = row.dualof != null;
-      if (hadValue) row.dualof = null;
-      return hadValue;
-    },
-  },
-
   mirrored: {
     get({ row } = {}) {
       return row?.mirrored ? "✓" : "";
@@ -447,7 +423,8 @@ export const ColumnKinds = {
     get({ row, col, model } = {}) {
       return nameOf(col.entity, model, row?.[col.key]);
     },
-    set({ row, col } = {}, v) {
+    set({ row, col, model } = {}, v) {
+      if (!row || !col?.key) return;
       if (typeof v === "number") {
         row[col.key] = v | 0;
         return;
@@ -456,7 +433,24 @@ export const ColumnKinds = {
         row[col.key] = null;
         return;
       }
-      // Stable-ID fields do not accept free text directly.
+      if (typeof v === "string") {
+        const trimmed = v.trim();
+        if (!trimmed) {
+          row[col.key] = null;
+          return;
+        }
+        if (!model) {
+          row[col.key] = null;
+          return;
+        }
+        const pool = resolveEntity(col?.entity, model) || [];
+        const target = trimmed.toLowerCase();
+        const found = pool.find(
+          (it) => String(it?.name || "").trim().toLowerCase() === target,
+        );
+        row[col.key] = found ? found.id | 0 : null;
+      }
+      // Stable-ID fields do not accept arbitrary free text beyond entity lookups.
     },
     beginEdit({ paletteAPI, row, col, r, c } = {}) {
       if (paletteAPI?.wantsToHandleCell?.()) {
@@ -529,6 +523,9 @@ export const ColumnKinds = {
     },
   },
 };
+
+// Legacy alias: outcomeRef now routes through the generic refPick implementation.
+ColumnKinds.outcomeRef = ColumnKinds.refPick;
 
 // Helper: format " (ModA+ModB)" suffix from a '+'-joined variantSig ordered by modifier row order
 function formatModsFromSig(model, sig) {
