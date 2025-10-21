@@ -1,4 +1,5 @@
 import { MOD } from "../data/constants.js";
+import { sortIdsByUserOrder } from "../data/variants/variants.js";
 
 // palette.js — one elegant, configurable dropdown for stable-ID cells.
 //
@@ -66,16 +67,6 @@ export function initPalette(ctx) {
   } = ctx;
 
   // ---------- Helpers shared by modes ----------
-  const sortIdsByUserOrder = (ids, model) => {
-    const order = new Map();
-    for (let i = 0; i < (model.modifiers || []).length; i++) {
-      const id = model.modifiers[i]?.id;
-      if (typeof id === "number") order.set(id, i);
-    }
-    return ids
-      .slice()
-      .sort((x, y) => (order.get(x) ?? 1e9) - (order.get(y) ?? 1e9));
-  };
   const idsFromSig = (sig) =>
     String(sig || "")
       .split("+")
