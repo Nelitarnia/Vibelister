@@ -12,6 +12,7 @@ import { getModelSnapshotTests } from "../scripts/support/tests/specs/model-snap
 import { getUndoTests } from "../scripts/support/tests/specs/undo.js";
 import { getModStateTests } from "../scripts/support/tests/specs/mod-state.js";
 import { getGridKeysTests } from "../scripts/support/tests/specs/grid-keys.js";
+import { getColumnKindTests } from "../scripts/support/tests/specs/column-kinds.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -33,6 +34,10 @@ for (const spec of getModStateTests()) {
 
 for (const spec of getGridKeysTests()) {
   test(`Grid keys › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getColumnKindTests()) {
+  test(`Column kinds › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getModelSnapshotTests()) {
