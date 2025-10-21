@@ -276,24 +276,14 @@ export function initGridKeys(deps) {
       return;
     }
 
-    // ----- MODIFIER COLUMNS: handle first (tri-state) -----
+    // ----- MODIFIER COLUMNS: keyboard shortcuts -----
     const col = viewDef().columns[sel.c];
     if (getActiveView() === "actions" && isModColumn(col)) {
-      // Cycle: OFF→ON→BYPASS→OFF on Enter / Space / X / F2
-      if (
-        e.key === " " ||
-        e.key.toLowerCase() === "x" ||
-        e.key === "Enter" ||
-        e.key === "F2"
-      ) {
+      if (e.key === " ") {
         e.preventDefault();
-        if (selection.rows.size > 1)
-          setModForSelection(sel.c, undefined); // batch cycle using active row's next
-        else setCell(sel.r, sel.c, undefined); // single cycle
-        render();
+        beginEdit(sel.r, sel.c);
         return;
       }
-      // Optional explicit sets: Alt+0/1/2 → OFF/ON/BYPASS
       if (e.altKey && (e.key === "0" || e.key === "1" || e.key === "2")) {
         e.preventDefault();
         const target = Number(e.key);

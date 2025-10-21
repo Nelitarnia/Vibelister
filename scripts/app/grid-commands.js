@@ -109,7 +109,7 @@ export function createGridCommands(deps = {}) {
           const row = arr[r];
           if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
           setCellForKind?.(
-            "modTriState",
+            "modState",
             kindCtx?.({ r, c: colIndex, col, row, v: next }),
             next,
           );
