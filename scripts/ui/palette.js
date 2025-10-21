@@ -316,6 +316,35 @@ export function initPalette(ctx) {
     editor.parentElement.appendChild(root);
   }
 
+  function prepareEditorForCell(rect, initialText, opts = {}) {
+    if (!editor) return false;
+    const { focus = false } = opts || {};
+    const wasVisible = editor.style.display !== "none";
+    if (rect) {
+      editor.style.left = rect.left + "px";
+      editor.style.top = rect.top + "px";
+      editor.style.width = Math.max(40, rect.width || 0) + "px";
+      editor.style.height = (rect.height || 24) + "px";
+    }
+    if (typeof initialText === "string") {
+      try {
+        editor.value = initialText;
+      } catch (_) {}
+    }
+    editor.style.display = "block";
+    pal.ownsEditor = !wasVisible;
+    if (focus) {
+      try {
+        editor.focus({ preventScroll: true });
+      } catch (_) {
+        try {
+          editor.focus();
+        } catch (_) {}
+      }
+    }
+    return true;
+  }
+
   function wantsToHandleCell() {
     const vd = viewDef();
     if (!vd) return false;
@@ -324,9 +353,23 @@ export function initPalette(ctx) {
   }
 
   function openForCurrentCell(arg1, arg2, arg3, arg4) {
+    const targetArg =
+      arg1 && typeof arg1 === "object" &&
+      ("r" in arg1 || "c" in arg1 || "initialText" in arg1 || "focusEditor" in arg1)
+        ? arg1
+        : null;
+
     const vd = viewDef();
     if (!vd) return false;
-    const key = String(vd.columns?.[sel.c]?.key || "");
+
+    let rowIndex = Number.isFinite(sel?.r) ? sel.r : NaN;
+    let colIndex = Number.isFinite(sel?.c) ? sel.c : NaN;
+    if (targetArg) {
+      if (Number.isFinite(targetArg.r)) rowIndex = targetArg.r;
+      if (Number.isFinite(targetArg.c)) colIndex = targetArg.c;
+    }
+
+    const key = String(vd.columns?.[colIndex]?.key || "");
     const mode = MODE_MAP.find((m) => m.testKey(key));
     if (!mode) return false;
     ensureDOM();
@@ -335,7 +378,33 @@ export function initPalette(ctx) {
     let top = 0;
     let width = 0;
     let initialText = "";
-    if (arg1 && typeof arg1 === "object") {
+    let rect = null;
+    const claimEditor = !!targetArg;
+    const focusEditor = targetArg ? targetArg.focusEditor !== false : false;
+    if (targetArg) {
+      initialText =
+        typeof targetArg.initialText === "string"
+          ? targetArg.initialText
+          : typeof arg2 === "string"
+            ? arg2
+            : "";
+      if (
+        typeof getCellRect === "function" &&
+        Number.isFinite(rowIndex) &&
+        Number.isFinite(colIndex)
+      ) {
+        rect = getCellRect(rowIndex, colIndex);
+      }
+      if (rect) {
+        left = Number(rect.left) || 0;
+        top = Number(rect.top) || 0;
+        width = Math.max(200, Number(rect.width) || 0);
+      } else {
+        left = 0;
+        top = HEADER_HEIGHT;
+        width = 200;
+      }
+    } else if (arg1 && typeof arg1 === "object") {
       left = Number(arg1.left) || 0;
       top = Number(arg1.top) || 0;
       width = Number(arg1.width) || 0;
@@ -347,9 +416,10 @@ export function initPalette(ctx) {
       initialText = typeof arg4 === "string" ? arg4 : "";
       top += HEADER_HEIGHT;
     }
+    width = Math.max(200, width);
     pal.left = left;
     pal.top = top;
-    pal.width = Math.max(200, width);
+    pal.width = width;
     Object.assign(pal.el.style, {
       left: pal.left + "px",
       top: pal.top + "px",
@@ -358,6 +428,9 @@ export function initPalette(ctx) {
     });
     pal.isOpen = true;
     pal.showRecent = false;
+
+    if (claimEditor) prepareEditorForCell(rect, initialText, { focus: focusEditor });
+    else pal.ownsEditor = false;
 
     // Initialize query
     const initialQueryRaw = mode.parseInitial(initialText);
@@ -399,12 +472,6 @@ export function initPalette(ctx) {
     const t = target || {};
     const rowIndex = Number.isFinite(t.r) ? t.r : Number.isFinite(sel?.r) ? sel.r : NaN;
     const colIndex = Number.isFinite(t.c) ? t.c : Number.isFinite(sel?.c) ? sel.c : NaN;
-    const rect =
-      typeof getCellRect === "function" &&
-      Number.isFinite(rowIndex) &&
-      Number.isFinite(colIndex)
-        ? getCellRect(rowIndex, colIndex)
-        : null;
 
     const resolveOutcomeName = (rawId) => {
       const id = Number(rawId);
@@ -441,49 +508,12 @@ export function initPalette(ctx) {
       }
     }
 
-    const editorWasVisible = !!(editor && editor.style.display !== "none");
-    if (editor) {
-      if (rect) {
-        editor.style.left = rect.left + "px";
-        editor.style.top = rect.top + "px";
-        editor.style.width = Math.max(40, rect.width || 0) + "px";
-        editor.style.height = (rect.height || 24) + "px";
-      }
-      editor.value = initialText;
-      editor.style.display = "block";
-    }
-    pal.ownsEditor = !!editor && !editorWasVisible;
-
-    if (editor && !editorWasVisible) {
-      try {
-        editor.focus({ preventScroll: true });
-      } catch (_) {
-        try {
-          editor.focus();
-        } catch (_) {}
-      }
-      try {
-        editor.select();
-      } catch (_) {}
-    }
-
-    const opened = rect
-      ? openForCurrentCell(
-          {
-            left: rect.left,
-            top: rect.top,
-            width: Math.max(200, rect.width || 0),
-          },
-          initialText,
-        )
-      : openForCurrentCell(undefined, undefined, undefined, initialText);
-
-    if (!opened && pal.ownsEditor && editor) {
-      editor.style.display = "none";
-      pal.ownsEditor = false;
-    }
-
-    return opened;
+    return openForCurrentCell({
+      r: rowIndex,
+      c: colIndex,
+      initialText,
+      focusEditor: true,
+    });
   }
 
   function close() {
