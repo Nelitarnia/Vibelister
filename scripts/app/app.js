@@ -555,8 +555,20 @@ const colorPickerAPI = initColorPicker({
 if (!paletteAPI.openReference) {
   paletteAPI.openReference = ({ entity, target } = {}) => {
     try {
-      if (entity === "outcome" && typeof paletteAPI.openOutcome === "function")
-        return !!paletteAPI.openOutcome(target);
+      if (entity === "outcome") {
+        if (typeof paletteAPI.openOutcome === "function") {
+          return !!paletteAPI.openOutcome(target);
+        }
+        if (typeof paletteAPI.openForCurrentCell === "function") {
+          return !!paletteAPI.openForCurrentCell({
+            r: target?.r,
+            c: target?.c,
+            initialText: target?.initialText,
+            focusEditor: target?.focusEditor !== false,
+          });
+        }
+        return false;
+      }
       if (entity === "action" && typeof paletteAPI.openAction === "function")
         return !!paletteAPI.openAction(target);
       if (entity === "input" && typeof paletteAPI.openInput === "function")

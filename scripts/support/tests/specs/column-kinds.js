@@ -36,18 +36,67 @@ export function getColumnKindTests() {
       name: "refPick beginEdit falls back to openReference when needed",
       run(assert) {
         let invoked = false;
+        let receivedTarget = null;
+        const row = { dualof: 7 };
+        const model = { outcomes: [{ id: 7, name: "Final Victory" }] };
         const res = beginEditForKind("refPick", {
           paletteAPI: {
             wantsToHandleCell: () => false,
-            openReference: () => {
+            openReference: ({ target }) => {
               invoked = true;
+              receivedTarget = target;
               return true;
             },
           },
-          col: { entity: "outcome" },
+          row,
+          model,
+          col: { entity: "outcome", key: "dualof" },
         });
         assert.ok(invoked, "openReference should be invoked when inline mode missing");
+        assert.ok(receivedTarget, "openReference should receive a target payload");
+        assert.strictEqual(
+          receivedTarget.initialText,
+          "Final Victory",
+          "fallback should provide a display label for the current value",
+        );
         assert.ok(res?.handled, "successful openReference should consume beginEdit");
+      },
+    },
+    {
+      name: "refPick beginEdit falls back to openForCurrentCell when openReference missing",
+      run(assert) {
+        let invoked = false;
+        const row = { dualof: 5 };
+        const model = { outcomes: [{ id: 5, name: "Radiant Dawn" }] };
+        const res = beginEditForKind("refPick", {
+          r: 3,
+          c: 2,
+          row,
+          model,
+          col: { entity: "outcome", key: "dualof" },
+          paletteAPI: {
+            wantsToHandleCell: () => false,
+            openForCurrentCell: (args) => {
+              invoked = true;
+              assert.deepStrictEqual(
+                { r: args.r, c: args.c },
+                { r: 3, c: 2 },
+                "openForCurrentCell should receive the requested coordinates",
+              );
+              assert.strictEqual(
+                args.initialText,
+                "Radiant Dawn",
+                "openForCurrentCell fallback should get the lookup name",
+              );
+              return true;
+            },
+          },
+        });
+        assert.ok(
+          invoked,
+          "openForCurrentCell should be invoked when openReference is unavailable",
+        );
+        assert.ok(res?.handled, "successful openForCurrentCell fallback should consume beginEdit");
       },
     },
     {

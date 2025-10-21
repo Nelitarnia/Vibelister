@@ -452,16 +452,33 @@ export const ColumnKinds = {
       }
       // Stable-ID fields do not accept arbitrary free text beyond entity lookups.
     },
-    beginEdit({ paletteAPI, row, col, r, c } = {}) {
+    beginEdit({ paletteAPI, row, col, r, c, model } = {}) {
       if (paletteAPI?.wantsToHandleCell?.()) {
         return { useEditor: true };
       }
+      const colKey = col?.key;
+      let initialText = "";
+      if (colKey && row && typeof row[colKey] === "number") {
+        initialText = nameOf(col?.entity, model, row[colKey]) || "";
+      }
+      const target = { row, col, r, c, initialText };
       if (paletteAPI?.openReference) {
         const opened = paletteAPI.openReference({
           entity: col?.entity,
-          target: { row, col, r, c },
+          target,
         });
         if (opened) return { handled: true };
+      }
+      if (
+        paletteAPI?.openForCurrentCell &&
+        paletteAPI.openForCurrentCell({
+          r,
+          c,
+          initialText,
+          focusEditor: true,
+        })
+      ) {
+        return { handled: true };
       }
       return { useEditor: true };
     },
