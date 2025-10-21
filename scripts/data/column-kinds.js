@@ -79,8 +79,12 @@ function normalizeModState(raw, mod, current) {
     return mod.OFF;
   }
   if (typeof raw === "string") {
-    const normalized = raw.trim().toLowerCase();
-    if (!normalized) return mod.OFF;
+    const trimmed = raw.trim();
+    if (!trimmed) return mod.OFF;
+    if (trimmed === "✓" || trimmed === "✔" || trimmed === "☑") return mod.ON;
+    if (trimmed === "◐" || trimmed === "◑" || trimmed === "◓" || trimmed === "◎")
+      return mod.BYPASS;
+    const normalized = trimmed.toLowerCase();
     if (
       normalized === "0" ||
       normalized === "off" ||
@@ -176,6 +180,32 @@ export const ColumnKinds = {
     },
     beginEdit() {
       return { useEditor: true };
+    },
+    getStructured({ row, col, MOD } = {}) {
+      const mod = getModEnum(MOD);
+      const id = parseModColumnId(col);
+      if (!Number.isFinite(id)) return null;
+      const raw = row?.modSet?.[id];
+      const value =
+        typeof raw === "number"
+          ? normalizeModState(raw, mod, mod.OFF)
+          : mod.OFF;
+      return { type: "modifierState", data: { value } };
+    },
+    applyStructured({ row, col, MOD } = {}, payload) {
+      if (!row || !col || !payload || typeof payload !== "object") return false;
+      if (payload.type !== "modifierState") return false;
+      const mod = getModEnum(MOD);
+      const id = parseModColumnId(col);
+      if (!Number.isFinite(id)) return false;
+      if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
+      const hasValue =
+        payload.data && Object.prototype.hasOwnProperty.call(payload.data, "value");
+      if (!hasValue) return false;
+      const current = Number(row.modSet[id] ?? mod.OFF) | 0;
+      const next = normalizeModState(payload.data.value, mod, current);
+      row.modSet[id] = next;
+      return true;
     },
     clear({ row, col, MOD } = {}) {
       if (!row || !col) return false;

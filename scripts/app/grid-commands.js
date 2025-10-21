@@ -452,9 +452,12 @@ export function createGridCommands(deps = {}) {
     const col = vd?.columns?.[c];
     const activeView = currentView();
     const isColorColumn = String(col?.kind || "").toLowerCase() === "color";
+    const isModColumnKind = typeof isModColumn === "function" ? isModColumn(col) : false;
     const shouldSpreadDown =
       hasMultiSelection &&
-      ((activeView === "interactions" && c === sel?.c) || isColorColumn);
+      ((activeView === "interactions" && c === sel?.c) ||
+        isColorColumn ||
+        isModColumnKind);
 
     const targetRows = shouldSpreadDown
       ? Array.from(rowsSet).sort((a, b) => a - b)
