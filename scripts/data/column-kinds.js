@@ -133,8 +133,10 @@ export const ColumnKinds = {
       if (!row) return; // tolerate null row (e.g., Interactions)
       row[col.key] = v ?? "";
     },
-    beginEdit({ row } = {}) {
-      if (!row) return { handled: true }; // don't open editor on non-row views
+    beginEdit({ row, activeView } = {}) {
+      if (!row && activeView === "interactions") {
+        return { handled: true }; // interactions rows are synthesized
+      }
       return { useEditor: true };
     },
     clear({ row, col } = {}) {
