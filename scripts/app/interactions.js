@@ -1,6 +1,7 @@
 // interactions.js — Interactions view helpers (notes keys, get/set, clipboard, delete)
 
-import { canonicalSig, sortIdsByUserOrder } from "../data/variants/variants.js";
+import { formatEndActionLabel } from "../data/column-kinds.js";
+import { canonicalSig } from "../data/variants/variants.js";
 import { parsePhaseKey } from "../data/utils.js";
 import { invertOutcomeId } from "./outcomes.js";
 
@@ -57,13 +58,9 @@ export function getInteractionsCell(model, viewDef, r, c) {
   if (keyL === "action" || keyL === "actionid" || keyL === "actionname") {
     const a = model.actions.find((x) => x.id === pair.aId);
     if (!a) return "";
-    if (!pair.variantSig) return a.name || "";
-    const ids = String(pair.variantSig).split("+").filter(Boolean).map(Number);
-    const sortedIds = sortIdsByUserOrder(ids, model);
-    const mods = sortedIds
-      .map((id) => model.modifiers.find((m) => m.id === id)?.name || "")
-      .filter(Boolean);
-    return mods.length ? `${a.name || ""} (${mods.join("+")})` : a.name || "";
+    return formatEndActionLabel(model, a, pair.variantSig, {
+      style: "parentheses",
+    });
   }
 
   // Right-hand identity column: Input (AI) or RHS Action (AA)
@@ -76,15 +73,10 @@ export function getInteractionsCell(model, viewDef, r, c) {
     const kind = pair && pair.kind ? String(pair.kind).toUpperCase() : "AI";
     if (kind === "AA" || keyL === "rhsaction" || keyL === "rhsactionid") {
       const aRhs = model.actions.find((x) => x.id === pair.rhsActionId);
-      const base = aRhs?.name || "";
-      const sig = pair.rhsVariantSig || "";
-      if (!sig) return base;
-      const ids = String(sig).split("+").filter(Boolean).map(Number);
-      const sortedIds = sortIdsByUserOrder(ids, model);
-      const mods = sortedIds
-        .map((id) => model.modifiers.find((m) => m.id === id)?.name || "")
-        .filter(Boolean);
-      return mods.length ? `${base} (${mods.join("+")})` : base;
+      if (!aRhs && !pair.rhsVariantSig) return "";
+      return formatEndActionLabel(model, aRhs, pair.rhsVariantSig, {
+        style: "parentheses",
+      });
     }
     const i = model.inputs.find((x) => x.id === pair.iId);
     return i?.name || "";
@@ -115,19 +107,9 @@ export function getInteractionsCell(model, viewDef, r, c) {
   if (pk.field === "end") {
     if (typeof note.endActionId === "number") {
       const a2 = model.actions.find((x) => x.id === note.endActionId);
-      const name2 = a2?.name || "";
-      if (note.endVariantSig) {
-        const ids2 = String(note.endVariantSig)
-          .split("+")
-          .filter(Boolean)
-          .map(Number);
-        const sortedIds2 = sortIdsByUserOrder(ids2, model);
-        const modNames2 = sortedIds2
-          .map((id) => model.modifiers.find((m) => m.id === id)?.name || "")
-          .filter(Boolean);
-        return modNames2.length ? `${name2} (${modNames2.join("+")})` : name2;
-      }
-      return name2;
+      return formatEndActionLabel(model, a2, note.endVariantSig, {
+        style: "parentheses",
+      });
     }
     return "";
   }
