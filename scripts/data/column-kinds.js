@@ -458,10 +458,16 @@ export const ColumnKinds = {
       }
       // Stable-ID fields do not accept free text directly.
     },
-    beginEdit({ paletteAPI, row, col } = {}) {
+    beginEdit({ paletteAPI, row, col, r, c } = {}) {
+      if (paletteAPI?.wantsToHandleCell?.()) {
+        return { useEditor: true };
+      }
       if (paletteAPI?.openReference) {
-        paletteAPI.openReference({ entity: col.entity, target: { row, col } });
-        return { handled: true };
+        const opened = paletteAPI.openReference({
+          entity: col?.entity,
+          target: { row, col, r, c },
+        });
+        if (opened) return { handled: true };
       }
       return { useEditor: true };
     },

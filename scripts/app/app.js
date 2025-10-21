@@ -533,6 +533,7 @@ paletteAPI = initPalette({
   model,
   setCell: setCellSelectionAware,
   render,
+  getCellRect,
   HEADER_HEIGHT,
   ROW_HEIGHT,
   endEdit,
@@ -552,18 +553,18 @@ const colorPickerAPI = initColorPicker({
 
 // Adapter: unify palette entrypoints for refPick columns
 if (!paletteAPI.openReference) {
-  paletteAPI.openReference = ({ entity, target }) => {
+  paletteAPI.openReference = ({ entity, target } = {}) => {
     try {
       if (entity === "outcome" && typeof paletteAPI.openOutcome === "function")
-        return paletteAPI.openOutcome(target);
+        return !!paletteAPI.openOutcome(target);
       if (entity === "action" && typeof paletteAPI.openAction === "function")
-        return paletteAPI.openAction(target);
+        return !!paletteAPI.openAction(target);
       if (entity === "input" && typeof paletteAPI.openInput === "function")
-        return paletteAPI.openInput(target);
+        return !!paletteAPI.openInput(target);
     } catch (_) {
       /* noop */
     }
-    return undefined; // fall back to text editor if no specific picker exists
+    return false; // fall back to text editor if no specific picker exists
   };
 }
 
