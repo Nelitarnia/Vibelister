@@ -11,6 +11,7 @@ import { getSelectionTests } from "../scripts/support/tests/specs/selection.js";
 import { getModelSnapshotTests } from "../scripts/support/tests/specs/model-snapshot.js";
 import { getUndoTests } from "../scripts/support/tests/specs/undo.js";
 import { getModStateTests } from "../scripts/support/tests/specs/mod-state.js";
+import { getGridKeysTests } from "../scripts/support/tests/specs/grid-keys.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -28,6 +29,10 @@ for (const spec of getSelectionTests()) {
 
 for (const spec of getModStateTests()) {
   test(`Modifiers › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getGridKeysTests()) {
+  test(`Grid keys › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getModelSnapshotTests()) {
