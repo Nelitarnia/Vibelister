@@ -501,6 +501,9 @@ export function clearInteractionsCell(model, viewDef, r, c) {
   }
 
   if (!Object.keys(note).length) delete model.notes[k];
+  if (pk.field === "outcome") {
+    mirrorAaPhase0Outcome(model, pair, pk.p);
+  }
   return changed;
 }
 
@@ -576,6 +579,9 @@ export function clearInteractionsSelection(
         const note = model.notes[k] || (model.notes[k] = {});
         clearField(note, key, pk);
         if (Object.keys(note).length === 0) delete model.notes[k];
+        if (pk && pk.field === "outcome") {
+          mirrorAaPhase0Outcome(model, pair, pk.p);
+        }
       }
     }
   } else {
@@ -600,6 +606,9 @@ export function clearInteractionsSelection(
       const note = model.notes[k] || (model.notes[k] = {});
       clearField(note, key, pk);
       if (Object.keys(note).length === 0) delete model.notes[k];
+      if (pk && pk.field === "outcome") {
+        mirrorAaPhase0Outcome(model, pair, pk.p);
+      }
     }
   }
 

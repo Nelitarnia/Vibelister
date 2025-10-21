@@ -4,6 +4,8 @@ import {
   setInteractionsCell,
   getStructuredCellInteractions,
   applyStructuredCellInteractions,
+  clearInteractionsCell,
+  clearInteractionsSelection,
   isInteractionPhaseColumnActiveForRow,
 } from "../../../app/interactions.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
@@ -191,6 +193,110 @@ export function getInteractionsTests() {
         assert.ok(
           !model.notes[mirrorKey],
           "mirrored note entry removed when source cleared",
+        );
+
+        setInteractionsCell(model, status, viewDef, mirrorRow, 2, lose.id);
+        assert.strictEqual(
+          getInteractionsCell(model, viewDef, row, 2),
+          "Win",
+          "mirrored write reflects inverted outcome on source row",
+        );
+        const sourceKey = noteKeyForPair(model.interactionsPairs[row], 0);
+        assert.strictEqual(
+          model.notes[sourceKey]?.outcomeId,
+          win.id,
+          "source note stores inverted outcome when mirror edited",
+        );
+
+        setInteractionsCell(model, status, viewDef, mirrorRow, 2, null);
+        assert.strictEqual(
+          getInteractionsCell(model, viewDef, row, 2),
+          "",
+          "clearing mirrored row clears source cell",
+        );
+        assert.ok(
+          !model.notes[sourceKey],
+          "source note entry removed when mirror cleared",
+        );
+      },
+    },
+    {
+      name: "AA phase 0 command clears mirror both directions",
+      run(assert) {
+        const { model, addAction, addOutcome } = makeModelFixture();
+        model.meta.interactionsMode = "AA";
+        const left = addAction("Left");
+        const right = addAction("Right");
+        const win = addOutcome("Win");
+        const lose = addOutcome("Lose");
+        win.dualof = lose.id;
+        lose.dualof = win.id;
+        buildInteractionsPairs(model);
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "rhsaction" },
+            { key: "p0:outcome" },
+          ],
+        };
+        const row = model.interactionsPairs.findIndex(
+          (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
+        );
+        const mirrorRow = model.interactionsPairs.findIndex(
+          (pair) => pair.aId === right.id && pair.rhsActionId === left.id,
+        );
+        assert.ok(row >= 0 && mirrorRow >= 0, "expected AA pairs present");
+        const status = { set() {} };
+
+        setInteractionsCell(model, status, viewDef, row, 2, win.id);
+        const mirrorKey = noteKeyForPair(model.interactionsPairs[mirrorRow], 0);
+        const sourceKey = noteKeyForPair(model.interactionsPairs[row], 0);
+        assert.strictEqual(
+          model.notes[mirrorKey]?.outcomeId,
+          lose.id,
+          "mirrored note stores inverted outcome",
+        );
+
+        const cleared = clearInteractionsCell(model, viewDef, mirrorRow, 2);
+        assert.ok(cleared, "clearInteractionsCell reports change");
+        assert.strictEqual(
+          getInteractionsCell(model, viewDef, row, 2),
+          "",
+          "clearing mirrored row via command clears source cell",
+        );
+        assert.ok(
+          !model.notes[sourceKey] && !model.notes[mirrorKey],
+          "notes removed on both sides after command clear",
+        );
+
+        setInteractionsCell(model, status, viewDef, row, 2, win.id);
+        assert.strictEqual(
+          model.notes[mirrorKey]?.outcomeId,
+          lose.id,
+          "mirrored note restored for selection clear",
+        );
+
+        const selection = { rows: new Set([mirrorRow]) };
+        const sel = { r: mirrorRow, c: 2 };
+        const statusClear = { set() {} };
+        const result = clearInteractionsSelection(
+          model,
+          viewDef,
+          selection,
+          sel,
+          "clearActiveCell",
+          statusClear,
+          () => {},
+        );
+        assert.ok(result?.cleared > 0, "selection clear reports entries cleared");
+        assert.strictEqual(
+          getInteractionsCell(model, viewDef, row, 2),
+          "",
+          "selection clear removes mirrored source cell",
+        );
+        assert.ok(
+          !model.notes[sourceKey] && !model.notes[mirrorKey],
+          "notes removed on both sides after selection clear",
         );
       },
     },
