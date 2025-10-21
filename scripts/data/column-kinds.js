@@ -527,19 +527,51 @@ export const ColumnKinds = {
 // Legacy alias: outcomeRef now routes through the generic refPick implementation.
 ColumnKinds.outcomeRef = ColumnKinds.refPick;
 
+function getModifierNamesFromSig(model, sig) {
+  const s = typeof sig === "string" ? sig : "";
+  if (!s) return [];
+  const ids = s
+    .split("+")
+    .filter(Boolean)
+    .map((part) => Number(part))
+    .filter(Number.isFinite);
+  if (!ids.length) return [];
+
+  const modifiers = Array.isArray(model?.modifiers) ? model.modifiers : [];
+  const order = new Map();
+  const nameById = new Map();
+  modifiers.forEach((mod, idx) => {
+    const rawId = mod?.id;
+    const id = Number(rawId);
+    if (!Number.isFinite(id)) return;
+    order.set(id, idx);
+    if (typeof mod?.name === "string") nameById.set(id, mod.name);
+  });
+
+  ids.sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
+  const names = [];
+  for (const id of ids) {
+    const label = nameById.get(id);
+    if (label) names.push(label);
+  }
+  return names;
+}
+
 // Helper: format " (ModA+ModB)" suffix from a '+'-joined variantSig ordered by modifier row order
 function formatModsFromSig(model, sig) {
-  const s = typeof sig === "string" ? sig : "";
-  if (!s) return "";
-  const ids = s.split("+").filter(Boolean).map(Number);
-  if (!ids.length) return "";
-  const order = new Map();
-  (model.modifiers || []).forEach((m, i) => order.set(m?.id, i));
-  ids.sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
-  const names = ids
-    .map((id) => model.modifiers.find((m) => m?.id === id)?.name || "")
-    .filter(Boolean);
+  const names = getModifierNamesFromSig(model, sig);
   return names.length ? `(${names.join("+")})` : "";
+}
+
+export function formatEndActionLabel(model, action, variantSig, opts = {}) {
+  const base = action?.name || "";
+  const names = getModifierNamesFromSig(model, variantSig);
+  if (!names.length) return base;
+  const modLabel = names.join("+");
+  if (opts.style === "parentheses") {
+    return `${base} (${modLabel})`;
+  }
+  return `${base} — ${modLabel}`;
 }
 
 export function getCellForKind(kind, ctx) {

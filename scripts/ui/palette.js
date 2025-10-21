@@ -1,3 +1,4 @@
+import { formatEndActionLabel } from "../data/column-kinds.js";
 import { MOD } from "../data/constants.js";
 import { sortIdsByUserOrder } from "../data/variants/variants.js";
 
@@ -228,6 +229,7 @@ export function initPalette(ctx) {
             const modNames = modIds
               .map((id) => model.modifiers.find((m) => m.id === id)?.name || "")
               .filter(Boolean);
+            const variantSig = modIds.length ? modIds.join("+") : "";
 
             if (mods.length) {
               const lowerMods = modNames.map((s) => s.toLowerCase());
@@ -236,14 +238,12 @@ export function initPalette(ctx) {
               )
                 continue;
             }
-            const display = modNames.length
-              ? `${actionName} — ${modNames.join("+")}`
-              : actionName;
+            const display = formatEndActionLabel(model, act, variantSig);
             out.push({
               display,
               data: {
                 endActionId: act.id,
-                endVariantSig: modIds.length ? modIds.join("+") : "",
+                endVariantSig: variantSig,
               },
             });
           }
@@ -253,7 +253,7 @@ export function initPalette(ctx) {
             const nm = aRow.name || "";
             if (a && !nm.toLowerCase().startsWith(a)) continue;
             out.push({
-              display: nm,
+              display: formatEndActionLabel(model, aRow, ""),
               data: { endActionId: aRow.id, endVariantSig: "" },
             });
           }
