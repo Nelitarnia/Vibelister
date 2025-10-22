@@ -231,6 +231,7 @@ export function buildInteractionsPairs(model) {
   );
   const useG = model.modifierGroups && model.modifierGroups.length > 0;
   const pairs = [];
+  const indexGroups = [];
   let capped = false,
     cappedActions = 0;
   const mode = (model.meta && model.meta.interactionsMode) || "AI";
@@ -244,7 +245,11 @@ export function buildInteractionsPairs(model) {
         capped = true;
         cappedActions++;
       }
+      const group = { actionId: a.id, variants: [] };
+      let groupFirstRow = null;
+      let groupTotalRows = 0;
       for (const sigA of varsA) {
+        const variantStart = pairs.length;
         for (const b of actions) {
           let varsB = useG ? computeVariantsForAction(b, model) : [""];
           // We do not increment cappedActions for B; keep semantics per-left-action
@@ -260,9 +265,26 @@ export function buildInteractionsPairs(model) {
             });
           }
         }
+        const rowsAdded = pairs.length - variantStart;
+        group.variants.push({
+          variantSig: sigA,
+          rowIndex: variantStart,
+          rowCount: rowsAdded,
+        });
+        if (rowsAdded > 0) {
+          if (groupFirstRow == null) groupFirstRow = variantStart;
+          groupTotalRows += rowsAdded;
+        }
       }
+      group.rowIndex = groupFirstRow;
+      group.totalRows = groupTotalRows;
+      indexGroups.push(group);
     }
     model.interactionsPairs = pairs;
+    model.interactionsIndex = {
+      mode: "AA",
+      groups: indexGroups,
+    };
     return {
       actionsCount: actions.length,
       inputsCount: actions.length,
@@ -278,12 +300,33 @@ export function buildInteractionsPairs(model) {
       capped = true;
       cappedActions++;
     }
+    const group = { actionId: a.id, variants: [] };
+    let groupFirstRow = null;
+    let groupTotalRows = 0;
     for (const sig of vars) {
+      const variantStart = pairs.length;
       for (const i of inputs)
         pairs.push({ aId: a.id, iId: i.id, variantSig: sig, kind: "AI" });
+      const rowsAdded = pairs.length - variantStart;
+      group.variants.push({
+        variantSig: sig,
+        rowIndex: variantStart,
+        rowCount: rowsAdded,
+      });
+      if (rowsAdded > 0) {
+        if (groupFirstRow == null) groupFirstRow = variantStart;
+        groupTotalRows += rowsAdded;
+      }
     }
+    group.rowIndex = groupFirstRow;
+    group.totalRows = groupTotalRows;
+    indexGroups.push(group);
   }
   model.interactionsPairs = pairs;
+  model.interactionsIndex = {
+    mode: "AI",
+    groups: indexGroups,
+  };
   return {
     actionsCount: actions.length,
     inputsCount: inputs.length,
