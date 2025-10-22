@@ -17,6 +17,7 @@ export function createPersistenceController({
   setProjectNameFromFile,
   getSuggestedName,
   closeMenus,
+  onModelReset,
 }) {
   function ensureMinRows(arr, n) {
     while (arr.length < n) arr.push(makeRow(model));
@@ -59,6 +60,14 @@ export function createPersistenceController({
     if (!Array.isArray(o.modifierConstraints)) o.modifierConstraints = [];
     if (!o.notes || typeof o.notes !== "object") o.notes = {};
     if (!Array.isArray(o.interactionsPairs)) o.interactionsPairs = [];
+    if (!o.interactionsIndex || typeof o.interactionsIndex !== "object") {
+      o.interactionsIndex = { mode: "AI", groups: [] };
+    } else {
+      if (!Array.isArray(o.interactionsIndex.groups))
+        o.interactionsIndex.groups = [];
+      if (!o.interactionsIndex.mode)
+        o.interactionsIndex.mode = "AI";
+    }
     let maxId = 0;
     for (const r of o.actions) {
       if (typeof r.id !== "number") r.id = ++maxId;
@@ -100,6 +109,7 @@ export function createPersistenceController({
       modifierConstraints: [],
       notes: {},
       interactionsPairs: [],
+      interactionsIndex: { mode: "AI", groups: [] },
       nextId: 1,
     });
     clearHistory();
@@ -112,6 +122,7 @@ export function createPersistenceController({
     setActiveView("actions");
     updateProjectNameWidget();
     statusBar?.set("New project created (Actions view).");
+    onModelReset?.();
   }
 
   async function openFromDisk() {
@@ -129,6 +140,7 @@ export function createPersistenceController({
       statusBar?.set(
         `Opened: ${name} (${model.actions.length} actions, ${model.inputs.length} inputs)`,
       );
+      onModelReset?.();
     } catch (e) {
       statusBar?.set("Open failed: " + (e?.message || e));
     }

@@ -102,6 +102,7 @@ export function initGridKeys(deps) {
     undo,
     redo,
     getPaletteAPI,
+    toggleInteractionsOutline,
   } = deps;
 
   function setStatusMessage(message) {
@@ -412,6 +413,13 @@ export function initGridKeys(deps) {
     if (mod && e.key.toLowerCase() === "s") {
       e.preventDefault();
       saveToDisk(false);
+      return;
+    }
+    if (mod && e.shiftKey && e.key.toLowerCase() === "o") {
+      e.preventDefault();
+      if (typeof toggleInteractionsOutline === "function") {
+        toggleInteractionsOutline();
+      }
       return;
     }
     if (mod && e.key.toLowerCase() === "o") {

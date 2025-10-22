@@ -5,6 +5,7 @@ import { initGridKeys } from "../ui/grid-keys.js";
 import { initGridMouse } from "../ui/grid-mouse.js";
 import { initRowDrag } from "../ui/drag.js";
 import { initMenus } from "../ui/menus.js";
+import { createInteractionsOutline } from "../ui/interactions-outline.js";
 import { initPalette } from "../ui/palette.js";
 import { initColorPicker } from "../ui/color-picker.js";
 import { initStatusBar } from "../ui/status.js";
@@ -99,6 +100,7 @@ const model = {
   modifierConstraints: [],
   notes: {},
   interactionsPairs: [],
+  interactionsIndex: { mode: "AI", groups: [] },
   nextId: 1,
 };
 
@@ -185,6 +187,20 @@ const {
 });
 
 onSelectionChanged(() => render());
+
+const interactionsOutline = createInteractionsOutline({
+  model,
+  Selection,
+  SelectionCtl,
+  sel,
+  getActiveView: () => activeView,
+  ensureVisible,
+  render,
+  layout,
+  sheet,
+  onSelectionChanged,
+});
+interactionsOutline?.refresh?.();
 
 const {
   makeUndoConfig,
@@ -344,6 +360,7 @@ function setCell(r, c, v) {
 function rebuildInteractionsInPlace() {
   // Rebuild pairs without changing the active view or selection
   buildInteractionsPairs(model);
+  interactionsOutline?.refresh?.();
 }
 
 function pruneNotesToValidPairs() {
@@ -463,6 +480,7 @@ const {
   setProjectNameFromFile,
   getSuggestedName,
   closeMenus: () => menusAPI?.closeAllMenus?.(),
+  onModelReset: () => interactionsOutline?.refresh?.(),
 });
 
 const { runSelfTests } = createDiagnosticsController({
@@ -522,6 +540,7 @@ const disposeKeys = initGridKeys({
   undo,
   redo,
   getPaletteAPI: () => paletteAPI,
+  toggleInteractionsOutline: () => interactionsOutline?.toggle?.(),
 });
 
 // Initialize palette (handles both Outcome and End cells)
@@ -665,6 +684,7 @@ function setActiveView(key) {
   clearSelection();
   if (!(key in VIEWS)) return;
   activeView = key;
+  interactionsOutline?.setActive?.(key === "interactions");
   invalidateViewDef();
   if (key === "actions") {
     rebuildActionColumnsFromModifiers(model);
@@ -750,6 +770,7 @@ async function doGenerate() {
   invalidateViewDef();
   const { actionsCount, inputsCount, pairsCount, capped, cappedActions } =
     buildInteractionsPairs(model);
+  interactionsOutline?.refresh?.();
   setActiveView("interactions");
   sel.r = 0;
   sel.c = 0;
