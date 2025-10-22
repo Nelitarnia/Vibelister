@@ -378,7 +378,7 @@ export function createInteractionsOutline(options = {}) {
     SelectionCtl?.startSingle?.(rowIndex, colIndex);
     sel.r = rowIndex;
     sel.c = colIndex;
-    ensureVisible?.(rowIndex, colIndex);
+    ensureVisible?.(rowIndex, colIndex, { align: "top" });
     render?.();
     sheet?.focus?.();
   }

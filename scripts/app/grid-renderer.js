@@ -69,7 +69,7 @@ function createGridRenderer({
     return colGeomCache;
   }
 
-  function ensureVisible(r, c) {
+  function ensureVisible(r, c, options = null) {
     const { offs } = getColGeomFor(viewDef().columns);
     const vw = sheet.clientWidth,
       vh = sheet.clientHeight,
@@ -77,10 +77,28 @@ function createGridRenderer({
       cr = offs[c + 1],
       ct = r * ROW_HEIGHT,
       cb = ct + ROW_HEIGHT;
+    const align =
+      options && typeof options === "object" && typeof options.align === "string"
+        ? options.align
+        : null;
     if (cl < sheet.scrollLeft) sheet.scrollLeft = cl;
-    if (cr > sheet.scrollLeft + vw) sheet.scrollLeft = cr - vw;
-    if (ct < sheet.scrollTop) sheet.scrollTop = ct;
-    if (cb > sheet.scrollTop + vh) sheet.scrollTop = cb - vh;
+    if (cr > sheet.scrollLeft + vw) {
+      const maxScrollLeft = Math.max(0, sheet.scrollWidth - vw);
+      const targetLeft = cr - vw;
+      sheet.scrollLeft = Math.max(0, Math.min(targetLeft, maxScrollLeft));
+    }
+    const maxScrollTop = Math.max(0, sheet.scrollHeight - vh);
+    if (ct < sheet.scrollTop) {
+      const targetTop = Math.max(0, Math.min(ct, maxScrollTop));
+      sheet.scrollTop = targetTop;
+    }
+    if (cb > sheet.scrollTop + vh) {
+      const targetTop =
+        align && align.toLowerCase() === "top"
+          ? ct
+          : cb - vh;
+      sheet.scrollTop = Math.max(0, Math.min(targetTop, maxScrollTop));
+    }
   }
 
   function getEntityCollection(entity) {
