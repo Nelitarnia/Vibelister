@@ -34,6 +34,26 @@ function createGridRenderer({
   modIdFromKey,
 }) {
   let colGeomCache = { key: null, widths: null, offs: null, stamp: 0 };
+  const colHeaderPool = Array.from(colHdrs.children || []);
+  const rowHeaderPool = Array.from(rowHdrs.children || []);
+
+  function ensurePoolSize(pool, container, needed, className) {
+    for (let i = pool.length; i < needed; i++) {
+      const el = document.createElement("div");
+      el.className = className;
+      container.appendChild(el);
+      pool.push(el);
+    }
+    for (let i = 0; i < pool.length; i++) {
+      const el = pool[i];
+      if (i < needed) {
+        if (el.className !== className) el.className = className;
+        if (el.style.display !== "") el.style.display = "";
+      } else if (el.style.display !== "none") {
+        el.style.display = "none";
+      }
+    }
+  }
 
   function getColGeomFor(columns) {
     const key = columns || null;
@@ -192,12 +212,19 @@ function createGridRenderer({
     colHdrs.style.transform = `translateX(${-sl}px)`;
     rowHdrs.style.transform = `translateY(${-st}px)`;
 
-    colHdrs.innerHTML = "";
-    const hf = document.createDocumentFragment();
     const activeView = String(getActiveView() || "");
+    const visibleColsCount =
+      vc.end >= vc.start ? vc.end - vc.start + 1 : 0;
+    const visibleRowsCount =
+      vr.end >= vr.start ? vr.end - vr.start + 1 : 0;
+
+    ensurePoolSize(colHeaderPool, colHdrs, visibleColsCount, "hdr");
+    ensurePoolSize(rowHeaderPool, rowHdrs, visibleRowsCount, "rhdr");
+
+    let colIndex = 0;
     for (let c = vc.start; c <= vc.end; c++) {
-      const d = document.createElement("div");
-      d.className = "hdr";
+      const d = colHeaderPool[colIndex++];
+      if (!d) continue;
       d.style.left = offs[c] + "px";
       d.style.width = widths[c] + "px";
       d.style.top = "0px";
@@ -210,15 +237,12 @@ function createGridRenderer({
       }
       d.textContent = t;
       d.title = tooltip;
-      hf.appendChild(d);
     }
-    colHdrs.appendChild(hf);
 
-    rowHdrs.innerHTML = "";
-    const rf = document.createDocumentFragment();
+    let rowIndex = 0;
     for (let r = vr.start; r <= vr.end; r++) {
-      const d = document.createElement("div");
-      d.className = "rhdr";
+      const d = rowHeaderPool[rowIndex++];
+      if (!d) continue;
       const top = r * ROW_HEIGHT;
       d.style.top = top + "px";
       d.dataset.r = r;
@@ -233,13 +257,12 @@ function createGridRenderer({
       if (isRowSelected(r)) {
         d.style.background = "#26344d";
         d.style.color = "#e6eefc";
+      } else {
+        d.style.background = "";
+        d.style.color = "";
       }
-      rf.appendChild(d);
     }
-    rowHdrs.appendChild(rf);
 
-    const visibleColsCount = vc.end - vc.start + 1;
-    const visibleRowsCount = vr.end - vr.start + 1;
     const need = visibleColsCount * visibleRowsCount;
 
     window.__cellPool = window.__cellPool || [];
