@@ -4,6 +4,7 @@
   --grid-font:
     12px/1.2 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   --tab-h: 36px;
+  --sheet-sidebar-width: 280px;
   --vl-color-background: #0f1115;
   --vl-color-toolbar: #141822;
   --vl-color-text: #e6e6e6;
@@ -179,7 +180,7 @@ body {
 }
 
 .sheet-sidebar {
-  flex: 0 0 280px;
+  flex: 0 0 var(--sheet-sidebar-width);
   display: none;
   flex-direction: column;
   gap: 12px;
@@ -192,6 +193,39 @@ body {
 
 .sheet-sidebar[data-open="true"] {
   display: flex;
+}
+
+.sheet-sidebar-handle {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(0, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+#interactionsOutline[data-open="true"] + .sheet-sidebar-handle {
+  left: var(--sheet-sidebar-width);
+}
+
+.sheet-sidebar-handle[data-active="false"] {
+  display: none;
+}
+
+.sheet-sidebar-handle > * {
+  pointer-events: auto;
+}
+
+.sheet-sidebar-handle [data-action="close"] {
+  display: none;
+}
+
+.sheet-sidebar-handle[data-open="true"] [data-action="close"] {
+  display: inline-flex;
 }
 
 .sheet-sidebar__header {
@@ -324,10 +358,10 @@ body {
 }
 
 .sheet-sidebar-toggle {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  z-index: 6;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 12px;
   border-radius: 8px;
   border: 1px solid #32384a;

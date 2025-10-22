@@ -211,16 +211,6 @@
     </div>
 
     <div class="sheet-layout">
-      <button
-        class="sheet-sidebar-toggle"
-        id="interactionsOutlineToggle"
-        type="button"
-        aria-expanded="false"
-        aria-controls="interactionsOutline"
-        title="Toggle Interactions Outline (Ctrl+Shift+O)"
-      >
-        Outline
-      </button>
       <aside
         class="sheet-sidebar"
         id="interactionsOutline"
@@ -229,14 +219,6 @@
       >
         <div class="sheet-sidebar__header">
           <span class="sheet-sidebar__title">Interactions Outline</span>
-          <button
-            class="sheet-sidebar__close"
-            type="button"
-            data-action="close"
-            title="Hide outline (Ctrl+Shift+O)"
-          >
-            Hide
-          </button>
         </div>
         <div class="sheet-sidebar__controls">
           <input
@@ -262,6 +244,27 @@
           Generate Interactions to see the outline.
         </div>
       </aside>
+      <div class="sheet-sidebar-handle" id="interactionsOutlineHandle">
+        <button
+          class="sheet-sidebar-toggle"
+          id="interactionsOutlineToggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="interactionsOutline"
+          title="Toggle Interactions Outline (Ctrl+Shift+O)"
+        >
+          Outline
+        </button>
+        <button
+          class="sheet-sidebar__close"
+          type="button"
+          data-action="close"
+          title="Hide outline (Ctrl+Shift+O)"
+          aria-label="Hide outline"
+        >
+          Hide
+        </button>
+      </div>
       <div class="grid-wrap" id="gridWrap">
         <div class="corner">#</div>
         <div class="col-headers">

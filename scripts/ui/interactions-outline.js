@@ -170,8 +170,9 @@ export function createInteractionsOutline(options = {}) {
   } = options;
 
   const panel = document.getElementById("interactionsOutline");
+  const handle = document.getElementById("interactionsOutlineHandle");
   const toggleButton = document.getElementById("interactionsOutlineToggle");
-  if (!panel || !toggleButton) {
+  if (!panel || !toggleButton || !handle) {
     return {
       refresh() {},
       setActive() {},
@@ -183,7 +184,7 @@ export function createInteractionsOutline(options = {}) {
   const emptyEl = panel.querySelector('[data-role="empty"]');
   const filterInput = panel.querySelector('[data-role="filter"]');
   const variantsToggle = panel.querySelector('[data-role="variants-toggle"]');
-  const closeButton = panel.querySelector('[data-action="close"]');
+  const closeButton = handle.querySelector('[data-action="close"]');
 
   if (!listEl || !emptyEl) {
     return {
@@ -200,12 +201,27 @@ export function createInteractionsOutline(options = {}) {
   let entries = [];
   let lastEffectiveOpen = false;
 
+  updateToggleState(false);
+
   function updateToggleState(effectiveOpen) {
-    toggleButton.setAttribute("data-open", effectiveOpen ? "true" : "false");
-    toggleButton.setAttribute("aria-expanded", effectiveOpen ? "true" : "false");
-    toggleButton.setAttribute("data-active", active ? "true" : "false");
+    const openValue = effectiveOpen ? "true" : "false";
+    const activeValue = active ? "true" : "false";
+    toggleButton.setAttribute("data-open", openValue);
+    toggleButton.setAttribute("aria-expanded", openValue);
+    toggleButton.setAttribute("data-active", activeValue);
     if (!active) toggleButton.setAttribute("aria-disabled", "true");
     else toggleButton.removeAttribute("aria-disabled");
+    handle.setAttribute("data-open", openValue);
+    handle.setAttribute("data-active", activeValue);
+    if (closeButton) {
+      if (effectiveOpen && active) {
+        closeButton.removeAttribute("tabindex");
+        closeButton.removeAttribute("aria-hidden");
+      } else {
+        closeButton.setAttribute("tabindex", "-1");
+        closeButton.setAttribute("aria-hidden", "true");
+      }
+    }
   }
 
   function ensureControlsReflectState() {
