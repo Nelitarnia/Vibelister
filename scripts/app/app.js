@@ -521,6 +521,7 @@ const disposeKeys = initGridKeys({
   status: statusBar,
   undo,
   redo,
+  getPaletteAPI: () => paletteAPI,
 });
 
 // Initialize palette (handles both Outcome and End cells)
