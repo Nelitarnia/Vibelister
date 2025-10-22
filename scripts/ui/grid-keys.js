@@ -101,6 +101,7 @@ export function initGridKeys(deps) {
     status,
     undo,
     redo,
+    getPaletteAPI,
   } = deps;
 
   function setStatusMessage(message) {
@@ -201,6 +202,18 @@ export function initGridKeys(deps) {
     if (isColorPickerContext(ae)) return;
     if (isTypingInEditable(ae)) return;
 
+    function paletteIsOpen() {
+      if (typeof getPaletteAPI !== "function") return false;
+      try {
+        const palette = getPaletteAPI();
+        if (!palette) return false;
+        if (typeof palette.isOpen === "function") return !!palette.isOpen();
+      } catch (_) {
+        /* ignore palette lookup issues */
+      }
+      return false;
+    }
+
     // Clear multi-selection with Escape when not editing
     if (!gridIsEditing() && e.key === "Escape" && selection.rows.size > 0) {
       clearSelection();
@@ -266,6 +279,9 @@ export function initGridKeys(deps) {
 
     // In-cell editing mode
     if (gridIsEditing()) {
+      if (paletteIsOpen()) {
+        return;
+      }
       let keyDef;
       // If editing the Interactions → Outcome cell, defer Enter/Escape to the palette handler in App.js
       try {
