@@ -182,6 +182,7 @@ export function createHistoryController(deps = {}) {
 
   const {
     runModelMutation,
+    beginUndoableTransaction,
     runModelTransaction,
     undo,
     redo,
@@ -199,6 +200,7 @@ export function createHistoryController(deps = {}) {
     makeUndoConfig,
     updateUndoUI,
     runModelMutation,
+    beginUndoableTransaction,
     runModelTransaction,
     undo,
     redo,

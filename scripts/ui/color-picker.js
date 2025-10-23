@@ -9,6 +9,8 @@ export function initColorPicker(ctx = {}) {
     getColorValue,
     setColorValue,
     render,
+    makeUndoConfig,
+    beginUndoableTransaction,
   } = ctx;
   if (!parent || !sheet || !sel || !getCellRect || !setColorValue || !render) {
     return {
@@ -44,7 +46,60 @@ export function initColorPicker(ctx = {}) {
     isOpen: false,
     target: null,
     current: "",
+    initial: "",
   };
+
+  let previewTx = null;
+  let previewResult = null;
+
+  function resetPreviewTransaction() {
+    if (previewTx && typeof previewTx.cancel === "function") {
+      try {
+        previewTx.cancel();
+      } catch (_) {
+        /* noop */
+      }
+    }
+    previewTx = null;
+    previewResult = null;
+  }
+
+  function ensurePreviewTransaction() {
+    if (previewTx || typeof beginUndoableTransaction !== "function") return;
+    const undoConfig =
+      typeof makeUndoConfig === "function"
+        ? makeUndoConfig({
+            label: "cell edit",
+            shouldRecord: (res) => (res?.changedCells ?? 0) > 0,
+          })
+        : undefined;
+    const tx = beginUndoableTransaction("setCellSelectionAware", {
+      render: true,
+      undo: undoConfig,
+    });
+    if (tx && typeof tx === "object") {
+      previewTx = tx;
+      previewResult = null;
+    }
+  }
+
+  function finalizePreviewTransaction() {
+    if (!previewTx) return;
+    try {
+      if (typeof previewTx.commit === "function") {
+        previewTx.commit(previewResult);
+      } else if (typeof previewTx.cancel === "function") {
+        previewTx.cancel();
+      }
+    } catch (_) {
+      try {
+        previewTx.cancel?.();
+      } catch (_) {
+        /* noop */
+      }
+    }
+    resetPreviewTransaction();
+  }
 
   function ensureDOM() {
     if (root) return;
@@ -174,7 +229,7 @@ export function initColorPicker(ctx = {}) {
       if (!normalized) return;
       state.current = normalized;
       updateInputs(normalized);
-      applyColor(normalized, { recordRecent: false });
+      applyColor(normalized, { recordRecent: false, isPreview: true });
     });
 
     hexInput.addEventListener("input", () => {
@@ -367,10 +422,18 @@ export function initColorPicker(ctx = {}) {
 
   function applyColor(raw, options = {}) {
     if (!state.target) return;
-    const { closeAfter = false, recordRecent = false } = options;
+    const {
+      closeAfter = false,
+      recordRecent = false,
+      isPreview = false,
+    } = options;
+    if (isPreview) ensurePreviewTransaction();
     const color = normalizeColor(raw);
     const valueToSet = color || "";
-    setColorValue(state.target.r, state.target.c, valueToSet);
+    const result = setColorValue(state.target.r, state.target.c, valueToSet);
+    if (previewTx && result != null) {
+      previewResult = result;
+    }
     render();
     if (color) {
       if (recordRecent) pushRecent(color);
@@ -390,8 +453,10 @@ export function initColorPicker(ctx = {}) {
     if (!Number.isFinite(r) || !Number.isFinite(c) || r < 0 || c < 0)
       return false;
     const rect = getCellRect(r, c);
+    finalizePreviewTransaction();
     state.target = { r, c };
     const initial = normalizeColor(getColorValue ? getColorValue(r, c) : "");
+    state.initial = initial;
     state.current = initial;
     updateInputs(initial);
     root.style.display = "block";
@@ -425,10 +490,12 @@ export function initColorPicker(ctx = {}) {
 
   function close() {
     if (!state.isOpen || !root) return;
+    finalizePreviewTransaction();
     root.style.display = "none";
     root.removeAttribute("data-open");
     state.isOpen = false;
     state.target = null;
+    state.initial = "";
   }
 
   function onDocMouseDown(ev) {

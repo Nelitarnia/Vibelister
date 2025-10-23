@@ -205,6 +205,7 @@ interactionsOutline?.refresh?.();
 const {
   makeUndoConfig,
   runModelMutation,
+  beginUndoableTransaction,
   runModelTransaction,
   undo,
   redo,
@@ -570,6 +571,8 @@ const colorPickerAPI = initColorPicker({
   getColorValue: (r, c) => getCell(r, c),
   setColorValue: (r, c, v) => setCellSelectionAware(r, c, v),
   render,
+  makeUndoConfig,
+  beginUndoableTransaction,
 });
 
 // Adapter: unify palette entrypoints for refPick columns
