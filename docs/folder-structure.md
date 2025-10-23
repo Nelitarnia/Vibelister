@@ -15,6 +15,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── app/
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
+│   │   ├── column-widths.js
 │   │   ├── editing-shortcuts.js
 │   │   ├── grid-commands.js
 │   │   ├── grid-renderer.js
@@ -50,6 +51,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── palette.js
 │   │   ├── rules.js
 │   │   ├── settings.js
+│   │   ├── column-resize.js
 │   │   └── status.js
 │   └── support/
 │       └── tests/
@@ -106,6 +108,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
+- `column-widths.js` captures default widths for each view, clones override metadata, and exposes helpers so state controllers can merge persisted sizing without bloating callers.
 - `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
 - `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.
 - `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
@@ -124,6 +127,7 @@ This document outlines a maintainable directory layout tailored to the current c
 
 - Concentrate modules that manage user interactions and visual behavior: drag handling, keyboard/mouse input, menu and palette logic, and rule rendering.
 - This clustering clarifies which code is safe to adjust when tweaking UI without touching data logic.
+- `column-resize.js` binds resize handles in the grid header to pointer gestures, persisting per-column width overrides and coordinating layout rerenders.
 
 #### `scripts/support/`
 
