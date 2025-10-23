@@ -371,16 +371,54 @@ export function createInteractionsOutline(options = {}) {
     else openPanel();
   }
 
+  function activateRow(rowIndex) {
+    const targetRow = Number(rowIndex);
+    if (!Number.isFinite(targetRow) || targetRow < 0) return false;
+    const colIndex = 0;
+    SelectionCtl?.startSingle?.(targetRow, colIndex);
+    sel.r = targetRow;
+    sel.c = colIndex;
+    ensureVisible?.(targetRow, colIndex, { align: "top" });
+    render?.();
+    sheet?.focus?.();
+    return true;
+  }
+
   function activateButton(btn) {
     const rowIndex = Number(btn?.dataset?.rowIndex);
     if (!Number.isFinite(rowIndex) || rowIndex < 0) return;
-    const colIndex = 0;
-    SelectionCtl?.startSingle?.(rowIndex, colIndex);
-    sel.r = rowIndex;
-    sel.c = colIndex;
-    ensureVisible?.(rowIndex, colIndex, { align: "top" });
-    render?.();
-    sheet?.focus?.();
+    activateRow(rowIndex);
+  }
+
+  function jumpToActionInternal(offset) {
+    if (!Number.isFinite(offset) || !entries.length) return false;
+    const actionEntries = entries.filter((entry) => entry.type === "action");
+    if (!actionEntries.length) return false;
+
+    const actionKey = resolveActiveKey(model, Selection, false);
+    let currentIdx = actionEntries.findIndex((entry) => entry.key === actionKey);
+
+    if (currentIdx < 0 && Number.isFinite(sel?.r)) {
+      const row = Number(sel.r);
+      currentIdx = actionEntries.findIndex((entry) => {
+        const start = Number(entry?.rowIndex);
+        const count = Number(entry?.rowCount);
+        if (!Number.isFinite(start) || !Number.isFinite(count) || count <= 0) return false;
+        return row >= start && row < start + count;
+      });
+    }
+
+    const lastIdx = actionEntries.length - 1;
+    let baseIdx = currentIdx;
+    if (baseIdx < 0) baseIdx = offset > 0 ? -1 : actionEntries.length;
+    let targetIdx = baseIdx + offset;
+    if (targetIdx < 0) targetIdx = 0;
+    if (targetIdx > lastIdx) targetIdx = lastIdx;
+    if (currentIdx >= 0 && targetIdx === currentIdx) return false;
+
+    const target = actionEntries[targetIdx];
+    if (!target) return false;
+    return activateRow(target.rowIndex);
   }
 
   if (toggleButton) {
@@ -456,6 +494,9 @@ export function createInteractionsOutline(options = {}) {
     },
     toggle() {
       togglePanel();
+    },
+    jumpToAction(offset) {
+      return jumpToActionInternal(offset);
     },
     open: openPanel,
     close: closePanel,
