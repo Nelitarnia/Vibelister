@@ -496,15 +496,83 @@ body {
   position: absolute;
   height: var(--header-height);
   border-right: 1px solid #2d3342;
-  display: grid;
-  place-items: center;
-  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 0 6px;
   font:
     12px/1 system-ui,
     sans-serif;
   color: #aab3c5;
   background: #1a1e29;
   user-select: none;
+  overflow: hidden;
+}
+
+.hdr__label {
+  flex: 1 1 auto;
+  text-align: center;
+  padding: 0 8px 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.hdr__resize-handle {
+  flex: 0 0 12px;
+  align-self: stretch;
+  margin-left: auto;
+  margin-right: -4px;
+  cursor: col-resize;
+  position: relative;
+  touch-action: none;
+  transition: background 120ms ease;
+}
+
+.hdr__resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(170, 179, 197, 0.45);
+  transition: background 120ms ease, opacity 120ms ease;
+  opacity: 0.6;
+}
+
+.hdr__resize-handle:hover {
+  background: rgba(129, 161, 255, 0.12);
+}
+
+.hdr__resize-handle:hover::after,
+.hdr__resize-handle.is-resizing::after {
+  background: #81a1ff;
+  opacity: 1;
+}
+
+.hdr__resize-handle.is-resizing {
+  background: rgba(129, 161, 255, 0.18);
+}
+
+.hdr__resize-handle.is-resetting {
+  animation: hdrResetFlash 200ms ease-out;
+}
+
+.hdr__resize-handle.is-resetting::after {
+  background: #81a1ff;
+  opacity: 1;
+}
+
+@keyframes hdrResetFlash {
+  0% {
+    background: rgba(129, 161, 255, 0.3);
+  }
+  100% {
+    background: transparent;
+  }
 }
 .rhdr {
   position: absolute;

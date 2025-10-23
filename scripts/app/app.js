@@ -8,6 +8,7 @@ import { initMenus } from "../ui/menus.js";
 import { createInteractionsOutline } from "../ui/interactions-outline.js";
 import { initPalette } from "../ui/palette.js";
 import { initColorPicker } from "../ui/color-picker.js";
+import { initColumnResize } from "../ui/column-resize.js";
 import { initStatusBar } from "../ui/status.js";
 import {
   isCanonicalStructuredPayload,
@@ -91,7 +92,12 @@ function initA11y() {
 
 // Core model + views
 const model = {
-  meta: { schema: SCHEMA_VERSION, projectName: "", interactionsMode: "AI" },
+  meta: {
+    schema: SCHEMA_VERSION,
+    projectName: "",
+    interactionsMode: "AI",
+    columnWidths: {},
+  },
   actions: [],
   inputs: [],
   modifiers: [],
@@ -266,6 +272,19 @@ const {
   render,
   isModColumn,
   parsePhaseKey,
+});
+
+initColumnResize({
+  container: colHdrs,
+  model,
+  getActiveView: () => activeView,
+  viewDef,
+  runModelMutation,
+  beginUndoableTransaction,
+  makeUndoConfig,
+  invalidateViewDef,
+  layout,
+  render,
 });
 
 function isModColumn(c) {

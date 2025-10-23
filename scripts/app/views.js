@@ -8,49 +8,104 @@ export const VIEWS = {
     key: "actions",
     title: "Actions",
     columns: [
-      { key: "name", title: "Action Name", width: 240, kind: "text" },
-      { key: "phases", title: "Phases", width: 150, kind: "phases" },
-      { key: "color", title: "Color 1", width: 65, kind: "color" },
-      { key: "color2", title: "Color 2", width: 65, kind: "color" },
-      { key: "notes", title: "Other Notes", width: 480, kind: "text" },
+      {
+        key: "name",
+        title: "Action Name",
+        width: 240,
+        defaultWidth: 240,
+        kind: "text",
+      },
+      {
+        key: "phases",
+        title: "Phases",
+        width: 150,
+        defaultWidth: 150,
+        kind: "phases",
+      },
+      { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
+      { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+      {
+        key: "notes",
+        title: "Other Notes",
+        width: 480,
+        defaultWidth: 480,
+        kind: "text",
+      },
     ],
   },
   inputs: {
     key: "inputs",
     title: "Inputs",
     columns: [
-      { key: "name", title: "Input Name", width: 240, kind: "text" },
-      { key: "color", title: "Color 1", width: 65, kind: "color" },
-      { key: "color2", title: "Color 2", width: 65, kind: "color" },
-      { key: "notes", title: "Other Notes", width: 480, kind: "text" },
+      {
+        key: "name",
+        title: "Input Name",
+        width: 240,
+        defaultWidth: 240,
+        kind: "text",
+      },
+      { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
+      { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+      {
+        key: "notes",
+        title: "Other Notes",
+        width: 480,
+        defaultWidth: 480,
+        kind: "text",
+      },
     ],
   },
   modifiers: {
     key: "modifiers",
     title: "Modifiers",
     columns: [
-      { key: "name", title: "Modifier Name", width: 240, kind: "text" },
-      { key: "color", title: "Color 1", width: 65, kind: "color" },
-      { key: "color2", title: "Color 2", width: 65, kind: "color" },
-      { key: "notes", title: "Notes", width: 480, kind: "text" },
+      {
+        key: "name",
+        title: "Modifier Name",
+        width: 240,
+        defaultWidth: 240,
+        kind: "text",
+      },
+      { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
+      { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+      { key: "notes", title: "Notes", width: 480, defaultWidth: 480, kind: "text" },
     ],
   },
   outcomes: {
     key: "outcomes",
     title: "Outcomes",
     columns: [
-      { key: "name", title: "Outcome Name", width: 240, kind: "text" },
-      { key: "color", title: "Color 1", width: 65, kind: "color" },
-      { key: "color2", title: "Color 2", width: 65, kind: "color" },
-      { key: "mirrored", title: "Mirrored?", width: 80, kind: "checkbox" },
+      {
+        key: "name",
+        title: "Outcome Name",
+        width: 240,
+        defaultWidth: 240,
+        kind: "text",
+      },
+      { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
+      { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+      {
+        key: "mirrored",
+        title: "Mirrored?",
+        width: 80,
+        defaultWidth: 80,
+        kind: "checkbox",
+      },
       {
         key: "dualof",
         title: "Dual Of",
         width: 100,
+        defaultWidth: 100,
         kind: "refPick",
         entity: "outcome",
       },
-      { key: "notes", title: "Notes", width: 480, kind: "text" },
+      {
+        key: "notes",
+        title: "Notes",
+        width: 480,
+        defaultWidth: 480,
+        kind: "text",
+      },
     ],
   },
   interactions: {
@@ -61,6 +116,7 @@ export const VIEWS = {
         key: "action",
         title: "Action Name",
         width: 220,
+        defaultWidth: 220,
         kind: "refRO",
         entity: "action",
       },
@@ -68,6 +124,7 @@ export const VIEWS = {
         key: "inputId",
         title: "Input",
         width: 180,
+        defaultWidth: 180,
         kind: "refRO",
         entity: "input",
         hiddenWhen: "AA",
@@ -76,12 +133,19 @@ export const VIEWS = {
         key: "rhsActionId",
         title: "Action As Input",
         width: 220,
+        defaultWidth: 220,
         kind: "refRO",
         entity: "action",
         hiddenWhen: "AI",
       },
       // phase columns are injected at runtime by buildInteractionPhaseColumns()
-      { key: "notes", title: "Notes", width: 480, kind: "interactions" },
+      {
+        key: "notes",
+        title: "Notes",
+        width: 480,
+        defaultWidth: 480,
+        kind: "interactions",
+      },
     ],
   },
 };
@@ -89,10 +153,22 @@ export const VIEWS = {
 // Rebuild Actions view columns to include one tri-state palette column per modifier
 export function rebuildActionColumnsFromModifiers(model) {
   const left = [
-    { key: "name", title: "Action Name", width: 240, kind: "text" },
-    { key: "phases", title: "Phases", width: 150, kind: "phases" },
-    { key: "color", title: "Color 1", width: 65, kind: "color" },
-    { key: "color2", title: "Color 2", width: 65, kind: "color" },
+    {
+      key: "name",
+      title: "Action Name",
+      width: 240,
+      defaultWidth: 240,
+      kind: "text",
+    },
+    {
+      key: "phases",
+      title: "Phases",
+      width: 150,
+      defaultWidth: 150,
+      kind: "phases",
+    },
+    { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
+    { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
   ];
   const mods = (model.modifiers || [])
     .filter((m) => (m.name || "").trim())
@@ -100,12 +176,19 @@ export function rebuildActionColumnsFromModifiers(model) {
       key: `mod:${m.id}`,
       title: m.name,
       width: 80,
+      defaultWidth: 80,
       isMod: true,
       modId: m.id,
       kind: "modState",
     }));
   const right = [
-    { key: "notes", title: "Other Notes", width: 480, kind: "text" },
+    {
+      key: "notes",
+      title: "Other Notes",
+      width: 480,
+      defaultWidth: 480,
+      kind: "text",
+    },
   ];
   VIEWS.actions.columns = left.concat(mods, right);
 }
@@ -130,6 +213,7 @@ export function buildInteractionPhaseColumns(model, selectedRowIndex = 0) {
       key: "action",
       title: "Action Name",
       width: 220,
+      defaultWidth: 220,
       kind: "refRO",
       entity: "action",
     },
@@ -137,6 +221,7 @@ export function buildInteractionPhaseColumns(model, selectedRowIndex = 0) {
       key: "inputId",
       title: "Input",
       width: 180,
+      defaultWidth: 180,
       kind: "refRO",
       entity: "input",
       hiddenWhen: "AA",
@@ -145,6 +230,7 @@ export function buildInteractionPhaseColumns(model, selectedRowIndex = 0) {
       key: "rhsActionId",
       title: "Action As Input",
       width: 220,
+      defaultWidth: 220,
       kind: "refRO",
       entity: "action",
       hiddenWhen: "AI",
@@ -161,6 +247,7 @@ export function buildInteractionPhaseColumns(model, selectedRowIndex = 0) {
       key: `p${p}:outcome`,
       title: `P${p}: Outcome`,
       width: 78,
+      defaultWidth: 78,
       kind: "interactions",
     });
     let endTitle = `P${p}: End`;
@@ -170,11 +257,18 @@ export function buildInteractionPhaseColumns(model, selectedRowIndex = 0) {
       key: `p${p}:end`,
       title: endTitle,
       width: 220,
+      defaultWidth: 220,
       kind: "interactions",
     });
   }
   const tail = [
-    { key: "notes", title: "Notes", width: 480, kind: "interactions" },
+    {
+      key: "notes",
+      title: "Notes",
+      width: 480,
+      defaultWidth: 480,
+      kind: "interactions",
+    },
   ];
   return base.concat(phases, tail);
 }
