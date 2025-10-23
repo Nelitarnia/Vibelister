@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createNodeAsserts } from "../scripts/support/tests/specs/assertions.js";
 import { getModelVariantTests } from "../scripts/support/tests/specs/model-variants.js";
 import { getInteractionsTests } from "../scripts/support/tests/specs/interactions.js";
+import { getPersistenceTests } from "../scripts/support/tests/specs/persistence.js";
 import { getUiGridMouseTests } from "../scripts/support/tests/specs/ui-grid-mouse.js";
 import { getUiRowDragTests } from "../scripts/support/tests/specs/ui-row-drag.js";
 import { getRowInsertionTests } from "../scripts/support/tests/specs/rows.js";
@@ -22,6 +23,10 @@ for (const spec of getModelVariantTests()) {
 
 for (const spec of getInteractionsTests()) {
   test(`Interactions › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getPersistenceTests()) {
+  test(`Persistence › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getSelectionTests()) {
