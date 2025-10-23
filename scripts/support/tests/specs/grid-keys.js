@@ -186,5 +186,178 @@ export function getGridKeysTests() {
         }
       },
     },
+    {
+      name: "Ctrl+Shift+Arrow navigates interactions actions",
+      run(assert) {
+        const originalWindow = globalThis.window;
+        const originalDocument = globalThis.document;
+        const originalNavigator = globalThis.navigator;
+        const navigatorDescriptor = Object.getOwnPropertyDescriptor(
+          globalThis,
+          "navigator",
+        );
+
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: { tagName: "DIV" },
+        };
+
+        globalThis.window = windowStub;
+        globalThis.document = documentStub;
+        Object.defineProperty(globalThis, "navigator", {
+          value: { platform: "Test" },
+          configurable: true,
+          enumerable: navigatorDescriptor
+            ? navigatorDescriptor.enumerable
+            : true,
+          writable: true,
+        });
+
+        const editor = { style: { display: "none" } };
+        const selection = { rows: new Set(), cols: new Set() };
+        const jumpCalls = [];
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "interactions",
+          selection,
+          sel: { r: 0, c: 0 },
+          editor,
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [{ key: "dummy" }] }),
+          getRowCount: () => 1,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => ({
+            isOpen: () => false,
+          }),
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: (delta) => {
+            jumpCalls.push(delta);
+          },
+        });
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const captureListener = keyListeners.find((entry) => entry.capture);
+          assert.ok(
+            captureListener,
+            "grid keydown listener should be registered",
+          );
+
+          const downEvent = {
+            key: "ArrowDown",
+            ctrlKey: true,
+            metaKey: false,
+            altKey: false,
+            shiftKey: true,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+
+          captureListener.cb(downEvent);
+
+          assert.strictEqual(
+            downEvent.prevented,
+            true,
+            "Ctrl+Shift+ArrowDown should be consumed for interactions navigation",
+          );
+          assert.deepStrictEqual(
+            jumpCalls,
+            [1],
+            "Ctrl+Shift+ArrowDown should jump to next action",
+          );
+
+          const upEvent = {
+            key: "ArrowUp",
+            ctrlKey: false,
+            metaKey: true,
+            altKey: false,
+            shiftKey: true,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+
+          captureListener.cb(upEvent);
+
+          assert.strictEqual(
+            upEvent.prevented,
+            true,
+            "Meta+Shift+ArrowUp should also be consumed",
+          );
+          assert.deepStrictEqual(
+            jumpCalls,
+            [1, -1],
+            "Meta+Shift+ArrowUp should jump to previous action",
+          );
+        } finally {
+          dispose?.();
+          globalThis.window = originalWindow;
+          globalThis.document = originalDocument;
+          if (navigatorDescriptor) {
+            Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
+          } else if (typeof originalNavigator === "undefined") {
+            delete globalThis.navigator;
+          } else {
+            globalThis.navigator = originalNavigator;
+          }
+        }
+      },
+    },
   ];
 }

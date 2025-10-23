@@ -103,6 +103,7 @@ export function initGridKeys(deps) {
     redo,
     getPaletteAPI,
     toggleInteractionsOutline,
+    jumpToInteractionsAction,
   } = deps;
 
   function setStatusMessage(message) {
@@ -273,6 +274,23 @@ export function initGridKeys(deps) {
         if (!gridIsEditing()) {
           e.preventDefault();
           if (typeof redo === "function") redo();
+        }
+        return;
+      }
+    }
+
+    if (
+      !gridIsEditing() &&
+      e.shiftKey &&
+      !e.altKey &&
+      (e.ctrlKey || e.metaKey) &&
+      (e.key === "ArrowUp" || e.key === "ArrowDown")
+    ) {
+      if (getActiveView && getActiveView() === "interactions") {
+        e.preventDefault();
+        if (typeof jumpToInteractionsAction === "function") {
+          const delta = e.key === "ArrowUp" ? -1 : 1;
+          jumpToInteractionsAction(delta);
         }
         return;
       }

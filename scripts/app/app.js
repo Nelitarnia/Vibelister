@@ -541,6 +541,7 @@ const disposeKeys = initGridKeys({
   redo,
   getPaletteAPI: () => paletteAPI,
   toggleInteractionsOutline: () => interactionsOutline?.toggle?.(),
+  jumpToInteractionsAction: (delta) => interactionsOutline?.jumpToAction?.(delta),
 });
 
 // Initialize palette (handles both Outcome and End cells)
