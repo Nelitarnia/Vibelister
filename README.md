@@ -73,13 +73,19 @@ Yes, combinatorial explosion is real, and you might end up with monstrous Modifi
 
 It's good practice to give short names to Modifiers since horizontal space may be scarce in the Interactions-view.
 
+## Interactions
+
+This is a generated view which puts together the Actions and Inputs you've listed for systematic note taking.
+
+To help navigate Interactions, there is an Outline that can be brought out with Ctrl+Shift+O (or clicking the small button to the left). You can also immediately jump between actions with Ctrl+Shift+Up or Ctrl+Shift+Down.
+
+While adding Actions to the End-column, you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed".
+
+Although the default mode in Interactions is comparing Actions vs Inputs (AI), pressing Ctrl+Shift+A lets you switch to Actions vs Actions (AA) comparing in Interactions-view. (It's rather specialized, but could come in handy in some kind of situations.)
+
 ## Other features
 
 If you double tap Shift, you can change between normal selection mode and a horizontal selection mode which highlights and envelopes the entire row at once.
-
-Pressing Ctrl+Shift+A lets you switch from Actions vs Inputs comparing (AI) to Actions vs Actions (AA) comparing in Interactions-view.
-
-On any columns where you paste stable ID Actions (like "End" in Interactions), you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed".
 
 You can undo any action which changes the core data model (editing cells, reordering rows, etc.) with Ctrl+z / Ctlr+y.
 
@@ -96,7 +102,6 @@ It's possible to save / load project files in .json-format. Note: on Firefox and
 
 ## Ideas for later
 
-- Column resizing (and saving changed column sizes as a part of your project file).
 - Freezing certain columns so that they always stay visible (like in Libreoffice Calc, etc.)
 - Drag 'n' drop box select?
 - Ability to create multi-selection with keyboard alone.
