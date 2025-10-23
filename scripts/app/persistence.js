@@ -18,6 +18,7 @@ export function createPersistenceController({
   getSuggestedName,
   closeMenus,
   onModelReset,
+  loadFsModule = () => import("../data/fs.js"),
 }) {
   function ensureMinRows(arr, n) {
     while (arr.length < n) arr.push(makeRow(model));
@@ -41,6 +42,10 @@ export function createPersistenceController({
       }
     }
     ensureMinRows(model.outcomes, Math.max(DEFAULT_OUTCOMES.length + 10, 20));
+  }
+
+  function countNamedRows(rows) {
+    return (rows || []).filter((row) => row && (row.name || "").trim().length).length;
   }
 
   function upgradeModelInPlace(o) {
@@ -128,7 +133,7 @@ export function createPersistenceController({
   async function openFromDisk() {
     closeMenus?.();
     try {
-      const m = await import("../data/fs.js");
+      const m = await loadFsModule();
       const { data, name } = await m.openJson();
       upgradeModelInPlace(data);
       Object.assign(model, data);
@@ -137,8 +142,10 @@ export function createPersistenceController({
       resetAllViewState();
       setActiveView("actions");
       setProjectNameFromFile(name);
+      const actionsCount = countNamedRows(model.actions);
+      const inputsCount = countNamedRows(model.inputs);
       statusBar?.set(
-        `Opened: ${name} (${model.actions.length} actions, ${model.inputs.length} inputs)`,
+        `Opened: ${name} (${actionsCount} actions, ${inputsCount} inputs)`,
       );
       onModelReset?.();
     } catch (e) {
