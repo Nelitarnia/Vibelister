@@ -303,6 +303,27 @@ export function makeMutationRunner(deps) {
     }
   }
 
+  function beginUndoableTransaction(label, options = {}) {
+    const tx = beginTransaction(label, options);
+    if (!tx) return null;
+    if (!tx.parent) {
+      tx.undoContext = prepareUndoContext(label, options, true);
+    }
+    let settled = false;
+    return {
+      commit(result, overrides) {
+        if (settled) return result;
+        settled = true;
+        return commitTransaction(tx, result, overrides);
+      },
+      cancel() {
+        if (settled) return;
+        settled = true;
+        cancelTransaction(tx);
+      },
+    };
+  }
+
   function normalizeUndoOptions(label, undoOptions) {
     if (!undoOptions) return null;
     let config = null;
@@ -550,6 +571,7 @@ export function makeMutationRunner(deps) {
 
   return {
     runModelMutation,
+    beginUndoableTransaction,
     beginTransaction,
     commitTransaction,
     runModelTransaction,
