@@ -197,7 +197,7 @@ body {
 
 .sheet-sidebar-handle {
   position: absolute;
-  top: 50%;
+  top: 94%;
   left: 0;
   transform: translate(0, -50%);
   display: flex;

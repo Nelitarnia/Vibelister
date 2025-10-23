@@ -89,16 +89,10 @@ It's possible to save / load project files in .json-format. Note: on Firefox and
 
 # To do
 
-## In-progress
-
-- The logic for adding Phase 0 (simultaneous testing) and Outcome mirroring was started but not completed at the present.
-- Other cleaning up and streamlining around the files.
-
 ## Known bugs
 
 - Drop-down palettes at the bottom of the screen in Interactions-view go partially out of screen.
 - Drop down menu text for undo/redo loses the "ctrl+z" / "ctrl+y" hotkey instruction at runtime.
-- Ctrl+arrow keys shortcut to move between tabs stops working sometimes.
 
 ## Ideas for later
 
@@ -117,6 +111,7 @@ It's possible to save / load project files in .json-format. Note: on Firefox and
 - Predictive analysis to auto-fill cells (maybe one day in the future...)
   - Ability to create Action types or categories would likely help guide this feature.
 - Exporting or importing files in more formats.
+- Other cleaning up and streamlining around the files.
 - Write better instructions for the user, and add helpful tooltips.
 - Cover functionalities not currently covered by adding tests to the test suite.
 - ...And more!

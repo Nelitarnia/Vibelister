@@ -34,7 +34,7 @@ export function createEditingController({
   let editing = false;
   let shiftPressed = false;
   let lastShiftTap = 0;
-  const DOUBLE_SHIFT_WINDOW_MS = 350;
+  const DOUBLE_SHIFT_WINDOW_MS = 200;
 
   function getPalette() {
     return typeof getPaletteAPI === "function" ? getPaletteAPI() : null;

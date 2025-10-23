@@ -45,6 +45,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── drag.js
 │   │   ├── grid-keys.js
 │   │   ├── grid-mouse.js
+│   │   ├── interactions-outline.js
 │   │   ├── menus.js
 │   │   ├── palette.js
 │   │   ├── rules.js
@@ -62,6 +63,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │           │   ├── model-fixtures.js
 │           │   ├── model-snapshot.js
 │           │   ├── model-variants.js
+│           │   ├── persistence.js
 │           │   ├── rows.js
 │           │   ├── selection.js
 │           │   └── ui-grid-mouse.js
