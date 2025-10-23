@@ -1,4 +1,5 @@
 import { MIN_ROWS as DEFAULT_MIN_ROWS } from "../data/constants.js";
+import { applyColumnWidthOverrides } from "./column-widths.js";
 
 const EMPTY_STATE = () => ({ row: 0, col: 0, scrollTop: 0 });
 
@@ -58,6 +59,7 @@ export function createViewStateController(options = {}) {
   let cachedViewKey = null;
   let cachedViewColumns = null;
   let cachedInteractionsMode = null;
+  let cachedColumnWidthsRef = null;
 
   function viewDef() {
     const activeView = getActiveView();
@@ -66,17 +68,19 @@ export function createViewStateController(options = {}) {
 
     const mode = String(model?.meta?.interactionsMode || "AI").toUpperCase();
     const columns = base.columns;
+    const overridesRef = model?.meta?.columnWidths || null;
 
     if (
       cachedViewDef &&
       cachedViewKey === activeView &&
       cachedViewColumns === columns &&
-      (activeView !== "interactions" || cachedInteractionsMode === mode)
+      (activeView !== "interactions" || cachedInteractionsMode === mode) &&
+      cachedColumnWidthsRef === overridesRef
     ) {
       return cachedViewDef;
     }
 
-    let result = base;
+    let workingColumns = columns;
     if (activeView === "interactions") {
       const cols = Array.isArray(columns)
         ? columns.filter((col) => {
@@ -89,13 +93,22 @@ export function createViewStateController(options = {}) {
             return String(hidden).toUpperCase() !== mode;
           })
         : columns;
-      result = { ...base, columns: cols };
+      workingColumns = cols;
     }
+
+    const appliedColumns = applyColumnWidthOverrides(
+      activeView,
+      workingColumns,
+      overridesRef,
+    );
+
+    const result = { ...base, columns: appliedColumns };
 
     cachedViewDef = result;
     cachedViewKey = activeView;
     cachedViewColumns = columns;
     cachedInteractionsMode = mode;
+    cachedColumnWidthsRef = overridesRef;
     return result;
   }
 
@@ -104,6 +117,7 @@ export function createViewStateController(options = {}) {
     cachedViewKey = null;
     cachedViewColumns = null;
     cachedInteractionsMode = null;
+    cachedColumnWidthsRef = null;
   }
 
   function rebuildInteractionPhaseColumns() {

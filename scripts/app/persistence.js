@@ -49,13 +49,24 @@ export function createPersistenceController({
   }
 
   function upgradeModelInPlace(o) {
-    if (!o.meta) o.meta = { schema: 0, projectName: "", interactionsMode: "AI" };
+    if (!o.meta)
+      o.meta = { schema: 0, projectName: "", interactionsMode: "AI", columnWidths: {} };
     if (typeof o.meta.projectName !== "string") o.meta.projectName = "";
     if (
       !("interactionsMode" in o.meta) ||
       (o.meta.interactionsMode !== "AI" && o.meta.interactionsMode !== "AA")
     ) {
       o.meta.interactionsMode = "AI";
+    }
+    if (!o.meta.columnWidths || typeof o.meta.columnWidths !== "object") {
+      o.meta.columnWidths = {};
+    } else {
+      const cleaned = {};
+      for (const [key, value] of Object.entries(o.meta.columnWidths)) {
+        const num = Number(value);
+        if (Number.isFinite(num) && num > 0) cleaned[key] = num;
+      }
+      o.meta.columnWidths = cleaned;
     }
     if (!Array.isArray(o.actions)) o.actions = [];
     if (!Array.isArray(o.inputs)) o.inputs = [];
@@ -105,7 +116,12 @@ export function createPersistenceController({
 
   function newProject() {
     Object.assign(model, {
-      meta: { schema: SCHEMA_VERSION, projectName: "", interactionsMode: "AI" },
+      meta: {
+        schema: SCHEMA_VERSION,
+        projectName: "",
+        interactionsMode: "AI",
+        columnWidths: {},
+      },
       actions: [],
       inputs: [],
       modifiers: [],

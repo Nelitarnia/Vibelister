@@ -55,6 +55,24 @@ function createGridRenderer({
     }
   }
 
+  function ensureHeaderContent(el) {
+    if (!el) return { label: null, handle: null };
+    let label = el._labelEl;
+    let handle = el._resizeHandle;
+    if (!label || !handle || !label.isConnected || !handle.isConnected) {
+      el.textContent = "";
+      label = document.createElement("span");
+      label.className = "hdr__label";
+      handle = document.createElement("div");
+      handle.className = "hdr__resize-handle";
+      el.appendChild(label);
+      el.appendChild(handle);
+      el._labelEl = label;
+      el._resizeHandle = handle;
+    }
+    return { label, handle };
+  }
+
   function getColGeomFor(columns) {
     const key = columns || null;
     if (
@@ -246,6 +264,8 @@ function createGridRenderer({
       d.style.left = offs[c] + "px";
       d.style.width = widths[c] + "px";
       d.style.top = "0px";
+      d.dataset.colIndex = c;
+      d.dataset.viewKey = activeView;
       const col = cols[c];
       const t = col.title;
       let tooltip = t;
@@ -253,7 +273,14 @@ function createGridRenderer({
         const mode = (model.meta && model.meta.interactionsMode) || "AI";
         tooltip = `${t} — Interactions Mode: ${mode}`;
       }
-      d.textContent = t;
+      const { label, handle } = ensureHeaderContent(d);
+      if (label) label.textContent = t || "";
+      if (handle) {
+        handle.dataset.colIndex = String(c);
+        handle.dataset.viewKey = activeView;
+        handle.dataset.columnKey = col?.key ?? "";
+      }
+      d.dataset.columnKey = col?.key ?? "";
       d.title = tooltip;
     }
 
