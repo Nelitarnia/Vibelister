@@ -16,10 +16,10 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
 │   │   ├── column-widths.js
+│   │   ├── diagnostics.js
 │   │   ├── editing-shortcuts.js
 │   │   ├── grid-commands.js
 │   │   ├── grid-renderer.js
-│   │   ├── diagnostics.js
 │   │   ├── history.js
 │   │   ├── interactions.js
 │   │   ├── outcomes.js
@@ -31,54 +31,57 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── view-state.js
 │   │   └── views.js
 │   ├── data/
-│   │   ├── column-kinds.js
 │   │   ├── color-utils.js
+│   │   ├── column-kinds.js
 │   │   ├── constants.js
 │   │   ├── deletion.js
 │   │   ├── fs.js
 │   │   ├── mutation-runner.js
 │   │   ├── rows.js
-│   │   ├── variants/
-│   │   │   └── variants.js
-│   │   └── utils.js
-│   ├── ui/
-│   │   ├── color-picker.js
-│   │   ├── drag.js
-│   │   ├── grid-keys.js
-│   │   ├── grid-mouse.js
-│   │   ├── interactions-outline.js
-│   │   ├── menus.js
-│   │   ├── palette.js
-│   │   ├── rules.js
-│   │   ├── settings.js
-│   │   ├── column-resize.js
-│   │   └── status.js
-│   └── support/
-│       └── tests/
-│           ├── specs/
-│           │   ├── assertions.js
-│           │   ├── column-kinds.js
-│           │   ├── deletion.js
-│           │   ├── grid-keys.js
-│           │   ├── interactions.js
-│           │   ├── mod-state.js
-│           │   ├── model-fixtures.js
-│           │   ├── model-snapshot.js
-│           │   ├── model-variants.js
-│           │   ├── persistence.js
-│           │   ├── rows.js
-│           │   ├── selection.js
-│           │   └── ui-grid-mouse.js
-│           │   └── ui-row-drag.js
-│           │   └── undo.js
-│           ├── tests-ui.js
-│           └── tests.js
+│   │   ├── utils.js
+│   │   └── variants/
+│   │       └── variants.js
+│   ├── support/
+│   │   └── tests/
+│   │       ├── specs/
+│   │       │   ├── assertions.js
+│   │       │   ├── column-kinds.js
+│   │       │   ├── deletion.js
+│   │       │   ├── grid-keys.js
+│   │       │   ├── interactions.js
+│   │       │   ├── mod-state.js
+│   │       │   ├── model-fixtures.js
+│   │       │   ├── model-snapshot.js
+│   │       │   ├── model-variants.js
+│   │       │   ├── persistence.js
+│   │       │   ├── rows.js
+│   │       │   ├── selection.js
+│   │       │   ├── ui-grid-mouse.js
+│   │       │   ├── ui-row-drag.js
+│   │       │   └── undo.js
+│   │       ├── tests-ui.js
+│   │       └── tests.js
+│   └── ui/
+│       ├── color-picker.js
+│       ├── column-resize.js
+│       ├── drag.js
+│       ├── grid-keys.js
+│       ├── grid-mouse.js
+│       ├── interactions-outline.js
+│       ├── menus.js
+│       ├── palette.js
+│       ├── rules.js
+│       ├── settings.js
+│       └── status.js
 ├── tests/
 │   └── node.test.js
+├── agents.md
+├── format.bat
+├── LICENSE
 ├── README.md
 ├── package.json
-├── run.bat
-└── prettierrc.json
+├── prettierrc.json
+└── run.bat
 ```
 
 ## Folder breakdown
@@ -112,6 +115,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
 - `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.
 - `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
+- `user-settings.js` defines the persisted defaults, schema metadata, and sanitizers for color preferences so both the controller and UI can trust incoming payloads.
 - `view-state.js` owns per-view selection snapshots and cached column layouts so `app.js` only orchestrates switching and rendering logic.
 
 #### `scripts/data/`
@@ -120,6 +124,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `mutation-runner.js` centralizes layout/render/derived rebuild side effects for core model mutations, exposes a transaction helper so multi-step edits fire those hooks only once, and provides a canonical snapshot utility for history features.
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
 - `variants.js` merits its own subfolder (`variants/`) because it describes sizable domain data; additional variant files can join it without clutter.
+- `deletion.js` scrubs modifier groups and constraints after rows are removed so downstream consumers never see dangling references.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
 - `color-utils.js` offers shared normalization and contrast helpers so rendering modules and pickers reuse consistent color logic.
 
@@ -128,6 +133,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - Concentrate modules that manage user interactions and visual behavior: drag handling, keyboard/mouse input, menu and palette logic, and rule rendering.
 - This clustering clarifies which code is safe to adjust when tweaking UI without touching data logic.
 - `column-resize.js` binds resize handles in the grid header to pointer gestures, persisting per-column width overrides and coordinating layout rerenders.
+- `settings.js` renders the modal for customizing palette colors and keeps the dialog in sync with the sanitized `user-settings` payloads.
 
 #### `scripts/support/`
 
@@ -142,9 +148,13 @@ This document outlines a maintainable directory layout tailored to the current c
 
 ### Root files
 
+- `agents.md` captures repository-specific contribution guidelines—skim it before adjusting tooling or adding new modules.
 - `package.json` enables the automated test script (`npm test`) and flags the project as an ES module environment.
-- `prettierrc.json` carries formatting conventions; use the provided scripts (`run.bat`, `format.bat`) as convenience wrappers when working on Windows.
+- `prettierrc.json` carries formatting conventions enforced by automated tooling.
+- `format.bat` provides a Windows-friendly wrapper around the Prettier formatter so contributors can quickly normalize style.
+- `run.bat` launches a lightweight static server and opens the current build in a browser for manual testing on Windows.
 - `README.md` continues to document the project overview, setup steps, and known gaps.
+- `LICENSE` records the MIT terms that govern redistribution.
 
 ## Transition tips
 
