@@ -354,8 +354,8 @@ export const ColumnKinds = {
       const { row, col, model, r, activeView } = ctx;
       // Prefer per-row storage when available
       let id = row?.[col.key];
-      let vSig = ""; // will hold variant signature when derived from Interactions
-      let suffix = "";
+      let variantSig = ""; // will hold variant signature when derived from Interactions
+      let useInteractionsVariant = false;
       // Interactions view has no per-row object; derive id (and modifier suffix) from pairs
       if (
         activeView === "interactions" &&
@@ -366,21 +366,54 @@ export const ColumnKinds = {
           const k = String(col.key || "").toLowerCase();
           if (k === "action" || k === "actionid" || k === "actionname") {
             id = id ?? pair.aId;
-            vSig = String(pair.variantSig || "");
-            // Append modifiers for left-hand action
-            suffix = formatModsFromSig(model, pair.variantSig);
+            variantSig = String(pair.variantSig || "");
+            useInteractionsVariant = true;
           } else if (k === "rhsaction" || k === "rhsactionid") {
             id = id ?? pair.rhsActionId;
-            vSig = String(pair.rhsVariantSig || "");
-            // Append modifiers for right-hand action (AA mode)
-            suffix = formatModsFromSig(model, pair.rhsVariantSig);
+            variantSig = String(pair.rhsVariantSig || "");
+            useInteractionsVariant = true;
           } else if (k === "input" || k === "inputid") {
             id = id ?? pair.iId;
           }
         }
       }
-      const base = nameOf(col.entity, model, id);
-      return suffix ? (base ? `${base} ${suffix}` : suffix) : base;
+      const entityRows = resolveEntity(col.entity, model);
+      let entityRow = null;
+      if (entityRows && entityRows.length && id != null) {
+        const numId = Number(id);
+        if (Number.isFinite(numId)) {
+          entityRow =
+            entityRows.find((candidate) => (candidate?.id | 0) === (numId | 0)) ||
+            null;
+        }
+      }
+      const base = entityRow?.name || nameOf(col.entity, model, id);
+      const suffix =
+        useInteractionsVariant && variantSig
+          ? formatModsFromSig(model, variantSig)
+          : "";
+      const fallback = suffix ? (base ? `${base} ${suffix}` : suffix) : base;
+      if (
+        useInteractionsVariant &&
+        String(col.entity || "").toLowerCase() === "action"
+      ) {
+        const label = formatEndActionLabel(
+          model,
+          entityRow || (base ? { name: base } : null),
+          variantSig,
+          { style: "parentheses" },
+        );
+        if (label) {
+          const plainText = label.plainText || fallback || "";
+          const segments =
+            Array.isArray(label.segments) && label.segments.length
+              ? label.segments
+              : null;
+          if (segments) return { plainText, segments };
+          return plainText;
+        }
+      }
+      return fallback;
     },
     // read-only: ignore writes
     set() {

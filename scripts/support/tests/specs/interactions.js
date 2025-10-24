@@ -421,5 +421,100 @@ export function getInteractionsTests() {
         assert.ok(riseIndex >= 0 && fallIndex > riseIndex, "modifier segments preserve canonical order");
       },
     },
+    {
+      name: "action column emits colored modifier segments",
+      run(assert) {
+        const { model, addAction, addInput, addModifier } = makeModelFixture();
+        const m1 = addModifier("Rise");
+        const m2 = addModifier("Fall");
+        m1.color2 = "#ff0000";
+        m2.color2 = "#00ff00";
+        const action = addAction("Lift");
+        addInput("Up");
+        buildInteractionsPairs(model);
+        assert.ok(model.interactionsPairs.length > 0, "pairs built for AI mode");
+        model.interactionsPairs[0].variantSig = `${m2.id}+${m1.id}`;
+
+        const viewDef = { columns: [{ key: "action" }, { key: "input" }] };
+        const cell = getInteractionsCell(model, viewDef, 0, 0);
+        assert.strictEqual(
+          plainCellText(cell),
+          "Lift (Rise+Fall)",
+          "action column plain text matches legacy format",
+        );
+        const segments = cellSegments(cell);
+        assert.ok(Array.isArray(segments) && segments.length >= 5, "action column emits segments");
+        const riseSegment = segments.find((seg) => seg.text === "Rise");
+        const fallSegment = segments.find((seg) => seg.text === "Fall");
+        assert.strictEqual(riseSegment?.foreground, "#ff0000", "Rise segment uses color2 foreground");
+        assert.strictEqual(fallSegment?.foreground, "#00ff00", "Fall segment uses color2 foreground");
+      },
+    },
+    {
+      name: "AA action columns emit colored modifier segments",
+      run(assert) {
+        const { model, addAction, addModifier } = makeModelFixture();
+        model.meta.interactionsMode = "AA";
+        const boost = addModifier("Boost");
+        const guard = addModifier("Guard");
+        boost.color2 = "#aa0000";
+        guard.color2 = "#00aa00";
+        const left = addAction("Left");
+        const right = addAction("Right");
+        buildInteractionsPairs(model);
+        const pairIndex = model.interactionsPairs.findIndex(
+          (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
+        );
+        assert.ok(pairIndex >= 0, "expected AA pair present");
+        const pair = model.interactionsPairs[pairIndex];
+        pair.variantSig = `${guard.id}+${boost.id}`;
+        pair.rhsVariantSig = `${boost.id}`;
+
+        const viewDef = { columns: [{ key: "action" }, { key: "rhsaction" }] };
+        const leftCell = getInteractionsCell(model, viewDef, pairIndex, 0);
+        const rightCell = getInteractionsCell(model, viewDef, pairIndex, 1);
+
+        assert.strictEqual(
+          plainCellText(leftCell),
+          "Left (Boost+Guard)",
+          "left action plain text canonicalizes modifiers",
+        );
+        assert.strictEqual(
+          plainCellText(rightCell),
+          "Right (Boost)",
+          "rhs action plain text includes modifiers",
+        );
+
+        const leftSegments = cellSegments(leftCell);
+        const rightSegments = cellSegments(rightCell);
+        assert.ok(
+          Array.isArray(leftSegments) && leftSegments.length >= 5,
+          "left action emits segments",
+        );
+        assert.ok(
+          Array.isArray(rightSegments) && rightSegments.length >= 3,
+          "rhs action emits segments",
+        );
+
+        const boostLeftSegment = leftSegments.find((seg) => seg.text === "Boost");
+        const guardSegment = leftSegments.find((seg) => seg.text === "Guard");
+        const boostRightSegment = rightSegments.find((seg) => seg.text === "Boost");
+        assert.strictEqual(
+          boostLeftSegment?.foreground,
+          "#aa0000",
+          "Boost segment uses color2 foreground on left action",
+        );
+        assert.strictEqual(
+          guardSegment?.foreground,
+          "#00aa00",
+          "Guard segment uses color2 foreground on left action",
+        );
+        assert.strictEqual(
+          boostRightSegment?.foreground,
+          "#aa0000",
+          "Boost segment uses color2 foreground on rhs action",
+        );
+      },
+    },
   ];
 }
