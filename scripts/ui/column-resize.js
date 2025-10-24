@@ -111,22 +111,29 @@ export function initColumnResize(options = {}) {
     window.removeEventListener("pointerup", onPointerUp, true);
     window.removeEventListener("pointercancel", onPointerCancel, true);
 
+    const lastResult = resizeState.lastResult;
+    if (cancel) {
+      resizeState.lastResult = null;
+    }
+
     if (tx) {
       try {
-        if (cancel && typeof tx.cancel === "function") {
-          tx.cancel();
+        if (cancel) {
+          tx.cancel?.();
         } else if (typeof tx.commit === "function") {
-          tx.commit(resizeState.lastResult, {
+          tx.commit(lastResult, {
             invalidateView: true,
             layout: true,
             render: true,
           });
         }
       } catch (_) {
-        try {
-          tx.cancel?.();
-        } catch (_) {
-          /* noop */
+        if (!cancel) {
+          try {
+            tx.cancel?.();
+          } catch (_) {
+            /* noop */
+          }
         }
       }
     }
@@ -227,7 +234,14 @@ export function initColumnResize(options = {}) {
 
   function onPointerCancel(ev) {
     if (!resizeState || ev.pointerId !== resizeState.pointerId) return;
-    finishResize(false);
+    const startWidth = resizeState.startWidth;
+    if (resizeState.lastWidth !== startWidth) {
+      resizeState.lastWidth = startWidth;
+      applyWidth(startWidth);
+    } else {
+      resizeState.lastResult = null;
+    }
+    finishResize(true);
   }
 
   function onDoubleClick(ev) {

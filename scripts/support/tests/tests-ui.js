@@ -1,11 +1,13 @@
 import { createBrowserAsserts } from "./specs/assertions.js";
 import { getUiGridMouseTests } from "./specs/ui-grid-mouse.js";
+import { getColumnResizeTests } from "./specs/column-resize.js";
 
 export function runUiTests() {
   const log = (...args) => console.log("[ui-tests]", ...args);
   const results = { passed: 0, failed: 0 };
   const assert = createBrowserAsserts();
-  for (const spec of getUiGridMouseTests()) {
+  const specs = [...getUiGridMouseTests(), ...getColumnResizeTests()];
+  for (const spec of specs) {
     try {
       spec.run(assert);
       results.passed++;
