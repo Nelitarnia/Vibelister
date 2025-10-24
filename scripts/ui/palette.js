@@ -238,10 +238,13 @@ export function initPalette(ctx) {
               )
                 continue;
             }
-            const display =
-              formatEndActionLabel(model, act, variantSig)?.plainText || "";
+            const label = formatEndActionLabel(model, act, variantSig);
+            const display = label?.plainText || "";
             out.push({
               display,
+              displaySegments: Array.isArray(label?.segments)
+                ? label.segments
+                : null,
               data: {
                 endActionId: act.id,
                 endVariantSig: variantSig,
@@ -256,6 +259,9 @@ export function initPalette(ctx) {
             const label = formatEndActionLabel(model, aRow, "");
             out.push({
               display: label?.plainText || "",
+              displaySegments: Array.isArray(label?.segments)
+                ? label.segments
+                : null,
               data: { endActionId: aRow.id, endVariantSig: "" },
             });
           }
@@ -575,6 +581,27 @@ export function initPalette(ctx) {
     ul.innerHTML = "";
     const frag = document.createDocumentFragment();
 
+    const renderSegments = (target, segments, fallback) => {
+      if (segments && segments.length) {
+        try {
+          target.textContent = "";
+        } catch (_) {
+          /* noop */
+        }
+        segments.forEach((seg) => {
+          if (!seg || typeof seg.text !== "string") {
+            return;
+          }
+          const span = document.createElement("span");
+          span.textContent = seg.text;
+          if (seg.foreground) span.style.color = seg.foreground;
+          target.appendChild(span);
+        });
+      } else {
+        target.textContent = fallback;
+      }
+    };
+
     if (!pal.items.length) {
       const d = document.createElement("div");
       d.textContent = "No matches";
@@ -619,9 +646,18 @@ export function initPalette(ctx) {
           item.setAttribute("aria-selected", "true");
         } else item.removeAttribute("aria-selected");
 
+        const segments = Array.isArray(it.displaySegments)
+          ? it.displaySegments
+          : null;
+        const fallback = typeof it.display === "string" ? it.display : "";
+        const ariaLabel = fallback
+          || (segments
+            ? segments.map((seg) => (seg && seg.text) || "").join("")
+            : "");
+
         if (it.description) {
           const label = document.createElement("div");
-          label.textContent = it.display || "";
+          renderSegments(label, segments, fallback);
           label.style.fontWeight = "600";
           const desc = document.createElement("div");
           desc.textContent = it.description;
@@ -630,8 +666,11 @@ export function initPalette(ctx) {
           item.appendChild(label);
           item.appendChild(desc);
         } else {
-          item.textContent = it.display || "";
+          renderSegments(item, segments, fallback);
         }
+
+        if (ariaLabel) item.setAttribute("aria-label", ariaLabel);
+        else item.removeAttribute("aria-label");
 
         item.onmouseenter = () => {
           if (Date.now() < pal.lockHoverUntil) return;

@@ -8,6 +8,7 @@ import {
   clearInteractionsSelection,
   isInteractionPhaseColumnActiveForRow,
 } from "../../../app/interactions.js";
+import { initPalette } from "../../../ui/palette.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
@@ -514,6 +515,150 @@ export function getInteractionsTests() {
           "#aa0000",
           "Boost segment uses color2 foreground on rhs action",
         );
+      },
+    },
+    {
+      name: "palette renders colored modifier spans for end actions",
+      run(assert) {
+        const { model, addAction, addModifier } = makeModelFixture();
+        const rise = addModifier("Rise");
+        const fall = addModifier("Fall");
+        rise.color2 = "#ff3366";
+        fall.color2 = "#33ff66";
+        const action = addAction("Lift");
+
+        model.interactionsPairs = [
+          { aId: action.id, variantSig: `${rise.id}+${fall.id}` },
+        ];
+
+        const originalDocument = globalThis.document;
+
+        class StubElement {
+          constructor(tag, isFragment = false) {
+            this.tag = tag;
+            this.isFragment = isFragment;
+            this._children = [];
+            this.style = {};
+            this.dataset = {};
+            this.attributes = {};
+            this.className = "";
+            this.parentElement = null;
+            this._textContent = "";
+          }
+          appendChild(child) {
+            if (!child) return child;
+            if (child.isFragment) {
+              child._children.forEach((node) => this.appendChild(node));
+              return child;
+            }
+            this._children.push(child);
+            child.parentElement = this;
+            return child;
+          }
+          get children() {
+            return this._children;
+          }
+          set innerHTML(value) {
+            this._children = [];
+            this._textContent = typeof value === "string" ? value : "";
+          }
+          set textContent(value) {
+            this._children = [];
+            this._textContent =
+              typeof value === "string" ? value : String(value ?? "");
+          }
+          get textContent() {
+            return this._textContent;
+          }
+          setAttribute(name, value) {
+            this.attributes[name] = String(value);
+          }
+          removeAttribute(name) {
+            delete this.attributes[name];
+          }
+          scrollIntoView() {}
+        }
+
+        const documentStub = {
+          createElement(tag) {
+            return new StubElement(tag);
+          },
+          createDocumentFragment() {
+            return new StubElement("#fragment", true);
+          },
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          activeElement: null,
+        };
+
+        globalThis.document = documentStub;
+
+        try {
+          const host = new StubElement("div");
+          const editor = {
+            style: {},
+            parentElement: host,
+            addEventListener: () => {},
+            focus: () => {},
+            setSelectionRange: () => {},
+            select: () => {},
+            value: "",
+          };
+          const sheet = { addEventListener: () => {} };
+          const palette = initPalette({
+            editor,
+            sheet,
+            getActiveView: () => "interactions",
+            viewDef: () => ({ columns: [{ key: "p0:end" }] }),
+            sel: { r: 0, c: 0 },
+            model,
+            setCell: () => {},
+            render: () => {},
+            getCellRect: () => ({ left: 0, top: 0, width: 200, height: 24 }),
+            HEADER_HEIGHT: 0,
+            endEdit: () => {},
+            moveSelectionForTab: () => {},
+            moveSelectionForEnter: () => {},
+          });
+
+          const opened = palette.openForCurrentCell({
+            r: 0,
+            c: 0,
+            initialText: "",
+            focusEditor: false,
+          });
+          assert.ok(opened, "palette opened for end column");
+
+          const paletteRoot = host.children.find(
+            (child) => child && child.id === "universalPalette",
+          );
+          assert.ok(paletteRoot, "palette root appended to host");
+          const listEl = paletteRoot?.children?.[0];
+          assert.ok(listEl, "palette list rendered");
+
+          const item = listEl.children.find(
+            (child) => child.className === "pal-item",
+          );
+          assert.ok(item, "palette item created for action variant");
+          const spans = item.children.filter((child) => child.tag === "span");
+          assert.ok(spans.length >= 5, "rich text spans rendered for palette item");
+
+          const riseSpan = spans.find((child) => child.textContent === "Rise");
+          const fallSpan = spans.find((child) => child.textContent === "Fall");
+          assert.strictEqual(
+            riseSpan?.style?.color,
+            "#ff3366",
+            "Rise span uses modifier color",
+          );
+          assert.strictEqual(
+            fallSpan?.style?.color,
+            "#33ff66",
+            "Fall span uses modifier color",
+          );
+        } finally {
+          if (typeof originalDocument === "undefined") delete globalThis.document;
+          else globalThis.document = originalDocument;
+        }
       },
     },
   ];
