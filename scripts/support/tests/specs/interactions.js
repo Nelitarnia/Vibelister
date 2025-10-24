@@ -684,8 +684,6 @@ export function getInteractionsTests() {
         };
         model.interactionsPairs = [];
 
-        const originalDocument = globalThis.document;
-
         class StubElement {
           constructor(tag, isFragment = false) {
             this.tag = tag;
@@ -743,75 +741,68 @@ export function getInteractionsTests() {
           removeEventListener: () => {},
           activeElement: null,
         };
+        const host = new StubElement("div");
+        const editor = {
+          style: {},
+          parentElement: host,
+          addEventListener: () => {},
+          focus: () => {},
+          setSelectionRange: () => {},
+          select: () => {},
+          value: "",
+        };
+        const sheet = { addEventListener: () => {} };
+        const palette = initPalette({
+          editor,
+          sheet,
+          getActiveView: () => "interactions",
+          viewDef: () => ({ columns: [{ key: "p0:end" }] }),
+          sel: { r: 0, c: 0 },
+          model,
+          setCell: () => {},
+          render: () => {},
+          getCellRect: () => ({ left: 0, top: 0, width: 200, height: 24 }),
+          HEADER_HEIGHT: 0,
+          endEdit: () => {},
+          moveSelectionForTab: () => {},
+          moveSelectionForEnter: () => {},
+          document: documentStub,
+        });
 
-        globalThis.document = documentStub;
+        const opened = palette.openForCurrentCell({
+          r: 0,
+          c: 0,
+          initialText: "",
+          focusEditor: false,
+        });
+        assert.ok(opened, "palette opened for end column");
 
-        try {
-          const host = new StubElement("div");
-          const editor = {
-            style: {},
-            parentElement: host,
-            addEventListener: () => {},
-            focus: () => {},
-            setSelectionRange: () => {},
-            select: () => {},
-            value: "",
-          };
-          const sheet = { addEventListener: () => {} };
-          const palette = initPalette({
-            editor,
-            sheet,
-            getActiveView: () => "interactions",
-            viewDef: () => ({ columns: [{ key: "p0:end" }] }),
-            sel: { r: 0, c: 0 },
-            model,
-            setCell: () => {},
-            render: () => {},
-            getCellRect: () => ({ left: 0, top: 0, width: 200, height: 24 }),
-            HEADER_HEIGHT: 0,
-            endEdit: () => {},
-            moveSelectionForTab: () => {},
-            moveSelectionForEnter: () => {},
-          });
+        const paletteRoot = host.children.find(
+          (child) => child && child.id === "universalPalette",
+        );
+        assert.ok(paletteRoot, "palette root appended to host");
+        const listEl = paletteRoot?.children?.[0];
+        assert.ok(listEl, "palette list rendered");
 
-          const opened = palette.openForCurrentCell({
-            r: 0,
-            c: 0,
-            initialText: "",
-            focusEditor: false,
-          });
-          assert.ok(opened, "palette opened for end column");
+        const item = listEl.children.find(
+          (child) => child.className === "pal-item",
+        );
+        assert.ok(item, "palette item created for action variant");
+        const spans = item.children.filter((child) => child.tag === "span");
+        assert.ok(spans.length >= 5, "rich text spans rendered for palette item");
 
-          const paletteRoot = host.children.find(
-            (child) => child && child.id === "universalPalette",
-          );
-          assert.ok(paletteRoot, "palette root appended to host");
-          const listEl = paletteRoot?.children?.[0];
-          assert.ok(listEl, "palette list rendered");
-
-          const item = listEl.children.find(
-            (child) => child.className === "pal-item",
-          );
-          assert.ok(item, "palette item created for action variant");
-          const spans = item.children.filter((child) => child.tag === "span");
-          assert.ok(spans.length >= 5, "rich text spans rendered for palette item");
-
-          const riseSpan = spans.find((child) => child.textContent === "Rise");
-          const fallSpan = spans.find((child) => child.textContent === "Fall");
-          assert.strictEqual(
-            riseSpan?.style?.color,
-            "#ff3366",
-            "Rise span uses modifier color",
-          );
-          assert.strictEqual(
-            fallSpan?.style?.color,
-            "#33ff66",
-            "Fall span uses modifier color",
-          );
-        } finally {
-          if (typeof originalDocument === "undefined") delete globalThis.document;
-          else globalThis.document = originalDocument;
-        }
+        const riseSpan = spans.find((child) => child.textContent === "Rise");
+        const fallSpan = spans.find((child) => child.textContent === "Fall");
+        assert.strictEqual(
+          riseSpan?.style?.color,
+          "#ff3366",
+          "Rise span uses modifier color",
+        );
+        assert.strictEqual(
+          fallSpan?.style?.color,
+          "#33ff66",
+          "Fall span uses modifier color",
+        );
       },
     },
   ];

@@ -104,7 +104,14 @@ export function initGridKeys(deps) {
     getPaletteAPI,
     toggleInteractionsOutline,
     jumpToInteractionsAction,
+    window: winOverride,
+    document: docOverride,
+    navigator: navOverride,
   } = deps;
+
+  const win = winOverride || globalThis.window;
+  const doc = docOverride || globalThis.document;
+  const nav = navOverride || globalThis.navigator;
 
   function setStatusMessage(message) {
     if (!message) return;
@@ -169,7 +176,7 @@ export function initGridKeys(deps) {
   const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
   function isColorPickerContext(ae) {
-    const root = document.getElementById("vlColorPicker");
+    const root = doc?.getElementById?.("vlColorPicker");
     if (!root || root.getAttribute("data-open") !== "true") return false;
     return !!(ae && root.contains(ae));
   }
@@ -199,8 +206,8 @@ export function initGridKeys(deps) {
   }
 
   function onGridKeyDown(e) {
-    if (document.querySelector('[aria-modal="true"]')) return; // respect modals
-    const ae = document.activeElement;
+    if (doc?.querySelector?.('[aria-modal="true"]')) return; // respect modals
+    const ae = doc?.activeElement || null;
     if (isColorPickerContext(ae)) return;
     if (isTypingInEditable(ae)) return;
 
@@ -425,7 +432,8 @@ export function initGridKeys(deps) {
   }
 
   function onShortcutKeyDown(e) {
-    const isMac = navigator.platform.includes("Mac");
+    const platform = typeof nav?.platform === "string" ? nav.platform : "";
+    const isMac = platform.includes("Mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
 
     if (mod && e.key.toLowerCase() === "s") {
@@ -468,8 +476,8 @@ export function initGridKeys(deps) {
     }
   }
 
-  window.addEventListener("keydown", onGridKeyDown, true); // capture: grid first
-  window.addEventListener("keydown", onShortcutKeyDown); // bubble: plays nice
+  win?.addEventListener?.("keydown", onGridKeyDown, true); // capture: grid first
+  win?.addEventListener?.("keydown", onShortcutKeyDown); // bubble: plays nice
   // ---- Clipboard: generic structured refs for any stable-ID cell ----
 
   function isInteractions() {
@@ -612,8 +620,8 @@ export function initGridKeys(deps) {
   }
 
   function onCopy(e) {
-    if (document.querySelector('[aria-modal="true"]')) return;
-    const ae = document.activeElement;
+    if (doc?.querySelector?.('[aria-modal="true"]')) return;
+    const ae = doc?.activeElement || null;
     if (isTypingInEditable(ae)) return;
     if (gridIsEditing()) return;
 
@@ -650,8 +658,8 @@ export function initGridKeys(deps) {
   }
 
   function onPaste(e) {
-    if (document.querySelector('[aria-modal="true"]')) return;
-    const ae = document.activeElement;
+    if (doc?.querySelector?.('[aria-modal="true"]')) return;
+    const ae = doc?.activeElement || null;
     if (isTypingInEditable(ae)) return;
 
     e.preventDefault();
@@ -886,14 +894,14 @@ export function initGridKeys(deps) {
     setStatusMessage(pasteMessage);
   }
 
-  window.addEventListener("copy", onCopy, true);
-  window.addEventListener("paste", onPaste, true);
+  win?.addEventListener?.("copy", onCopy, true);
+  win?.addEventListener?.("paste", onPaste, true);
 
   // Return disposer for future use (optional)
   return () => {
-    window.removeEventListener("keydown", onGridKeyDown, true);
-    window.removeEventListener("keydown", onShortcutKeyDown);
-    window.removeEventListener("copy", onCopy, true);
-    window.removeEventListener("paste", onPaste, true);
+    win?.removeEventListener?.("keydown", onGridKeyDown, true);
+    win?.removeEventListener?.("keydown", onShortcutKeyDown);
+    win?.removeEventListener?.("copy", onCopy, true);
+    win?.removeEventListener?.("paste", onPaste, true);
   };
 }

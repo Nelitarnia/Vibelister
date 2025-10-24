@@ -101,7 +101,6 @@ export function getColumnResizeTests() {
         const containerListeners = makeListenerMap();
         const containerClassList = makeClassList();
         const windowListeners = makeListenerMap();
-        const previousWindow = globalThis.window;
         const windowStub = {
           addEventListener(type, cb, opts) {
             windowListeners.add(type, cb, opts);
@@ -115,7 +114,6 @@ export function getColumnResizeTests() {
           setTimeout: globalThis.setTimeout.bind(globalThis),
           clearTimeout: globalThis.clearTimeout.bind(globalThis),
         };
-        globalThis.window = windowStub;
         let dispose;
 
         const headerClassList = makeClassList();
@@ -201,6 +199,7 @@ export function getColumnResizeTests() {
             render() {
               renderCount++;
             },
+            window: windowStub,
           });
 
           const pointerId = 7;
@@ -249,7 +248,6 @@ export function getColumnResizeTests() {
           assert.strictEqual(releasedPointer, pointerId);
         } finally {
           dispose?.();
-          globalThis.window = previousWindow;
         }
       },
     },

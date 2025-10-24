@@ -69,7 +69,10 @@ export function initPalette(ctx) {
     endEdit,
     moveSelectionForTab,
     moveSelectionForEnter,
+    document: docOverride,
   } = ctx;
+
+  const doc = docOverride || globalThis.document;
 
   // ---------- Helpers shared by modes ----------
   const idsFromSig = (sig) =>
@@ -302,7 +305,8 @@ export function initPalette(ctx) {
 
   function ensureDOM() {
     if (pal.el) return;
-    const root = document.createElement("div");
+    if (!doc?.createElement) return;
+    const root = doc.createElement("div");
     root.id = "universalPalette";
     Object.assign(root.style, {
       position: "absolute",
@@ -319,12 +323,12 @@ export function initPalette(ctx) {
       lineHeight: "1.2",
     });
     root.setAttribute("role", "listbox");
-    const ul = document.createElement("div");
+    const ul = doc.createElement("div");
     ul.style.padding = "4px 0";
     root.appendChild(ul);
     pal.el = root;
     pal.listEl = ul;
-    editor.parentElement.appendChild(root);
+    editor.parentElement?.appendChild?.(root);
   }
 
   function prepareEditorForCell(rect, initialText, opts = {}) {
@@ -581,8 +585,10 @@ export function initPalette(ctx) {
 
   function renderList(isRecent = false) {
     const ul = pal.listEl;
+    if (!ul) return;
     ul.innerHTML = "";
-    const frag = document.createDocumentFragment();
+    if (!doc?.createElement || !doc.createDocumentFragment) return;
+    const frag = doc.createDocumentFragment();
 
     const renderSegments = (target, segments, fallback) => {
       if (segments && segments.length) {
@@ -595,7 +601,7 @@ export function initPalette(ctx) {
           if (!seg || typeof seg.text !== "string") {
             return;
           }
-          const span = document.createElement("span");
+          const span = doc.createElement("span");
           span.textContent = seg.text;
           if (seg.foreground) span.style.color = seg.foreground;
           target.appendChild(span);
@@ -606,7 +612,7 @@ export function initPalette(ctx) {
     };
 
     if (!pal.items.length) {
-      const d = document.createElement("div");
+      const d = doc.createElement("div");
       d.textContent = "No matches";
       d.style.padding = "6px 10px";
       d.style.opacity = "0.7";
@@ -626,7 +632,7 @@ export function initPalette(ctx) {
       frag.appendChild(d);
     } else {
       if (isRecent) {
-        const h = document.createElement("div");
+        const h = doc.createElement("div");
         h.textContent = "Recent";
         h.style.fontSize = "11px";
         h.style.opacity = "0.75";
@@ -634,7 +640,7 @@ export function initPalette(ctx) {
         frag.appendChild(h);
       }
       pal.items.forEach((it, idx) => {
-        const item = document.createElement("div");
+        const item = doc.createElement("div");
         item.dataset.index = String(idx);
         item.style.padding = "6px 10px";
         item.style.cursor = "pointer";
@@ -659,10 +665,10 @@ export function initPalette(ctx) {
             : "");
 
         if (it.description) {
-          const label = document.createElement("div");
+          const label = doc.createElement("div");
           renderSegments(label, segments, fallback);
           label.style.fontWeight = "600";
-          const desc = document.createElement("div");
+          const desc = doc.createElement("div");
           desc.textContent = it.description;
           desc.style.opacity = "0.72";
           desc.style.fontSize = "11px";
@@ -712,7 +718,7 @@ export function initPalette(ctx) {
     close();
     endEdit(false);
   };
-  document.addEventListener("mousedown", onDocMouseDown, true);
+  doc?.addEventListener?.("mousedown", onDocMouseDown, true);
 
   // Editor input → query (Outcome wants empty editor, End can keep text)
   const onEditorInput = () => {
