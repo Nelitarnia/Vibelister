@@ -45,6 +45,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   └── tests/
 │   │       ├── specs/
 │   │       │   ├── assertions.js
+│   │       │   ├── column-resize.js
 │   │       │   ├── column-kinds.js
 │   │       │   ├── deletion.js
 │   │       │   ├── grid-keys.js
