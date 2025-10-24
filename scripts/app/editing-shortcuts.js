@@ -1,5 +1,22 @@
 import { clamp } from "../data/utils.js";
 
+function toPlainText(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "object") {
+    if (typeof value.plainText === "string") return value.plainText;
+    if (Array.isArray(value.segments)) {
+      return value.segments
+        .map((seg) => (seg && seg.text != null ? String(seg.text) : ""))
+        .join("");
+    }
+    if (typeof value.text === "string") return value.text;
+    if (typeof value.value === "string") return value.value;
+  }
+  return "";
+}
+
 export function createEditingController({
   sheet,
   editor,
@@ -107,7 +124,7 @@ export function createEditingController({
       editor.style.top = rect.top + "px";
       editor.style.width = Math.max(40, rect.width) + "px";
       editor.style.height = rect.height + "px";
-      editor.value = getCell(r, c);
+      editor.value = toPlainText(getCell(r, c));
       editor.style.display = "block";
     }
     editing = true;

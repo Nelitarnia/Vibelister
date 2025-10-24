@@ -8,8 +8,25 @@ import {
   clearInteractionsSelection,
   isInteractionPhaseColumnActiveForRow,
 } from "../../../app/interactions.js";
+import { initPalette } from "../../../ui/palette.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
 import { makeModelFixture } from "./model-fixtures.js";
+
+function plainCellText(value) {
+  if (value && typeof value === "object" && typeof value.plainText === "string") {
+    return value.plainText;
+  }
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  return String(value);
+}
+
+function cellSegments(value) {
+  if (value && typeof value === "object" && Array.isArray(value.segments)) {
+    return value.segments;
+  }
+  return null;
+}
 
 function makeInteractionsView() {
   return {
@@ -49,8 +66,9 @@ export function getInteractionsTests() {
 
         status.set("");
         setInteractionsCell(model, status, viewDef, 0, 2, outcome.id);
+        const outcomeCell = getInteractionsCell(model, viewDef, 0, 2);
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, 0, 2),
+          plainCellText(outcomeCell),
           "Cancels",
           "outcome id accepted",
         );
@@ -64,8 +82,9 @@ export function getInteractionsTests() {
           endActionId: action.id,
           endVariantSig: "",
         });
+        const endCell = getInteractionsCell(model, viewDef, 0, 3);
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, 0, 3),
+          plainCellText(endCell),
           "Aim",
           "structured end payload accepted",
         );
@@ -128,13 +147,15 @@ export function getInteractionsTests() {
         );
         assert.ok(applyEnd, "end payload applied");
 
+        const pastedOutcome = getInteractionsCell(model, viewDef, 1, 2);
+        const pastedEnd = getInteractionsCell(model, viewDef, 1, 3);
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, 1, 2),
+          plainCellText(pastedOutcome),
           "Hit",
           "pasted outcome visible",
         );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, 1, 3),
+          plainCellText(pastedEnd),
           "Attack",
           "pasted end visible",
         );
@@ -169,8 +190,14 @@ export function getInteractionsTests() {
         const status = { set() {} };
 
         setInteractionsCell(model, status, viewDef, row, 2, win.id);
+        const mirroredAfterWin = getInteractionsCell(
+          model,
+          viewDef,
+          mirrorRow,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, mirrorRow, 2),
+          plainCellText(mirroredAfterWin),
           "Lose",
           "mirrored row reflects inverted outcome",
         );
@@ -185,8 +212,14 @@ export function getInteractionsTests() {
         );
 
         setInteractionsCell(model, status, viewDef, row, 2, null);
+        const mirroredAfterClear = getInteractionsCell(
+          model,
+          viewDef,
+          mirrorRow,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, mirrorRow, 2),
+          plainCellText(mirroredAfterClear),
           "",
           "clearing source row clears mirrored cell",
         );
@@ -196,8 +229,14 @@ export function getInteractionsTests() {
         );
 
         setInteractionsCell(model, status, viewDef, mirrorRow, 2, lose.id);
+        const sourceAfterMirrorWrite = getInteractionsCell(
+          model,
+          viewDef,
+          row,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, row, 2),
+          plainCellText(sourceAfterMirrorWrite),
           "Win",
           "mirrored write reflects inverted outcome on source row",
         );
@@ -209,8 +248,14 @@ export function getInteractionsTests() {
         );
 
         setInteractionsCell(model, status, viewDef, mirrorRow, 2, null);
+        const sourceAfterMirrorClear = getInteractionsCell(
+          model,
+          viewDef,
+          row,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, row, 2),
+          plainCellText(sourceAfterMirrorClear),
           "",
           "clearing mirrored row clears source cell",
         );
@@ -259,8 +304,14 @@ export function getInteractionsTests() {
 
         const cleared = clearInteractionsCell(model, viewDef, mirrorRow, 2);
         assert.ok(cleared, "clearInteractionsCell reports change");
+        const sourceAfterCommandClear = getInteractionsCell(
+          model,
+          viewDef,
+          row,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, row, 2),
+          plainCellText(sourceAfterCommandClear),
           "",
           "clearing mirrored row via command clears source cell",
         );
@@ -289,8 +340,14 @@ export function getInteractionsTests() {
           () => {},
         );
         assert.ok(result?.cleared > 0, "selection clear reports entries cleared");
+        const sourceAfterSelectionClear = getInteractionsCell(
+          model,
+          viewDef,
+          row,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, row, 2),
+          plainCellText(sourceAfterSelectionClear),
           "",
           "selection clear removes mirrored source cell",
         );
@@ -335,6 +392,8 @@ export function getInteractionsTests() {
         const { model, addAction, addInput, addModifier } = makeModelFixture();
         const m1 = addModifier("Rise");
         const m2 = addModifier("Fall");
+        m1.color2 = "#ff0000";
+        m2.color2 = "#00ff00";
         const action = addAction("Lift", { [m1.id]: 1, [m2.id]: 1 });
         addInput("Up");
         buildInteractionsPairs(model);
@@ -346,11 +405,260 @@ export function getInteractionsTests() {
           endActionId: action.id,
           endVariantSig: `${m2.id}+${m1.id}`,
         });
-        const text = getInteractionsCell(model, viewDef, 0, 2);
+        const cell = getInteractionsCell(model, viewDef, 0, 2);
+        const text = plainCellText(cell);
         assert.ok(
           /Lift \((Fall\+Rise|Rise\+Fall)\)/.test(text),
           "end column shows canonical modifier order",
         );
+        const segments = cellSegments(cell);
+        assert.ok(Array.isArray(segments) && segments.length >= 5, "segments emitted");
+        const riseSegment = segments.find((seg) => seg.text === "Rise");
+        const fallSegment = segments.find((seg) => seg.text === "Fall");
+        assert.strictEqual(riseSegment?.foreground, "#ff0000", "Rise uses color2 foreground");
+        assert.strictEqual(fallSegment?.foreground, "#00ff00", "Fall uses color2 foreground");
+        const riseIndex = segments.indexOf(riseSegment);
+        const fallIndex = segments.indexOf(fallSegment);
+        assert.ok(riseIndex >= 0 && fallIndex > riseIndex, "modifier segments preserve canonical order");
+      },
+    },
+    {
+      name: "action column emits colored modifier segments",
+      run(assert) {
+        const { model, addAction, addInput, addModifier } = makeModelFixture();
+        const m1 = addModifier("Rise");
+        const m2 = addModifier("Fall");
+        m1.color2 = "#ff0000";
+        m2.color2 = "#00ff00";
+        const action = addAction("Lift");
+        addInput("Up");
+        buildInteractionsPairs(model);
+        assert.ok(model.interactionsPairs.length > 0, "pairs built for AI mode");
+        model.interactionsPairs[0].variantSig = `${m2.id}+${m1.id}`;
+
+        const viewDef = { columns: [{ key: "action" }, { key: "input" }] };
+        const cell = getInteractionsCell(model, viewDef, 0, 0);
+        assert.strictEqual(
+          plainCellText(cell),
+          "Lift (Rise+Fall)",
+          "action column plain text matches legacy format",
+        );
+        const segments = cellSegments(cell);
+        assert.ok(Array.isArray(segments) && segments.length >= 5, "action column emits segments");
+        const riseSegment = segments.find((seg) => seg.text === "Rise");
+        const fallSegment = segments.find((seg) => seg.text === "Fall");
+        assert.strictEqual(riseSegment?.foreground, "#ff0000", "Rise segment uses color2 foreground");
+        assert.strictEqual(fallSegment?.foreground, "#00ff00", "Fall segment uses color2 foreground");
+      },
+    },
+    {
+      name: "AA action columns emit colored modifier segments",
+      run(assert) {
+        const { model, addAction, addModifier } = makeModelFixture();
+        model.meta.interactionsMode = "AA";
+        const boost = addModifier("Boost");
+        const guard = addModifier("Guard");
+        boost.color2 = "#aa0000";
+        guard.color2 = "#00aa00";
+        const left = addAction("Left");
+        const right = addAction("Right");
+        buildInteractionsPairs(model);
+        const pairIndex = model.interactionsPairs.findIndex(
+          (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
+        );
+        assert.ok(pairIndex >= 0, "expected AA pair present");
+        const pair = model.interactionsPairs[pairIndex];
+        pair.variantSig = `${guard.id}+${boost.id}`;
+        pair.rhsVariantSig = `${boost.id}`;
+
+        const viewDef = { columns: [{ key: "action" }, { key: "rhsaction" }] };
+        const leftCell = getInteractionsCell(model, viewDef, pairIndex, 0);
+        const rightCell = getInteractionsCell(model, viewDef, pairIndex, 1);
+
+        assert.strictEqual(
+          plainCellText(leftCell),
+          "Left (Boost+Guard)",
+          "left action plain text canonicalizes modifiers",
+        );
+        assert.strictEqual(
+          plainCellText(rightCell),
+          "Right (Boost)",
+          "rhs action plain text includes modifiers",
+        );
+
+        const leftSegments = cellSegments(leftCell);
+        const rightSegments = cellSegments(rightCell);
+        assert.ok(
+          Array.isArray(leftSegments) && leftSegments.length >= 5,
+          "left action emits segments",
+        );
+        assert.ok(
+          Array.isArray(rightSegments) && rightSegments.length >= 3,
+          "rhs action emits segments",
+        );
+
+        const boostLeftSegment = leftSegments.find((seg) => seg.text === "Boost");
+        const guardSegment = leftSegments.find((seg) => seg.text === "Guard");
+        const boostRightSegment = rightSegments.find((seg) => seg.text === "Boost");
+        assert.strictEqual(
+          boostLeftSegment?.foreground,
+          "#aa0000",
+          "Boost segment uses color2 foreground on left action",
+        );
+        assert.strictEqual(
+          guardSegment?.foreground,
+          "#00aa00",
+          "Guard segment uses color2 foreground on left action",
+        );
+        assert.strictEqual(
+          boostRightSegment?.foreground,
+          "#aa0000",
+          "Boost segment uses color2 foreground on rhs action",
+        );
+      },
+    },
+    {
+      name: "palette renders colored modifier spans for end actions",
+      run(assert) {
+        const { model, addAction, addModifier } = makeModelFixture();
+        const rise = addModifier("Rise");
+        const fall = addModifier("Fall");
+        rise.color2 = "#ff3366";
+        fall.color2 = "#33ff66";
+        const action = addAction("Lift");
+
+        model.interactionsPairs = [
+          { aId: action.id, variantSig: `${rise.id}+${fall.id}` },
+        ];
+
+        const originalDocument = globalThis.document;
+
+        class StubElement {
+          constructor(tag, isFragment = false) {
+            this.tag = tag;
+            this.isFragment = isFragment;
+            this._children = [];
+            this.style = {};
+            this.dataset = {};
+            this.attributes = {};
+            this.className = "";
+            this.parentElement = null;
+            this._textContent = "";
+          }
+          appendChild(child) {
+            if (!child) return child;
+            if (child.isFragment) {
+              child._children.forEach((node) => this.appendChild(node));
+              return child;
+            }
+            this._children.push(child);
+            child.parentElement = this;
+            return child;
+          }
+          get children() {
+            return this._children;
+          }
+          set innerHTML(value) {
+            this._children = [];
+            this._textContent = typeof value === "string" ? value : "";
+          }
+          set textContent(value) {
+            this._children = [];
+            this._textContent =
+              typeof value === "string" ? value : String(value ?? "");
+          }
+          get textContent() {
+            return this._textContent;
+          }
+          setAttribute(name, value) {
+            this.attributes[name] = String(value);
+          }
+          removeAttribute(name) {
+            delete this.attributes[name];
+          }
+          scrollIntoView() {}
+        }
+
+        const documentStub = {
+          createElement(tag) {
+            return new StubElement(tag);
+          },
+          createDocumentFragment() {
+            return new StubElement("#fragment", true);
+          },
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          activeElement: null,
+        };
+
+        globalThis.document = documentStub;
+
+        try {
+          const host = new StubElement("div");
+          const editor = {
+            style: {},
+            parentElement: host,
+            addEventListener: () => {},
+            focus: () => {},
+            setSelectionRange: () => {},
+            select: () => {},
+            value: "",
+          };
+          const sheet = { addEventListener: () => {} };
+          const palette = initPalette({
+            editor,
+            sheet,
+            getActiveView: () => "interactions",
+            viewDef: () => ({ columns: [{ key: "p0:end" }] }),
+            sel: { r: 0, c: 0 },
+            model,
+            setCell: () => {},
+            render: () => {},
+            getCellRect: () => ({ left: 0, top: 0, width: 200, height: 24 }),
+            HEADER_HEIGHT: 0,
+            endEdit: () => {},
+            moveSelectionForTab: () => {},
+            moveSelectionForEnter: () => {},
+          });
+
+          const opened = palette.openForCurrentCell({
+            r: 0,
+            c: 0,
+            initialText: "",
+            focusEditor: false,
+          });
+          assert.ok(opened, "palette opened for end column");
+
+          const paletteRoot = host.children.find(
+            (child) => child && child.id === "universalPalette",
+          );
+          assert.ok(paletteRoot, "palette root appended to host");
+          const listEl = paletteRoot?.children?.[0];
+          assert.ok(listEl, "palette list rendered");
+
+          const item = listEl.children.find(
+            (child) => child.className === "pal-item",
+          );
+          assert.ok(item, "palette item created for action variant");
+          const spans = item.children.filter((child) => child.tag === "span");
+          assert.ok(spans.length >= 5, "rich text spans rendered for palette item");
+
+          const riseSpan = spans.find((child) => child.textContent === "Rise");
+          const fallSpan = spans.find((child) => child.textContent === "Fall");
+          assert.strictEqual(
+            riseSpan?.style?.color,
+            "#ff3366",
+            "Rise span uses modifier color",
+          );
+          assert.strictEqual(
+            fallSpan?.style?.color,
+            "#33ff66",
+            "Fall span uses modifier color",
+          );
+        } finally {
+          if (typeof originalDocument === "undefined") delete globalThis.document;
+          else globalThis.document = originalDocument;
+        }
       },
     },
   ];

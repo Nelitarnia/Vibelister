@@ -69,9 +69,10 @@ function buildEntries(model, filter, showVariants) {
       if (!Number.isFinite(rowIndex) || rowCount <= 0) continue;
       totalRows += rowCount;
       const variantSig = typeof variant?.variantSig === "string" ? variant.variantSig : "";
-      const fullLabel = formatEndActionLabel(model, action, variantSig, {
-        style: "parentheses",
-      });
+      const fullLabel =
+        formatEndActionLabel(model, action, variantSig, {
+          style: "parentheses",
+        })?.plainText || "";
       const modifierNames = namesForVariant(model, variantSig);
       const displayLabel = modifierNames.length
         ? modifierNames.map((name) => `+${name}`).join(" ")

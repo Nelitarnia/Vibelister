@@ -322,6 +322,23 @@ function getCell(r, c) {
   return "";
 }
 
+function cellValueToPlainText(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "object") {
+    if (typeof value.plainText === "string") return value.plainText;
+    if (Array.isArray(value.segments)) {
+      return value.segments
+        .map((seg) => (seg && seg.text != null ? String(seg.text) : ""))
+        .join("");
+    }
+    if (typeof value.text === "string") return value.text;
+    if (typeof value.value === "string") return value.value;
+  }
+  return "";
+}
+
 function setCell(r, c, v) {
   const vd = viewDef();
   const col = vd.columns[c];
@@ -553,7 +570,7 @@ const disposeKeys = initGridKeys({
 
   // clipboard helpers
   model,
-  getCellText: (r, c) => getCell(r, c),
+  getCellText: (r, c) => cellValueToPlainText(getCell(r, c)),
   getStructuredCell,
   applyStructuredCell,
   status: statusBar,
@@ -587,7 +604,7 @@ const colorPickerAPI = initColorPicker({
   sheet,
   sel,
   getCellRect,
-  getColorValue: (r, c) => getCell(r, c),
+  getColorValue: (r, c) => cellValueToPlainText(getCell(r, c)),
   setColorValue: (r, c, v) => setCellSelectionAware(r, c, v),
   render,
   makeUndoConfig,

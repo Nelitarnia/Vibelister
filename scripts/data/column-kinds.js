@@ -1,6 +1,8 @@
 // column-kinds.js — Registry of reusable column behaviors
 // Minimal, dependency-light; safe to iterate as we add kinds.
 
+import { getEntityColorsFromRow } from "./color-utils.js";
+
 export const STRUCTURED_SCHEMA_VERSION = 1;
 
 function wrapRefPayload(entity, payload) {
@@ -352,8 +354,8 @@ export const ColumnKinds = {
       const { row, col, model, r, activeView } = ctx;
       // Prefer per-row storage when available
       let id = row?.[col.key];
-      let vSig = ""; // will hold variant signature when derived from Interactions
-      let suffix = "";
+      let variantSig = ""; // will hold variant signature when derived from Interactions
+      let useInteractionsVariant = false;
       // Interactions view has no per-row object; derive id (and modifier suffix) from pairs
       if (
         activeView === "interactions" &&
@@ -364,21 +366,54 @@ export const ColumnKinds = {
           const k = String(col.key || "").toLowerCase();
           if (k === "action" || k === "actionid" || k === "actionname") {
             id = id ?? pair.aId;
-            vSig = String(pair.variantSig || "");
-            // Append modifiers for left-hand action
-            suffix = formatModsFromSig(model, pair.variantSig);
+            variantSig = String(pair.variantSig || "");
+            useInteractionsVariant = true;
           } else if (k === "rhsaction" || k === "rhsactionid") {
             id = id ?? pair.rhsActionId;
-            vSig = String(pair.rhsVariantSig || "");
-            // Append modifiers for right-hand action (AA mode)
-            suffix = formatModsFromSig(model, pair.rhsVariantSig);
+            variantSig = String(pair.rhsVariantSig || "");
+            useInteractionsVariant = true;
           } else if (k === "input" || k === "inputid") {
             id = id ?? pair.iId;
           }
         }
       }
-      const base = nameOf(col.entity, model, id);
-      return suffix ? (base ? `${base} ${suffix}` : suffix) : base;
+      const entityRows = resolveEntity(col.entity, model);
+      let entityRow = null;
+      if (entityRows && entityRows.length && id != null) {
+        const numId = Number(id);
+        if (Number.isFinite(numId)) {
+          entityRow =
+            entityRows.find((candidate) => (candidate?.id | 0) === (numId | 0)) ||
+            null;
+        }
+      }
+      const base = entityRow?.name || nameOf(col.entity, model, id);
+      const suffix =
+        useInteractionsVariant && variantSig
+          ? formatModsFromSig(model, variantSig)
+          : "";
+      const fallback = suffix ? (base ? `${base} ${suffix}` : suffix) : base;
+      if (
+        useInteractionsVariant &&
+        String(col.entity || "").toLowerCase() === "action"
+      ) {
+        const label = formatEndActionLabel(
+          model,
+          entityRow || (base ? { name: base } : null),
+          variantSig,
+          { style: "parentheses" },
+        );
+        if (label) {
+          const plainText = label.plainText || fallback || "";
+          const segments =
+            Array.isArray(label.segments) && label.segments.length
+              ? label.segments
+              : null;
+          if (segments) return { plainText, segments };
+          return plainText;
+        }
+      }
+      return fallback;
     },
     // read-only: ignore writes
     set() {
@@ -544,7 +579,7 @@ export const ColumnKinds = {
 // Legacy alias: outcomeRef now routes through the generic refPick implementation.
 ColumnKinds.outcomeRef = ColumnKinds.refPick;
 
-function getModifierNamesFromSig(model, sig) {
+function getModifiersFromSig(model, sig) {
   const s = typeof sig === "string" ? sig : "";
   if (!s) return [];
   const ids = s
@@ -556,39 +591,71 @@ function getModifierNamesFromSig(model, sig) {
 
   const modifiers = Array.isArray(model?.modifiers) ? model.modifiers : [];
   const order = new Map();
-  const nameById = new Map();
+  const rowById = new Map();
   modifiers.forEach((mod, idx) => {
     const rawId = mod?.id;
     const id = Number(rawId);
     if (!Number.isFinite(id)) return;
     order.set(id, idx);
-    if (typeof mod?.name === "string") nameById.set(id, mod.name);
+    rowById.set(id, mod);
   });
 
   ids.sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
-  const names = [];
+  const out = [];
   for (const id of ids) {
-    const label = nameById.get(id);
-    if (label) names.push(label);
+    const row = rowById.get(id);
+    const label = typeof row?.name === "string" ? row.name : "";
+    if (label) out.push({ id, name: label, row });
   }
-  return names;
+  return out;
 }
 
 // Helper: format " (ModA+ModB)" suffix from a '+'-joined variantSig ordered by modifier row order
 function formatModsFromSig(model, sig) {
-  const names = getModifierNamesFromSig(model, sig);
+  const modifiers = getModifiersFromSig(model, sig);
+  const names = modifiers.map((mod) => mod.name).filter(Boolean);
   return names.length ? `(${names.join("+")})` : "";
 }
 
 export function formatEndActionLabel(model, action, variantSig, opts = {}) {
   const base = action?.name || "";
-  const names = getModifierNamesFromSig(model, variantSig);
-  if (!names.length) return base;
-  const modLabel = names.join("+");
-  if (opts.style === "parentheses") {
-    return `${base} (${modLabel})`;
+  const modifiers = getModifiersFromSig(model, variantSig);
+  const names = modifiers.map((mod) => mod.name).filter(Boolean);
+
+  const segments = [];
+  const textParts = [];
+  const pushSegment = (text, color = null) => {
+    if (!text) return;
+    segments.push({ text, foreground: color });
+    textParts.push(text);
+  };
+
+  if (base) pushSegment(base, null);
+
+  if (!names.length) {
+    return { plainText: textParts.join("") || base, segments };
   }
-  return `${base} — ${modLabel}`;
+
+  const style = opts?.style === "parentheses" ? "parentheses" : "dash";
+  if (style === "parentheses") {
+    pushSegment(base ? " (" : " (", null);
+    modifiers.forEach((mod, idx) => {
+      const color = getEntityColorsFromRow(mod.row)?.foreground || null;
+      pushSegment(mod.name, color);
+      if (idx < modifiers.length - 1) pushSegment("+", null);
+    });
+    pushSegment(")", null);
+  } else {
+    pushSegment(base ? " — " : " — ", null);
+    modifiers.forEach((mod, idx) => {
+      const color = getEntityColorsFromRow(mod.row)?.foreground || null;
+      pushSegment(mod.name, color);
+      if (idx < modifiers.length - 1) pushSegment("+", null);
+    });
+  }
+
+  const plainText = textParts.join("");
+  return { plainText, segments };
 }
 
 export function getCellForKind(kind, ctx) {
