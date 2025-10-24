@@ -39,14 +39,6 @@ export function getGridKeysTests() {
     {
       name: "grid keydown defers Enter when palette is open",
       run(assert) {
-        const originalWindow = globalThis.window;
-        const originalDocument = globalThis.document;
-        const originalNavigator = globalThis.navigator;
-        const navigatorDescriptor = Object.getOwnPropertyDescriptor(
-          globalThis,
-          "navigator",
-        );
-
         const listeners = new Map();
         const windowStub = {
           listeners,
@@ -74,16 +66,7 @@ export function getGridKeysTests() {
           activeElement: null,
         };
 
-        globalThis.window = windowStub;
-        globalThis.document = documentStub;
-        Object.defineProperty(globalThis, "navigator", {
-          value: { platform: "Test" },
-          configurable: true,
-          enumerable: navigatorDescriptor
-            ? navigatorDescriptor.enumerable
-            : true,
-          writable: true,
-        });
+        const navigatorStub = { platform: "Test" };
 
         const editor = { style: { display: "block" } };
         documentStub.activeElement = editor;
@@ -134,6 +117,9 @@ export function getGridKeysTests() {
           getPaletteAPI: () => ({
             isOpen: () => true,
           }),
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
         });
 
         try {
@@ -174,29 +160,12 @@ export function getGridKeysTests() {
           );
         } finally {
           dispose?.();
-          globalThis.window = originalWindow;
-          globalThis.document = originalDocument;
-          if (navigatorDescriptor) {
-            Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
-          } else if (typeof originalNavigator === "undefined") {
-            delete globalThis.navigator;
-          } else {
-            globalThis.navigator = originalNavigator;
-          }
         }
       },
     },
     {
       name: "Ctrl+Shift+Arrow navigates interactions actions",
       run(assert) {
-        const originalWindow = globalThis.window;
-        const originalDocument = globalThis.document;
-        const originalNavigator = globalThis.navigator;
-        const navigatorDescriptor = Object.getOwnPropertyDescriptor(
-          globalThis,
-          "navigator",
-        );
-
         const listeners = new Map();
         const windowStub = {
           listeners,
@@ -224,16 +193,7 @@ export function getGridKeysTests() {
           activeElement: { tagName: "DIV" },
         };
 
-        globalThis.window = windowStub;
-        globalThis.document = documentStub;
-        Object.defineProperty(globalThis, "navigator", {
-          value: { platform: "Test" },
-          configurable: true,
-          enumerable: navigatorDescriptor
-            ? navigatorDescriptor.enumerable
-            : true,
-          writable: true,
-        });
+        const navigatorStub = { platform: "Test" };
 
         const editor = { style: { display: "none" } };
         const selection = { rows: new Set(), cols: new Set() };
@@ -282,6 +242,9 @@ export function getGridKeysTests() {
           jumpToInteractionsAction: (delta) => {
             jumpCalls.push(delta);
           },
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
         });
 
         try {
@@ -347,15 +310,6 @@ export function getGridKeysTests() {
           );
         } finally {
           dispose?.();
-          globalThis.window = originalWindow;
-          globalThis.document = originalDocument;
-          if (navigatorDescriptor) {
-            Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
-          } else if (typeof originalNavigator === "undefined") {
-            delete globalThis.navigator;
-          } else {
-            globalThis.navigator = originalNavigator;
-          }
         }
       },
     },

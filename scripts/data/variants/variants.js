@@ -230,8 +230,9 @@ export function buildInteractionsPairs(model) {
     (i) => i && (i.name || "").trim().length,
   );
   const useG = model.modifierGroups && model.modifierGroups.length > 0;
-  const pairs = [];
   const indexGroups = [];
+  const variantCatalog = {};
+  let totalRows = 0;
   let capped = false,
     cappedActions = 0;
   const mode = (model.meta && model.meta.interactionsMode) || "AI";
@@ -255,24 +256,21 @@ export function buildInteractionsPairs(model) {
         capped = true;
         cappedActions++;
       }
+      variantCatalog[a.id] = varsA.slice();
       const group = { actionId: a.id, variants: [] };
       let groupFirstRow = null;
       let groupTotalRows = 0;
       for (const sigA of varsA) {
-        const variantStart = pairs.length;
+        const variantStart = totalRows;
+        let rowsAdded = 0;
         for (const b of actions) {
           const { variants: varsB } = getVariantsForAction(b);
+          if (!variantCatalog[b.id]) variantCatalog[b.id] = varsB.slice();
           for (const sigB of varsB) {
-            pairs.push({
-              aId: a.id,
-              rhsActionId: b.id,
-              variantSig: sigA,
-              rhsVariantSig: sigB,
-              kind: "AA",
-            });
+            rowsAdded++;
           }
         }
-        const rowsAdded = pairs.length - variantStart;
+        totalRows += rowsAdded;
         group.variants.push({
           variantSig: sigA,
           rowIndex: variantStart,
@@ -287,15 +285,19 @@ export function buildInteractionsPairs(model) {
       group.totalRows = groupTotalRows;
       indexGroups.push(group);
     }
-    model.interactionsPairs = pairs;
+    model.interactionsPairs = [];
     model.interactionsIndex = {
       mode: "AA",
       groups: indexGroups,
+      totalRows,
+      actionsOrder: actions.map((a) => a.id),
+      inputsOrder: [],
+      variantCatalog,
     };
     return {
       actionsCount: actions.length,
       inputsCount: actions.length,
-      pairsCount: pairs.length,
+      pairsCount: totalRows,
       capped,
       cappedActions,
     };
@@ -306,14 +308,14 @@ export function buildInteractionsPairs(model) {
       capped = true;
       cappedActions++;
     }
+    variantCatalog[a.id] = vars.slice();
     const group = { actionId: a.id, variants: [] };
     let groupFirstRow = null;
     let groupTotalRows = 0;
     for (const sig of vars) {
-      const variantStart = pairs.length;
-      for (const i of inputs)
-        pairs.push({ aId: a.id, iId: i.id, variantSig: sig, kind: "AI" });
-      const rowsAdded = pairs.length - variantStart;
+      const variantStart = totalRows;
+      const rowsAdded = inputs.length;
+      totalRows += rowsAdded;
       group.variants.push({
         variantSig: sig,
         rowIndex: variantStart,
@@ -328,15 +330,19 @@ export function buildInteractionsPairs(model) {
     group.totalRows = groupTotalRows;
     indexGroups.push(group);
   }
-  model.interactionsPairs = pairs;
+  model.interactionsPairs = [];
   model.interactionsIndex = {
     mode: "AI",
     groups: indexGroups,
+    totalRows,
+    actionsOrder: actions.map((a) => a.id),
+    inputsOrder: inputs.map((i) => i.id),
+    variantCatalog,
   };
   return {
     actionsCount: actions.length,
     inputsCount: inputs.length,
-    pairsCount: pairs.length,
+    pairsCount: totalRows,
     capped,
     cappedActions,
   };

@@ -52,6 +52,18 @@ export function snapshotModel(model, options = {}) {
 
   if (!includeDerived) {
     cloned.interactionsPairs = [];
+    const mode =
+      cloned.interactionsIndex && cloned.interactionsIndex.mode
+        ? cloned.interactionsIndex.mode
+        : "AI";
+    cloned.interactionsIndex = {
+      mode,
+      groups: [],
+      totalRows: 0,
+      actionsOrder: [],
+      inputsOrder: [],
+      variantCatalog: {},
+    };
   }
 
   if (!includeNotes) {

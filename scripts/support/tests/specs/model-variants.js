@@ -1,7 +1,21 @@
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
+import {
+  getInteractionsPair,
+  getInteractionsRowCount,
+} from "../../../app/interactions-data.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 export function getModelVariantTests() {
+  function collectPairs(model) {
+    const total = getInteractionsRowCount(model);
+    const out = [];
+    for (let r = 0; r < total; r++) {
+      const pair = getInteractionsPair(model, r);
+      if (pair) out.push(pair);
+    }
+    return out;
+  }
+
   return [
     {
       name: "basic action/input cross product",
@@ -33,7 +47,7 @@ export function getModelVariantTests() {
         let stats = buildInteractionsPairs(model);
         assert.strictEqual(stats.pairsCount, 1, "exact-2 yields a single pair");
 
-        for (const pair of model.interactionsPairs) {
+        for (const pair of collectPairs(model)) {
           const key = `${pair.aId}|${pair.iId}|${pair.variantSig}`;
           model.notes[key] = { result: "works", notes: "" };
         }
@@ -46,7 +60,7 @@ export function getModelVariantTests() {
         stats = buildInteractionsPairs(model);
         assert.strictEqual(stats.pairsCount, 1, "regen keeps single combo");
 
-        const pair = model.interactionsPairs[0];
+        const pair = collectPairs(model)[0];
         const key = `${pair.aId}|${pair.iId}|${pair.variantSig}`;
         assert.strictEqual(
           model.notes[key]?.result,
@@ -78,7 +92,7 @@ export function getModelVariantTests() {
         const stats = buildInteractionsPairs(model);
         assert.strictEqual(stats.pairsCount, 6, "EXACT1 × EXACT2 = 6 variants");
 
-        const sigs = model.interactionsPairs.map((p) => p.variantSig);
+        const sigs = collectPairs(model).map((p) => p.variantSig);
         const expected = [
           `${ma.id}+${mc.id}+${md.id}`,
           `${ma.id}+${mc.id}+${me.id}`,

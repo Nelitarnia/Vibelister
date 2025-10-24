@@ -22,6 +22,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── grid-renderer.js
 │   │   ├── history.js
 │   │   ├── interactions.js
+│   │   ├── interactions-data.js
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
 │   │   ├── selection.js
@@ -112,6 +113,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
+- `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `column-widths.js` captures default widths for each view, clones override metadata, and exposes helpers so state controllers can merge persisted sizing without bloating callers.
 - `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
 - `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.

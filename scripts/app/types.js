@@ -90,6 +90,14 @@
 * @property {Array<Object>} modifierConstraints // rule constraints; see rules.js
 * @property {Record<string, NoteRecord>} notes  // flat map from noteKey → note
 * @property {InteractionPair[]} interactionsPairs
+* @property {{
+*   mode: string,
+*   groups: Array<Object>,
+*   totalRows?: number,
+*   actionsOrder?: number[],
+*   inputsOrder?: number[],
+*   variantCatalog?: Record<number, string[]>
+* }} interactionsIndex
 * @property {number} nextId
   */
 

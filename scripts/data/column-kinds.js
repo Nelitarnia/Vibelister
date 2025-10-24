@@ -2,6 +2,7 @@
 // Minimal, dependency-light; safe to iterate as we add kinds.
 
 import { getEntityColorsFromRow } from "./color-utils.js";
+import { getInteractionsPair } from "../app/interactions-data.js";
 
 export const STRUCTURED_SCHEMA_VERSION = 1;
 
@@ -357,11 +358,8 @@ export const ColumnKinds = {
       let variantSig = ""; // will hold variant signature when derived from Interactions
       let useInteractionsVariant = false;
       // Interactions view has no per-row object; derive id (and modifier suffix) from pairs
-      if (
-        activeView === "interactions" &&
-        Array.isArray(model?.interactionsPairs)
-      ) {
-        const pair = model.interactionsPairs[r];
+      if (activeView === "interactions") {
+        const pair = getInteractionsPair(model, r);
         if (pair) {
           const k = String(col.key || "").toLowerCase();
           if (k === "action" || k === "actionid" || k === "actionname") {
@@ -428,12 +426,8 @@ export const ColumnKinds = {
       const { row, col, model, r, activeView } = ctx;
       let id = row?.[col.key];
       let variantSig = "";
-      if (
-        activeView === "interactions" &&
-        id == null &&
-        Array.isArray(model?.interactionsPairs)
-      ) {
-        const pair = model.interactionsPairs[r];
+      if (activeView === "interactions" && id == null) {
+        const pair = getInteractionsPair(model, r);
         if (pair) {
           const k = String(col.key || "").toLowerCase();
           if (k === "action" || k === "actionid" || k === "actionname") {

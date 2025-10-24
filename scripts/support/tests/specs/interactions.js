@@ -7,6 +7,8 @@ import {
   clearInteractionsCell,
   clearInteractionsSelection,
   isInteractionPhaseColumnActiveForRow,
+  getInteractionsPair,
+  getInteractionsRowCount,
 } from "../../../app/interactions.js";
 import { initPalette } from "../../../ui/palette.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
@@ -38,6 +40,19 @@ function makeInteractionsView() {
       { key: "notes" },
     ],
   };
+}
+
+function getPair(model, rowIndex) {
+  return getInteractionsPair(model, rowIndex);
+}
+
+function findPairIndex(model, predicate) {
+  const total = getInteractionsRowCount(model);
+  for (let r = 0; r < total; r++) {
+    const pair = getPair(model, r);
+    if (pair && predicate(pair)) return r;
+  }
+  return -1;
 }
 
 export function getInteractionsTests() {
@@ -180,10 +195,12 @@ export function getInteractionsTests() {
             { key: "p0:outcome" },
           ],
         };
-        const row = model.interactionsPairs.findIndex(
+        const row = findPairIndex(
+          model,
           (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
         );
-        const mirrorRow = model.interactionsPairs.findIndex(
+        const mirrorRow = findPairIndex(
+          model,
           (pair) => pair.aId === right.id && pair.rhsActionId === left.id,
         );
         assert.ok(row >= 0 && mirrorRow >= 0, "expected AA pairs present");
@@ -201,10 +218,7 @@ export function getInteractionsTests() {
           "Lose",
           "mirrored row reflects inverted outcome",
         );
-        const mirrorKey = noteKeyForPair(
-          model.interactionsPairs[mirrorRow],
-          0,
-        );
+        const mirrorKey = noteKeyForPair(getPair(model, mirrorRow), 0);
         assert.strictEqual(
           model.notes[mirrorKey]?.outcomeId,
           lose.id,
@@ -240,7 +254,7 @@ export function getInteractionsTests() {
           "Win",
           "mirrored write reflects inverted outcome on source row",
         );
-        const sourceKey = noteKeyForPair(model.interactionsPairs[row], 0);
+        const sourceKey = noteKeyForPair(getPair(model, row), 0);
         assert.strictEqual(
           model.notes[sourceKey]?.outcomeId,
           win.id,
@@ -284,18 +298,20 @@ export function getInteractionsTests() {
             { key: "p0:outcome" },
           ],
         };
-        const row = model.interactionsPairs.findIndex(
+        const row = findPairIndex(
+          model,
           (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
         );
-        const mirrorRow = model.interactionsPairs.findIndex(
+        const mirrorRow = findPairIndex(
+          model,
           (pair) => pair.aId === right.id && pair.rhsActionId === left.id,
         );
         assert.ok(row >= 0 && mirrorRow >= 0, "expected AA pairs present");
         const status = { set() {} };
 
         setInteractionsCell(model, status, viewDef, row, 2, win.id);
-        const mirrorKey = noteKeyForPair(model.interactionsPairs[mirrorRow], 0);
-        const sourceKey = noteKeyForPair(model.interactionsPairs[row], 0);
+        const mirrorKey = noteKeyForPair(getPair(model, mirrorRow), 0);
+        const sourceKey = noteKeyForPair(getPair(model, row), 0);
         assert.strictEqual(
           model.notes[mirrorKey]?.outcomeId,
           lose.id,
@@ -383,7 +399,7 @@ export function getInteractionsTests() {
         assert.strictEqual(result.cappedActions, 0, "no AA actions truncated");
         assert.strictEqual(
           result.pairsCount,
-          model.interactionsPairs.length,
+          getInteractionsRowCount(model),
           "pairsCount matches generated pairs",
         );
 
@@ -416,9 +432,14 @@ export function getInteractionsTests() {
           "right action variants mirror left combinations",
         );
 
-        const leftRightPairs = model.interactionsPairs.filter(
-          (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
-        );
+        const leftRightPairs = [];
+        const totalPairs = getInteractionsRowCount(model);
+        for (let i = 0; i < totalPairs; i++) {
+          const pair = getPair(model, i);
+          if (pair && pair.aId === left.id && pair.rhsActionId === right.id) {
+            leftRightPairs.push(pair);
+          }
+        }
         const expectedPairCount = expectedVariants.length * expectedVariants.length;
         assert.strictEqual(
           leftRightPairs.length,
@@ -522,8 +543,14 @@ export function getInteractionsTests() {
         const action = addAction("Lift");
         addInput("Up");
         buildInteractionsPairs(model);
-        assert.ok(model.interactionsPairs.length > 0, "pairs built for AI mode");
-        model.interactionsPairs[0].variantSig = `${m2.id}+${m1.id}`;
+        assert.ok(getInteractionsRowCount(model) > 0, "pairs built for AI mode");
+        const actionGroup = model.interactionsIndex.groups.find(
+          (group) => group.actionId === action.id,
+        );
+        assert.ok(actionGroup, "action group recorded");
+        if (actionGroup?.variants?.[0]) {
+          actionGroup.variants[0].variantSig = `${m2.id}+${m1.id}`;
+        }
 
         const viewDef = { columns: [{ key: "action" }, { key: "input" }] };
         const cell = getInteractionsCell(model, viewDef, 0, 0);
@@ -552,13 +579,30 @@ export function getInteractionsTests() {
         const left = addAction("Left");
         const right = addAction("Right");
         buildInteractionsPairs(model);
-        const pairIndex = model.interactionsPairs.findIndex(
+        const pairIndex = findPairIndex(
+          model,
           (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
         );
         assert.ok(pairIndex >= 0, "expected AA pair present");
-        const pair = model.interactionsPairs[pairIndex];
-        pair.variantSig = `${guard.id}+${boost.id}`;
-        pair.rhsVariantSig = `${boost.id}`;
+        const leftGroup = model.interactionsIndex.groups.find(
+          (group) => group.actionId === left.id,
+        );
+        const targetVariant = leftGroup?.variants?.find(
+          (variant) =>
+            Number.isFinite(variant?.rowIndex) &&
+            Number.isFinite(variant?.rowCount) &&
+            pairIndex >= variant.rowIndex &&
+            pairIndex < variant.rowIndex + variant.rowCount,
+        );
+        if (targetVariant) targetVariant.variantSig = `${guard.id}+${boost.id}`;
+        const rightGroup = model.interactionsIndex.groups.find(
+          (group) => group.actionId === right.id,
+        );
+        if (rightGroup?.variants?.[0])
+          rightGroup.variants[0].variantSig = `${boost.id}`;
+        if (model.interactionsIndex.variantCatalog) {
+          model.interactionsIndex.variantCatalog[right.id] = [`${boost.id}`];
+        }
 
         const viewDef = { columns: [{ key: "action" }, { key: "rhsaction" }] };
         const leftCell = getInteractionsCell(model, viewDef, pairIndex, 0);
@@ -609,18 +653,36 @@ export function getInteractionsTests() {
     {
       name: "palette renders colored modifier spans for end actions",
       run(assert) {
-        const { model, addAction, addModifier } = makeModelFixture();
+        const { model, addAction, addModifier, addInput } = makeModelFixture();
         const rise = addModifier("Rise");
         const fall = addModifier("Fall");
         rise.color2 = "#ff3366";
         fall.color2 = "#33ff66";
         const action = addAction("Lift");
+        const input = addInput("Any");
 
-        model.interactionsPairs = [
-          { aId: action.id, variantSig: `${rise.id}+${fall.id}` },
-        ];
-
-        const originalDocument = globalThis.document;
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [
+                {
+                  variantSig: `${rise.id}+${fall.id}`,
+                  rowIndex: 0,
+                  rowCount: 1,
+                },
+              ],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [`${rise.id}+${fall.id}`] },
+        };
+        model.interactionsPairs = [];
 
         class StubElement {
           constructor(tag, isFragment = false) {
@@ -679,75 +741,68 @@ export function getInteractionsTests() {
           removeEventListener: () => {},
           activeElement: null,
         };
+        const host = new StubElement("div");
+        const editor = {
+          style: {},
+          parentElement: host,
+          addEventListener: () => {},
+          focus: () => {},
+          setSelectionRange: () => {},
+          select: () => {},
+          value: "",
+        };
+        const sheet = { addEventListener: () => {} };
+        const palette = initPalette({
+          editor,
+          sheet,
+          getActiveView: () => "interactions",
+          viewDef: () => ({ columns: [{ key: "p0:end" }] }),
+          sel: { r: 0, c: 0 },
+          model,
+          setCell: () => {},
+          render: () => {},
+          getCellRect: () => ({ left: 0, top: 0, width: 200, height: 24 }),
+          HEADER_HEIGHT: 0,
+          endEdit: () => {},
+          moveSelectionForTab: () => {},
+          moveSelectionForEnter: () => {},
+          document: documentStub,
+        });
 
-        globalThis.document = documentStub;
+        const opened = palette.openForCurrentCell({
+          r: 0,
+          c: 0,
+          initialText: "",
+          focusEditor: false,
+        });
+        assert.ok(opened, "palette opened for end column");
 
-        try {
-          const host = new StubElement("div");
-          const editor = {
-            style: {},
-            parentElement: host,
-            addEventListener: () => {},
-            focus: () => {},
-            setSelectionRange: () => {},
-            select: () => {},
-            value: "",
-          };
-          const sheet = { addEventListener: () => {} };
-          const palette = initPalette({
-            editor,
-            sheet,
-            getActiveView: () => "interactions",
-            viewDef: () => ({ columns: [{ key: "p0:end" }] }),
-            sel: { r: 0, c: 0 },
-            model,
-            setCell: () => {},
-            render: () => {},
-            getCellRect: () => ({ left: 0, top: 0, width: 200, height: 24 }),
-            HEADER_HEIGHT: 0,
-            endEdit: () => {},
-            moveSelectionForTab: () => {},
-            moveSelectionForEnter: () => {},
-          });
+        const paletteRoot = host.children.find(
+          (child) => child && child.id === "universalPalette",
+        );
+        assert.ok(paletteRoot, "palette root appended to host");
+        const listEl = paletteRoot?.children?.[0];
+        assert.ok(listEl, "palette list rendered");
 
-          const opened = palette.openForCurrentCell({
-            r: 0,
-            c: 0,
-            initialText: "",
-            focusEditor: false,
-          });
-          assert.ok(opened, "palette opened for end column");
+        const item = listEl.children.find(
+          (child) => child.className === "pal-item",
+        );
+        assert.ok(item, "palette item created for action variant");
+        const spans = item.children.filter((child) => child.tag === "span");
+        assert.ok(spans.length >= 5, "rich text spans rendered for palette item");
 
-          const paletteRoot = host.children.find(
-            (child) => child && child.id === "universalPalette",
-          );
-          assert.ok(paletteRoot, "palette root appended to host");
-          const listEl = paletteRoot?.children?.[0];
-          assert.ok(listEl, "palette list rendered");
-
-          const item = listEl.children.find(
-            (child) => child.className === "pal-item",
-          );
-          assert.ok(item, "palette item created for action variant");
-          const spans = item.children.filter((child) => child.tag === "span");
-          assert.ok(spans.length >= 5, "rich text spans rendered for palette item");
-
-          const riseSpan = spans.find((child) => child.textContent === "Rise");
-          const fallSpan = spans.find((child) => child.textContent === "Fall");
-          assert.strictEqual(
-            riseSpan?.style?.color,
-            "#ff3366",
-            "Rise span uses modifier color",
-          );
-          assert.strictEqual(
-            fallSpan?.style?.color,
-            "#33ff66",
-            "Fall span uses modifier color",
-          );
-        } finally {
-          if (typeof originalDocument === "undefined") delete globalThis.document;
-          else globalThis.document = originalDocument;
-        }
+        const riseSpan = spans.find((child) => child.textContent === "Rise");
+        const fallSpan = spans.find((child) => child.textContent === "Fall");
+        assert.strictEqual(
+          riseSpan?.style?.color,
+          "#ff3366",
+          "Rise span uses modifier color",
+        );
+        assert.strictEqual(
+          fallSpan?.style?.color,
+          "#33ff66",
+          "Fall span uses modifier color",
+        );
       },
     },
   ];

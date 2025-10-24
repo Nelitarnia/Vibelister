@@ -2,6 +2,7 @@
 
 import { PHASE_CAP } from "../data/constants.js";
 import { getPhaseLabel } from "../data/utils.js";
+import { getInteractionsPair } from "./interactions.js";
 
 export const VIEWS = {
   actions: {
@@ -237,7 +238,7 @@ export function buildInteractionPhaseColumns(model, selectedRowIndex = 0) {
     },
   ];
   const phases = [];
-  const selPair = model.interactionsPairs[selectedRowIndex];
+  const selPair = getInteractionsPair(model, selectedRowIndex);
   const selAction = selPair
     ? model.actions.find((x) => x.id === selPair.aId)
     : null;

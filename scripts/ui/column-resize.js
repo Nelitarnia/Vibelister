@@ -28,7 +28,10 @@ export function initColumnResize(options = {}) {
     invalidateViewDef,
     layout,
     render,
+    window: winOverride,
   } = options;
+
+  const win = winOverride || globalThis.window;
 
   if (
     !container ||
@@ -107,9 +110,9 @@ export function initColumnResize(options = {}) {
     } catch (_) {
       /* noop */
     }
-    window.removeEventListener("pointermove", onPointerMove);
-    window.removeEventListener("pointerup", onPointerUp, true);
-    window.removeEventListener("pointercancel", onPointerCancel, true);
+    win?.removeEventListener?.("pointermove", onPointerMove);
+    win?.removeEventListener?.("pointerup", onPointerUp, true);
+    win?.removeEventListener?.("pointercancel", onPointerCancel, true);
 
     const lastResult = resizeState.lastResult;
     if (cancel) {
@@ -208,9 +211,9 @@ export function initColumnResize(options = {}) {
     header.classList.add("is-resizing");
     container.classList.add("is-resizing");
 
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp, true);
-    window.addEventListener("pointercancel", onPointerCancel, true);
+    win?.addEventListener?.("pointermove", onPointerMove);
+    win?.addEventListener?.("pointerup", onPointerUp, true);
+    win?.addEventListener?.("pointercancel", onPointerCancel, true);
 
     ev.preventDefault();
   }
@@ -296,7 +299,8 @@ export function initColumnResize(options = {}) {
 
     if (result?.changed) {
       handle.classList.add("is-resetting");
-      window.setTimeout(() => {
+      const schedule = win?.setTimeout || globalThis.setTimeout;
+      schedule?.(() => {
         handle.classList.remove("is-resetting");
       }, 200);
     }
