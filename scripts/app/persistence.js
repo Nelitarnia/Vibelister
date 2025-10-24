@@ -20,6 +20,20 @@ export function createPersistenceController({
   onModelReset,
   loadFsModule = () => import("../data/fs.js"),
 }) {
+  let fsModulePromise = null;
+
+  function getFsModule() {
+    if (!fsModulePromise) {
+      fsModulePromise = Promise.resolve()
+        .then(() => loadFsModule())
+        .catch((err) => {
+          fsModulePromise = null;
+          throw err;
+        });
+    }
+    return fsModulePromise;
+  }
+
   function ensureMinRows(arr, n) {
     while (arr.length < n) arr.push(makeRow(model));
   }
@@ -149,7 +163,7 @@ export function createPersistenceController({
   async function openFromDisk() {
     closeMenus?.();
     try {
-      const m = await loadFsModule();
+      const m = await getFsModule();
       const { data, name } = await m.openJson();
       upgradeModelInPlace(data);
       Object.assign(model, data);
@@ -172,7 +186,7 @@ export function createPersistenceController({
   async function saveToDisk(as = false) {
     closeMenus?.();
     try {
-      const m = await import("../data/fs.js");
+      const m = await getFsModule();
       const { name } = await m.saveJson(model, {
         as,
         suggestedName: getSuggestedName(),
