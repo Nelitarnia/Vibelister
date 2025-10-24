@@ -6,6 +6,7 @@ import { getInteractionsTests } from "../scripts/support/tests/specs/interaction
 import { getPersistenceTests } from "../scripts/support/tests/specs/persistence.js";
 import { getUiGridMouseTests } from "../scripts/support/tests/specs/ui-grid-mouse.js";
 import { getUiRowDragTests } from "../scripts/support/tests/specs/ui-row-drag.js";
+import { getColumnResizeTests } from "../scripts/support/tests/specs/column-resize.js";
 import { getRowInsertionTests } from "../scripts/support/tests/specs/rows.js";
 import { getDeletionTests } from "../scripts/support/tests/specs/deletion.js";
 import { getSelectionTests } from "../scripts/support/tests/specs/selection.js";
@@ -54,6 +55,10 @@ for (const spec of getUiGridMouseTests()) {
 }
 
 for (const spec of getUiRowDragTests()) {
+  test(`UI › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getColumnResizeTests()) {
   test(`UI › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
