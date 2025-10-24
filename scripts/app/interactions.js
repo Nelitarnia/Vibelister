@@ -571,11 +571,26 @@ export function clearInteractionsSelection(
       }
     }
   } else {
-    const key = String(viewDef.columns[sel.c]?.key || "");
-    const pk = parsePhaseKey(key);
-    const isEditable =
-      key === "notes" || (pk && (pk.field === "outcome" || pk.field === "end"));
-    if (!isEditable) {
+    const cols = Array.isArray(viewDef?.columns) ? viewDef.columns : [];
+    let colsToClear;
+    if (selection?.cols?.size) {
+      colsToClear = Array.from(selection.cols).sort((a, b) => a - b);
+    } else {
+      colsToClear = [sel.c];
+    }
+
+    const editableCols = colsToClear
+      .filter((c) => Number.isInteger(c) && c >= 0 && c < cols.length)
+      .map((c) => {
+        const key = String(cols[c]?.key || "");
+        const pk = parsePhaseKey(key);
+        const editable =
+          key === "notes" || (pk && (pk.field === "outcome" || pk.field === "end"));
+        return editable ? { c, key, pk } : null;
+      })
+      .filter(Boolean);
+
+    if (!editableCols.length) {
       if (status?.set)
         status.set(
           "Nothing to delete here: select an Outcome, End, or Notes cell.",
@@ -585,15 +600,21 @@ export function clearInteractionsSelection(
           "Nothing to delete here: select an Outcome, End, or Notes cell.";
       return;
     }
+
     for (const r of rows) {
       const pair = getPairFromIndex(model, r);
       if (!pair) continue;
-      const k = noteKeyForPair(pair, pk ? pk.p : undefined);
-      const note = model.notes[k] || (model.notes[k] = {});
-      clearField(note, key, pk);
-      if (Object.keys(note).length === 0) delete model.notes[k];
-      if (pk && pk.field === "outcome") {
-        mirrorAaPhase0Outcome(model, pair, pk.p);
+      for (const { key, pk } of editableCols) {
+        const phase = pk ? pk.p : undefined;
+        const noteKey = noteKeyForPair(pair, phase);
+        const note = model.notes[noteKey];
+        if (!note) continue;
+        const clearedBefore = cleared;
+        clearField(note, key, pk);
+        if (Object.keys(note).length === 0) delete model.notes[noteKey];
+        if (pk && pk.field === "outcome" && cleared !== clearedBefore) {
+          mirrorAaPhase0Outcome(model, pair, pk.p);
+        }
       }
     }
   }
