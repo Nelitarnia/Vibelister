@@ -573,7 +573,9 @@ export function clearInteractionsSelection(
   } else {
     const cols = Array.isArray(viewDef?.columns) ? viewDef.columns : [];
     let colsToClear;
-    if (selection?.cols?.size) {
+    if (selection?.colsAll) {
+      colsToClear = cols.map((_, index) => index);
+    } else if (selection?.cols?.size) {
       colsToClear = Array.from(selection.cols).sort((a, b) => a - b);
     } else {
       colsToClear = [sel.c];
