@@ -1,6 +1,8 @@
 // column-kinds.js — Registry of reusable column behaviors
 // Minimal, dependency-light; safe to iterate as we add kinds.
 
+import { getEntityColorsFromRow } from "./color-utils.js";
+
 export const STRUCTURED_SCHEMA_VERSION = 1;
 
 function wrapRefPayload(entity, payload) {
@@ -544,7 +546,7 @@ export const ColumnKinds = {
 // Legacy alias: outcomeRef now routes through the generic refPick implementation.
 ColumnKinds.outcomeRef = ColumnKinds.refPick;
 
-function getModifierNamesFromSig(model, sig) {
+function getModifiersFromSig(model, sig) {
   const s = typeof sig === "string" ? sig : "";
   if (!s) return [];
   const ids = s
@@ -556,39 +558,71 @@ function getModifierNamesFromSig(model, sig) {
 
   const modifiers = Array.isArray(model?.modifiers) ? model.modifiers : [];
   const order = new Map();
-  const nameById = new Map();
+  const rowById = new Map();
   modifiers.forEach((mod, idx) => {
     const rawId = mod?.id;
     const id = Number(rawId);
     if (!Number.isFinite(id)) return;
     order.set(id, idx);
-    if (typeof mod?.name === "string") nameById.set(id, mod.name);
+    rowById.set(id, mod);
   });
 
   ids.sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
-  const names = [];
+  const out = [];
   for (const id of ids) {
-    const label = nameById.get(id);
-    if (label) names.push(label);
+    const row = rowById.get(id);
+    const label = typeof row?.name === "string" ? row.name : "";
+    if (label) out.push({ id, name: label, row });
   }
-  return names;
+  return out;
 }
 
 // Helper: format " (ModA+ModB)" suffix from a '+'-joined variantSig ordered by modifier row order
 function formatModsFromSig(model, sig) {
-  const names = getModifierNamesFromSig(model, sig);
+  const modifiers = getModifiersFromSig(model, sig);
+  const names = modifiers.map((mod) => mod.name).filter(Boolean);
   return names.length ? `(${names.join("+")})` : "";
 }
 
 export function formatEndActionLabel(model, action, variantSig, opts = {}) {
   const base = action?.name || "";
-  const names = getModifierNamesFromSig(model, variantSig);
-  if (!names.length) return base;
-  const modLabel = names.join("+");
-  if (opts.style === "parentheses") {
-    return `${base} (${modLabel})`;
+  const modifiers = getModifiersFromSig(model, variantSig);
+  const names = modifiers.map((mod) => mod.name).filter(Boolean);
+
+  const segments = [];
+  const textParts = [];
+  const pushSegment = (text, color = null) => {
+    if (!text) return;
+    segments.push({ text, foreground: color });
+    textParts.push(text);
+  };
+
+  if (base) pushSegment(base, null);
+
+  if (!names.length) {
+    return { plainText: textParts.join("") || base, segments };
   }
-  return `${base} — ${modLabel}`;
+
+  const style = opts?.style === "parentheses" ? "parentheses" : "dash";
+  if (style === "parentheses") {
+    pushSegment(base ? " (" : " (", null);
+    modifiers.forEach((mod, idx) => {
+      const color = getEntityColorsFromRow(mod.row)?.foreground || null;
+      pushSegment(mod.name, color);
+      if (idx < modifiers.length - 1) pushSegment("+", null);
+    });
+    pushSegment(")", null);
+  } else {
+    pushSegment(base ? " — " : " — ", null);
+    modifiers.forEach((mod, idx) => {
+      const color = getEntityColorsFromRow(mod.row)?.foreground || null;
+      pushSegment(mod.name, color);
+      if (idx < modifiers.length - 1) pushSegment("+", null);
+    });
+  }
+
+  const plainText = textParts.join("");
+  return { plainText, segments };
 }
 
 export function getCellForKind(kind, ctx) {

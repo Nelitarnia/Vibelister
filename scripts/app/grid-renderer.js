@@ -37,6 +37,69 @@ function createGridRenderer({
   const colHeaderPool = Array.from(colHdrs.children || []);
   const rowHeaderPool = Array.from(rowHdrs.children || []);
 
+  function normalizeCellValue(value) {
+    if (value == null) return { plainText: "", segments: null };
+    if (typeof value === "string") return { plainText: value, segments: null };
+    if (typeof value === "number" || typeof value === "boolean") {
+      return { plainText: String(value), segments: null };
+    }
+    if (typeof value === "object") {
+      const rawSegments = Array.isArray(value.segments) ? value.segments : null;
+      const segments = rawSegments
+        ? rawSegments
+            .map((seg) => {
+              const text =
+                seg && seg.text != null ? String(seg.text) : "";
+              const foreground =
+                seg && typeof seg.foreground === "string" && seg.foreground
+                  ? seg.foreground
+                  : null;
+              return text
+                ? {
+                    text,
+                    foreground,
+                  }
+                : null;
+            })
+            .filter(Boolean)
+        : null;
+      let plainText = "";
+      if (typeof value.plainText === "string") plainText = value.plainText;
+      else if (segments && segments.length)
+        plainText = segments.map((seg) => seg.text).join("");
+      else if (typeof value.text === "string") plainText = value.text;
+      else if (typeof value.value === "string") plainText = value.value;
+      return {
+        plainText,
+        segments: segments && segments.length ? segments : null,
+      };
+    }
+    return { plainText: String(value), segments: null };
+  }
+
+  function setCellContent(el, text, segments) {
+    if (segments && segments.length) {
+      while (el.firstChild) el.removeChild(el.firstChild);
+      const frag = document.createDocumentFragment();
+      for (const seg of segments) {
+        const span = document.createElement("span");
+        span.textContent = seg.text;
+        span.style.color = seg.foreground || "";
+        frag.appendChild(span);
+      }
+      el.textContent = "";
+      el.appendChild(frag);
+      el._richText = true;
+    } else {
+      if (el._richText) {
+        while (el.firstChild) el.removeChild(el.firstChild);
+        el._richText = false;
+      }
+      el.textContent =
+        typeof text === "string" ? text : text == null ? "" : String(text);
+    }
+  }
+
   function ensurePoolSize(pool, container, needed, className) {
     for (let i = pool.length; i < needed; i++) {
       const el = document.createElement("div");
@@ -339,14 +402,24 @@ function createGridRenderer({
         d.style.height = ROW_HEIGHT + "px";
         d.dataset.r = r;
         d.dataset.c = c;
-        d.textContent = getCell(r, c);
+        const rawValue = getCell(r, c);
+        const normalized = normalizeCellValue(rawValue);
+        let displayText =
+          typeof normalized.plainText === "string"
+            ? normalized.plainText
+            : String(normalized.plainText ?? "");
+        let displaySegments = normalized.segments;
         const col = cols[c];
         const colorInfo = computeCellColors(r, c, col, row);
         if (
           colorInfo &&
           Object.prototype.hasOwnProperty.call(colorInfo, "textOverride")
-        )
-          d.textContent = colorInfo.textOverride;
+        ) {
+          const override = colorInfo.textOverride;
+          displayText = override == null ? "" : String(override);
+          displaySegments = null;
+        }
+        setCellContent(d, displayText, displaySegments);
         applyCellColors(d, colorInfo);
         d.title = colorInfo && colorInfo.title ? colorInfo.title : "";
         if (r % 2 === 1) d.classList.add("alt");

@@ -11,6 +11,22 @@ import {
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
+function plainCellText(value) {
+  if (value && typeof value === "object" && typeof value.plainText === "string") {
+    return value.plainText;
+  }
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  return String(value);
+}
+
+function cellSegments(value) {
+  if (value && typeof value === "object" && Array.isArray(value.segments)) {
+    return value.segments;
+  }
+  return null;
+}
+
 function makeInteractionsView() {
   return {
     columns: [
@@ -49,8 +65,9 @@ export function getInteractionsTests() {
 
         status.set("");
         setInteractionsCell(model, status, viewDef, 0, 2, outcome.id);
+        const outcomeCell = getInteractionsCell(model, viewDef, 0, 2);
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, 0, 2),
+          plainCellText(outcomeCell),
           "Cancels",
           "outcome id accepted",
         );
@@ -64,8 +81,9 @@ export function getInteractionsTests() {
           endActionId: action.id,
           endVariantSig: "",
         });
+        const endCell = getInteractionsCell(model, viewDef, 0, 3);
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, 0, 3),
+          plainCellText(endCell),
           "Aim",
           "structured end payload accepted",
         );
@@ -128,13 +146,15 @@ export function getInteractionsTests() {
         );
         assert.ok(applyEnd, "end payload applied");
 
+        const pastedOutcome = getInteractionsCell(model, viewDef, 1, 2);
+        const pastedEnd = getInteractionsCell(model, viewDef, 1, 3);
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, 1, 2),
+          plainCellText(pastedOutcome),
           "Hit",
           "pasted outcome visible",
         );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, 1, 3),
+          plainCellText(pastedEnd),
           "Attack",
           "pasted end visible",
         );
@@ -169,8 +189,14 @@ export function getInteractionsTests() {
         const status = { set() {} };
 
         setInteractionsCell(model, status, viewDef, row, 2, win.id);
+        const mirroredAfterWin = getInteractionsCell(
+          model,
+          viewDef,
+          mirrorRow,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, mirrorRow, 2),
+          plainCellText(mirroredAfterWin),
           "Lose",
           "mirrored row reflects inverted outcome",
         );
@@ -185,8 +211,14 @@ export function getInteractionsTests() {
         );
 
         setInteractionsCell(model, status, viewDef, row, 2, null);
+        const mirroredAfterClear = getInteractionsCell(
+          model,
+          viewDef,
+          mirrorRow,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, mirrorRow, 2),
+          plainCellText(mirroredAfterClear),
           "",
           "clearing source row clears mirrored cell",
         );
@@ -196,8 +228,14 @@ export function getInteractionsTests() {
         );
 
         setInteractionsCell(model, status, viewDef, mirrorRow, 2, lose.id);
+        const sourceAfterMirrorWrite = getInteractionsCell(
+          model,
+          viewDef,
+          row,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, row, 2),
+          plainCellText(sourceAfterMirrorWrite),
           "Win",
           "mirrored write reflects inverted outcome on source row",
         );
@@ -209,8 +247,14 @@ export function getInteractionsTests() {
         );
 
         setInteractionsCell(model, status, viewDef, mirrorRow, 2, null);
+        const sourceAfterMirrorClear = getInteractionsCell(
+          model,
+          viewDef,
+          row,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, row, 2),
+          plainCellText(sourceAfterMirrorClear),
           "",
           "clearing mirrored row clears source cell",
         );
@@ -259,8 +303,14 @@ export function getInteractionsTests() {
 
         const cleared = clearInteractionsCell(model, viewDef, mirrorRow, 2);
         assert.ok(cleared, "clearInteractionsCell reports change");
+        const sourceAfterCommandClear = getInteractionsCell(
+          model,
+          viewDef,
+          row,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, row, 2),
+          plainCellText(sourceAfterCommandClear),
           "",
           "clearing mirrored row via command clears source cell",
         );
@@ -289,8 +339,14 @@ export function getInteractionsTests() {
           () => {},
         );
         assert.ok(result?.cleared > 0, "selection clear reports entries cleared");
+        const sourceAfterSelectionClear = getInteractionsCell(
+          model,
+          viewDef,
+          row,
+          2,
+        );
         assert.strictEqual(
-          getInteractionsCell(model, viewDef, row, 2),
+          plainCellText(sourceAfterSelectionClear),
           "",
           "selection clear removes mirrored source cell",
         );
@@ -335,6 +391,8 @@ export function getInteractionsTests() {
         const { model, addAction, addInput, addModifier } = makeModelFixture();
         const m1 = addModifier("Rise");
         const m2 = addModifier("Fall");
+        m1.color2 = "#ff0000";
+        m2.color2 = "#00ff00";
         const action = addAction("Lift", { [m1.id]: 1, [m2.id]: 1 });
         addInput("Up");
         buildInteractionsPairs(model);
@@ -346,11 +404,21 @@ export function getInteractionsTests() {
           endActionId: action.id,
           endVariantSig: `${m2.id}+${m1.id}`,
         });
-        const text = getInteractionsCell(model, viewDef, 0, 2);
+        const cell = getInteractionsCell(model, viewDef, 0, 2);
+        const text = plainCellText(cell);
         assert.ok(
           /Lift \((Fall\+Rise|Rise\+Fall)\)/.test(text),
           "end column shows canonical modifier order",
         );
+        const segments = cellSegments(cell);
+        assert.ok(Array.isArray(segments) && segments.length >= 5, "segments emitted");
+        const riseSegment = segments.find((seg) => seg.text === "Rise");
+        const fallSegment = segments.find((seg) => seg.text === "Fall");
+        assert.strictEqual(riseSegment?.foreground, "#ff0000", "Rise uses color2 foreground");
+        assert.strictEqual(fallSegment?.foreground, "#00ff00", "Fall uses color2 foreground");
+        const riseIndex = segments.indexOf(riseSegment);
+        const fallIndex = segments.indexOf(fallSegment);
+        assert.ok(riseIndex >= 0 && fallIndex > riseIndex, "modifier segments preserve canonical order");
       },
     },
   ];

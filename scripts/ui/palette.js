@@ -238,7 +238,8 @@ export function initPalette(ctx) {
               )
                 continue;
             }
-            const display = formatEndActionLabel(model, act, variantSig);
+            const display =
+              formatEndActionLabel(model, act, variantSig)?.plainText || "";
             out.push({
               display,
               data: {
@@ -252,8 +253,9 @@ export function initPalette(ctx) {
           for (const aRow of actions) {
             const nm = aRow.name || "";
             if (a && !nm.toLowerCase().startsWith(a)) continue;
+            const label = formatEndActionLabel(model, aRow, "");
             out.push({
-              display: formatEndActionLabel(model, aRow, ""),
+              display: label?.plainText || "",
               data: { endActionId: aRow.id, endVariantSig: "" },
             });
           }
