@@ -106,6 +106,113 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "clearing selection spans multiple columns",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const strike = addAction("Strike");
+        const followUp = addAction("Follow Up");
+        const input = addInput("Tap");
+        const outcome = addOutcome("Stagger");
+        buildInteractionsPairs(model);
+        const viewDef = makeInteractionsView();
+
+        const rowIndex = findPairIndex(
+          model,
+          (pair) => pair.aId === strike.id && pair.iId === input.id,
+        );
+        assert.ok(rowIndex >= 0, "pair for action/input present");
+
+        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 2, outcome.id);
+        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 3, {
+          endActionId: followUp.id,
+          endVariantSig: "",
+        });
+        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 4, "combo notes");
+
+        const selection = {
+          rows: new Set([rowIndex]),
+          cols: new Set([2, 3, 4]),
+          colsAll: false,
+        };
+        const sel = { r: rowIndex, c: 4 };
+        const status = { set() {} };
+
+        const result = clearInteractionsSelection(
+          model,
+          viewDef,
+          selection,
+          sel,
+          "clearActiveCell",
+          status,
+          () => {},
+        );
+
+        assert.strictEqual(result?.cleared, 4, "clears outcome, end, and notes fields");
+
+        const pair = getPair(model, rowIndex);
+        const phaseKey = noteKeyForPair(pair, 1);
+        const notesKey = noteKeyForPair(pair, undefined);
+        assert.ok(!model.notes[phaseKey], "phase note removed after clearing");
+        assert.ok(!model.notes[notesKey], "notes entry removed after clearing");
+      },
+    },
+    {
+      name: "horizontal selection clears all editable columns",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const strike = addAction("Strike");
+        const followUp = addAction("Follow Up");
+        const input = addInput("Tap");
+        const outcome = addOutcome("Stagger");
+        buildInteractionsPairs(model);
+        const viewDef = makeInteractionsView();
+
+        const rowIndex = findPairIndex(
+          model,
+          (pair) => pair.aId === strike.id && pair.iId === input.id,
+        );
+        assert.ok(rowIndex >= 0, "pair for action/input present");
+
+        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 2, outcome.id);
+        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 3, {
+          endActionId: followUp.id,
+          endVariantSig: "",
+        });
+        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 4, "combo notes");
+
+        const selection = {
+          rows: new Set([rowIndex]),
+          cols: new Set(),
+          colsAll: true,
+          horizontalMode: true,
+        };
+        const sel = { r: rowIndex, c: 2 };
+        const status = { set() {} };
+
+        const result = clearInteractionsSelection(
+          model,
+          viewDef,
+          selection,
+          sel,
+          "clearActiveCell",
+          status,
+          () => {},
+        );
+
+        assert.strictEqual(
+          result?.cleared,
+          4,
+          "clears outcome, end, and notes fields when horizontal selection active",
+        );
+
+        const pair = getPair(model, rowIndex);
+        const phaseKey = noteKeyForPair(pair, 1);
+        const notesKey = noteKeyForPair(pair, undefined);
+        assert.ok(!model.notes[phaseKey], "phase note removed after clearing");
+        assert.ok(!model.notes[notesKey], "notes entry removed after clearing");
+      },
+    },
+    {
       name: "structured copy paste round trip",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
