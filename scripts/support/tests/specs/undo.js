@@ -1,5 +1,9 @@
 import { makeMutationRunner } from "../../../data/mutation-runner.js";
-import { clearInteractionsSelection, noteKeyForPair } from "../../../app/interactions.js";
+import {
+  clearInteractionsSelection,
+  noteKeyForPair,
+  getInteractionsPair,
+} from "../../../app/interactions.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 function createRunner(model, statusLog = []) {
@@ -422,10 +426,23 @@ export function getUndoTests() {
         const { model, addAction, addInput } = makeModelFixture();
         const action = addAction("Hero");
         const input = addInput("Torch");
-        model.interactionsPairs = [
-          { aId: action.id, iId: input.id, variantSig: "", kind: "AI" },
-        ];
-        const noteKey = noteKeyForPair(model.interactionsPairs[0], undefined);
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+        model.interactionsPairs = [];
+        const noteKey = noteKeyForPair(getInteractionsPair(model, 0), undefined);
         model.notes[noteKey] = { notes: "Keep me" };
         const runner = createRunner(model, statusLog);
 

@@ -20,14 +20,31 @@ export function getModelSnapshotTests() {
           notes: "hello",
           extra: { trail: [outcome.id], deep: { flag: true } },
         };
-        model.interactionsPairs = [
-          { aId: action.id, iId: input.id, variantSig: "", kind: "AI" },
-        ];
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+        model.interactionsPairs = [];
         model.nextId = 42;
 
         const snapshot = snapshotModel(model);
 
         assert.ok(snapshot.model !== model, "model object cloned");
+        assert.ok(
+          snapshot.model.interactionsIndex !== model.interactionsIndex,
+          "interactionsIndex cloned",
+        );
         assert.deepStrictEqual(
           snapshot.model,
           model,
@@ -64,9 +81,22 @@ export function getModelSnapshotTests() {
         const { model, addAction, addInput } = fixture;
         const action = addAction("Alpha");
         const input = addInput("Mic");
-        model.interactionsPairs = [
-          { aId: action.id, iId: input.id, variantSig: "", kind: "AI" },
-        ];
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+        model.interactionsPairs = [];
         model.notes.foo = { notes: "hi" };
         model.nextId = Number.NaN;
 
@@ -79,6 +109,16 @@ export function getModelSnapshotTests() {
           snapshot.model.interactionsPairs,
           [],
           "derived pairs omitted",
+        );
+        assert.strictEqual(
+          snapshot.model.interactionsIndex.totalRows,
+          0,
+          "interactions index cleared",
+        );
+        assert.deepStrictEqual(
+          snapshot.model.interactionsIndex.groups,
+          [],
+          "interactions groups cleared",
         );
         assert.deepStrictEqual(snapshot.model.notes, {}, "notes omitted");
         assert.strictEqual(

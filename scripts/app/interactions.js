@@ -4,6 +4,12 @@ import { formatEndActionLabel } from "../data/column-kinds.js";
 import { canonicalSig } from "../data/variants/variants.js";
 import { parsePhaseKey } from "../data/utils.js";
 import { invertOutcomeId } from "./outcomes.js";
+import {
+  getInteractionsPair as getPairFromIndex,
+  getInteractionsRowCount,
+} from "./interactions-data.js";
+
+export { getInteractionsRowCount, getPairFromIndex as getInteractionsPair };
 
 // Key builder
 export function noteKeyForPair(pair, phase) {
@@ -34,9 +40,7 @@ export function isInteractionPhaseColumnActiveForRow(
   if (!col) return false;
   const pk = parsePhaseKey(col.key);
   if (!pk || (pk.field !== "outcome" && pk.field !== "end")) return true;
-  const pair = Array.isArray(model.interactionsPairs)
-    ? model.interactionsPairs[r]
-    : null;
+  const pair = getPairFromIndex(model, r);
   if (!pair) return false;
   const action = Array.isArray(model.actions)
     ? model.actions.find((x) => x && x.id === pair.aId)
@@ -48,7 +52,7 @@ export function isInteractionPhaseColumnActiveForRow(
 
 // Read a cell in Interactions
 export function getInteractionsCell(model, viewDef, r, c) {
-  const pair = model.interactionsPairs[r];
+  const pair = getPairFromIndex(model, r);
   if (!pair) return "";
   const col = viewDef.columns[c];
   const key = (col && col.key) || "";
@@ -121,7 +125,7 @@ export function getStructuredCellInteractions(model, viewDef, r, c) {
   const col = viewDef.columns[c];
   if (!col) return null;
   const key = String(col.key || "");
-  const pair = model.interactionsPairs[r];
+  const pair = getPairFromIndex(model, r);
   if (!pair) return null;
 
   if (key === "notes") {
@@ -252,7 +256,7 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
 
 // Write a cell in Interactions (strict stable-ID policy for ouctome/end)
 export function setInteractionsCell(model, status, viewDef, r, c, value) {
-  const pair = model.interactionsPairs[r];
+  const pair = getPairFromIndex(model, r);
   if (!pair) return false;
   const key = String(viewDef.columns[c]?.key || "");
 
@@ -423,7 +427,7 @@ export function applyStructuredCellInteractions(
   }
 
   if (wrote && pk.field === "outcome") {
-    const pair = model.interactionsPairs && model.interactionsPairs[r];
+    const pair = getPairFromIndex(model, r);
     mirrorAaPhase0Outcome(model, pair, pk.p);
   }
 
@@ -435,7 +439,7 @@ export function clearInteractionsCell(model, viewDef, r, c) {
   const col = viewDef.columns[c];
   if (!col) return false;
   const key = String(col.key || "");
-  const pair = model.interactionsPairs[r];
+  const pair = getPairFromIndex(model, r);
   if (!pair) return false;
 
   if (key === "notes") {
@@ -545,7 +549,7 @@ export function clearInteractionsSelection(
   if (mode === "clearAllEditable") {
     const cols = viewDef.columns;
     for (const r of rows) {
-      const pair = model.interactionsPairs[r];
+      const pair = getPairFromIndex(model, r);
       if (!pair) continue;
       for (let c = 0; c < cols.length; c++) {
         const key = String(cols[c].key || "");
@@ -582,7 +586,7 @@ export function clearInteractionsSelection(
       return;
     }
     for (const r of rows) {
-      const pair = model.interactionsPairs[r];
+      const pair = getPairFromIndex(model, r);
       if (!pair) continue;
       const k = noteKeyForPair(pair, pk ? pk.p : undefined);
       const note = model.notes[k] || (model.notes[k] = {});

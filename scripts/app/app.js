@@ -54,6 +54,8 @@ import {
   applyStructuredCellInteractions,
   clearInteractionsSelection,
   isInteractionPhaseColumnActiveForRow,
+  getInteractionsPair,
+  getInteractionsRowCount,
 } from "./interactions.js";
 import {
   UI,
@@ -190,6 +192,7 @@ const {
   updateSelectionSnapshot,
   isModColumn,
   modIdFromKey,
+  getInteractionsPair,
 });
 
 onSelectionChanged(() => render());
@@ -404,7 +407,10 @@ function pruneNotesToValidPairs() {
   // Build the full set of valid base keys using the same composer as Interactions
   // (phase suffixes are intentionally omitted for pruning)
   const validBase = new Set();
-  for (const p of model.interactionsPairs || []) {
+  const rowCount = getInteractionsRowCount(model);
+  for (let r = 0; r < rowCount; r++) {
+    const p = getInteractionsPair(model, r);
+    if (!p) continue;
     try {
       // Primary (current) scheme
       const base = noteKeyForPair(p, undefined);

@@ -1,5 +1,6 @@
 import { formatEndActionLabel } from "../data/column-kinds.js";
 import { sortIdsByUserOrder } from "../data/variants/variants.js";
+import { getInteractionsRowCount } from "../app/interactions-data.js";
 
 function namesForVariant(model, sig) {
   if (!model) return [];
@@ -237,7 +238,7 @@ export function createInteractionsOutline(options = {}) {
       emptyEl.setAttribute("data-hidden", "true");
       return;
     }
-    const hasPairs = Array.isArray(model?.interactionsPairs) && model.interactionsPairs.length > 0;
+    const hasPairs = getInteractionsRowCount(model) > 0;
     emptyEl.setAttribute("data-hidden", "false");
     if (filter) {
       emptyEl.textContent = "No matches found.";

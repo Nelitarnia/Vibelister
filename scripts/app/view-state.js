@@ -1,4 +1,5 @@
 import { MIN_ROWS as DEFAULT_MIN_ROWS } from "../data/constants.js";
+import { getInteractionsRowCount } from "./interactions.js";
 import { applyColumnWidthOverrides } from "./column-widths.js";
 
 const EMPTY_STATE = () => ({ row: 0, col: 0, scrollTop: 0 });
@@ -170,7 +171,7 @@ export function createViewStateController(options = {}) {
   function getRowCount() {
     const activeView = getActiveView();
     if (activeView === "interactions") {
-      const len = model?.interactionsPairs ? model.interactionsPairs.length : 0;
+      const len = getInteractionsRowCount(model);
       return Math.max(len + 1, MIN_ROWS.interactionsBase);
     }
     const len = dataArray().length;

@@ -97,6 +97,19 @@ export function createPersistenceController({
         o.interactionsIndex.groups = [];
       if (!o.interactionsIndex.mode)
         o.interactionsIndex.mode = "AI";
+      const total = Number(o.interactionsIndex.totalRows);
+      o.interactionsIndex.totalRows =
+        Number.isFinite(total) && total >= 0 ? total : 0;
+      if (!Array.isArray(o.interactionsIndex.actionsOrder))
+        o.interactionsIndex.actionsOrder = [];
+      if (!Array.isArray(o.interactionsIndex.inputsOrder))
+        o.interactionsIndex.inputsOrder = [];
+      if (
+        !o.interactionsIndex.variantCatalog ||
+        typeof o.interactionsIndex.variantCatalog !== "object"
+      ) {
+        o.interactionsIndex.variantCatalog = {};
+      }
     }
     let maxId = 0;
     for (const r of o.actions) {

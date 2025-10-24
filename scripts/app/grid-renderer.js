@@ -32,6 +32,7 @@ function createGridRenderer({
   updateSelectionSnapshot,
   isModColumn,
   modIdFromKey,
+  getInteractionsPair,
 }) {
   let colGeomCache = { key: null, widths: null, offs: null, stamp: 0 };
   const colHeaderPool = Array.from(colHdrs.children || []);
@@ -212,7 +213,7 @@ function createGridRenderer({
     }
 
     if (activeView === "interactions") {
-      const pair = model.interactionsPairs?.[r];
+      const pair = getInteractionsPair(model, r);
       if (!pair) return null;
 
       if (kind === "refro" || kind === "refpick") {
@@ -455,7 +456,7 @@ function createGridRenderer({
                 (field === "outcome" || field === "end") &&
                 Number.isFinite(pNum)
               ) {
-                const pair = model.interactionsPairs[r];
+                const pair = getInteractionsPair(model, r);
                 if (pair) {
                   const a = model.actions.find((x) => x.id === pair.aId);
                   const ids = a && a.phases && a.phases.ids ? a.phases.ids : [];

@@ -1,6 +1,10 @@
 import { formatEndActionLabel } from "../data/column-kinds.js";
 import { MOD } from "../data/constants.js";
 import { sortIdsByUserOrder } from "../data/variants/variants.js";
+import {
+  getInteractionsPair,
+  getInteractionsRowCount,
+} from "../app/interactions-data.js";
 
 // palette.js — one elegant, configurable dropdown for stable-ID cells.
 //
@@ -204,15 +208,14 @@ export function initPalette(ctx) {
         const actions = (model.actions || []).filter((x) =>
           (x.name || "").trim(),
         );
-        const pairs = Array.isArray(model.interactionsPairs)
-          ? model.interactionsPairs
-          : [];
         const seen = new Set();
         const out = [];
 
-        if (pairs.length) {
-          for (let i = 0; i < pairs.length; i++) {
-            const p = pairs[i];
+        const pairCount = getInteractionsRowCount(model);
+        if (pairCount > 0) {
+          for (let i = 0; i < pairCount; i++) {
+            const p = getInteractionsPair(model, i);
+            if (!p) continue;
             const key = `${p.aId}|${String(p.variantSig || "")}`;
             if (seen.has(key)) continue;
             seen.add(key);

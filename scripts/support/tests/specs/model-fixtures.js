@@ -9,6 +9,14 @@ export function makeModelFixture() {
     modifierConstraints: [],
     notes: {},
     interactionsPairs: [],
+    interactionsIndex: {
+      mode: "AI",
+      groups: [],
+      totalRows: 0,
+      actionsOrder: [],
+      inputsOrder: [],
+      variantCatalog: {},
+    },
     nextId: 1,
   };
 
