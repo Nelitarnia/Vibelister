@@ -358,6 +358,95 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "AA variant pairs cover all modifier combinations",
+      run(assert) {
+        const { model, addAction, addModifier, groupExact } = makeModelFixture();
+        model.meta.interactionsMode = "AA";
+        const boost = addModifier("Boost");
+        const guard = addModifier("Guard");
+        const feint = addModifier("Feint");
+        const cancel = addModifier("Cancel");
+        groupExact(1, [boost, guard], { name: "primary" });
+        groupExact(1, [feint, cancel], { name: "secondary" });
+        const modSet = {
+          [boost.id]: 1,
+          [guard.id]: 1,
+          [feint.id]: 1,
+          [cancel.id]: 1,
+        };
+        const left = addAction("Strike", modSet);
+        const right = addAction("Block", modSet);
+
+        const result = buildInteractionsPairs(model);
+
+        assert.strictEqual(result.capped, false, "AA combinations remain within cap");
+        assert.strictEqual(result.cappedActions, 0, "no AA actions truncated");
+        assert.strictEqual(
+          result.pairsCount,
+          model.interactionsPairs.length,
+          "pairsCount matches generated pairs",
+        );
+
+        const expectedVariants = [
+          [boost.id, feint.id],
+          [boost.id, cancel.id],
+          [guard.id, feint.id],
+          [guard.id, cancel.id],
+        ].map((combo) => combo.slice().sort((a, b) => a - b).join("+"));
+
+        const leftGroup = model.interactionsIndex.groups.find(
+          (group) => group.actionId === left.id,
+        );
+        const rightGroup = model.interactionsIndex.groups.find(
+          (group) => group.actionId === right.id,
+        );
+        assert.ok(leftGroup, "left action group present");
+        assert.ok(rightGroup, "right action group present");
+
+        const leftVariants = leftGroup.variants.map((v) => v.variantSig).slice().sort();
+        const rightVariants = rightGroup.variants.map((v) => v.variantSig).slice().sort();
+        assert.deepStrictEqual(
+          leftVariants,
+          expectedVariants.slice().sort(),
+          "left action variants cover all modifier combinations",
+        );
+        assert.deepStrictEqual(
+          rightVariants,
+          expectedVariants.slice().sort(),
+          "right action variants mirror left combinations",
+        );
+
+        const leftRightPairs = model.interactionsPairs.filter(
+          (pair) => pair.aId === left.id && pair.rhsActionId === right.id,
+        );
+        const expectedPairCount = expectedVariants.length * expectedVariants.length;
+        assert.strictEqual(
+          leftRightPairs.length,
+          expectedPairCount,
+          "left-right pairs cover cross product",
+        );
+
+        const combos = new Set(
+          leftRightPairs.map(
+            (pair) => `${pair.variantSig}|${pair.rhsVariantSig}`,
+          ),
+        );
+        assert.strictEqual(
+          combos.size,
+          expectedPairCount,
+          "unique left-right variant pairs match cross product",
+        );
+        for (const leftSig of expectedVariants) {
+          for (const rightSig of expectedVariants) {
+            assert.ok(
+              combos.has(`${leftSig}|${rightSig}`),
+              `missing AA pair for ${leftSig} vs ${rightSig}`,
+            );
+          }
+        }
+      },
+    },
+    {
       name: "phase availability respects action phases",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();

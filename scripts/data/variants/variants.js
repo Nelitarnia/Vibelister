@@ -235,13 +235,23 @@ export function buildInteractionsPairs(model) {
   let capped = false,
     cappedActions = 0;
   const mode = (model.meta && model.meta.interactionsMode) || "AI";
+  const actionVariantCache = new Map();
+
+  function getVariantsForAction(action) {
+    if (actionVariantCache.has(action)) return actionVariantCache.get(action);
+    let variants = useG ? computeVariantsForAction(action, model) : [""];
+    const truncated = variants.length > CAP_PER_ACTION;
+    if (truncated) variants = variants.slice(0, CAP_PER_ACTION);
+    const entry = { variants, truncated };
+    actionVariantCache.set(action, entry);
+    return entry;
+  }
 
   if (mode === "AA") {
     // Actions × Actions (with variants on BOTH sides)
     for (const a of actions) {
-      let varsA = useG ? computeVariantsForAction(a, model) : [""];
-      if (varsA.length > CAP_PER_ACTION) {
-        varsA = varsA.slice(0, CAP_PER_ACTION);
+      const { variants: varsA, truncated: truncatedA } = getVariantsForAction(a);
+      if (truncatedA) {
         capped = true;
         cappedActions++;
       }
@@ -251,10 +261,7 @@ export function buildInteractionsPairs(model) {
       for (const sigA of varsA) {
         const variantStart = pairs.length;
         for (const b of actions) {
-          let varsB = useG ? computeVariantsForAction(b, model) : [""];
-          // We do not increment cappedActions for B; keep semantics per-left-action
-          if (varsB.length > CAP_PER_ACTION)
-            varsB = varsB.slice(0, CAP_PER_ACTION);
+          const { variants: varsB } = getVariantsForAction(b);
           for (const sigB of varsB) {
             pairs.push({
               aId: a.id,
@@ -294,9 +301,8 @@ export function buildInteractionsPairs(model) {
     };
   } // Default: Actions × Inputs
   for (const a of actions) {
-    let vars = useG ? computeVariantsForAction(a, model) : [""];
-    if (vars.length > CAP_PER_ACTION) {
-      vars = vars.slice(0, CAP_PER_ACTION);
+    const { variants: vars, truncated } = getVariantsForAction(a);
+    if (truncated) {
       capped = true;
       cappedActions++;
     }
