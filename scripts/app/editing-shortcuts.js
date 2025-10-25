@@ -242,12 +242,17 @@ export function createEditingController({
   }
 
   function moveSel(dr, dc, edit = false) {
-    if (!shiftPressed && SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
     const cols = viewDef()?.columns || [];
     const maxC = cols.length ? cols.length - 1 : 0;
     const nextR = clamp(sel.r + dr, 0, getRowCount() - 1);
     const nextC = clamp(sel.c + dc, 0, maxC);
-    SelectionCtl?.startSingle?.(nextR, nextC);
+    const useBoxExtend = shiftPressed && SelectionCtl?.extendBoxTo;
+    if (useBoxExtend) {
+      SelectionCtl.extendBoxTo(nextR, nextC);
+    } else {
+      if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
+      SelectionCtl?.startSingle?.(nextR, nextC);
+    }
     updateSelectionSnapshot?.({ row: sel.r, col: sel.c });
     SelectionCtl?.applyHorizontalMode?.();
     ensureVisible(sel.r, sel.c);

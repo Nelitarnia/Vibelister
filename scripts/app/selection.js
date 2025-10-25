@@ -100,6 +100,33 @@ export const SelectionCtl = {
   extendRowsTo(r) {
     SelectionNS.extendTo(r);
   },
+  extendBoxTo(r, c) {
+    if (!Number.isFinite(r) || !Number.isFinite(c)) return;
+    if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
+    else if (!selection.horizontalMode && selection.colsAll) selection.colsAll = false;
+
+    const rowAnchor = selection.anchor != null ? selection.anchor : sel.r;
+    selection.rows.clear();
+    const rLo = Math.min(rowAnchor, r);
+    const rHi = Math.max(rowAnchor, r);
+    for (let ri = rLo; ri <= rHi; ri++) selection.rows.add(ri);
+    selection.anchor = rowAnchor;
+
+    const colAnchor =
+      typeof selection.colAnchor === "number" ? selection.colAnchor : sel.c;
+    if (selection.cols) {
+      selection.cols.clear();
+      const cLo = Math.min(colAnchor, c);
+      const cHi = Math.max(colAnchor, c);
+      for (let ci = cLo; ci <= cHi; ci++) selection.cols.add(ci);
+    }
+    selection.colAnchor = colAnchor;
+
+    sel.r = r;
+    sel.c = c;
+
+    emit();
+  },
   toggleRow(r) {
     if (selection.rows.has(r)) selection.rows.delete(r);
     else selection.rows.add(r);
