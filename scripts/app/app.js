@@ -667,6 +667,7 @@ const disposeMouse = initGridMouse({
   sel,
   selection,
   SelectionNS,
+  SelectionCtl,
   isEditing,
   beginEdit,
   endEdit,

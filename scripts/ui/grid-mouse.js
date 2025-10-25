@@ -10,6 +10,7 @@ export function initGridMouse(deps) {
     sel,
     selection,
     SelectionNS,
+    SelectionCtl,
     // app callbacks
     isEditing,
     beginEdit,
@@ -68,22 +69,8 @@ export function initGridMouse(deps) {
     }
 
     // Selection logic (single or extended)
-    if (e.shiftKey) {
-      if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
-      const rowAnchor = selection.anchor != null ? selection.anchor : sel.r;
-      selection.rows.clear();
-      const lo = Math.min(rowAnchor, r),
-        hi = Math.max(rowAnchor, r);
-      for (let i = lo; i <= hi; i++) selection.rows.add(i);
-      selection.anchor = rowAnchor;
-
-      const colAnchor =
-        typeof selection.colAnchor === "number" ? selection.colAnchor : sel.c;
-      if (selection.cols) selection.cols.clear();
-      const clo = Math.min(colAnchor, c),
-        chi = Math.max(colAnchor, c);
-      for (let i = clo; i <= chi; i++) selection.cols && selection.cols.add(i);
-      selection.colAnchor = colAnchor;
+    if (e.shiftKey && SelectionCtl?.extendBoxTo) {
+      SelectionCtl.extendBoxTo(r, c);
     } else {
       const clickInMulti = selection.rows.size > 1 && selection.rows.has(r);
       if (!clickInMulti) {
@@ -98,8 +85,10 @@ export function initGridMouse(deps) {
       }
       selection.colAnchor = c;
     }
-    sel.r = r;
-    sel.c = c;
+    if (!(e.shiftKey && SelectionCtl?.extendBoxTo)) {
+      sel.r = r;
+      sel.c = c;
+    }
     ensureVisible(r, c);
     render();
 

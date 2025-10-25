@@ -82,6 +82,30 @@ function makeDeps() {
         return deps.selection.colsAll;
       },
     },
+    SelectionCtl: {
+      extendBoxTo(r, c) {
+        deps._extended = (deps._extended || 0) + 1;
+        deps.SelectionNS.setColsAll(false);
+        const rowAnchor =
+          deps.selection.anchor != null ? deps.selection.anchor : deps.sel.r;
+        deps.selection.rows.clear();
+        for (let i = Math.min(rowAnchor, r); i <= Math.max(rowAnchor, r); i++) {
+          deps.selection.rows.add(i);
+        }
+        deps.selection.anchor = rowAnchor;
+        const colAnchor =
+          typeof deps.selection.colAnchor === "number"
+            ? deps.selection.colAnchor
+            : deps.sel.c;
+        deps.selection.cols.clear();
+        for (let i = Math.min(colAnchor, c); i <= Math.max(colAnchor, c); i++) {
+          deps.selection.cols.add(i);
+        }
+        deps.selection.colAnchor = colAnchor;
+        deps.sel.r = r;
+        deps.sel.c = c;
+      },
+    },
     isEditing: () => false,
     beginEdit: (r, c) => (deps._began = [r, c]),
     endEdit: () => {},
@@ -93,6 +117,7 @@ function makeDeps() {
     _began: null,
     _toggled: null,
     _rendered: 0,
+    _extended: 0,
   };
   return deps;
 }
@@ -113,6 +138,40 @@ export function getUiGridMouseTests() {
           target: cell,
         });
         assert.deepStrictEqual(deps._began, [3, 0]);
+      },
+    },
+    {
+      name: "shift-click extends box selection",
+      run(assert) {
+        const deps = makeDeps();
+        deps.selection.rows = new Set([1]);
+        deps.selection.anchor = 1;
+        deps.selection.cols = new Set([0]);
+        deps.selection.colAnchor = 0;
+        deps.sel.r = 1;
+        deps.sel.c = 0;
+        initGridMouse(deps);
+        const cell = makeCell(deps.sheet, 3, 2);
+        deps.sheet.dispatch("mousedown", {
+          button: 0,
+          detail: 1,
+          preventDefault() {},
+          target: cell,
+          shiftKey: true,
+        });
+        assert.strictEqual(deps._extended, 1, "extend helper should be used");
+        assert.deepStrictEqual(
+          Array.from(deps.selection.rows).sort((a, b) => a - b),
+          [1, 2, 3],
+          "rows should include anchor through clicked row",
+        );
+        assert.deepStrictEqual(
+          Array.from(deps.selection.cols).sort((a, b) => a - b),
+          [0, 1, 2],
+          "cols should include anchor through clicked col",
+        );
+        assert.strictEqual(deps.sel.r, 3, "active row should follow click");
+        assert.strictEqual(deps.sel.c, 2, "active col should follow click");
       },
     },
     {

@@ -1,4 +1,21 @@
 import { computeDestinationIndices, initGridKeys } from "../../../ui/grid-keys.js";
+import {
+  selection as globalSelection,
+  sel as globalSel,
+  SelectionNS as globalSelectionNS,
+  SelectionCtl as globalSelectionCtl,
+} from "../../../app/selection.js";
+
+function resetSelectionState() {
+  globalSelection.rows.clear();
+  globalSelection.cols.clear();
+  globalSelection.anchor = null;
+  globalSelection.colAnchor = null;
+  globalSelection.colsAll = false;
+  globalSelection.horizontalMode = false;
+  globalSel.r = 0;
+  globalSel.c = 0;
+}
 
 export function getGridKeysTests() {
   return [
@@ -310,6 +327,185 @@ export function getGridKeysTests() {
           );
         } finally {
           dispose?.();
+        }
+      },
+    },
+    {
+      name: "Shift+Arrow expands and contracts selection box",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: { tagName: "DIV" },
+        };
+
+        const navigatorStub = { platform: "Test" };
+
+        const editor = { style: { display: "none" } };
+        const view = {
+          columns: Array.from({ length: 6 }, (_, i) => ({ key: `col${i}` })),
+        };
+
+        resetSelectionState();
+        globalSelection.rows.add(2);
+        globalSelection.cols.add(2);
+        globalSelection.anchor = 2;
+        globalSelection.colAnchor = 2;
+        globalSel.r = 2;
+        globalSel.c = 2;
+
+        let shiftMode = false;
+        const clamp = (value, lo, hi) => Math.min(hi, Math.max(lo, value));
+        const moveSel = (dr, dc) => {
+          const maxC = view.columns.length ? view.columns.length - 1 : 0;
+          const nextR = clamp(globalSel.r + dr, 0, 9);
+          const nextC = clamp(globalSel.c + dc, 0, maxC);
+          if (shiftMode && globalSelectionCtl.extendBoxTo) {
+            globalSelectionCtl.extendBoxTo(nextR, nextC);
+          } else {
+            globalSelectionNS?.setColsAll?.(false);
+            globalSelectionCtl.startSingle(nextR, nextC);
+          }
+          globalSelectionCtl.applyHorizontalMode();
+        };
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection: globalSelection,
+          sel: globalSel,
+          editor,
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel,
+          ensureVisible: () => {},
+          viewDef: () => view,
+          getRowCount: () => 10,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => null,
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const captureListener = keyListeners.find((entry) => entry.capture);
+          assert.ok(captureListener, "grid keydown listener should be registered");
+
+          function dispatch(event) {
+            shiftMode = !!event.shiftKey;
+            event.preventDefault = event.preventDefault || (() => {});
+            event.stopPropagation = event.stopPropagation || (() => {});
+            event.stopImmediatePropagation =
+              event.stopImmediatePropagation || (() => {});
+            captureListener.cb(event);
+          }
+
+          dispatch({ key: "ArrowRight", shiftKey: true });
+          assert.deepStrictEqual(
+            Array.from(globalSelection.cols).sort((a, b) => a - b),
+            [2, 3],
+            "first shift-right should expand column range",
+          );
+          assert.strictEqual(globalSel.c, 3, "active column should advance");
+
+          dispatch({ key: "ArrowRight", shiftKey: true });
+          assert.deepStrictEqual(
+            Array.from(globalSelection.cols).sort((a, b) => a - b),
+            [2, 3, 4],
+            "second shift-right should keep extending",
+          );
+          assert.strictEqual(globalSel.c, 4, "active column should continue");
+
+          dispatch({ key: "ArrowLeft", shiftKey: true });
+          assert.deepStrictEqual(
+            Array.from(globalSelection.cols).sort((a, b) => a - b),
+            [2, 3],
+            "shift-left should contract horizontal selection",
+          );
+          assert.strictEqual(globalSel.c, 3, "active column should move left");
+
+          dispatch({ key: "ArrowDown", shiftKey: true });
+          assert.deepStrictEqual(
+            Array.from(globalSelection.rows).sort((a, b) => a - b),
+            [2, 3],
+            "shift-down should expand row selection",
+          );
+          assert.strictEqual(globalSel.r, 3, "active row should advance");
+
+          dispatch({ key: "ArrowDown", shiftKey: true });
+          assert.deepStrictEqual(
+            Array.from(globalSelection.rows).sort((a, b) => a - b),
+            [2, 3, 4],
+            "second shift-down should continue expanding",
+          );
+          assert.strictEqual(globalSel.r, 4, "active row should continue down");
+
+          dispatch({ key: "ArrowUp", shiftKey: true });
+          assert.deepStrictEqual(
+            Array.from(globalSelection.rows).sort((a, b) => a - b),
+            [2, 3],
+            "shift-up should contract vertical selection",
+          );
+          assert.strictEqual(globalSel.r, 3, "active row should move up");
+
+          dispatch({ key: "ArrowUp", shiftKey: true });
+          assert.deepStrictEqual(
+            Array.from(globalSelection.rows).sort((a, b) => a - b),
+            [2],
+            "repeated shift-up should collapse back to anchor",
+          );
+          assert.strictEqual(globalSel.r, 2, "active row should return to anchor");
+        } finally {
+          dispose?.();
+          resetSelectionState();
         }
       },
     },
