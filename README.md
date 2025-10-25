@@ -35,31 +35,6 @@ Every row in the main sheets carries a stable ID behind the scenes. Clearing a c
 
 List Inputs here. This is mostly self-explanatory, but in many games it is useful to list "external" triggers like hitting a damage wall, ledge or restarting as Inputs as well.
 
-## Outcomes
-
-Outcomes view contains formal results of your observation. The default Outcomes are as follows:
-
-- "Uncertain" is used when the result is indeterminant or random.
-- "No Effect" means that nothing observably changed as a result of the Input.
-- "Impossible" is for interactions which are not possible to test.
-- "Prereq" means that the input is already in use as a part of the Action's setup.
-- "Mutual" means that the input causes something to overlap, combine or co-exist with the current Action.
-- "Cancels" means that the Action is interrupted by the input.
-- "Buffers" means that the next Action triggered by the Input is buffered to occur afterwards.
-- "Follows" means that the next Action triggered by the Input is queued afterwards in a way which is distinct from ordinary buffering.
-
-You can also create some own Outcomes, if needed.
-
-## Phases
-
-Actions have nuance: their different parts often have different rules. For example, the buffers might work completely differently during start-up and cooldown. To allow examining the "timeline" of an Action in a closer detail, you can give Actions a number which represents their Phases.
-
-The Phase-column in Actions view allows a list of numbers ("1,2,3"), a range of numbers (1..5) or giving labels to Phases (1:start-up, 2:active, 3:cooldown). These labels will be visible in Interactions view if added, but they're optional.
-
-Interactions-view expands horizontally to fit whatever is the highest Phase count in any Action. (Capped to 12 at the moment.) Furthermore, unused Phases in each Action are grayed out to give a visual guide to the range of the current Action.
-
-Phase 0 signifies simultaneous testing, and it operates under slightly different rules than the other Phases. (More to come later...)
-
 ## Modifiers
 
 Especially in modern games, Actions can overlap with other Actions or states in a nearly uncontrollable way. It would be almost impossible to manage adding and deleting them by hand, so Modifiers is a system that lets you generate alternative versions of an Action based on conditional logic.
@@ -79,9 +54,40 @@ This is a generated view which puts together the Actions and Inputs you've liste
 
 To help navigate Interactions, there is an Outline that can be brought out with Ctrl+Shift+O (or clicking the small button to the left). You can also immediately jump between actions with Ctrl+Shift+Up or Ctrl+Shift+Down.
 
-While adding Actions to the End-column, you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed".
+While adding Actions to the End-column, you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed". You can also see most recently added Actions to quickly select them by holding Ctrl while the palette is open.
 
 Although the default mode in Interactions is comparing Actions vs Inputs (AI), pressing Ctrl+Shift+A lets you switch to Actions vs Actions (AA) comparing in Interactions-view. (It's rather specialized, but could come in handy in some kind of situations.)
+
+## Phases
+
+Actions have nuance: their different parts often have different rules. For example, the buffers might work completely differently during start-up and cooldown. To allow examining the "timeline" of an Action in a closer detail, you can give Actions a number which represents their Phases.
+
+The Phase-column in Actions view allows a list of numbers ("1,2,3"), a range of numbers (1..5) or giving labels to Phases (1:start-up, 2:active, 3:cooldown). These labels will be visible in Interactions view if added, but they're optional.
+
+Interactions-view expands horizontally to fit whatever is the highest Phase count in any Action. (Capped to 12 at the moment.) Furthermore, unused Phases in each Action are grayed out to give a visual guide to the range of the current Action.
+
+Phase 0 signifies simultaneous testing - what happens if you press inputs simultaneously - and it has some special functionality which is not used in other Phases. (Read more below from the "Mirrored and Dual Of" section.)
+
+## Outcomes
+
+Outcomes view contains formal results of your observation. The default Outcomes are as follows:
+
+- "Uncertain" is used when the result is indeterminant or random.
+- "No Effect" means that nothing observably changed as a result of the Input.
+- "Impossible" is for interactions which are not possible to test.
+- "Prereq" means that the input is already in use as a part of the Action's setup.
+- "Mutual" means that the input causes something to overlap, combine or co-exist with the current Action.
+- "Cancels" means that the Action is interrupted by the input.
+- "Buffers" means that the next Action triggered by the Input is buffered to occur afterwards.
+- "Follows" means that the next Action triggered by the Input is queued afterwards in a way which is distinct from ordinary buffering.
+
+You can also create some own Outcomes, if needed.
+
+### Mirrored and Dual Of
+
+These two columns are used in a specialized feature regarding Phase 0.
+
+While testing Actions vs Actions, you can choose to mirror the Phase 0 notes to both actions at once. You first have to set up the mirroring in the Outcomes-view by enabling the row from the "Mirrored" column, then choosing which Outcome you want to get added to the second Action. For instance, "Impossible", "Uncertain" and "Mutual" will be the same no matter which of the two animations you test. One could argue "No Effect" and "Cancels" also mirror each other. It's just something to save time if you choose to use this state.
 
 ## Other features
 
