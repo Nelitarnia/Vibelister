@@ -192,6 +192,7 @@ export function initPalette(ctx) {
       consumeTyping: false, // editor can hold text if you like
       filterFn: () => true, // filtering handled by parse/makeItems
       domId: "universalPalette",
+      supportsRecentToggle: true,
       parseInitial: normalizeCellTextToQuery,
       parseQuery: (raw) => {
         const s = String(raw || "").trim();
@@ -539,6 +540,7 @@ export function initPalette(ctx) {
     pal.selIndex = -1;
     pal.query = "";
     pal.mode = null;
+    pal.showRecent = false;
     pal.prefillActive = false;
     if (pal.ownsEditor && editor) {
       editor.style.display = "none";
@@ -549,6 +551,10 @@ export function initPalette(ctx) {
   function refilter() {
     const mode = pal.mode;
     if (!mode) return;
+    if (pal.showRecent) {
+      buildRecentItems();
+      return;
+    }
     const parsed = mode.parseQuery(pal.query);
     let items = mode.makeItems(model, parsed, { sel, viewDef, getActiveView });
     items = items || [];
@@ -565,6 +571,11 @@ export function initPalette(ctx) {
   function buildRecentItems() {
     const mode = pal.mode;
     if (!mode) return;
+    if (!mode.supportsRecentToggle) {
+      pal.showRecent = false;
+      return;
+    }
+    pal.showRecent = true;
     const bag = pal.recent.get(mode.name) || [];
     pal.items = bag.slice(0);
     pal.selIndex = pal.items.length ? 0 : -1;
@@ -726,6 +737,7 @@ export function initPalette(ctx) {
     const mode = pal.mode;
     if (!mode) return;
     pal.prefillActive = false;
+    pal.showRecent = false;
     pal.query = editor.value;
     if (mode.consumeTyping) {
       try {
@@ -741,6 +753,11 @@ export function initPalette(ctx) {
     if (!pal.isOpen) return;
     const mode = pal.mode;
     if (!mode) return;
+
+    if (mode.supportsRecentToggle && e.key === "Control" && !pal.showRecent) {
+      buildRecentItems();
+      return;
+    }
 
     if (pal.prefillActive) {
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -800,7 +817,7 @@ export function initPalette(ctx) {
       const dir = e.key === "ArrowDown" ? 1 : -1;
       pal.selIndex = ((pal.selIndex < 0 ? 0 : pal.selIndex) + dir + n) % n;
       pal.lockHoverUntil = Date.now() + 120;
-      renderList(false);
+      renderList(pal.showRecent);
       return;
     }
     if (e.key === "Enter") {
@@ -854,6 +871,18 @@ export function initPalette(ctx) {
     }
   };
   editor.addEventListener("keydown", onEditorKeyDown, true);
+
+  const onEditorKeyUp = (e) => {
+    if (!pal.isOpen) return;
+    const mode = pal.mode;
+    if (!mode) return;
+    if (!pal.showRecent) return;
+    if (e.key === "Control" || !e.ctrlKey) {
+      pal.showRecent = false;
+      refilter();
+    }
+  };
+  editor.addEventListener("keyup", onEditorKeyUp, true);
 
   // Close on scroll
   sheet.addEventListener(
