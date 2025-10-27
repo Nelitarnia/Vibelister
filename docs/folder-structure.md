@@ -35,6 +35,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── color-utils.js
 │   │   ├── column-kinds.js
 │   │   ├── constants.js
+│   │   ├── mod-state.js
 │   │   ├── deletion.js
 │   │   ├── fs.js
 │   │   ├── mutation-runner.js
@@ -128,6 +129,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
 - `variants.js` merits its own subfolder (`variants/`) because it describes sizable domain data; additional variant files can join it without clutter.
 - `deletion.js` scrubs modifier groups and constraints after rows are removed so downstream consumers never see dangling references.
+- `mod-state.js` centralizes the modifier-state descriptor (IDs, glyphs, parsing tokens) so column kinds, palette UI, persistence, and tests reuse the same definitions.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
 - `color-utils.js` offers shared normalization and contrast helpers so rendering modules and pickers reuse consistent color logic.
 
