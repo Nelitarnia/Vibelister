@@ -1,4 +1,5 @@
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
+import { MOD } from "../../../data/constants.js";
 import {
   getInteractionsPair,
   getInteractionsRowCount,
@@ -122,6 +123,77 @@ export function getModelVariantTests() {
           stats.pairsCount,
           3,
           "mutex inside EXACT-1 group does not reduce combinations",
+        );
+      },
+    },
+    {
+      name: "required modifiers prune variant combos",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, groupExact } =
+          makeModelFixture();
+        const req = addModifier("Mandatory");
+        const opt = addModifier("Optional");
+        groupExact(1, [req, opt], { required: true, name: "PickOne" });
+        addAction("Atk", { [req.id]: MOD.REQUIRES, [opt.id]: MOD.ON });
+        addInput("Btn");
+
+        const stats = buildInteractionsPairs(model);
+        assert.strictEqual(stats.pairsCount, 1, "only one variant should remain");
+
+        const sigs = collectPairs(model).map((pair) => pair.variantSig);
+        assert.deepStrictEqual(
+          sigs,
+          [`${req.id}`],
+          "required modifier must appear in every variant",
+        );
+      },
+    },
+    {
+      name: "required modifiers persist without groups",
+      run(assert) {
+        const { model, addAction, addInput, addModifier } = makeModelFixture();
+        const req = addModifier("Mandatory");
+        addAction("Atk", { [req.id]: MOD.REQUIRES });
+        addInput("Btn");
+
+        const stats = buildInteractionsPairs(model);
+        assert.strictEqual(
+          stats.pairsCount,
+          1,
+          "single variant still emitted without groups",
+        );
+
+        const sigs = collectPairs(model).map((pair) => pair.variantSig);
+        assert.deepStrictEqual(
+          sigs,
+          [`${req.id}`],
+          "required modifier should be preserved even without groups",
+        );
+      },
+    },
+    {
+      name: "optional groups without eligible members do not clear variants",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, groupExact } =
+          makeModelFixture();
+        const action = addAction("Atk");
+        addInput("Btn");
+        const m1 = addModifier("Req A");
+        const m2 = addModifier("Req B");
+        const opt1 = addModifier("Opt A");
+        const opt2 = addModifier("Opt B");
+        groupExact(1, [m1, m2], { required: true, name: "ReqGroup" });
+        groupExact(1, [opt1, opt2], { required: false, name: "OptGroup" });
+        action.modSet = { [m1.id]: MOD.ON, [m2.id]: MOD.ON };
+
+        const stats = buildInteractionsPairs(model);
+        assert.strictEqual(stats.pairsCount, 2, "required group variants remain");
+
+        const sigs = collectPairs(model).map((pair) => pair.variantSig);
+        assert.deepStrictEqual(
+          sigs,
+          [`${m1.id}`, `${m2.id}`],
+          "optional group absence should not wipe signatures",
         );
       },
     },
