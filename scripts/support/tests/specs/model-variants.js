@@ -127,6 +127,33 @@ export function getModelVariantTests() {
       },
     },
     {
+      name: "optional groups without eligible members are ignored",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, groupExact } =
+          makeModelFixture();
+        const g1 = addModifier("G1 member");
+        const g2 = addModifier("G2 member");
+        const action = addAction("Atk", { [g1.id]: MOD.ON });
+        addInput("Btn");
+        groupExact(1, [g1], { required: false, name: "Group 1" });
+        groupExact(1, [g2], { required: false, name: "Group 2" });
+
+        const stats = buildInteractionsPairs(model);
+
+        assert.strictEqual(
+          stats.pairsCount,
+          2,
+          "action should yield base and modifier variants",
+        );
+
+        assert.deepStrictEqual(
+          model.interactionsIndex.variantCatalog[action.id],
+          ["", `${g1.id}`],
+          "variant catalog should include the eligible modifier",
+        );
+      },
+    },
+    {
       name: "required modifiers prune variant combos",
       run(assert) {
         const { model, addAction, addInput, addModifier, groupExact } =
