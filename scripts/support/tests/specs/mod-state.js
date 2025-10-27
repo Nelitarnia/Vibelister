@@ -4,8 +4,10 @@ import {
   clearCellForKind,
 } from "../../../data/column-kinds.js";
 import { MOD } from "../../../data/constants.js";
+import { enumerateModStates } from "../../../data/mod-state.js";
 import { canonicalizePayload } from "../../../app/clipboard-codec.js";
 import { createGridCommands } from "../../../app/grid-commands.js";
+import { initPalette } from "../../../ui/palette.js";
 
 export function getModStateTests() {
   return [
@@ -42,6 +44,20 @@ export function getModStateTests() {
           MOD.OFF,
           "cross glyph should map to OFF",
         );
+
+        ColumnKinds.modState.set({ row, col, MOD }, "requires");
+        assert.strictEqual(
+          row.modSet[7],
+          MOD.REQUIRES,
+          "requires keyword should map to REQUIRES",
+        );
+
+        ColumnKinds.modState.set({ row, col, MOD }, "!");
+        assert.strictEqual(
+          row.modSet[7],
+          MOD.REQUIRES,
+          "exclamation glyph should map to REQUIRES",
+        );
       },
     },
     {
@@ -65,6 +81,13 @@ export function getModStateTests() {
           ColumnKinds.modState.get({ row, col, MOD }),
           "✕",
           "explicit OFF should render with cross sigil",
+        );
+
+        row.modSet[9] = MOD.REQUIRES;
+        assert.strictEqual(
+          ColumnKinds.modState.get({ row, col, MOD }),
+          "!",
+          "requires state should render with its glyph",
         );
 
         ColumnKinds.modState.set({ row, col, MOD }, "");
@@ -288,6 +311,181 @@ export function getModStateTests() {
           MOD.BYPASS,
           "applied payload should update modifier value",
         );
+
+        const requiresPayload = canonicalizePayload({
+          type: "modifierState",
+          data: { value: MOD.REQUIRES },
+        });
+        assert.deepStrictEqual(
+          requiresPayload,
+          { type: "modifierState", data: { value: MOD.REQUIRES } },
+          "canonicalizePayload should preserve new modifier state",
+        );
+
+        const requiresTarget = { modSet: {} };
+        ColumnKinds.modState.applyStructured(
+          { row: requiresTarget, col, MOD },
+          requiresPayload,
+        );
+        assert.strictEqual(
+          requiresTarget.modSet[5],
+          MOD.REQUIRES,
+          "structured payload should support REQUIRES",
+        );
+      },
+    },
+    {
+      name: "numeric outliers normalize to default state",
+      run(assert) {
+        const row = { modSet: {} };
+        const col = { key: "mod:2", kind: "modState" };
+        ColumnKinds.modState.set({ row, col, MOD }, 99);
+        assert.strictEqual(
+          row.modSet[2],
+          MOD.OFF,
+          "values above descriptor range should clamp to default",
+        );
+      },
+    },
+    {
+      name: "modifier palette reflects descriptor states",
+      run(assert) {
+        const editor = {
+          value: "",
+          style: {},
+          parentElement: {
+            children: [],
+            appendChild(node) {
+              this.children.push(node);
+              node.parentNode = this;
+              return node;
+            },
+          },
+          addEventListener: () => {},
+          focus: () => {},
+          setSelectionRange: () => {},
+          select: () => {},
+        };
+        const sheet = { addEventListener: () => {} };
+        const sel = { r: 0, c: 1 };
+        const view = {
+          columns: [
+            { key: "name", kind: "text" },
+            { key: "mod:1", kind: "modState" },
+          ],
+        };
+        const model = {
+          actions: [{ id: 1, name: "Action", modSet: { 1: MOD.REQUIRES } }],
+          modifiers: [{ id: 1, name: "Mod" }],
+        };
+
+        function makeNode(tag) {
+          return {
+            tag,
+            id: "",
+            style: {},
+            children: [],
+            dataset: {},
+            parentNode: null,
+            appendChild(child) {
+              if (child && child.__isFragment) {
+                child.children.forEach((ch) => this.appendChild(ch));
+                return child;
+              }
+              this.children.push(child);
+              child.parentNode = this;
+              return child;
+            },
+            setAttribute() {},
+            removeAttribute() {},
+            contains(target) {
+              if (target === this) return true;
+              return this.children.some((child) => child.contains?.(target));
+            },
+            get textContent() {
+              return this._textContent || "";
+            },
+            set textContent(value) {
+              this._textContent = String(value);
+              if (this.children.length) {
+                this.children.forEach((child) => {
+                  if (child.setTextFromParent)
+                    child.setTextFromParent(String(value));
+                });
+              }
+            },
+            setTextFromParent(value) {
+              this._textContent = value;
+            },
+            get innerHTML() {
+              return this._innerHTML || "";
+            },
+            set innerHTML(value) {
+              this._innerHTML = String(value);
+              if (value === "") {
+                this.children = [];
+              }
+            },
+          };
+        }
+
+        const doc = {
+          createElement(tag) {
+            const node = makeNode(tag);
+            if (tag === "div" && node.id === "") node.id = "";
+            return node;
+          },
+          createDocumentFragment() {
+            return {
+              __isFragment: true,
+              children: [],
+              appendChild(child) {
+                this.children.push(child);
+                return child;
+              },
+            };
+          },
+          addEventListener: () => {},
+        };
+
+        const palette = initPalette({
+          editor,
+          sheet,
+          getActiveView: () => "actions",
+          viewDef: () => view,
+          sel,
+          model,
+          setCell: () => {},
+          render: () => {},
+          getCellRect: () => ({ left: 0, top: 0, width: 200, height: 26 }),
+          HEADER_HEIGHT: 28,
+          endEdit: () => {},
+          moveSelectionForTab: () => {},
+          moveSelectionForEnter: () => {},
+          document: doc,
+        });
+
+        assert.ok(palette.wantsToHandleCell(), "modifier column should be handled");
+        palette.openForCurrentCell({ r: 0, c: 1, focusEditor: false });
+
+        const root = editor.parentElement.children.find((node) => node.id === "universalPalette");
+        assert.ok(root, "palette root should be attached to editor parent");
+        const list = root?.children?.[0];
+        assert.ok(list, "palette list container should exist");
+
+        const expectedStates = enumerateModStates(MOD).states;
+        const optionNodes = list.children || [];
+        assert.strictEqual(
+          optionNodes.length,
+          expectedStates.length,
+          "palette should render an option for each state",
+        );
+
+        const requiresNode = optionNodes.find((node) => {
+          const label = node.children?.[0] || node;
+          return /Requires/.test(label.textContent || "");
+        });
+        assert.ok(requiresNode, "palette should include the Requires option");
       },
     },
   ];

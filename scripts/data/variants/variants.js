@@ -1,5 +1,22 @@
 // variants.js - variant engine which generates the list of Actions with modifiers.
-// Self-contained: no imports; operates on provided model via function args
+
+import {
+  MOD_STATE_ACTIVE_VALUES,
+  MOD_STATE_MARKED_VALUES,
+  MOD_STATE_MAX_VALUE,
+  MOD_STATE_MIN_VALUE,
+} from "../mod-state.js";
+
+const ACTIVE_STATE_SET = new Set(MOD_STATE_ACTIVE_VALUES);
+const MARKED_STATE_SET = new Set(MOD_STATE_MARKED_VALUES);
+
+function normalizeModStateValue(v) {
+  const num = Number(v);
+  if (!Number.isFinite(num)) return null;
+  const truncated = Math.trunc(num);
+  if (truncated < MOD_STATE_MIN_VALUE || truncated > MOD_STATE_MAX_VALUE) return null;
+  return truncated;
+}
 
 // helpers for ordering
 export function modOrderMap(model) {
@@ -31,13 +48,15 @@ export function compareVariantSig(a, b, model) {
   return 0;
 }
 
-// Treat raw modSet values as tri-state: 0=OFF, 1=ON, 2=BYPASS
+// Treat raw modSet values using descriptor metadata
 function modStateIsOn(v) {
-  return (v | 0) === 1;
-} // only ON participates in generation
+  const value = normalizeModStateValue(v);
+  return value != null && ACTIVE_STATE_SET.has(value);
+} // only explicitly active states participate in generation
 function modStateActiveish(v) {
-  return (v | 0) >= 1;
-} // ON or BYPASS counts as "marked"
+  const value = normalizeModStateValue(v);
+  return value != null && MARKED_STATE_SET.has(value);
+} // active or marked states count as "selected"
 
 // canonical signature for storage
 function variantSignature(ids) {
