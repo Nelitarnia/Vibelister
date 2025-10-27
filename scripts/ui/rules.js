@@ -470,9 +470,9 @@ export function openRulesDialog(model) {
         }
         return ng;
       });
-      // Drop empty/singleton groups (no semantic weight)
+      // Drop groups with no members; singleton groups must persist for unary rules
       newGroups = newGroups.filter(
-        (g) => Array.isArray(g.memberIds) && g.memberIds.length >= 2,
+        (g) => Array.isArray(g.memberIds) && g.memberIds.length > 0,
       );
 
       // --- Constraints: sanitize ---
