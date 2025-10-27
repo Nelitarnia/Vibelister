@@ -52,6 +52,13 @@ export function getModStateTests() {
           "requires keyword should map to REQUIRES",
         );
 
+        ColumnKinds.modState.set({ row, col, MOD }, "ℜ");
+        assert.strictEqual(
+          row.modSet[7],
+          MOD.REQUIRES,
+          "script-r glyph should map to REQUIRES",
+        );
+
         ColumnKinds.modState.set({ row, col, MOD }, "!");
         assert.strictEqual(
           row.modSet[7],
@@ -86,7 +93,7 @@ export function getModStateTests() {
         row.modSet[9] = MOD.REQUIRES;
         assert.strictEqual(
           ColumnKinds.modState.get({ row, col, MOD }),
-          "!",
+          "ℜ",
           "requires state should render with its glyph",
         );
 

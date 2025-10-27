@@ -3,12 +3,14 @@
 import {
   MOD_STATE_ACTIVE_VALUES,
   MOD_STATE_MARKED_VALUES,
+  MOD_STATE_REQUIRED_VALUES,
   MOD_STATE_MAX_VALUE,
   MOD_STATE_MIN_VALUE,
 } from "../mod-state.js";
 
 const ACTIVE_STATE_SET = new Set(MOD_STATE_ACTIVE_VALUES);
 const MARKED_STATE_SET = new Set(MOD_STATE_MARKED_VALUES);
+const REQUIRED_STATE_SET = new Set(MOD_STATE_REQUIRED_VALUES);
 
 function normalizeModStateValue(v) {
   const num = Number(v);
@@ -57,6 +59,10 @@ function modStateActiveish(v) {
   const value = normalizeModStateValue(v);
   return value != null && MARKED_STATE_SET.has(value);
 } // active or marked states count as "selected"
+function modStateIsRequired(v) {
+  const value = normalizeModStateValue(v);
+  return value != null && REQUIRED_STATE_SET.has(value);
+}
 
 // canonical signature for storage
 function variantSignature(ids) {
@@ -130,17 +136,43 @@ function rangeCombos(a, min, max) {
   return out;
 }
 
-function groupCombos(g, elig) {
-  const m = elig.filter((id) => g.memberIds.includes(id));
+function groupCombos(g, optionalElig, optionalEligSet, requiredSet) {
+  const members = Array.isArray(g.memberIds) ? g.memberIds : [];
+  const requiredMembers = members.filter((id) => requiredSet.has(id));
+  const optionalMembers = members.filter((id) => optionalEligSet.has(id));
+  const requiredCount = requiredMembers.length;
+  const optionalCount = optionalMembers.length;
   const mode = g.mode || GROUP_MODES.EXACT,
     req = !!g.required;
   let ch = [];
-  if (mode === GROUP_MODES.EXACT) ch = kCombos(m, g.k ?? 0);
-  else if (mode === GROUP_MODES.AT_LEAST)
-    ch = rangeCombos(m, g.k ?? 0, m.length);
-  else if (mode === GROUP_MODES.AT_MOST) ch = rangeCombos(m, 0, g.k ?? 0);
-  else if (mode === GROUP_MODES.RANGE)
-    ch = rangeCombos(m, g.kMin ?? 0, g.kMax ?? m.length);
+  if (mode === GROUP_MODES.EXACT) {
+    const total = g.k ?? 0;
+    if (requiredCount > total) return [];
+    const pick = total - requiredCount;
+    if (pick > optionalCount) return [];
+    ch = kCombos(optionalMembers, pick);
+  } else if (mode === GROUP_MODES.AT_LEAST) {
+    const minTotal = g.k ?? 0;
+    const minPick = Math.max(0, minTotal - requiredCount);
+    if (minPick > optionalCount) return [];
+    ch = rangeCombos(optionalMembers, minPick, optionalCount);
+  } else if (mode === GROUP_MODES.AT_MOST) {
+    const maxTotal = g.k ?? 0;
+    if (requiredCount > maxTotal) return [];
+    const maxPick = Math.max(0, Math.min(optionalCount, maxTotal - requiredCount));
+    ch = rangeCombos(optionalMembers, 0, maxPick);
+  } else if (mode === GROUP_MODES.RANGE) {
+    const minTotal = g.kMin ?? 0;
+    const maxTotal = g.kMax ?? members.length;
+    if (requiredCount > maxTotal) return [];
+    const minPick = Math.max(0, minTotal - requiredCount);
+    const maxPick = Math.max(
+      minPick,
+      Math.min(optionalCount, maxTotal - requiredCount),
+    );
+    if (minPick > optionalCount) return [];
+    ch = rangeCombos(optionalMembers, minPick, maxPick);
+  }
 
   // optional-empty for non-required groups
   if (!req && !ch.some((a) => a.length === 0)) ch.unshift([]);
@@ -192,10 +224,21 @@ function violatesConstraints(setArr, maps) {
 
 function computeVariantsForAction(action, model) {
   const set = action.modSet || {};
-  const elig = Object.keys(set)
-    .map(Number)
-    .filter((id) => modStateIsOn(set[id]));
-  if (!elig.length) return [""];
+  const requiredIds = [];
+  const requiredSet = new Set();
+  const optionalElig = [];
+  for (const [key, value] of Object.entries(set)) {
+    const id = Number(key);
+    if (!Number.isFinite(id)) continue;
+    const isRequired = modStateIsRequired(value);
+    const isActive = modStateIsOn(value) || isRequired;
+    if (isRequired) {
+      requiredIds.push(id);
+      requiredSet.add(id);
+    }
+    if (isActive && !isRequired) optionalElig.push(id);
+  }
+  if (!requiredIds.length && !optionalElig.length) return [""];
   const groups = (model.modifierGroups || []).map((g) => ({
     id: g.id,
     name: g.name,
@@ -206,11 +249,12 @@ function computeVariantsForAction(action, model) {
     kMax: g.kMax,
     required: !!g.required,
   }));
-  if (!groups.length) return [""];
+  if (!groups.length) return [variantSignature(requiredIds)];
 
   const choices = [];
+  const optionalEligSet = new Set(optionalElig);
   for (const g of groups) {
-    const ch = groupCombos(g, elig);
+    const ch = groupCombos(g, optionalElig, optionalEligSet, requiredSet);
     if (g.required && ch.length === 0) return [];
     choices.push(ch);
   }
@@ -218,6 +262,7 @@ function computeVariantsForAction(action, model) {
 
   const maps = buildConstraintMaps(model.modifierConstraints);
   const res = [];
+  const base = requiredIds.slice();
   (function rec(i, acc) {
     if (res.length >= CAP_PER_ACTION) return; // hard stop
     if (i === choices.length) {
@@ -233,7 +278,7 @@ function computeVariantsForAction(action, model) {
         if (res.length >= CAP_PER_ACTION) return;
       }
     }
-  })(0, []);
+  })(0, base);
 
   // Deduplicate identical signatures (e.g., overlapping groups choosing the same modifier)
   const uniq = Array.from(new Set(res));
@@ -248,7 +293,17 @@ export function buildInteractionsPairs(model) {
   const inputs = (model.inputs || []).filter(
     (i) => i && (i.name || "").trim().length,
   );
-  const useG = model.modifierGroups && model.modifierGroups.length > 0;
+  const hasActionLevelRequirements = actions.some((action) => {
+    const set = action?.modSet;
+    if (!set || typeof set !== "object") return false;
+    for (const value of Object.values(set)) {
+      if (modStateIsRequired(value)) return true;
+    }
+    return false;
+  });
+  const useG =
+    (model.modifierGroups && model.modifierGroups.length > 0) ||
+    hasActionLevelRequirements;
   const indexGroups = [];
   const variantCatalog = {};
   let totalRows = 0;
