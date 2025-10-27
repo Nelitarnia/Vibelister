@@ -92,8 +92,8 @@ const RAW_STATES = [
     name: "REQUIRES",
     id: 3,
     label: "Requires",
-    glyph: "!",
-    glyphs: ["!", "‼", "❗", "⚠"],
+    glyph: "ℜ",
+    glyphs: ["ℜ", "℞", "ℛ", "R"],
     description: "Require this modifier for the action to function.",
     keywords: ["requires", "require", "need", "must", "!", "mandatory"],
     tokens: [
@@ -109,9 +109,14 @@ const RAW_STATES = [
       "‼",
       "❗",
       "⚠",
+      "ℜ",
+      "℞",
+      "ℛ",
+      "r",
     ],
     isActive: true,
     isMarked: true,
+    isRequired: true,
   },
 ];
 
@@ -182,6 +187,10 @@ export const MOD_STATE_ACTIVE_VALUES = Object.freeze(
 
 export const MOD_STATE_MARKED_VALUES = Object.freeze(
   MOD_STATES.filter((s) => s.isMarked || s.isActive).map((s) => s.id),
+);
+
+export const MOD_STATE_REQUIRED_VALUES = Object.freeze(
+  MOD_STATES.filter((s) => s.isRequired).map((s) => s.id),
 );
 
 /** @typedef {typeof MOD_STATE_ID[keyof typeof MOD_STATE_ID]} ModStateValue */
