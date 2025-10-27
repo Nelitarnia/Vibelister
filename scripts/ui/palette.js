@@ -1,5 +1,6 @@
 import { formatEndActionLabel } from "../data/column-kinds.js";
 import { MOD } from "../data/constants.js";
+import { enumerateModStates } from "../data/mod-state.js";
 import { sortIdsByUserOrder } from "../data/variants/variants.js";
 import {
   getInteractionsPair,
@@ -20,39 +21,6 @@ import {
 //   - 'modifierState' → for Actions view modifier compatibility columns
 //
 // You can add more modes later by extending MODE_MAP.
-
-const MOD_STATE_OPTIONS = [
-  {
-    value: MOD.OFF,
-    sigil: "✕",
-    label: "Off",
-    description: "Hide this modifier for the action.",
-    keywords: ["off", "0", "disable", "none", "hide", "✕", "x", "cross"],
-  },
-  {
-    value: MOD.ON,
-    sigil: "✓",
-    label: "On",
-    description: "Mark this modifier as compatible.",
-    keywords: ["on", "1", "enable", "yes", "show", "active", "✓", "check"],
-  },
-  {
-    value: MOD.BYPASS,
-    sigil: "◐",
-    label: "Bypass",
-    description: "Allow the modifier without filtering by it.",
-    keywords: [
-      "bypass",
-      "2",
-      "skip",
-      "allow",
-      "inherit",
-      "optional",
-      "◐",
-      "partial",
-    ],
-  },
-];
 
 export function initPalette(ctx) {
   const {
@@ -169,16 +137,29 @@ export function initPalette(ctx) {
             if (typeof raw === "number") current = raw | 0;
           }
         }
+        const descriptor = enumerateModStates(MOD);
         const lower = q.toLowerCase();
-        return MOD_STATE_OPTIONS.filter((opt) => {
-          if (!lower) return true;
-          return opt.keywords.some((kw) => kw.includes(lower));
-        }).map((opt) => ({
-          display: opt.sigil ? `${opt.sigil} ${opt.label}` : opt.label,
-          description: opt.description,
-          data: { value: opt.value },
-          isCurrent: opt.value === current,
-        }));
+        const normalizedQuery = lower.trim();
+        return descriptor.states
+          .filter((state) => {
+            if (!normalizedQuery) return true;
+            const haystack = new Set([
+              state.label?.toLowerCase() || "",
+              state.name?.toLowerCase() || "",
+              ...state.keywords,
+              ...state.tokens,
+            ]);
+            for (const kw of haystack) {
+              if (kw && kw.includes(normalizedQuery)) return true;
+            }
+            return false;
+          })
+          .map((state) => ({
+            display: state.glyph ? `${state.glyph} ${state.label}` : state.label,
+            description: state.description,
+            data: { value: state.value },
+            isCurrent: state.value === current,
+          }));
       },
       commit: (it) => {
         setCell(sel.r, sel.c, Number(it.data.value));

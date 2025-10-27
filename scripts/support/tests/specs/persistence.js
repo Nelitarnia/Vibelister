@@ -1,4 +1,5 @@
 import { createPersistenceController } from "../../../app/persistence.js";
+import { MOD } from "../../../data/constants.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 export function getPersistenceTests() {
@@ -149,6 +150,83 @@ export function getPersistenceTests() {
           statusMessage,
           "Saved As: saved-project.json",
           "status bar should reflect save result",
+        );
+      },
+    },
+    {
+      name: "openFromDisk normalizes modifier states",
+      async run(assert) {
+        const { model } = makeModelFixture();
+        const loadFsModule = async () => ({
+          openJson: async () => ({
+            name: "project.json",
+            data: {
+              meta: { schema: 0, projectName: "", interactionsMode: "AI" },
+              actions: [
+                {
+                  id: 1,
+                  name: "Alpha",
+                  modSet: { 1: true, 2: 99, 3: "requires", 4: "!" },
+                },
+              ],
+              inputs: [],
+              modifiers: [],
+              outcomes: [],
+              modifierGroups: [],
+              modifierConstraints: [],
+              notes: {},
+              interactionsPairs: [],
+              interactionsIndex: {
+                mode: "AI",
+                groups: [],
+                totalRows: 0,
+                actionsOrder: [],
+                inputsOrder: [],
+                variantCatalog: {},
+              },
+              nextId: 5,
+            },
+          }),
+        });
+
+        const controller = createPersistenceController({
+          model,
+          statusBar: null,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule,
+        });
+
+        await controller.openFromDisk();
+
+        const action = model.actions[0];
+        assert.ok(action, "action should be loaded");
+        assert.strictEqual(
+          action.modSet[1],
+          MOD.ON,
+          "boolean true should normalize to ON",
+        );
+        assert.strictEqual(
+          action.modSet[2],
+          MOD.OFF,
+          "numeric overflow should clamp to OFF",
+        );
+        assert.strictEqual(
+          action.modSet[3],
+          MOD.REQUIRES,
+          "requires keyword should map to REQUIRES",
+        );
+        assert.strictEqual(
+          action.modSet[4],
+          MOD.REQUIRES,
+          "glyph input should map to REQUIRES",
         );
       },
     },

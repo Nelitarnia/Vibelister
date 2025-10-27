@@ -2,6 +2,7 @@
 // Minimal, dependency-light; safe to iterate as we add kinds.
 
 import { getEntityColorsFromRow } from "./color-utils.js";
+import { enumerateModStates, MOD_STATE_BOOLEAN_TRUE_NAME } from "./mod-state.js";
 import { getInteractionsPair } from "../app/interactions-data.js";
 
 export const STRUCTURED_SCHEMA_VERSION = 1;
@@ -72,16 +73,12 @@ function nameOf(entity, model, id) {
   return it ? it.name || "" : "";
 }
 
-const DEFAULT_MOD_ENUM = Object.freeze({ OFF: 0, ON: 1, BYPASS: 2 });
+function getModRuntime(MOD) {
+  return enumerateModStates(MOD);
+}
 
 function getModEnum(MOD) {
-  if (!MOD || typeof MOD !== "object") return DEFAULT_MOD_ENUM;
-  const off = Number.isFinite(MOD.OFF) ? Number(MOD.OFF) : DEFAULT_MOD_ENUM.OFF;
-  const on = Number.isFinite(MOD.ON) ? Number(MOD.ON) : DEFAULT_MOD_ENUM.ON;
-  const bypass = Number.isFinite(MOD.BYPASS)
-    ? Number(MOD.BYPASS)
-    : DEFAULT_MOD_ENUM.BYPASS;
-  return { OFF: off, ON: on, BYPASS: bypass };
+  return getModRuntime(MOD).map;
 }
 
 function parseModColumnId(col) {
@@ -91,63 +88,51 @@ function parseModColumnId(col) {
   return Number(key.slice(idx + 1));
 }
 
-function normalizeModState(raw, mod, current) {
+function normalizeModState(raw, mod, current, runtime) {
+  const rt = runtime || getModRuntime(mod);
+  const { states, defaultState, cycleStates, valueToState } = rt;
+  const fallback = defaultState?.value ?? 0;
+  const boolTrueState =
+    states.find((st) => st.name === MOD_STATE_BOOLEAN_TRUE_NAME) ||
+    states.find((st) => st.isActive) ||
+    defaultState;
+
   if (raw === undefined) {
-    if (current === mod.OFF) return mod.ON;
-    if (current === mod.ON) return mod.BYPASS;
-    return mod.OFF;
+    const cur = Number(current);
+    if (cycleStates && cycleStates.length) {
+      const idx = cycleStates.findIndex((st) => st && st.value === cur);
+      const next = cycleStates[(idx + 1) % cycleStates.length];
+      if (next) return next.value;
+      return cycleStates[0].value;
+    }
+    return fallback;
   }
-  if (typeof raw === "boolean") return raw ? mod.ON : mod.OFF;
+
+  if (typeof raw === "boolean") {
+    return raw ? boolTrueState.value : fallback;
+  }
+
   if (typeof raw === "number") {
-    const clamped = Math.max(mod.OFF, Math.min(mod.BYPASS, raw | 0));
-    if (clamped === mod.OFF || clamped === mod.ON || clamped === mod.BYPASS)
-      return clamped;
-    return mod.OFF;
+    const num = Number(raw);
+    if (Number.isFinite(num) && valueToState.has(num)) return num;
+    return fallback;
   }
+
   if (typeof raw === "string") {
     const trimmed = raw.trim();
-    if (!trimmed) return mod.OFF;
-    if (
-      trimmed === "✕" ||
-      trimmed === "✖" ||
-      trimmed === "✗" ||
-      trimmed === "✘" ||
-      trimmed === "×"
-    )
-      return mod.OFF;
-    if (trimmed === "✓" || trimmed === "✔" || trimmed === "☑") return mod.ON;
-    if (trimmed === "◐" || trimmed === "◑" || trimmed === "◓" || trimmed === "◎")
-      return mod.BYPASS;
-    const normalized = trimmed.toLowerCase();
-    if (
-      normalized === "0" ||
-      normalized === "off" ||
-      normalized === "false" ||
-      normalized.startsWith("off") ||
-      normalized === "x"
-    )
-      return mod.OFF;
-    if (
-      normalized === "1" ||
-      normalized === "on" ||
-      normalized === "true" ||
-      normalized.startsWith("on")
-    )
-      return mod.ON;
-    if (
-      normalized === "2" ||
-      normalized === "bypass" ||
-      normalized.startsWith("by") ||
-      normalized.startsWith("pass") ||
-      normalized.startsWith("skip") ||
-      normalized.startsWith("allow") ||
-      normalized.startsWith("inherit")
-    )
-      return mod.BYPASS;
-    const parsed = Number(normalized);
-    if (Number.isFinite(parsed)) return normalizeModState(parsed, mod, current);
+    if (!trimmed) return fallback;
+    for (const st of states) {
+      if (st.glyphs.includes(trimmed)) return st.value;
+    }
+    const lower = trimmed.toLowerCase();
+    for (const st of states) {
+      if (st.tokens.includes(lower)) return st.value;
+    }
+    const num = Number(trimmed);
+    if (Number.isFinite(num) && valueToState.has(num)) return num;
   }
-  return mod.OFF;
+
+  return fallback;
 }
 
 export const ColumnKinds = {
@@ -198,23 +183,23 @@ export const ColumnKinds = {
 
   modState: {
     get({ row, col, MOD } = {}) {
-      const mod = getModEnum(MOD);
+      const runtime = getModRuntime(MOD);
+      const mod = runtime.map;
       const id = parseModColumnId(col);
       if (!Number.isFinite(id)) return "";
       const modSet = row?.modSet;
       const hasExplicit =
         modSet && Object.prototype.hasOwnProperty.call(modSet, id);
       const raw = hasExplicit ? modSet[id] : undefined;
-      const st = Number(raw ?? mod.OFF) | 0;
       if (!hasExplicit) return "";
-      if (st === mod.ON) return "✓";
-      if (st === mod.BYPASS) return "◐";
-      if (st === mod.OFF) return "✕";
-      return "";
+      const value = Number(raw);
+      const state = runtime.valueToState.get(value) || runtime.defaultState;
+      return state?.glyph || state?.label || "";
     },
     set({ row, col, MOD } = {}, v) {
       if (!row || !col) return;
-      const mod = getModEnum(MOD);
+      const runtime = getModRuntime(MOD);
+      const mod = runtime.map;
       const id = parseModColumnId(col);
       if (!Number.isFinite(id)) return;
       if (v === null) {
@@ -226,15 +211,15 @@ export const ColumnKinds = {
         return;
       }
       if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
-      const cur = Number(row.modSet[id] ?? mod.OFF) | 0;
-      const next = normalizeModState(v, mod, cur);
+      const cur = Number(row.modSet[id] ?? runtime.defaultState.value);
+      const next = normalizeModState(v, mod, cur, runtime);
       row.modSet[id] = next;
     },
     beginEdit() {
       return { useEditor: true };
     },
     getStructured({ row, col, MOD } = {}) {
-      const mod = getModEnum(MOD);
+      const runtime = getModRuntime(MOD);
       const id = parseModColumnId(col);
       if (!Number.isFinite(id)) return null;
       const modSet = row?.modSet;
@@ -243,28 +228,32 @@ export const ColumnKinds = {
       const raw = modSet[id];
       const value =
         typeof raw === "number"
-          ? normalizeModState(raw, mod, mod.OFF)
-          : mod.OFF;
+          ? normalizeModState(raw, runtime.map, runtime.defaultState.value, runtime)
+          : runtime.defaultState.value;
       return { type: "modifierState", data: { value } };
     },
     applyStructured({ row, col, MOD } = {}, payload) {
       if (!row || !col || !payload || typeof payload !== "object") return false;
       if (payload.type !== "modifierState") return false;
-      const mod = getModEnum(MOD);
+      const runtime = getModRuntime(MOD);
       const id = parseModColumnId(col);
       if (!Number.isFinite(id)) return false;
       if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
       const hasValue =
         payload.data && Object.prototype.hasOwnProperty.call(payload.data, "value");
       if (!hasValue) return false;
-      const current = Number(row.modSet[id] ?? mod.OFF) | 0;
-      const next = normalizeModState(payload.data.value, mod, current);
+      const current = Number(row.modSet[id] ?? runtime.defaultState.value);
+      const next = normalizeModState(
+        payload.data.value,
+        runtime.map,
+        current,
+        runtime,
+      );
       row.modSet[id] = next;
       return true;
     },
     clear({ row, col, MOD } = {}) {
       if (!row || !col) return false;
-      const mod = getModEnum(MOD);
       const id = parseModColumnId(col);
       if (!Number.isFinite(id)) return false;
       if (!row.modSet || typeof row.modSet !== "object") return false;

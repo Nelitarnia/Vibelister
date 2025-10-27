@@ -1,8 +1,10 @@
 // constants.js
 
+import { MOD_STATE_ID } from "./mod-state.js";
+
 export const UI = Object.freeze({ ROW_HEIGHT: 26, HEADER_HEIGHT: 28 });
 export const PHASE_CAP = 12;
-export const MOD = Object.freeze({ OFF: 0, ON: 1, BYPASS: 2 });
+export const MOD = MOD_STATE_ID;
 export const MIN_ROWS = Object.freeze({
   interactionsBase: 30,
   pad: 50,

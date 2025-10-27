@@ -16,13 +16,12 @@
 * @property {string=} notes
   */
 
-/** Tri-state modifier flag values (OFF/ON/INHERIT). */
-/** @typedef {0|1|2} ModTriState */
+/** @typedef {import("../data/mod-state.js").ModStateValue} ModStateValue */
 
-/** Action rows may contain a per-modifier tri-state map and optional phases. */
+/** Action rows may contain a per-modifier state map and optional phases. */
 /** @typedef {BaseRow & {
 
-* modSet?: Record<number, ModTriState>,
+* modSet?: Record<number, ModStateValue>,
 * phases?: { ids: number[] }
 * }} ActionRow */
 
