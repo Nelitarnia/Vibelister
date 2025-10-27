@@ -255,7 +255,10 @@ function computeVariantsForAction(action, model) {
   const optionalEligSet = new Set(optionalElig);
   for (const g of groups) {
     const ch = groupCombos(g, optionalElig, optionalEligSet, requiredSet);
-    if (g.required && ch.length === 0) return [];
+    if (ch.length === 0) {
+      if (g.required) return [];
+      continue;
+    }
     choices.push(ch);
   }
   choices.sort((a, b) => a.length - b.length);
