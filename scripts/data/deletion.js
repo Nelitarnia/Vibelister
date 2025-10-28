@@ -23,7 +23,7 @@ export function sanitizeModifierRulesAfterDeletion(model, deletedIds) {
 
         return { group: next, longest, foundArray };
       })
-      .filter(({ longest, foundArray }) => !foundArray || longest >= 2)
+      .filter(({ longest, foundArray }) => !foundArray || longest > 0)
       .map(({ group }) => group);
   }
 
