@@ -1,4 +1,8 @@
-import { beginEditForKind, setCellForKind } from "../../../data/column-kinds.js";
+import {
+  beginEditForKind,
+  setCellForKind,
+  formatEndActionLabel,
+} from "../../../data/column-kinds.js";
 
 export function getColumnKindTests() {
   return [
@@ -109,6 +113,25 @@ export function getColumnKindTests() {
           row.dualof,
           42,
           "refPick should persist the chosen stable id",
+        );
+      },
+    },
+    {
+      name: "formatEndActionLabel hides modifiers when action is missing",
+      run(assert) {
+        const model = {
+          modifiers: [
+            { id: 1, name: "Mod 1" },
+            { id: 2, name: "Mod 2" },
+          ],
+        };
+        const result = formatEndActionLabel(model, null, "1+2", {
+          style: "parentheses",
+        });
+        assert.deepStrictEqual(
+          result,
+          { plainText: "", segments: [] },
+          "Deleting an action should leave no modifier suffix behind",
         );
       },
     },

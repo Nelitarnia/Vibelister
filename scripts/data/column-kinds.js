@@ -601,6 +601,10 @@ function formatModsFromSig(model, sig) {
 }
 
 export function formatEndActionLabel(model, action, variantSig, opts = {}) {
+  if (!action) {
+    return { plainText: "", segments: [] };
+  }
+
   const base = action?.name || "";
   const modifiers = getModifiersFromSig(model, variantSig);
   const names = modifiers.map((mod) => mod.name).filter(Boolean);
