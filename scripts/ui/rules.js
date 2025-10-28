@@ -118,7 +118,7 @@ export function openRulesDialog(model) {
         "div",
         {
           style:
-            "display:grid;grid-template-columns:1fr auto auto auto auto;gap:6px;align-items:center;margin:6px 0;padding:6px;border:1px solid #1f2743;border-radius:8px;background:#0b1020;",
+            "display:grid;grid-template-columns:1fr auto auto auto auto auto auto;gap:6px;align-items:center;margin:6px 0;padding:6px;border:1px solid #1f2743;border-radius:8px;background:#0b1020;",
         },
         [],
       );
@@ -176,7 +176,7 @@ export function openRulesDialog(model) {
           type: "number",
           value: g[prop] ?? "",
           style:
-            "width:80px;background:#0e152b;color:#e6e6e6;border:1px solid #2b3558;border-radius:8px;padding:6px;",
+            "width:60px;background:#0e152b;color:#e6e6e6;border:1px solid #2b3558;border-radius:8px;padding:6px;",
         });
         inp.oninput = () => (g[prop] = Number(inp.value));
         return h(
@@ -198,6 +198,40 @@ export function openRulesDialog(model) {
       line.appendChild(param);
       line.appendChild(req);
       line.appendChild(del);
+      const moveUp = h(
+        "button",
+        {
+          style:
+            "background:#1b2130;border:1px solid #32426a;color:#d6e0ff;border-radius:8px;padding:4px 8px;",
+          disabled: gi === 0 ? "disabled" : null,
+          title: "Move group up",
+        },
+        ["↑"],
+      );
+      moveUp.onclick = () => {
+        if (gi <= 0) return;
+        const [item] = groups.splice(gi, 1);
+        groups.splice(gi - 1, 0, item);
+        render();
+      };
+      const moveDown = h(
+        "button",
+        {
+          style:
+            "background:#1b2130;border:1px solid #32426a;color:#d6e0ff;border-radius:8px;padding:4px 8px;",
+          disabled: gi === groups.length - 1 ? "disabled" : null,
+          title: "Move group down",
+        },
+        ["↓"],
+      );
+      moveDown.onclick = () => {
+        if (gi >= groups.length - 1) return;
+        const [item] = groups.splice(gi, 1);
+        groups.splice(gi + 1, 0, item);
+        render();
+      };
+      line.appendChild(moveUp);
+      line.appendChild(moveDown);
       const memHdr = h("div", { style: "grid-column:1/-1;margin-top:6px;" }, [
         h("div", { style: "opacity:.8;margin-bottom:4px;" }, ["Members"]),
       ]);
