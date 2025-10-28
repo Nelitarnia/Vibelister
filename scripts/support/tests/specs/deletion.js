@@ -81,5 +81,30 @@ export function getDeletionTests() {
         );
       },
     },
+    {
+      name: "keeps modifier groups that do not reference deleted modifiers",
+      run(assert) {
+        const { model, addModifier, groupExact } = makeModelFixture();
+        const modA = addModifier("A");
+        const modB = addModifier("B");
+        const modC = addModifier("C");
+        const modD = addModifier("D");
+
+        groupExact(2, [modA, modB, modC], { name: "trio" });
+
+        sanitizeModifierRulesAfterDeletion(model, [modD.id]);
+
+        assert.strictEqual(
+          model.modifierGroups.length,
+          1,
+          "modifier groups remain when none of their members are deleted",
+        );
+        assert.deepStrictEqual(
+          model.modifierGroups[0].memberIds,
+          [modA.id, modB.id, modC.id],
+          "memberIds stay intact for unaffected groups",
+        );
+      },
+    },
   ];
 }
