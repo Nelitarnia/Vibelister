@@ -5,26 +5,26 @@ export function sanitizeModifierRulesAfterDeletion(model, deletedIds) {
   const del = new Set(deletedIds);
 
   if (Array.isArray(model.modifierGroups)) {
+    const idKeys = ["ids", "members", "memberIds"];
+
     model.modifierGroups = model.modifierGroups
       .map((group) => {
-        const ids = Array.isArray(group.ids)
-          ? group.ids.filter((id) => !del.has(id))
-          : Array.isArray(group.members)
-            ? group.members.filter((id) => !del.has(id))
-            : [];
         const next = { ...group };
-        if ("ids" in group) next.ids = ids;
-        if ("members" in group) next.members = ids;
-        return next;
+        let longest = 0;
+        let foundArray = false;
+
+        for (const key of idKeys) {
+          if (!Array.isArray(group[key])) continue;
+          foundArray = true;
+          const filtered = group[key].filter((id) => !del.has(id));
+          next[key] = filtered;
+          if (filtered.length > longest) longest = filtered.length;
+        }
+
+        return { group: next, longest, foundArray };
       })
-      .filter((group) => {
-        const ids = Array.isArray(group.ids)
-          ? group.ids
-          : Array.isArray(group.members)
-            ? group.members
-            : [];
-        return ids.length >= 2;
-      });
+      .filter(({ longest, foundArray }) => !foundArray || longest >= 2)
+      .map(({ group }) => group);
   }
 
   if (Array.isArray(model.modifierConstraints)) {
