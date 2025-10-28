@@ -14,6 +14,7 @@ export function getDeletionTests() {
         model.modifierGroups.push(
           { id: 101, name: "duo", ids: [modA.id, modB.id] },
           { id: 102, name: "trio", members: [modA.id, modB.id, modC.id] },
+          { id: 103, name: "solo", memberIds: [modB.id] },
         );
 
         model.modifierConstraints.push(
@@ -32,13 +33,18 @@ export function getDeletionTests() {
 
         assert.deepStrictEqual(
           model.modifierGroups.map((group) => group.id),
-          [102],
-          "groups that lose too many members are removed",
+          [101, 102],
+          "groups are kept when at least one member remains",
         );
         assert.deepStrictEqual(
-          model.modifierGroups[0].members,
+          model.modifierGroups[0].ids,
+          [modA.id],
+          "two-member group retains surviving modifier id",
+        );
+        assert.deepStrictEqual(
+          model.modifierGroups[1].members,
           [modA.id, modC.id],
-          "remaining groups retain surviving modifier ids",
+          "larger group retains surviving modifier ids",
         );
 
         assert.strictEqual(
