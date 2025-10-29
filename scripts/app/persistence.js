@@ -12,6 +12,10 @@ import {
   MOD_STATE_MIN_VALUE,
 } from "../data/mod-state.js";
 import { makeRow } from "../data/rows.js";
+import {
+  createEmptyCommentMap,
+  normalizeCommentsMap,
+} from "../data/comments.js";
 
 export function createPersistenceController({
   model,
@@ -132,6 +136,7 @@ export function createPersistenceController({
     if (!Array.isArray(o.modifierGroups)) o.modifierGroups = [];
     if (!Array.isArray(o.modifierConstraints)) o.modifierConstraints = [];
     if (!o.notes || typeof o.notes !== "object") o.notes = {};
+    o.comments = normalizeCommentsMap(o.comments);
     if (!Array.isArray(o.interactionsPairs)) o.interactionsPairs = [];
     if (!o.interactionsIndex || typeof o.interactionsIndex !== "object") {
       o.interactionsIndex = { mode: "AI", groups: [] };
@@ -195,6 +200,7 @@ export function createPersistenceController({
       modifierGroups: [],
       modifierConstraints: [],
       notes: {},
+      comments: createEmptyCommentMap(),
       interactionsPairs: [],
       interactionsIndex: { mode: "AI", groups: [] },
       nextId: 1,

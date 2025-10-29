@@ -33,6 +33,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   └── views.js
 │   ├── data/
 │   │   ├── color-utils.js
+│   │   ├── comments.js
 │   │   ├── column-kinds.js
 │   │   ├── constants.js
 │   │   ├── mod-state.js
@@ -49,6 +50,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       │   ├── assertions.js
 │   │       │   ├── column-resize.js
 │   │       │   ├── column-kinds.js
+│   │       │   ├── comments.js
 │   │       │   ├── deletion.js
 │   │       │   ├── grid-keys.js
 │   │       │   ├── interactions.js
@@ -132,6 +134,8 @@ This document outlines a maintainable directory layout tailored to the current c
 - `mod-state.js` centralizes the modifier-state descriptor (IDs, glyphs, parsing tokens) so column kinds, palette UI, persistence, and tests reuse the same definitions.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
 - `color-utils.js` offers shared normalization and contrast helpers so rendering modules and pickers reuse consistent color logic.
+- `comments.js` composes stable identifiers for per-row, per-view comment buckets and normalizes persisted maps so app state and
+  migrations share the same helpers.
 
 #### `scripts/ui/`
 
@@ -144,6 +148,7 @@ This document outlines a maintainable directory layout tailored to the current c
 
 - Offer a home for cross-cutting helpers that are not part of the runtime app bundle, such as lightweight test harnesses.
 - The `tests/` subtree now keeps reusable spec modules (`specs/`) separate from browser runners (`tests.js`, `tests-ui.js`), ensuring Node and in-app harnesses share the same assertions and fixtures.
+- `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.
 
 ### `tests/`

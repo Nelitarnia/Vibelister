@@ -1,5 +1,6 @@
 import { createPersistenceController } from "../../../app/persistence.js";
 import { MOD } from "../../../data/constants.js";
+import { createEmptyCommentMap } from "../../../data/comments.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 export function getPersistenceTests() {
@@ -228,6 +229,79 @@ export function getPersistenceTests() {
           MOD.REQUIRES,
           "glyph input should map to REQUIRES",
         );
+      },
+    },
+    {
+      name: "upgradeModelInPlace seeds comments map",
+      run(assert) {
+        const { model } = makeModelFixture();
+        const controller = createPersistenceController({
+          model,
+          statusBar: null,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule: async () => ({
+            openJson: async () => ({ data: {}, name: "" }),
+            saveJson: async () => ({ name: "" }),
+          }),
+        });
+
+        const legacy = {
+          meta: { schema: 0, projectName: "", interactionsMode: "AI" },
+          actions: [],
+          inputs: [],
+          modifiers: [],
+          outcomes: [],
+          modifierGroups: [],
+          modifierConstraints: [],
+          notes: {},
+          comments: { actions: { 5: { text: "legacy" } }, inputs: ["bad"] },
+          interactionsPairs: [],
+          interactionsIndex: { mode: "AI", groups: [] },
+          nextId: 1,
+        };
+
+        controller.upgradeModelInPlace(legacy);
+
+        const expected = createEmptyCommentMap();
+        expected.actions["5"] = { text: "legacy" };
+        assert.deepStrictEqual(legacy.comments, expected);
+      },
+    },
+    {
+      name: "newProject resets comments map",
+      run(assert) {
+        const { model } = makeModelFixture();
+        model.comments.actions["12"] = { text: "persist" };
+
+        const controller = createPersistenceController({
+          model,
+          statusBar: null,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule: async () => ({
+            openJson: async () => ({ data: {}, name: "" }),
+            saveJson: async () => ({ name: "" }),
+          }),
+        });
+
+        controller.newProject();
+
+        assert.deepStrictEqual(model.comments, createEmptyCommentMap());
       },
     },
   ];
