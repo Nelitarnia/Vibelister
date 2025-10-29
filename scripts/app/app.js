@@ -101,6 +101,7 @@ const model = {
     projectName: "",
     interactionsMode: "AI",
     columnWidths: {},
+    commentFilter: { viewKey: "actions" },
   },
   actions: [],
   inputs: [],
@@ -322,6 +323,11 @@ const commentsUI = initCommentsUI({
   dataArray,
   render,
   statusBar,
+  model,
+  ensureVisible,
+  VIEWS,
+  noteKeyForPair,
+  getInteractionsPair,
 });
 
 initColumnResize({

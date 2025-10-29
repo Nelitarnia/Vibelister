@@ -160,6 +160,100 @@ export function deleteComment(model, viewDef, rowOrId, columnOrIndex) {
   };
 }
 
+function buildColumnIndexMap(viewDef) {
+  const columns = Array.isArray(viewDef?.columns) ? viewDef.columns : [];
+  const map = new Map();
+  for (let index = 0; index < columns.length; index++) {
+    const key = makeCommentColumnKey(viewDef, index);
+    map.set(key, { index, column: columns[index] });
+  }
+  return map;
+}
+
+function makeRowIndexResolver(viewDef, options = {}) {
+  const { rows, findRowIndex } = options || {};
+  if (typeof findRowIndex === "function") {
+    return (rowId) => {
+      const result = findRowIndex(rowId);
+      return Number.isFinite(result) ? result : -1;
+    };
+  }
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return () => -1;
+  }
+  const cache = new Map();
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    const coords = resolveCommentCoords(viewDef, row);
+    if (!coords) continue;
+    if (!cache.has(coords.rowId)) cache.set(coords.rowId, index);
+  }
+  return (rowId) => {
+    if (!cache.size) return -1;
+    const key = String(rowId ?? "");
+    if (cache.has(key)) return cache.get(key);
+    return -1;
+  };
+}
+
+export function listCommentsForView(model, viewDef, options = {}) {
+  if (!model || typeof model !== "object") return [];
+  const store = model.comments;
+  if (!store || typeof store !== "object") return [];
+
+  const vd = viewDef && typeof viewDef === "object" ? viewDef : null;
+  const viewKey = normalizeViewKey(vd);
+  const viewBucket = store[viewKey];
+  if (!viewBucket || typeof viewBucket !== "object") return [];
+
+  const columnMap = buildColumnIndexMap(vd);
+  const resolveRowIndex = makeRowIndexResolver(vd, options);
+
+  const entries = [];
+  for (const [rawRowId, columns] of Object.entries(viewBucket)) {
+    if (!columns || typeof columns !== "object") continue;
+    const rowId = String(rawRowId);
+    const rowIndex = resolveRowIndex(rowId);
+    for (const [rawColumnKey, value] of Object.entries(columns)) {
+      const columnKey = String(rawColumnKey);
+      const columnInfo = columnMap.get(columnKey);
+      const columnIndex = columnInfo ? columnInfo.index : -1;
+      const cellKey = columnIndex >= 0
+        ? makeCommentCellKey(vd, columnIndex, rowId)
+        : `${makeCommentRowKey(viewKey, rowId)}|${columnKey}`;
+      entries.push({
+        type: "value",
+        viewKey,
+        rowId,
+        rowKey: makeCommentRowKey(viewKey, rowId),
+        rowIndex,
+        columnKey,
+        columnIndex,
+        cellKey,
+        value: cloneValue(value),
+        column: columnInfo ? columnInfo.column : null,
+      });
+    }
+  }
+
+  entries.sort((a, b) => {
+    if (a.rowIndex === b.rowIndex) {
+      if (a.columnIndex === b.columnIndex) {
+        if (a.rowId === b.rowId) return a.columnKey.localeCompare(b.columnKey);
+        return a.rowId.localeCompare(b.rowId);
+      }
+      if (a.columnIndex < 0) return 1;
+      if (b.columnIndex < 0) return -1;
+      return a.columnIndex - b.columnIndex;
+    }
+    if (a.rowIndex < 0) return 1;
+    if (b.rowIndex < 0) return -1;
+    return a.rowIndex - b.rowIndex;
+  });
+
+  return entries;
+}
+
 export function listCommentsForCell(model, viewDef, rowOrId, columnOrIndex) {
   if (!model || typeof model !== "object") return [];
   const store = model.comments;
