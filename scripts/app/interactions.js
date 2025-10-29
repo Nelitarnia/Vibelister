@@ -1,6 +1,7 @@
 // interactions.js — Interactions view helpers (notes keys, get/set, clipboard, delete)
 
 import { formatEndActionLabel } from "../data/column-kinds.js";
+import { deleteComment } from "./comments.js";
 import { canonicalSig } from "../data/variants/variants.js";
 import { parsePhaseKey } from "../data/utils.js";
 import { invertOutcomeId } from "./outcomes.js";
@@ -551,8 +552,10 @@ export function clearInteractionsSelection(
     for (const r of rows) {
       const pair = getPairFromIndex(model, r);
       if (!pair) continue;
+      const commentIdentity = { commentRowId: noteKeyForPair(pair, undefined) };
       for (let c = 0; c < cols.length; c++) {
-        const key = String(cols[c].key || "");
+        const column = cols[c];
+        const key = String(column?.key || "");
         const pk = parsePhaseKey(key);
         if (
           !(
@@ -568,6 +571,8 @@ export function clearInteractionsSelection(
         if (pk && pk.field === "outcome") {
           mirrorAaPhase0Outcome(model, pair, pk.p);
         }
+        const commentChange = deleteComment(model, viewDef, commentIdentity, column);
+        if (commentChange) cleared++;
       }
     }
   } else {
@@ -584,11 +589,12 @@ export function clearInteractionsSelection(
     const editableCols = colsToClear
       .filter((c) => Number.isInteger(c) && c >= 0 && c < cols.length)
       .map((c) => {
-        const key = String(cols[c]?.key || "");
+        const column = cols[c];
+        const key = String(column?.key || "");
         const pk = parsePhaseKey(key);
         const editable =
           key === "notes" || (pk && (pk.field === "outcome" || pk.field === "end"));
-        return editable ? { c, key, pk } : null;
+        return editable ? { key, pk, column } : null;
       })
       .filter(Boolean);
 
@@ -606,10 +612,13 @@ export function clearInteractionsSelection(
     for (const r of rows) {
       const pair = getPairFromIndex(model, r);
       if (!pair) continue;
-      for (const { key, pk } of editableCols) {
+      const commentIdentity = { commentRowId: noteKeyForPair(pair, undefined) };
+      for (const { key, pk, column } of editableCols) {
         const phase = pk ? pk.p : undefined;
         const noteKey = noteKeyForPair(pair, phase);
         const note = model.notes[noteKey];
+        const commentChange = deleteComment(model, viewDef, commentIdentity, column);
+        if (commentChange) cleared++;
         if (!note) continue;
         const clearedBefore = cleared;
         clearField(note, key, pk);

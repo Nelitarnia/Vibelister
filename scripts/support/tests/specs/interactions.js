@@ -10,6 +10,7 @@ import {
   getInteractionsPair,
   getInteractionsRowCount,
 } from "../../../app/interactions.js";
+import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
 import { makeModelFixture } from "./model-fixtures.js";
@@ -477,6 +478,50 @@ export function getInteractionsTests() {
         assert.ok(
           !model.notes[sourceKey] && !model.notes[mirrorKey],
           "notes removed on both sides after selection clear",
+        );
+      },
+    },
+    {
+      name: "clearInteractionsSelection removes stored comments",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("Lever");
+        const input = addInput("Use");
+        buildInteractionsPairs(model);
+        const viewDef = { key: "interactions", ...makeInteractionsView() };
+        const rowIndex = findPairIndex(
+          model,
+          (pair) => pair.aId === action.id && pair.iId === input.id,
+        );
+        assert.ok(rowIndex >= 0, "pair found");
+        const pair = getPair(model, rowIndex);
+        const column = viewDef.columns[2];
+        const commentRowId = noteKeyForPair(pair, undefined);
+        setComment(
+          model,
+          viewDef,
+          { commentRowId },
+          column,
+          { text: "annotate" },
+        );
+
+        const selection = { rows: new Set([rowIndex]), cols: new Set([2]), colsAll: false };
+        const sel = { r: rowIndex, c: 2 };
+        const status = { set() {} };
+        const result = clearInteractionsSelection(
+          model,
+          viewDef,
+          selection,
+          sel,
+          "clearActiveCell",
+          status,
+          () => {},
+        );
+
+        assert.ok(result?.cleared > 0, "clearing reports entries removed");
+        assert.ok(
+          !model.comments.interactions?.[commentRowId],
+          "comment bucket cleared for row",
         );
       },
     },

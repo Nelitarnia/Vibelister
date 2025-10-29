@@ -1,4 +1,9 @@
 import { describeAttachmentLocation } from "./history.js";
+import {
+  deleteComment,
+  listCommentsForCell,
+  setComment,
+} from "./comments.js";
 
 export function createGridCommands(deps = {}) {
   const {
@@ -26,6 +31,8 @@ export function createGridCommands(deps = {}) {
     render,
     isModColumn,
     parsePhaseKey,
+    noteKeyForPair,
+    getInteractionsPair,
   } = deps;
 
   function currentView() {
@@ -47,6 +54,52 @@ export function createGridCommands(deps = {}) {
       if (Array.isArray(value)) return value.slice();
       return { ...value };
     }
+  }
+
+  function resolveCommentTarget(r, c, options = {}) {
+    const activeView = options?.view || currentView();
+    const vd = options?.viewDef || viewDef?.() || { key: activeView, columns: [] };
+    const columns = Array.isArray(vd.columns) ? vd.columns : [];
+    const column = options?.column || columns[c];
+    if (!column) return null;
+
+    let rowIdentity = options?.row ?? options?.rowId ?? null;
+    if (!rowIdentity) {
+      if (activeView === "interactions") {
+        const pair = options?.pair || getInteractionsPair?.(model, r);
+        const keySource =
+          options?.rowId || noteKeyForPair?.(pair, undefined) || null;
+        if (!keySource) return null;
+        rowIdentity = { commentRowId: keySource };
+      } else {
+        const arr = dataArray?.();
+        if (!arr || !arr.length) return null;
+        const row = arr[r];
+        if (!row) return null;
+        rowIdentity = row;
+      }
+    }
+
+    return { activeView, vd, column, rowIdentity };
+  }
+
+  function formatCommentUndoStatus(direction, context, defaultLabel = "comment edit") {
+    const change = context?.result?.change;
+    let label = defaultLabel;
+    if (change) {
+      if (change.type === "delete" || change.type === "deleteRow") {
+        label = "comment deletion";
+      } else if (change.type === "set" && change.previous == null) {
+        label = "comment addition";
+      }
+    }
+    const attachment =
+      direction === "undo"
+        ? context?.beforeAttachments
+        : context?.afterAttachments;
+    const location = describeAttachmentLocation(attachment, true);
+    const verb = direction === "undo" ? "Undid" : "Redid";
+    return `${verb} ${label}${location ? ` at ${location}` : ""}.`;
   }
 
   function columnsHorizontallyCompatible(sourceCol, targetCol) {
@@ -282,7 +335,7 @@ export function createGridCommands(deps = {}) {
       selection?.rows?.size > 0
         ? Array.from(selection.rows).sort((a, b) => a - b)
         : [sel?.r];
-    const vd = viewDef?.();
+    const vd = viewDef?.() || { key: currentView(), columns: [] };
     let colsToClear;
     if (selection?.colsAll) colsToClear = vd.columns.map((_, idx) => idx);
     else if (selection?.cols?.size)
@@ -297,6 +350,7 @@ export function createGridCommands(deps = {}) {
       "clearSelectedCells",
       () => {
         let cleared = 0;
+        const removedComments = [];
         for (const r of rows) {
           if (!Number.isFinite(r) || r < 0 || r >= arr.length) continue;
           const row = arr[r];
@@ -310,21 +364,27 @@ export function createGridCommands(deps = {}) {
               !isInteractionPhaseColumnActiveForRow?.(model, vd, r, c, col)
             )
               continue;
-            let changed = false;
-            if (col.kind)
-              changed = clearCellForKind?.(col.kind, kindCtx?.({ r, c, col, row }));
-            else if (col.key) {
+            let cellChanged = false;
+            if (col.kind) {
+              const changed = clearCellForKind?.(col.kind, kindCtx?.({ r, c, col, row }));
+              if (changed) cellChanged = true;
+            } else if (col.key) {
               const before = row[col.key];
               const hadValue = !(before == null || before === "");
               if (hadValue) {
                 row[col.key] = "";
-                changed = true;
+                cellChanged = true;
               }
             }
-            if (changed) cleared++;
+            const commentChange = deleteComment(model, vd, row, col);
+            if (commentChange) {
+              removedComments.push(commentChange);
+              cellChanged = true;
+            }
+            if (cellChanged) cleared++;
           }
         }
-        return { cleared };
+        return { cleared, removedComments };
       },
       {
         rebuildInteractions: (res) => (res?.cleared ?? 0) > 0,
@@ -374,13 +434,18 @@ export function createGridCommands(deps = {}) {
     const rows = selection?.rows?.size > 0 ? Array.from(selection.rows) : [sel?.r];
     rows.sort((a, b) => b - a);
 
+    const vd = viewDef?.() || { key: currentView(), columns: [] };
+
     runModelMutation?.(
       "deleteSelectedRows",
       () => {
         const deletedIds = [];
+        const removedComments = [];
         for (const r of rows) {
           const row = arr[r];
           if (!row) continue;
+          const commentRemoval = deleteComment(model, vd, row, null);
+          if (commentRemoval) removedComments.push(commentRemoval);
           deletedIds.push(row.id);
           arr.splice(r, 1);
         }
@@ -395,7 +460,7 @@ export function createGridCommands(deps = {}) {
 
         const last = Math.max(0, Math.min(arr.length - 1, rows[rows.length - 1] ?? 0));
 
-        return { deletedIds, needsModifierRebuild, last };
+        return { deletedIds, needsModifierRebuild, last, removedComments };
       },
       {
         rebuildActionColumns: (res) => res?.needsModifierRebuild,
@@ -550,6 +615,67 @@ export function createGridCommands(deps = {}) {
     );
   }
 
+  function setCellComment(r, c, value, options = {}) {
+    const target = resolveCommentTarget(r, c, options);
+    if (!target) return null;
+    const result = runModelMutation?.(
+      "setCellComment",
+      () => {
+        const change = setComment(
+          model,
+          target.vd,
+          target.rowIdentity,
+          target.column,
+          value,
+        );
+        return { change };
+      },
+      {
+        render: true,
+        undo: makeUndoConfig?.({
+          label: "comment edit",
+          shouldRecord: (res) => !!res?.change,
+          makeStatus: (direction, _label, context) =>
+            formatCommentUndoStatus(direction, context),
+        }),
+      },
+    );
+    return result?.change || null;
+  }
+
+  function deleteCellComment(r, c, options = {}) {
+    const target = resolveCommentTarget(r, c, options);
+    if (!target) return null;
+    const result = runModelMutation?.(
+      "deleteCellComment",
+      () => {
+        const change = deleteComment(
+          model,
+          target.vd,
+          target.rowIdentity,
+          target.column,
+        );
+        return { change };
+      },
+      {
+        render: true,
+        undo: makeUndoConfig?.({
+          label: "comment edit",
+          shouldRecord: (res) => !!res?.change,
+          makeStatus: (direction, _label, context) =>
+            formatCommentUndoStatus(direction, context, "comment deletion"),
+        }),
+      },
+    );
+    return result?.change || null;
+  }
+
+  function getCellComments(r, c, options = {}) {
+    const target = resolveCommentTarget(r, c, options);
+    if (!target) return [];
+    return listCommentsForCell(model, target.vd, target.rowIdentity, target.column);
+  }
+
   return {
     cloneValueForAssignment,
     getHorizontalTargetColumns,
@@ -560,5 +686,8 @@ export function createGridCommands(deps = {}) {
     clearSelectedCells,
     deleteSelectedRows,
     setCellSelectionAware,
+    setCellComment,
+    deleteCellComment,
+    getCellComments,
   };
 }
