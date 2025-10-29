@@ -252,6 +252,9 @@ const {
   clearSelectedCells,
   deleteSelectedRows,
   setCellSelectionAware,
+  setCellComment,
+  deleteCellComment,
+  getCellComments,
 } = createGridCommands({
   getActiveView: () => activeView,
   viewDef,
@@ -277,6 +280,8 @@ const {
   render,
   isModColumn,
   parsePhaseKey,
+  noteKeyForPair,
+  getInteractionsPair,
 });
 
 initColumnResize({

@@ -16,6 +16,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
 │   │   ├── column-widths.js
+│   │   ├── comments.js
 │   │   ├── diagnostics.js
 │   │   ├── editing-shortcuts.js
 │   │   ├── grid-commands.js
@@ -116,6 +117,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
+- `comments.js` exposes undo-friendly helpers for reading and mutating the normalized comment store so the rest of the app can work with stable row IDs and column keys.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `column-widths.js` captures default widths for each view, clones override metadata, and exposes helpers so state controllers can merge persisted sizing without bloating callers.
 - `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
