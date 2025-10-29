@@ -129,6 +129,35 @@ export function createPersistenceController({
       }
       o.meta.columnWidths = cleaned;
     }
+    const normalizeList = (values) => {
+      if (!Array.isArray(values) || !values.length) return undefined;
+      const unique = Array.from(
+        new Set(
+          values
+            .map((value) => {
+              const str = String(value ?? "").trim();
+              return str || null;
+            })
+            .filter(Boolean),
+        ),
+      );
+      return unique.length ? unique : undefined;
+    };
+    if (!o.meta.commentFilter || typeof o.meta.commentFilter !== "object") {
+      o.meta.commentFilter = {};
+    } else {
+      const cf = o.meta.commentFilter;
+      const normalized = {};
+      if (typeof cf.viewKey === "string") {
+        const trimmed = cf.viewKey.trim();
+        if (trimmed) normalized.viewKey = trimmed;
+      }
+      const rows = normalizeList(cf.rowIds || cf.rows);
+      if (rows) normalized.rowIds = rows;
+      const columns = normalizeList(cf.columnKeys || cf.columns);
+      if (columns) normalized.columnKeys = columns;
+      o.meta.commentFilter = normalized;
+    }
     if (!Array.isArray(o.actions)) o.actions = [];
     if (!Array.isArray(o.inputs)) o.inputs = [];
     if (!Array.isArray(o.modifiers)) o.modifiers = [];
@@ -192,6 +221,7 @@ export function createPersistenceController({
         projectName: "",
         interactionsMode: "AI",
         columnWidths: {},
+        commentFilter: {},
       },
       actions: [],
       inputs: [],

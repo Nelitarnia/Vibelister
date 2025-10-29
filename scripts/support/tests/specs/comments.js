@@ -8,6 +8,7 @@ import {
 import {
   deleteComment,
   listCommentsForCell,
+  listCommentsForView,
   setComment,
 } from "../../../app/comments.js";
 import { createGridCommands } from "../../../app/grid-commands.js";
@@ -92,6 +93,57 @@ export function getCommentTests() {
             value: payload,
           },
         ]);
+      },
+    },
+    {
+      name: "listCommentsForView returns enriched entries",
+      run(assert) {
+        const model = {
+          actions: [
+            { id: 1, name: "Hero" },
+            { id: 2, name: "Villain" },
+          ],
+          comments: createEmptyCommentMap(["actions"]),
+        };
+        const viewDef = {
+          key: "actions",
+          columns: [{ key: "name" }, { key: "notes" }],
+        };
+
+        setComment(model, viewDef, model.actions[0], viewDef.columns[0], { text: "primary" });
+        setComment(model, viewDef, model.actions[1], viewDef.columns[1], { text: "secondary" });
+
+        const entries = listCommentsForView(model, viewDef, { rows: model.actions });
+        assert.strictEqual(entries.length, 2);
+        assert.deepStrictEqual(
+          entries.map(({ rowIndex, columnIndex, rowId, columnKey }) => ({
+            rowIndex,
+            columnIndex,
+            rowId,
+            columnKey,
+          })),
+          [
+            { rowIndex: 0, columnIndex: 0, rowId: "1", columnKey: "name" },
+            { rowIndex: 1, columnIndex: 1, rowId: "2", columnKey: "notes" },
+          ],
+        );
+        assert.deepStrictEqual(entries[0].value, { text: "primary" });
+      },
+    },
+    {
+      name: "listCommentsForView tolerates orphaned coordinates",
+      run(assert) {
+        const model = { comments: createEmptyCommentMap(["actions"]) };
+        const viewDef = { key: "actions", columns: [{ key: "name" }] };
+        model.comments.actions["99"] = { ghost: { text: "lost" } };
+
+        const entries = listCommentsForView(model, viewDef, { rows: [] });
+        assert.strictEqual(entries.length, 1);
+        const [entry] = entries;
+        assert.strictEqual(entry.rowIndex, -1);
+        assert.strictEqual(entry.columnIndex, -1);
+        assert.strictEqual(entry.cellKey, "actions:99|ghost");
+        assert.deepStrictEqual(entry.value, { text: "lost" });
       },
     },
     {

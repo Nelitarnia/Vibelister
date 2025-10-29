@@ -72,8 +72,22 @@
 * * schema: monotonically increasing integer for migrations
 * * projectName: user-visible name (usually filename stem)
 * * interactionsMode: 'AI' or 'AA'
+* * columnWidths: per-view column overrides (Record<viewKey, number>)
+* * commentFilter: persisted sidebar filter state
     */
-    /** @typedef {{ schema: number, projectName: string, interactionsMode: InteractionsMode }} Meta */
+    /**
+     * @typedef {{
+     *   schema: number,
+     *   projectName: string,
+     *   interactionsMode: InteractionsMode,
+     *   columnWidths: Record<string, number>,
+     *   commentFilter?: {
+     *     viewKey?: string,
+     *     rowIds?: string[],
+     *     columnKeys?: string[],
+     *   },
+     * }} Meta
+     */
 
 /**
 
