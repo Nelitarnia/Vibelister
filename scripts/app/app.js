@@ -10,6 +10,7 @@ import { initPalette } from "../ui/palette.js";
 import { initColorPicker } from "../ui/color-picker.js";
 import { initColumnResize } from "../ui/column-resize.js";
 import { initStatusBar } from "../ui/status.js";
+import { initCommentsUI } from "../ui/comments.js";
 import {
   isCanonicalStructuredPayload,
   makeGetStructuredCell,
@@ -130,6 +131,18 @@ const sheet = document.getElementById("sheet"),
 const projectNameEl = document.getElementById(Ids.projectName);
 const undoMenuItem = document.getElementById(Ids.editUndo);
 const redoMenuItem = document.getElementById(Ids.editRedo);
+const commentToggleButton = document.getElementById(Ids.commentToggle);
+const commentAddButton = document.getElementById(Ids.commentAdd);
+const commentSidebar = document.getElementById(Ids.commentSidebar);
+const commentCloseButton = document.getElementById(Ids.commentClose);
+const commentList = document.getElementById(Ids.commentList);
+const commentEmpty = document.getElementById(Ids.commentEmpty);
+const commentEditor = document.getElementById(Ids.commentEditor);
+const commentTextarea = document.getElementById(Ids.commentText);
+const commentSaveButton = document.getElementById(Ids.commentSave);
+const commentDeleteButton = document.getElementById(Ids.commentDelete);
+const commentCancelButton = document.getElementById(Ids.commentCancel);
+const commentSelectionLabel = document.getElementById(Ids.commentSelection);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
 const { openSettingsDialog } = createSettingsController({ statusBar });
@@ -282,6 +295,33 @@ const {
   parsePhaseKey,
   noteKeyForPair,
   getInteractionsPair,
+});
+
+const commentsUI = initCommentsUI({
+  toggleButton: commentToggleButton,
+  addButton: commentAddButton,
+  sidebar: commentSidebar,
+  closeButton: commentCloseButton,
+  listElement: commentList,
+  emptyElement: commentEmpty,
+  editorForm: commentEditor,
+  textarea: commentTextarea,
+  saveButton: commentSaveButton,
+  deleteButton: commentDeleteButton,
+  cancelButton: commentCancelButton,
+  selectionLabel: commentSelectionLabel,
+  SelectionCtl,
+  selection,
+  sel,
+  onSelectionChanged,
+  getCellComments,
+  setCellComment,
+  deleteCellComment,
+  getActiveView: () => activeView,
+  viewDef,
+  dataArray,
+  render,
+  statusBar,
 });
 
 initColumnResize({
@@ -783,6 +823,7 @@ function setActiveView(key) {
   // Restore scrollTop after layout so spacer height is valid
   if (typeof st.scrollTop === "number") sheet.scrollTop = st.scrollTop;
   render();
+  commentsUI?.refresh?.();
   const modeLabel =
     key === "interactions" ? ` [${model.meta?.interactionsMode || "AI"}]` : "";
   statusBar?.set(`View: ${viewDef().title}${modeLabel}`);

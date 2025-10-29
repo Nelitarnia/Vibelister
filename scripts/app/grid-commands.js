@@ -102,6 +102,25 @@ export function createGridCommands(deps = {}) {
     return `${verb} ${label}${location ? ` at ${location}` : ""}.`;
   }
 
+  function emitCommentChange(change, target) {
+    if (!change) return;
+    if (typeof document === "undefined" || !document?.dispatchEvent) return;
+    try {
+      document.dispatchEvent(
+        new CustomEvent("vibelister:comments-updated", {
+          detail: {
+            change,
+            viewKey: target?.vd?.key ?? null,
+            rowIdentity: target?.rowIdentity ?? null,
+            column: target?.column ?? null,
+          },
+        }),
+      );
+    } catch (_) {
+      /* ignore dispatch failures */
+    }
+  }
+
   function columnsHorizontallyCompatible(sourceCol, targetCol) {
     if (!targetCol) return false;
     if (sourceCol === targetCol) return true;
@@ -640,7 +659,9 @@ export function createGridCommands(deps = {}) {
         }),
       },
     );
-    return result?.change || null;
+    const change = result?.change || null;
+    if (change) emitCommentChange(change, target);
+    return change;
   }
 
   function deleteCellComment(r, c, options = {}) {
@@ -667,7 +688,9 @@ export function createGridCommands(deps = {}) {
         }),
       },
     );
-    return result?.change || null;
+    const change = result?.change || null;
+    if (change) emitCommentChange(change, target);
+    return change;
   }
 
   function getCellComments(r, c, options = {}) {

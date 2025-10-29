@@ -179,6 +179,25 @@
           title="Used for Export / Save As filename"
         />
       </nav>
+      <div class="toolbar__comments" id="commentControls">
+        <button
+          type="button"
+          class="toolbar-button"
+          id="comment-add"
+          title="Add a comment to the selected cell"
+        >
+          Add comment
+        </button>
+        <button
+          type="button"
+          class="toolbar-button"
+          id="comment-toggle"
+          aria-expanded="false"
+          aria-controls="comment-sidebar"
+        >
+          Comments ▾
+        </button>
+      </div>
       <span class="status" id="status">Ready</span>
     </div>
 
@@ -283,6 +302,51 @@
 
         <textarea class="editor" id="editor"></textarea>
       </div>
+      <aside
+        class="comment-sidebar"
+        id="comment-sidebar"
+        data-open="false"
+        aria-hidden="true"
+      >
+        <div class="comment-sidebar__header">
+          <span class="comment-sidebar__title">Comments</span>
+          <button
+            type="button"
+            class="comment-sidebar__close"
+            id="comment-close"
+            aria-label="Hide comments"
+          >
+            Close
+          </button>
+        </div>
+        <div class="comment-sidebar__selection" id="comment-selection">
+          Select a cell to manage comments.
+        </div>
+        <form class="comment-sidebar__editor" id="comment-editor" hidden>
+          <label class="comment-sidebar__label" for="comment-text">Comment</label>
+          <textarea
+            class="comment-sidebar__textarea"
+            id="comment-text"
+            rows="4"
+            placeholder="Write a note for collaborators"
+          ></textarea>
+          <div class="comment-sidebar__editor-actions">
+            <button type="submit" class="comment-sidebar__save" id="comment-save">
+              Save
+            </button>
+            <button type="button" class="comment-sidebar__delete" id="comment-delete">
+              Delete
+            </button>
+            <button type="button" class="comment-sidebar__cancel" id="comment-cancel">
+              Cancel
+            </button>
+          </div>
+        </form>
+        <div class="comment-sidebar__empty" id="comment-empty">
+          No cell selected.
+        </div>
+        <ul class="comment-sidebar__list" id="comment-list"></ul>
+      </aside>
     </div>
 
     <!-- Load the application code -->
