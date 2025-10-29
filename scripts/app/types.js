@@ -88,6 +88,7 @@
 * @property {Array<Object>} modifierGroups      // group definitions; see rules.js
 * @property {Array<Object>} modifierConstraints // rule constraints; see rules.js
 * @property {Record<string, NoteRecord>} notes  // flat map from noteKey → note
+* @property {Record<string, Record<string, unknown>>} comments // view+row → comment payloads
 * @property {InteractionPair[]} interactionsPairs
 * @property {{
 *   mode: string,

@@ -68,6 +68,7 @@ import {
   HEADER_HEIGHT,
 } from "../data/constants.js";
 import { makeRow, insertBlankRows } from "../data/rows.js";
+import { createEmptyCommentMap } from "../data/comments.js";
 import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
 import { createHistoryController } from "./history.js";
 import {
@@ -107,6 +108,7 @@ const model = {
   modifierGroups: [],
   modifierConstraints: [],
   notes: {},
+  comments: createEmptyCommentMap(),
   interactionsPairs: [],
   interactionsIndex: { mode: "AI", groups: [] },
   nextId: 1,
