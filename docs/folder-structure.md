@@ -71,6 +71,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │       ├── color-picker.js
 │       ├── column-resize.js
 │       ├── drag.js
+│       ├── comments.js
 │       ├── grid-keys.js
 │       ├── grid-mouse.js
 │       ├── interactions-outline.js

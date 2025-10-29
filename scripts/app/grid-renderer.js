@@ -8,6 +8,7 @@ import {
   getEntityColorsFromRow,
   computeColorPreviewForColorColumn,
 } from "../data/color-utils.js";
+import { listCommentsForCell } from "./comments.js";
 
 function createGridRenderer({
   sheet,
@@ -78,9 +79,36 @@ function createGridRenderer({
     return { plainText: String(value), segments: null };
   }
 
+  function ensureCellStructure(el) {
+    if (!el) return { content: null, badge: null };
+    let content = el._contentEl;
+    let badge = el._commentBadge;
+    if (!content || !content.isConnected) {
+      content = document.createElement("div");
+      content.className = "cell__content";
+      if (badge && badge.parentNode === el) el.insertBefore(content, badge);
+      else el.insertBefore(content, el.firstChild);
+      el._contentEl = content;
+    }
+    if (!badge || !badge.isConnected) {
+      badge = document.createElement("span");
+      badge.className = "cell__comment-badge";
+      badge.setAttribute("aria-hidden", "true");
+      badge.dataset.visible = "false";
+      badge.dataset.status = "default";
+      el.appendChild(badge);
+      el._commentBadge = badge;
+    } else if (content && badge.previousSibling !== content && content.parentNode === el) {
+      el.insertBefore(content, badge);
+    }
+    return { content, badge };
+  }
+
   function setCellContent(el, text, segments) {
+    const { content } = ensureCellStructure(el);
+    if (!content) return;
     if (segments && segments.length) {
-      while (el.firstChild) el.removeChild(el.firstChild);
+      while (content.firstChild) content.removeChild(content.firstChild);
       const frag = document.createDocumentFragment();
       for (const seg of segments) {
         const span = document.createElement("span");
@@ -88,17 +116,83 @@ function createGridRenderer({
         span.style.color = seg.foreground || "";
         frag.appendChild(span);
       }
-      el.textContent = "";
-      el.appendChild(frag);
-      el._richText = true;
+      content.textContent = "";
+      content.appendChild(frag);
+      content._richText = true;
     } else {
-      if (el._richText) {
-        while (el.firstChild) el.removeChild(el.firstChild);
-        el._richText = false;
+      if (content._richText) {
+        while (content.firstChild) content.removeChild(content.firstChild);
+        content._richText = false;
       }
-      el.textContent =
+      content.textContent =
         typeof text === "string" ? text : text == null ? "" : String(text);
     }
+  }
+
+  function deriveCommentStatus(value) {
+    if (!value || typeof value !== "object") return "default";
+    if (typeof value.status === "string" && value.status.trim())
+      return value.status.trim().toLowerCase();
+    if (value.resolved === true) return "resolved";
+    if (value.resolved === false) return "open";
+    if (typeof value.severity === "string" && value.severity.trim())
+      return `severity-${value.severity.trim().toLowerCase()}`;
+    return "default";
+  }
+
+  function updateCommentBadge(cell, entries) {
+    const { badge } = ensureCellStructure(cell);
+    if (!badge) return;
+    const hasComments = Array.isArray(entries) && entries.length > 0;
+    badge.dataset.visible = hasComments ? "true" : "false";
+    badge.dataset.status = "default";
+    badge.textContent = "";
+    badge.removeAttribute("title");
+    cell.dataset.comment = hasComments ? "true" : "false";
+    if (!hasComments) return;
+    const count = entries.length;
+    badge.textContent = count > 1 ? String(count) : "•";
+    const primary = entries[0] || null;
+    badge.dataset.status = deriveCommentStatus(primary?.value) || "default";
+    const value = primary?.value;
+    if (value && typeof value === "object") {
+      const text =
+        typeof value.text === "string"
+          ? value.text
+          : typeof value.note === "string"
+            ? value.note
+            : null;
+      if (text) badge.title = text;
+    } else if (value != null) {
+      badge.title = String(value);
+    } else {
+      badge.title = "Comment attached";
+    }
+  }
+
+  function getInteractionCommentIdentity(rowIndex) {
+    if (typeof getInteractionsPair !== "function") return null;
+    try {
+      const pair = getInteractionsPair(model, rowIndex);
+      if (!pair || typeof noteKeyForPair !== "function") return null;
+      const baseKey = noteKeyForPair(pair, undefined);
+      if (!baseKey) return null;
+      return { commentRowId: baseKey };
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function listCommentsFor(activeView, viewDefinition, row, rowIndex, column) {
+    if (!column || !model || !model.comments) return [];
+    if (typeof listCommentsForCell !== "function") return [];
+    if (activeView === "interactions") {
+      const identity = getInteractionCommentIdentity(rowIndex);
+      if (!identity) return [];
+      return listCommentsForCell(model, viewDefinition, identity, column) || [];
+    }
+    if (!row) return [];
+    return listCommentsForCell(model, viewDefinition, row, column) || [];
   }
 
   function ensurePoolSize(pool, container, needed, className) {
@@ -304,7 +398,8 @@ function createGridRenderer({
     const sl = sheet.scrollLeft,
       st = sheet.scrollTop;
 
-    const cols = viewDef().columns;
+    const viewDefinition = viewDef();
+    const cols = viewDefinition.columns;
     const { widths, offs } = getColGeomFor(cols);
     const vc = visibleCols(offs, sl, vw, cols.length),
       vr = visibleRows(st, vh, ROW_HEIGHT, getRowCount());
@@ -385,9 +480,18 @@ function createGridRenderer({
     for (let i = need; i < cellPool.length; i++) {
       const d = cellPool[i];
       if (d.style.display !== "none") d.style.display = "none";
+      d.dataset.comment = "false";
+      const badge = d._commentBadge;
+      if (badge) {
+        badge.dataset.visible = "false";
+        badge.dataset.status = "default";
+        badge.textContent = "";
+        badge.removeAttribute("title");
+      }
     }
 
     const rows = activeView === "interactions" ? null : dataArray();
+    const commentStoreAvailable = !!(model && model.comments);
     let k = 0;
     for (let r = vr.start; r <= vr.end; r++) {
       const top = r * ROW_HEIGHT;
@@ -411,6 +515,10 @@ function createGridRenderer({
             : String(normalized.plainText ?? "");
         let displaySegments = normalized.segments;
         const col = cols[c];
+        const commentEntries =
+          commentStoreAvailable && col
+            ? listCommentsFor(activeView, viewDefinition, row, r, col)
+            : [];
         const colorInfo = computeCellColors(r, c, col, row);
         if (
           colorInfo &&
@@ -423,6 +531,7 @@ function createGridRenderer({
         setCellContent(d, displayText, displaySegments);
         applyCellColors(d, colorInfo);
         d.title = colorInfo && colorInfo.title ? colorInfo.title : "";
+        updateCommentBadge(d, commentEntries);
         if (r % 2 === 1) d.classList.add("alt");
         else d.classList.remove("alt");
         const isMultiSelection =
