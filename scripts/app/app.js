@@ -145,6 +145,8 @@ const commentSaveButton = document.getElementById(Ids.commentSave);
 const commentDeleteButton = document.getElementById(Ids.commentDelete);
 const commentCancelButton = document.getElementById(Ids.commentCancel);
 const commentSelectionLabel = document.getElementById(Ids.commentSelection);
+const commentPrevButton = document.getElementById(Ids.commentPrev);
+const commentNextButton = document.getElementById(Ids.commentNext);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
 const { openSettingsDialog } = createSettingsController({ statusBar });
@@ -314,6 +316,8 @@ const commentsUI = initCommentsUI({
   saveButton: commentSaveButton,
   deleteButton: commentDeleteButton,
   cancelButton: commentCancelButton,
+  prevButton: commentPrevButton,
+  nextButton: commentNextButton,
   selectionLabel: commentSelectionLabel,
   SelectionCtl,
   selection,

@@ -2,7 +2,6 @@ import { listCommentsForView } from "../app/comments.js";
 import {
   COMMENT_COLOR_PRESETS,
   DEFAULT_COMMENT_COLOR_ID,
-  commentColorPresetById,
   normalizeCommentColorId,
 } from "../data/comment-colors.js";
 
@@ -33,6 +32,13 @@ function getEntryColor(entry) {
   return trimmed || "";
 }
 
+function getEntryColorId(entry) {
+  const raw = getEntryColor(entry);
+  const normalized = normalizeColorId(raw);
+  if (normalized) return normalized;
+  return raw ? raw.trim() : "";
+}
+
 function buildPayload(existingEntry, text, color) {
   const base =
     existingEntry && existingEntry.value && typeof existingEntry.value === "object"
@@ -58,6 +64,8 @@ export function initCommentsUI(options = {}) {
     saveButton,
     deleteButton,
     cancelButton,
+    prevButton,
+    nextButton,
     selectionLabel,
     SelectionCtl,
     selection,
@@ -88,6 +96,8 @@ export function initCommentsUI(options = {}) {
   let commentsHandler = null;
 
   const colorSelectEl = colorSelect || null;
+  const prevButtonEl = prevButton || null;
+  const nextButtonEl = nextButton || null;
   const colorPresetSource =
     Array.isArray(commentColors) && commentColors.length
       ? commentColors
@@ -131,6 +141,8 @@ export function initCommentsUI(options = {}) {
     "";
   let lastSelectedColor = fallbackColorId;
   let colorSelectHandler = null;
+  let prevClickHandler = null;
+  let nextClickHandler = null;
 
   function normalizeColorId(value) {
     if (value == null) return "";
@@ -169,14 +181,15 @@ export function initCommentsUI(options = {}) {
   }
 
   function setColorSelectValue(colorId) {
-    const normalized = normalizeColorId(colorId) || fallbackColorId;
-    lastSelectedColor = normalized || fallbackColorId;
-    if (!colorSelectEl) return lastSelectedColor;
-    if (colorSelectEl.value !== lastSelectedColor) {
-      colorSelectEl.value = lastSelectedColor;
+    const normalized = normalizeColorId(colorId);
+    const target = normalized || fallbackColorId;
+    lastSelectedColor = target;
+    if (colorSelectEl && colorSelectEl.value !== target) {
+      colorSelectEl.value = target;
     }
-    updateColorSelectAppearance(lastSelectedColor);
-    return lastSelectedColor;
+    updateColorSelectAppearance(target);
+    setFilter({ colorIds: target ? [target] : null });
+    return target;
   }
 
   function getSelectedColorId() {
@@ -270,8 +283,28 @@ export function initCommentsUI(options = {}) {
     return unique;
   }
 
+  function normalizeColorFilter(values) {
+    if (values == null) return null;
+    const list = Array.isArray(values) ? values : [values];
+    const unique = Array.from(
+      new Set(
+        list
+          .map((value) => {
+            const normalized = normalizeColorId(value);
+            if (normalized) return normalized;
+            const str = String(value ?? "").trim();
+            return str || null;
+          })
+          .filter(Boolean),
+      ),
+    );
+    if (!unique.length) return null;
+    unique.sort((a, b) => a.localeCompare(b));
+    return unique;
+  }
+
   function normalizeFilter(raw = {}) {
-    const base = { viewKey: null, rowIds: null, columnKeys: null };
+    const base = { viewKey: null, rowIds: null, columnKeys: null, colorIds: null };
     if (!raw || typeof raw !== "object") return base;
     if (typeof raw.viewKey === "string") {
       const trimmed = raw.viewKey.trim();
@@ -279,6 +312,9 @@ export function initCommentsUI(options = {}) {
     }
     base.rowIds = normalizeStringArray(raw.rowIds || raw.rows);
     base.columnKeys = normalizeStringArray(raw.columnKeys || raw.columns);
+    base.colorIds = normalizeColorFilter(
+      raw.colorIds || raw.colors || raw.colorId || raw.color,
+    );
     return base;
   }
 
@@ -298,7 +334,8 @@ export function initCommentsUI(options = {}) {
     return (
       a.viewKey === b.viewKey &&
       arraysEqual(a.rowIds, b.rowIds) &&
-      arraysEqual(a.columnKeys, b.columnKeys)
+      arraysEqual(a.columnKeys, b.columnKeys) &&
+      arraysEqual(a.colorIds, b.colorIds)
     );
   }
 
@@ -374,36 +411,91 @@ export function initCommentsUI(options = {}) {
     if (filterState.columnKeys && filterState.columnKeys.length) {
       if (!filterState.columnKeys.includes(entry.columnKey)) return false;
     }
+    if (filterState.colorIds && filterState.colorIds.length) {
+      const colorId = getEntryColorId(entry);
+      if (!colorId || !filterState.colorIds.includes(colorId)) return false;
+    }
     return true;
   }
 
   function syncFilteredIndexToSelection() {
     const active = typeof getActiveView === "function" ? getActiveView() : null;
-    if (!active || active !== getFilterViewKey()) {
+    if (!active) {
       filteredIndex = -1;
       return;
     }
     filteredIndex = filteredEntries.findIndex(
-      (entry) => entry.rowIndex === sel.r && entry.columnIndex === sel.c,
+      (entry) =>
+        entry.viewKey === active &&
+        entry.rowIndex === sel.r &&
+        entry.columnIndex === sel.c,
     );
   }
 
+  function buildViewTraversalOrder(baseViewKey) {
+    const viewKeys = [];
+    if (VIEWS && typeof VIEWS === "object") {
+      for (const key of Object.keys(VIEWS)) viewKeys.push(key);
+    }
+    if (baseViewKey && !viewKeys.includes(baseViewKey)) {
+      viewKeys.unshift(baseViewKey);
+    }
+    if (!viewKeys.length && baseViewKey) return [baseViewKey];
+    if (!viewKeys.length) return [];
+    if (!baseViewKey) return viewKeys;
+    const start = viewKeys.indexOf(baseViewKey);
+    if (start <= 0) return viewKeys;
+    const after = viewKeys.slice(start);
+    const before = viewKeys.slice(0, start);
+    return after.concat(before);
+  }
+
   function rebuildFilteredEntries() {
-    const viewKey = getFilterViewKey();
-    const viewDefinition = resolveViewDefinitionForFilter(viewKey);
-    if (!viewDefinition) {
+    const baseViewKey = getFilterViewKey();
+    const traversal = buildViewTraversalOrder(baseViewKey);
+    if (!traversal.length) {
       filteredEntries = [];
       filteredIndex = -1;
+      updateNavButtons();
       return;
     }
-    const options =
-      viewKey === "interactions"
-        ? { findRowIndex: buildInteractionsRowResolver() }
-        : { rows: rowsForViewKey(viewKey) };
-    filteredEntries = listCommentsForView(model, viewDefinition, options).filter(
-      (entry) => matchesFilterEntry(entry),
-    );
+
+    const nextEntries = [];
+    let interactionsResolver = null;
+
+    for (const key of traversal) {
+      const definition = resolveViewDefinitionForFilter(key);
+      if (!definition) continue;
+      let options;
+      if (key === "interactions") {
+        if (!interactionsResolver) {
+          interactionsResolver = buildInteractionsRowResolver();
+        }
+        options = { findRowIndex: interactionsResolver };
+      } else {
+        options = { rows: rowsForViewKey(key) };
+      }
+      const viewEntries = listCommentsForView(model, definition, options).filter(
+        (entry) => matchesFilterEntry(entry),
+      );
+      if (viewEntries.length) nextEntries.push(...viewEntries);
+    }
+
+    filteredEntries = nextEntries;
     syncFilteredIndexToSelection();
+    updateNavButtons();
+  }
+
+  function updateNavButtons() {
+    const hasTargets = Array.isArray(filteredEntries) && filteredEntries.length > 0;
+    if (prevButtonEl) {
+      prevButtonEl.disabled = !hasTargets;
+      prevButtonEl.setAttribute("aria-disabled", hasTargets ? "false" : "true");
+    }
+    if (nextButtonEl) {
+      nextButtonEl.disabled = !hasTargets;
+      nextButtonEl.setAttribute("aria-disabled", hasTargets ? "false" : "true");
+    }
   }
 
   function setFilter(next, options = {}) {
@@ -420,6 +512,7 @@ export function initCommentsUI(options = {}) {
       viewKey: filterState.viewKey,
       rowIds: filterState.rowIds ? filterState.rowIds.slice() : null,
       columnKeys: filterState.columnKeys ? filterState.columnKeys.slice() : null,
+      colorIds: filterState.colorIds ? filterState.colorIds.slice() : null,
     };
   }
 
@@ -716,6 +809,18 @@ export function initCommentsUI(options = {}) {
   saveButton?.addEventListener("click", handleSave);
   editorForm?.addEventListener("submit", handleSave);
   deleteButton?.addEventListener("click", handleDelete);
+  if (prevButtonEl) {
+    prevClickHandler = () => {
+      stepFilteredEntry(-1);
+    };
+    prevButtonEl.addEventListener("click", prevClickHandler);
+  }
+  if (nextButtonEl) {
+    nextClickHandler = () => {
+      stepFilteredEntry(1);
+    };
+    nextButtonEl.addEventListener("click", nextClickHandler);
+  }
 
   if (typeof onSelectionChanged === "function") {
     selectionUnsub = onSelectionChanged(() => {
@@ -751,6 +856,14 @@ export function initCommentsUI(options = {}) {
       saveButton?.removeEventListener("click", handleSave);
       editorForm?.removeEventListener("submit", handleSave);
       deleteButton?.removeEventListener("click", handleDelete);
+      if (prevClickHandler && prevButtonEl) {
+        prevButtonEl.removeEventListener("click", prevClickHandler);
+        prevClickHandler = null;
+      }
+      if (nextClickHandler && nextButtonEl) {
+        nextButtonEl.removeEventListener("click", nextClickHandler);
+        nextClickHandler = null;
+      }
       if (colorSelectHandler && colorSelectEl) {
         colorSelectEl.removeEventListener("change", colorSelectHandler);
         colorSelectHandler = null;

@@ -29,6 +29,8 @@ export const Ids = Object.freeze({
   commentCancel: "comment-cancel",
   commentClose: "comment-close",
   commentSelection: "comment-selection",
+  commentPrev: "comment-prev",
+  commentNext: "comment-next",
   menuFile: "menu-file",
   menuEdit: "menu-edit",
   menuSheet: "menu-sheet",

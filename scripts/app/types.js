@@ -85,6 +85,7 @@
      *     viewKey?: string,
      *     rowIds?: string[],
      *     columnKeys?: string[],
+     *     colorIds?: string[],
      *   },
      * }} Meta
      */

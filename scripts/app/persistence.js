@@ -156,6 +156,8 @@ export function createPersistenceController({
       if (rows) normalized.rowIds = rows;
       const columns = normalizeList(cf.columnKeys || cf.columns);
       if (columns) normalized.columnKeys = columns;
+      const colors = normalizeList(cf.colorIds || cf.colors || cf.colorId || cf.color);
+      if (colors) normalized.colorIds = colors;
       o.meta.commentFilter = normalized;
     }
     if (!Array.isArray(o.actions)) o.actions = [];
