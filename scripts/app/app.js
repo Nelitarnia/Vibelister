@@ -327,6 +327,7 @@ const commentsUI = initCommentsUI({
   setCellComment,
   deleteCellComment,
   getActiveView: () => activeView,
+  setActiveView,
   viewDef,
   dataArray,
   render,
