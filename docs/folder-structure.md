@@ -34,6 +34,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   └── views.js
 │   ├── data/
 │   │   ├── color-utils.js
+│   │   ├── comment-colors.js
 │   │   ├── comments.js
 │   │   ├── column-kinds.js
 │   │   ├── constants.js
@@ -137,6 +138,8 @@ This document outlines a maintainable directory layout tailored to the current c
 - `mod-state.js` centralizes the modifier-state descriptor (IDs, glyphs, parsing tokens) so column kinds, palette UI, persistence, and tests reuse the same definitions.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
 - `color-utils.js` offers shared normalization and contrast helpers so rendering modules and pickers reuse consistent color logic.
+- `comment-colors.js` centralizes the curated preset palette for comment badges and selectors, exposing helpers so UI code stays
+  in sync with the available options.
 - `comments.js` composes stable identifiers for per-row, per-view comment buckets and normalizes persisted maps so app state and
   migrations share the same helpers.
 

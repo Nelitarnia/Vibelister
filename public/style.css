@@ -530,7 +530,7 @@ body {
   border-radius: 8px;
   border: 1px solid var(--comment-color-accent, #2a3244);
   background: var(--comment-color-fill, #0f1424);
-  color: var(--vl-color-text);
+  color: #000;
   padding: 6px 10px;
   font: inherit;
   appearance: none;
