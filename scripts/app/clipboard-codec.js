@@ -1,6 +1,8 @@
 // Single source of truth for structured clipboard payloads.
 // Keeps schema minimal, verifies canonical shape, and provides read/write helpers.
 
+import { cloneCommentValue } from "./comments.js";
+
 // --- MIME ---------------------------------------------------------------
 export const MIME_CELL = "application/x-gridcell+json";
 export const MIME_RANGE = "application/x-gridrange+json";
@@ -31,7 +33,22 @@ export function sanitizeStructuredPayload(payload) {
     outcome: ["outcomeId"],
     end: ["endActionId", "endVariantSig"],
     modifierState: ["value"],
+    comment: ["viewKey", "rowId", "columnKey", "cellKey", "value"],
   };
+
+  if (type === "comment") {
+    if (!Object.prototype.hasOwnProperty.call(d, "value")) return null;
+    try {
+      out.data.value = cloneCommentValue(d.value);
+    } catch (_) {
+      return null;
+    }
+    if (d.viewKey != null) out.data.viewKey = String(d.viewKey);
+    if (d.rowId != null) out.data.rowId = String(d.rowId);
+    if (d.columnKey != null) out.data.columnKey = String(d.columnKey);
+    if (d.cellKey != null) out.data.cellKey = String(d.cellKey);
+    return out;
+  }
 
   const allowed = ALLOW[type] || [];
   for (const k of allowed) if (k in d) out.data[k] = d[k];
@@ -127,6 +144,10 @@ function sanitizeRangeCell(cell) {
   if (Object.prototype.hasOwnProperty.call(cell, "structured")) {
     const canon = canonicalizePayload(cell.structured);
     if (canon) out.structured = canon;
+  }
+  if (Object.prototype.hasOwnProperty.call(cell, "comment")) {
+    const commentCanon = canonicalizePayload(cell.comment);
+    if (commentCanon) out.comment = commentCanon;
   }
   return out;
 }

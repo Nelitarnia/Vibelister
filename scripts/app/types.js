@@ -119,11 +119,12 @@
 
 * Structured clipboard payloads (canonical wrapper used across the app).
   */
-  /** @typedef {{ type: 'action',  data: { id: number, variantSig?: string } }} StructuredActionRef */
-  /** @typedef {{ type: 'input',   data: { id: number } }} StructuredInputRef */
-  /** @typedef {{ type: 'outcome', data: { outcomeId: number } }} StructuredOutcomeRef */
-  /** @typedef {{ type: 'end',     data: { endActionId: number, endVariantSig?: string } }} StructuredEndRef */
-  /** @typedef {(StructuredActionRef|StructuredInputRef|StructuredOutcomeRef|StructuredEndRef)} StructuredPayload */
+/** @typedef {{ type: 'action',  data: { id: number, variantSig?: string } }} StructuredActionRef */
+/** @typedef {{ type: 'input',   data: { id: number } }} StructuredInputRef */
+/** @typedef {{ type: 'outcome', data: { outcomeId: number } }} StructuredOutcomeRef */
+/** @typedef {{ type: 'end',     data: { endActionId: number, endVariantSig?: string } }} StructuredEndRef */
+/** @typedef {{ type: 'comment', data: { value: unknown, viewKey?: string, rowId?: string, columnKey?: string, cellKey?: string } }} StructuredCommentRef */
+/** @typedef {(StructuredActionRef|StructuredInputRef|StructuredOutcomeRef|StructuredEndRef|StructuredCommentRef)} StructuredPayload */
 
 /**
 

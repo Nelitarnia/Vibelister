@@ -98,6 +98,8 @@ export function initGridKeys(deps) {
     getCellText,
     getStructuredCell,
     applyStructuredCell,
+    getCellCommentClipboardPayload,
+    applyCellCommentClipboardPayload,
     status,
     undo,
     redo,
@@ -511,6 +513,7 @@ export function initGridKeys(deps) {
     const colDefs = (vd && vd.columns) || [];
     const out = [];
     let hasStructured = false;
+    let hasComments = false;
     for (const r of rows) {
       const row = [];
       for (const c of cols) {
@@ -524,9 +527,21 @@ export function initGridKeys(deps) {
             ? getStructuredCell(r, c)
             : null;
         if (structured) hasStructured = true;
+        const commentPayload =
+          typeof getCellCommentClipboardPayload === "function"
+            ? getCellCommentClipboardPayload(r, c, {
+                view:
+                  typeof getActiveView === "function"
+                    ? getActiveView()
+                    : undefined,
+                viewDef: vd,
+              })
+            : null;
+        if (commentPayload) hasComments = true;
         row.push({
           text,
           structured,
+          comment: commentPayload,
           colKey:
             col && Object.prototype.hasOwnProperty.call(col, "key")
               ? col.key
@@ -539,7 +554,7 @@ export function initGridKeys(deps) {
       }
       out.push(row);
     }
-    return { cells: out, hasStructured };
+    return { cells: out, hasStructured, hasComments };
   }
 
   function buildPlainTextFromCells(cells) {
@@ -574,6 +589,7 @@ export function initGridKeys(deps) {
           if (cell.colKey != null) payload.colKey = cell.colKey;
           if (cell.colKind != null) payload.colKind = cell.colKind;
           if (cell.structured) payload.structured = cell.structured;
+          if (cell.comment) payload.comment = cell.comment;
           return payload;
         }),
       ),
@@ -627,7 +643,7 @@ export function initGridKeys(deps) {
 
     const rows = getSelectedRowsList();
     const cols = getSelectedColsList();
-    const { cells, hasStructured } = gatherSelectionData(rows, cols);
+    const { cells, hasStructured, hasComments } = gatherSelectionData(rows, cols);
     const text = buildPlainTextFromCells(cells);
     e.preventDefault();
     try {
@@ -636,10 +652,13 @@ export function initGridKeys(deps) {
 
     const rangePayload = makeRangePayloadFromCells(cols, cells);
     const wroteRange = writeRangeToEvent(e, rangePayload);
-    if (hasStructured && rows.length === 1 && cols.length === 1) {
-      const structured =
-        cells[0] && cells[0][0] ? cells[0][0].structured : null;
-      if (structured) writeStructuredToEvent(e, structured);
+    if (rows.length === 1 && cols.length === 1) {
+      const single = cells[0] && cells[0][0] ? cells[0][0] : null;
+      if (single?.structured) {
+        writeStructuredToEvent(e, single.structured);
+      } else if (single?.comment) {
+        writeStructuredToEvent(e, single.comment);
+      }
     }
 
     console.debug(
@@ -649,6 +668,8 @@ export function initGridKeys(deps) {
       cols,
       "structured=",
       hasStructured,
+      "comments=",
+      hasComments,
       "rangeWritten=",
       wroteRange,
       "types after=",
@@ -794,6 +815,7 @@ export function initGridKeys(deps) {
 
           let structuredApplied = false;
           let typeRejected = false;
+          let cellChanged = false;
 
           if (
             meta &&
@@ -809,6 +831,7 @@ export function initGridKeys(deps) {
           } else if (
             !meta?.structured &&
             payload &&
+            payload.type !== "comment" &&
             typeof applyStructuredCell === "function"
           ) {
             structuredApplied = !!applyStructuredCell(r, c, payload);
@@ -817,7 +840,7 @@ export function initGridKeys(deps) {
 
           if (structuredApplied) {
             changed = true;
-            appliedCount++;
+            cellChanged = true;
           } else if (typeof setCell === "function") {
             if (
               colIsColor &&
@@ -838,13 +861,32 @@ export function initGridKeys(deps) {
                   : null;
                 if (!hasTextGetter || afterText !== beforeText) {
                   changed = true;
-                  appliedCount++;
+                  cellChanged = true;
                 }
               }
             }
           }
 
+          const commentPayload =
+            (meta && meta.comment) ||
+            (payload && payload.type === "comment" ? payload : null);
+          if (
+            commentPayload &&
+            typeof applyCellCommentClipboardPayload === "function"
+          ) {
+            const commentChange = applyCellCommentClipboardPayload(r, c, commentPayload, {
+              view:
+                typeof getActiveView === "function" ? getActiveView() : undefined,
+              viewDef: vd,
+            });
+            if (commentChange) {
+              changed = true;
+              cellChanged = true;
+            }
+          }
+
           if (typeRejected) rejectedCount++;
+          if (cellChanged) appliedCount++;
         }
       }
 

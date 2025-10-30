@@ -55,7 +55,7 @@ function resolveRowId(rowOrId) {
   return null;
 }
 
-function cloneValue(value) {
+export function cloneCommentValue(value) {
   if (!value || typeof value !== "object") return value;
   if (typeof structuredClone === "function") {
     try {
@@ -111,7 +111,7 @@ export function setComment(model, viewDef, rowOrId, columnOrIndex, value) {
   if (Object.is(previous, value)) {
     return null;
   }
-  rowBucket[coords.columnKey] = cloneValue(value);
+  rowBucket[coords.columnKey] = cloneCommentValue(value);
   return {
     type: "set",
     ...coords,
@@ -230,7 +230,7 @@ export function listCommentsForView(model, viewDef, options = {}) {
         columnKey,
         columnIndex,
         cellKey,
-        value: cloneValue(value),
+        value: cloneCommentValue(value),
         column: columnInfo ? columnInfo.column : null,
       });
     }
@@ -274,4 +274,36 @@ export function listCommentsForCell(model, viewDef, rowOrId, columnOrIndex) {
       value: rowBucket[coords.columnKey],
     },
   ];
+}
+
+export function makeCommentClipboardPayload(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  if (!Object.prototype.hasOwnProperty.call(entry, "value")) return null;
+  const payload = {
+    type: "comment",
+    data: {
+      value: cloneCommentValue(entry.value),
+    },
+  };
+  if (entry.viewKey != null) payload.data.viewKey = String(entry.viewKey);
+  if (entry.rowId != null) payload.data.rowId = String(entry.rowId);
+  if (entry.columnKey != null) payload.data.columnKey = String(entry.columnKey);
+  if (entry.cellKey != null) payload.data.cellKey = String(entry.cellKey);
+  return payload;
+}
+
+export function extractCommentClipboardData(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  if (payload.type !== "comment") return null;
+  const data = payload.data;
+  if (!data || typeof data !== "object") return null;
+  if (!Object.prototype.hasOwnProperty.call(data, "value")) return null;
+  const result = {
+    value: cloneCommentValue(data.value),
+  };
+  if (data.viewKey != null) result.viewKey = String(data.viewKey);
+  if (data.rowId != null) result.rowId = String(data.rowId);
+  if (data.columnKey != null) result.columnKey = String(data.columnKey);
+  if (data.cellKey != null) result.cellKey = String(data.cellKey);
+  return result;
 }

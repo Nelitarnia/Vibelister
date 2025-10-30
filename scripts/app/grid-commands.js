@@ -1,7 +1,9 @@
 import { describeAttachmentLocation } from "./history.js";
 import {
   deleteComment,
+  extractCommentClipboardData,
   listCommentsForCell,
+  makeCommentClipboardPayload,
   setComment,
 } from "./comments.js";
 
@@ -699,6 +701,36 @@ export function createGridCommands(deps = {}) {
     return listCommentsForCell(model, target.vd, target.rowIdentity, target.column);
   }
 
+  function getCellCommentClipboardPayload(r, c, options = {}) {
+    const target = resolveCommentTarget(r, c, options);
+    if (!target) return null;
+    const entries = listCommentsForCell(
+      model,
+      target.vd,
+      target.rowIdentity,
+      target.column,
+    );
+    if (!entries || !entries.length) return null;
+    return makeCommentClipboardPayload(entries[0]);
+  }
+
+  function applyCellCommentClipboardPayload(r, c, payload, options = {}) {
+    const target = resolveCommentTarget(r, c, options);
+    if (!target) return null;
+    const data = extractCommentClipboardData(payload);
+    if (!data) return null;
+    const change = setComment(
+      model,
+      target.vd,
+      target.rowIdentity,
+      target.column,
+      data.value,
+    );
+    if (!change) return null;
+    emitCommentChange(change, target);
+    return change;
+  }
+
   return {
     cloneValueForAssignment,
     getHorizontalTargetColumns,
@@ -712,5 +744,7 @@ export function createGridCommands(deps = {}) {
     setCellComment,
     deleteCellComment,
     getCellComments,
+    getCellCommentClipboardPayload,
+    applyCellCommentClipboardPayload,
   };
 }
