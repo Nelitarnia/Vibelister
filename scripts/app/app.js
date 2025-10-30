@@ -269,6 +269,8 @@ const {
   setCellComment,
   deleteCellComment,
   getCellComments,
+  getCellCommentClipboardPayload,
+  applyCellCommentClipboardPayload,
 } = createGridCommands({
   getActiveView: () => activeView,
   viewDef,
@@ -632,6 +634,8 @@ const disposeKeys = initGridKeys({
   getCellText: (r, c) => cellValueToPlainText(getCell(r, c)),
   getStructuredCell,
   applyStructuredCell,
+  getCellCommentClipboardPayload,
+  applyCellCommentClipboardPayload,
   status: statusBar,
   undo,
   redo,
