@@ -5,6 +5,7 @@ import {
   makeCommentRowKey,
   normalizeCommentsMap,
 } from "../../../data/comments.js";
+import { COMMENT_COLOR_PRESETS } from "../../../data/comment-colors.js";
 import {
   deleteComment,
   listCommentsForCell,
@@ -12,6 +13,9 @@ import {
   setComment,
 } from "../../../app/comments.js";
 import { createGridCommands } from "../../../app/grid-commands.js";
+
+const SAMPLE_COLOR = COMMENT_COLOR_PRESETS[0]?.id || "crimson";
+const SECONDARY_COLOR = COMMENT_COLOR_PRESETS[1]?.id || SAMPLE_COLOR;
 
 export function getCommentTests() {
   return [
@@ -72,7 +76,7 @@ export function getCommentTests() {
         const model = { comments: createEmptyCommentMap(["actions"]) };
         const viewDef = { key: "actions", columns: [{ key: "name" }] };
         const row = { id: 42, name: "Row" };
-        const payload = { text: "hello" };
+        const payload = { text: "hello", color: SAMPLE_COLOR };
 
         const change = setComment(model, viewDef, row, viewDef.columns[0], payload);
         assert.ok(change, "setComment reports change");
@@ -110,8 +114,14 @@ export function getCommentTests() {
           columns: [{ key: "name" }, { key: "notes" }],
         };
 
-        setComment(model, viewDef, model.actions[0], viewDef.columns[0], { text: "primary" });
-        setComment(model, viewDef, model.actions[1], viewDef.columns[1], { text: "secondary" });
+        setComment(model, viewDef, model.actions[0], viewDef.columns[0], {
+          text: "primary",
+          color: SAMPLE_COLOR,
+        });
+        setComment(model, viewDef, model.actions[1], viewDef.columns[1], {
+          text: "secondary",
+          color: SECONDARY_COLOR,
+        });
 
         const entries = listCommentsForView(model, viewDef, { rows: model.actions });
         assert.strictEqual(entries.length, 2);
@@ -127,7 +137,10 @@ export function getCommentTests() {
             { rowIndex: 1, columnIndex: 1, rowId: "2", columnKey: "notes" },
           ],
         );
-        assert.deepStrictEqual(entries[0].value, { text: "primary" });
+        assert.deepStrictEqual(entries[0].value, {
+          text: "primary",
+          color: SAMPLE_COLOR,
+        });
       },
     },
     {

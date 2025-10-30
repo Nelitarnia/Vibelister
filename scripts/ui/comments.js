@@ -1,4 +1,10 @@
 import { listCommentsForView } from "../app/comments.js";
+import {
+  COMMENT_COLOR_PRESETS,
+  DEFAULT_COMMENT_COLOR_ID,
+  commentColorPresetById,
+  normalizeCommentColorId,
+} from "../data/comment-colors.js";
 
 const DEFAULT_EMPTY_SELECTION_MESSAGE = "Select a cell to manage comments.";
 
@@ -19,11 +25,23 @@ function getEntryText(entry) {
   return String(value);
 }
 
-function buildPayload(existingEntry, text) {
-  if (existingEntry && existingEntry.value && typeof existingEntry.value === "object") {
-    return { ...existingEntry.value, text };
-  }
-  return { text };
+function getEntryColor(entry) {
+  if (!entry || !entry.value || typeof entry.value !== "object") return "";
+  const { color } = entry.value;
+  if (typeof color !== "string") return "";
+  const trimmed = color.trim();
+  return trimmed || "";
+}
+
+function buildPayload(existingEntry, text, color) {
+  const base =
+    existingEntry && existingEntry.value && typeof existingEntry.value === "object"
+      ? { ...existingEntry.value }
+      : {};
+  base.text = text;
+  if (color) base.color = color;
+  else if (Object.prototype.hasOwnProperty.call(base, "color")) delete base.color;
+  return base;
 }
 
 export function initCommentsUI(options = {}) {
@@ -36,6 +54,7 @@ export function initCommentsUI(options = {}) {
     emptyElement,
     editorForm,
     textarea,
+    colorSelect,
     saveButton,
     deleteButton,
     cancelButton,
@@ -57,6 +76,7 @@ export function initCommentsUI(options = {}) {
     VIEWS,
     noteKeyForPair,
     getInteractionsPair,
+    commentColors,
   } = options;
 
   if (!sidebar || !toggleButton) return null;
@@ -66,6 +86,149 @@ export function initCommentsUI(options = {}) {
   let comments = [];
   let selectionUnsub = null;
   let commentsHandler = null;
+
+  const colorSelectEl = colorSelect || null;
+  const colorPresetSource =
+    Array.isArray(commentColors) && commentColors.length
+      ? commentColors
+      : COMMENT_COLOR_PRESETS;
+  const colorMap = new Map();
+  for (const preset of colorPresetSource) {
+    if (!preset || typeof preset !== "object") continue;
+    const idCandidate =
+      typeof preset.id === "string" && preset.id.trim()
+        ? preset.id.trim()
+        : "";
+    const normalizedId = normalizeCommentColorId(idCandidate);
+    const id = normalizedId || idCandidate;
+    if (!id || colorMap.has(id)) continue;
+    const label =
+      typeof preset.label === "string" && preset.label.trim()
+        ? preset.label.trim()
+        : id;
+    const swatch =
+      typeof preset.swatch === "string" && preset.swatch.trim()
+        ? preset.swatch.trim()
+        : typeof preset.badgeBackground === "string"
+          ? preset.badgeBackground
+          : "";
+    colorMap.set(id, {
+      id,
+      label,
+      swatch,
+      badgeBackground:
+        typeof preset.badgeBackground === "string" ? preset.badgeBackground : "",
+      badgeBorder:
+        typeof preset.badgeBorder === "string" ? preset.badgeBorder : "",
+      badgeText: typeof preset.badgeText === "string" ? preset.badgeText : "",
+    });
+  }
+  const firstPreset = colorMap.values().next().value || null;
+  const fallbackColorId =
+    (firstPreset && firstPreset.id) ||
+    normalizeCommentColorId(DEFAULT_COMMENT_COLOR_ID) ||
+    DEFAULT_COMMENT_COLOR_ID ||
+    "";
+  let lastSelectedColor = fallbackColorId;
+  let colorSelectHandler = null;
+
+  function normalizeColorId(value) {
+    if (value == null) return "";
+    const normalized = normalizeCommentColorId(value);
+    if (normalized && colorMap.has(normalized)) return normalized;
+    const str = String(value).trim();
+    if (!str) return "";
+    return colorMap.has(str) ? str : "";
+  }
+
+  function getColorPreset(value) {
+    const id = normalizeColorId(value);
+    return id ? colorMap.get(id) || null : null;
+  }
+
+  function updateColorSelectAppearance(colorId) {
+    if (!colorSelectEl) return;
+    const preset = getColorPreset(colorId);
+    if (preset) {
+      colorSelectEl.dataset.color = preset.id;
+      if (preset.badgeBackground) {
+        colorSelectEl.style.setProperty("--comment-color-fill", preset.badgeBackground);
+      } else {
+        colorSelectEl.style.removeProperty("--comment-color-fill");
+      }
+      if (preset.badgeBorder) {
+        colorSelectEl.style.setProperty("--comment-color-accent", preset.badgeBorder);
+      } else {
+        colorSelectEl.style.removeProperty("--comment-color-accent");
+      }
+    } else {
+      if (colorSelectEl.dataset.color) delete colorSelectEl.dataset.color;
+      colorSelectEl.style.removeProperty("--comment-color-fill");
+      colorSelectEl.style.removeProperty("--comment-color-accent");
+    }
+  }
+
+  function setColorSelectValue(colorId) {
+    const normalized = normalizeColorId(colorId) || fallbackColorId;
+    lastSelectedColor = normalized || fallbackColorId;
+    if (!colorSelectEl) return lastSelectedColor;
+    if (colorSelectEl.value !== lastSelectedColor) {
+      colorSelectEl.value = lastSelectedColor;
+    }
+    updateColorSelectAppearance(lastSelectedColor);
+    return lastSelectedColor;
+  }
+
+  function getSelectedColorId() {
+    if (!colorSelectEl) return lastSelectedColor || fallbackColorId;
+    const normalized = normalizeColorId(colorSelectEl.value);
+    if (normalized) {
+      lastSelectedColor = normalized;
+      updateColorSelectAppearance(normalized);
+      return normalized;
+    }
+    return setColorSelectValue(lastSelectedColor || fallbackColorId);
+  }
+
+  function ensureColorOptions() {
+    if (!colorSelectEl) return;
+    while (colorSelectEl.firstChild) colorSelectEl.removeChild(colorSelectEl.firstChild);
+    if (!colorMap.size) {
+      const option = document.createElement("option");
+      option.value = fallbackColorId;
+      option.textContent = fallbackColorId || "Default";
+      colorSelectEl.appendChild(option);
+    } else {
+      for (const preset of colorMap.values()) {
+        const option = document.createElement("option");
+        option.value = preset.id;
+        option.textContent = preset.label;
+        colorSelectEl.appendChild(option);
+      }
+    }
+    setColorSelectValue(lastSelectedColor || fallbackColorId);
+  }
+
+  function applyColorPresetToSwatch(el, colorId) {
+    if (!el) return;
+    const preset = getColorPreset(colorId);
+    if (preset) {
+      el.dataset.color = preset.id;
+      el.style.background = preset.swatch || preset.badgeBackground || "";
+      el.style.borderColor = preset.badgeBorder || preset.swatch || "";
+      if (preset.label) el.title = `${preset.label} comment`;
+    } else {
+      if (el.dataset.color) delete el.dataset.color;
+      el.style.background = "";
+      el.style.borderColor = "";
+      el.removeAttribute("title");
+    }
+  }
+
+  function getColorLabel(entry) {
+    const preset = getColorPreset(getEntryColor(entry));
+    return preset ? preset.label : null;
+  }
 
   let filterState = normalizeFilter(
     model?.meta?.commentFilter || {
@@ -77,6 +240,16 @@ export function initCommentsUI(options = {}) {
   }
   let filteredEntries = [];
   let filteredIndex = -1;
+
+  if (colorSelectEl) {
+    ensureColorOptions();
+    colorSelectHandler = () => {
+      setColorSelectValue(colorSelectEl.value);
+    };
+    colorSelectEl.addEventListener("change", colorSelectHandler);
+  } else {
+    lastSelectedColor = fallbackColorId;
+  }
 
   persistFilterState(filterState);
 
@@ -406,7 +579,18 @@ export function initCommentsUI(options = {}) {
 
       const meta = document.createElement("div");
       meta.className = "comment-sidebar__item-meta";
-      meta.textContent = index === 0 ? "Primary" : `Entry ${index + 1}`;
+      const swatch = document.createElement("span");
+      swatch.className = "comment-sidebar__item-swatch";
+      applyColorPresetToSwatch(swatch, getEntryColor(entry));
+      meta.appendChild(swatch);
+
+      const metaText = document.createElement("span");
+      metaText.className = "comment-sidebar__item-meta-text";
+      const parts = [index === 0 ? "Primary" : `Entry ${index + 1}`];
+      const colorLabel = getColorLabel(entry);
+      if (colorLabel) parts.push(colorLabel);
+      metaText.textContent = parts.join(" · ");
+      meta.appendChild(metaText);
       item.appendChild(meta);
 
       item.addEventListener("click", () => startEditing(entry));
@@ -432,6 +616,13 @@ export function initCommentsUI(options = {}) {
         ? getCellComments(sel.r, sel.c, options) || []
         : [];
     comments = Array.isArray(entries) ? entries : [];
+    if (colorSelectEl && (!editorForm || editorForm.hidden)) {
+      if (comments.length) {
+        setColorSelectValue(getEntryColor(comments[0]) || fallbackColorId);
+      } else {
+        setColorSelectValue(lastSelectedColor || fallbackColorId);
+      }
+    }
     if (!comments.length) stopEditing();
     renderList();
     rebuildFilteredEntries();
@@ -449,6 +640,10 @@ export function initCommentsUI(options = {}) {
       textarea.value = getEntryText(editingEntry);
       textarea.focus();
       textarea.select();
+    }
+    if (colorSelectEl) {
+      const entryColor = getEntryColor(editingEntry);
+      setColorSelectValue(entryColor || lastSelectedColor || fallbackColorId);
     }
     if (deleteButton) deleteButton.disabled = !editingEntry;
   }
@@ -472,7 +667,8 @@ export function initCommentsUI(options = {}) {
       statusBar?.set?.("Comment text cannot be empty.");
       return;
     }
-    const payload = buildPayload(editingEntry, text);
+    const colorId = getSelectedColorId();
+    const payload = buildPayload(editingEntry, text, colorId);
     const options = {
       view: typeof getActiveView === "function" ? getActiveView() : undefined,
       viewDef: typeof viewDef === "function" ? viewDef() : undefined,
@@ -555,6 +751,10 @@ export function initCommentsUI(options = {}) {
       saveButton?.removeEventListener("click", handleSave);
       editorForm?.removeEventListener("submit", handleSave);
       deleteButton?.removeEventListener("click", handleDelete);
+      if (colorSelectHandler && colorSelectEl) {
+        colorSelectEl.removeEventListener("change", colorSelectHandler);
+        colorSelectHandler = null;
+      }
       if (selectionUnsub) selectionUnsub();
       if (commentsHandler) {
         document.removeEventListener("vibelister:comments-updated", commentsHandler);

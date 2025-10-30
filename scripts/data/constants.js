@@ -23,6 +23,7 @@ export const Ids = Object.freeze({
   commentEmpty: "comment-empty",
   commentEditor: "comment-editor",
   commentText: "comment-text",
+  commentColor: "comment-color",
   commentSave: "comment-save",
   commentDelete: "comment-delete",
   commentCancel: "comment-cancel",

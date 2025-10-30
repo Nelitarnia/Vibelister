@@ -140,6 +140,7 @@ const commentList = document.getElementById(Ids.commentList);
 const commentEmpty = document.getElementById(Ids.commentEmpty);
 const commentEditor = document.getElementById(Ids.commentEditor);
 const commentTextarea = document.getElementById(Ids.commentText);
+const commentColorSelect = document.getElementById(Ids.commentColor);
 const commentSaveButton = document.getElementById(Ids.commentSave);
 const commentDeleteButton = document.getElementById(Ids.commentDelete);
 const commentCancelButton = document.getElementById(Ids.commentCancel);
@@ -309,6 +310,7 @@ const commentsUI = initCommentsUI({
   emptyElement: commentEmpty,
   editorForm: commentEditor,
   textarea: commentTextarea,
+  colorSelect: commentColorSelect,
   saveButton: commentSaveButton,
   deleteButton: commentDeleteButton,
   cancelButton: commentCancelButton,
