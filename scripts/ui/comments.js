@@ -34,7 +34,7 @@ function getEntryColor(entry) {
 
 function getEntryColorId(entry) {
   const raw = getEntryColor(entry);
-  const normalized = normalizeColorId(raw);
+  const normalized = normalizeCommentColorId(raw);
   if (normalized) return normalized;
   return raw ? raw.trim() : "";
 }
