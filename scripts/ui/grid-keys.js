@@ -106,6 +106,7 @@ export function initGridKeys(deps) {
     getPaletteAPI,
     toggleInteractionsOutline,
     jumpToInteractionsAction,
+    toggleCommentsSidebar,
     window: winOverride,
     document: docOverride,
     navigator: navOverride,
@@ -448,6 +449,16 @@ export function initGridKeys(deps) {
       if (typeof toggleInteractionsOutline === "function") {
         toggleInteractionsOutline();
       }
+      return;
+    }
+    if (
+      mod &&
+      e.shiftKey &&
+      (e.key === "+" || e.key === "=") &&
+      typeof toggleCommentsSidebar === "function"
+    ) {
+      e.preventDefault();
+      toggleCommentsSidebar();
       return;
     }
     if (mod && e.key.toLowerCase() === "o") {

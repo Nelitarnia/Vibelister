@@ -952,6 +952,7 @@ export function initCommentsUI(options = {}) {
     setOpen,
     open: () => setOpen(true),
     close: () => setOpen(false),
+    toggle: () => setOpen(!isOpen),
     isOpen: () => isOpen,
     getFilter,
     setFilter: (next, options) => setFilter(next, options),
