@@ -429,6 +429,45 @@ export function initCommentsUI(options = {}) {
     return true;
   }
 
+  function entriesMatch(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    const aCell = a.cellKey != null ? String(a.cellKey) : null;
+    const bCell = b.cellKey != null ? String(b.cellKey) : null;
+    if (aCell && bCell && aCell === bCell) return true;
+    const aView = a.viewKey != null ? String(a.viewKey) : null;
+    const bView = b.viewKey != null ? String(b.viewKey) : null;
+    if (aView && bView && aView !== bView) return false;
+    const aRowKey = a.rowKey != null ? String(a.rowKey) : null;
+    const bRowKey = b.rowKey != null ? String(b.rowKey) : null;
+    if (aRowKey && bRowKey) {
+      if (aRowKey !== bRowKey) return false;
+    } else {
+      const aRowId = a.rowId != null ? String(a.rowId) : null;
+      const bRowId = b.rowId != null ? String(b.rowId) : null;
+      if (aRowId && bRowId) {
+        if (aRowId !== bRowId) return false;
+      } else if (
+        Number.isInteger(a.rowIndex) &&
+        Number.isInteger(b.rowIndex) &&
+        a.rowIndex !== b.rowIndex
+      ) {
+        return false;
+      }
+    }
+    const aColumnKey = a.columnKey != null ? String(a.columnKey) : null;
+    const bColumnKey = b.columnKey != null ? String(b.columnKey) : null;
+    if (aColumnKey && bColumnKey) return aColumnKey === bColumnKey;
+    if (
+      Number.isInteger(a.columnIndex) &&
+      Number.isInteger(b.columnIndex) &&
+      a.columnIndex === b.columnIndex
+    ) {
+      return true;
+    }
+    return false;
+  }
+
   function syncFilteredIndexToSelection() {
     const active = typeof getActiveView === "function" ? getActiveView() : null;
     if (!active) {
@@ -552,6 +591,7 @@ export function initCommentsUI(options = {}) {
           statusBar?.set?.(`Switch to the ${desiredView} view to inspect this comment.`);
           return null;
         }
+        const previous = entry;
         setActiveViewFn(desiredView);
         active = typeof getActiveView === "function" ? getActiveView() : null;
         if (active !== desiredView) {
@@ -566,7 +606,18 @@ export function initCommentsUI(options = {}) {
           updateNavButtons();
           return null;
         }
-        if (targetIndex >= filteredEntries.length) targetIndex = filteredEntries.length - 1;
+        if (previous) {
+          const matchIndex = filteredEntries.findIndex((candidate) =>
+            entriesMatch(candidate, previous),
+          );
+          if (matchIndex >= 0) {
+            targetIndex = matchIndex;
+          } else if (targetIndex >= filteredEntries.length) {
+            targetIndex = filteredEntries.length - 1;
+          }
+        } else if (targetIndex >= filteredEntries.length) {
+          targetIndex = filteredEntries.length - 1;
+        }
         entry = filteredEntries[targetIndex];
         continue;
       }
