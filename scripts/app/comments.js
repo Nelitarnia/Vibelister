@@ -307,3 +307,100 @@ export function extractCommentClipboardData(payload) {
   if (data.cellKey != null) result.cellKey = String(data.cellKey);
   return result;
 }
+
+export function setCommentInactive(model, viewDef, rowOrId, columnOrIndex, inactive = true) {
+  const store = ensureCommentStore(model);
+  const coords = extendWithColumn(
+    resolveCommentCoords(viewDef, rowOrId),
+    viewDef,
+    columnOrIndex,
+  );
+  if (!store || !coords) return null;
+  const viewBucket = store[coords.viewKey];
+  const rowBucket = viewBucket?.[coords.rowId];
+  if (!rowBucket || typeof rowBucket !== "object") return null;
+  if (!Object.prototype.hasOwnProperty.call(rowBucket, coords.columnKey)) return null;
+  const current = rowBucket[coords.columnKey];
+  if (!current || typeof current !== "object") return null;
+  const desiredInactive = !!inactive;
+  if (desiredInactive && current.inactive === true) return null;
+  if (!desiredInactive && current.inactive !== true) return null;
+  const previous = cloneCommentValue(current);
+  const next = { ...current };
+  if (desiredInactive) next.inactive = true;
+  else if (Object.prototype.hasOwnProperty.call(next, "inactive")) delete next.inactive;
+  rowBucket[coords.columnKey] = next;
+  return {
+    type: "set",
+    ...coords,
+    value: cloneCommentValue(next),
+    previous,
+  };
+}
+
+function parseInteractionCommentRowId(rowId) {
+  if (rowId == null) return null;
+  const raw = String(rowId);
+  if (!raw) return null;
+  const parts = raw.split("|");
+  if (!parts.length) return null;
+  if (parts[0] === "ai" && parts.length >= 2) {
+    const aId = Number(parts[1]);
+    return Number.isFinite(aId) ? { kind: "AI", aId } : null;
+  }
+  if (parts[0] === "aa" && parts.length >= 3) {
+    const aId = Number(parts[1]);
+    const rhsActionId = Number(parts[2]);
+    return {
+      kind: "AA",
+      aId: Number.isFinite(aId) ? aId : null,
+      rhsActionId: Number.isFinite(rhsActionId) ? rhsActionId : null,
+    };
+  }
+  const maybeId = Number(parts[0]);
+  if (Number.isFinite(maybeId)) {
+    return { kind: "AI", aId: maybeId };
+  }
+  return null;
+}
+
+export function removeInteractionsCommentsForActionIds(model, actionIds) {
+  const store = ensureCommentStore(model);
+  if (!store || !Array.isArray(actionIds) || !actionIds.length) return [];
+  const viewBucket = store.interactions;
+  if (!viewBucket || typeof viewBucket !== "object") return [];
+  const ids = new Set(
+    actionIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id))
+      .map((id) => String(id)),
+  );
+  if (!ids.size) return [];
+
+  const removed = [];
+  for (const [rowId, columns] of Object.entries(viewBucket)) {
+    const meta = parseInteractionCommentRowId(rowId);
+    if (!meta) continue;
+    const matches =
+      (meta.aId != null && ids.has(String(meta.aId))) ||
+      (meta.rhsActionId != null && ids.has(String(meta.rhsActionId)));
+    if (!matches) continue;
+    const snapshot = {};
+    if (columns && typeof columns === "object") {
+      for (const [columnKey, value] of Object.entries(columns)) {
+        snapshot[columnKey] = cloneCommentValue(value);
+      }
+    }
+    delete viewBucket[rowId];
+    removed.push({
+      type: "deleteRow",
+      viewKey: "interactions",
+      rowId: String(rowId),
+      rowKey: makeCommentRowKey("interactions", rowId),
+      columnKey: null,
+      cellKey: null,
+      previous: snapshot,
+    });
+  }
+  return removed;
+}

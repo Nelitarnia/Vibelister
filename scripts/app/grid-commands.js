@@ -4,8 +4,10 @@ import {
   extractCommentClipboardData,
   listCommentsForCell,
   makeCommentClipboardPayload,
+  removeInteractionsCommentsForActionIds,
   setComment,
 } from "./comments.js";
+import { emitCommentChangeEvent } from "./comment-events.js";
 
 export function createGridCommands(deps = {}) {
   const {
@@ -105,22 +107,7 @@ export function createGridCommands(deps = {}) {
   }
 
   function emitCommentChange(change, target) {
-    if (!change) return;
-    if (typeof document === "undefined" || !document?.dispatchEvent) return;
-    try {
-      document.dispatchEvent(
-        new CustomEvent("vibelister:comments-updated", {
-          detail: {
-            change,
-            viewKey: target?.vd?.key ?? null,
-            rowIdentity: target?.rowIdentity ?? null,
-            column: target?.column ?? null,
-          },
-        }),
-      );
-    } catch (_) {
-      /* ignore dispatch failures */
-    }
+    emitCommentChangeEvent(change, target);
   }
 
   function columnsHorizontallyCompatible(sourceCol, targetCol) {
@@ -367,7 +354,7 @@ export function createGridCommands(deps = {}) {
       (c) => Number.isFinite(c) && c >= 0 && c < vd.columns.length,
     );
 
-    runModelMutation?.(
+    const result = runModelMutation?.(
       "clearSelectedCells",
       () => {
         let cleared = 0;
@@ -439,6 +426,14 @@ export function createGridCommands(deps = {}) {
         }),
       },
     );
+    if (result?.removedComments?.length) {
+      for (const change of result.removedComments) {
+        if (!change) continue;
+        const target =
+          change.viewKey && change.viewKey !== vd?.key ? { viewKey: change.viewKey } : { vd };
+        emitCommentChange(change, target);
+      }
+    }
   }
 
   function deleteSelectedRows(options = {}) {
@@ -457,7 +452,7 @@ export function createGridCommands(deps = {}) {
 
     const vd = viewDef?.() || { key: currentView(), columns: [] };
 
-    runModelMutation?.(
+    const result = runModelMutation?.(
       "deleteSelectedRows",
       () => {
         const deletedIds = [];
@@ -469,6 +464,14 @@ export function createGridCommands(deps = {}) {
           if (commentRemoval) removedComments.push(commentRemoval);
           deletedIds.push(row.id);
           arr.splice(r, 1);
+        }
+
+        if (deletedIds.length) {
+          const interactionRemovals =
+            removeInteractionsCommentsForActionIds?.(model, deletedIds) || [];
+          if (interactionRemovals.length) {
+            removedComments.push(...interactionRemovals);
+          }
         }
 
         const needsModifierRebuild = currentView() === "modifiers" && deletedIds.length > 0;
@@ -529,6 +532,14 @@ export function createGridCommands(deps = {}) {
         }),
       },
     );
+    if (result?.removedComments?.length) {
+      for (const change of result.removedComments) {
+        if (!change) continue;
+        const target =
+          change.viewKey && change.viewKey !== vd?.key ? { viewKey: change.viewKey } : { vd };
+        emitCommentChange(change, target);
+      }
+    }
   }
 
   function setCellSelectionAware(r, c, v) {

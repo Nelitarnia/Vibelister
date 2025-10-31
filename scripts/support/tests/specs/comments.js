@@ -10,7 +10,9 @@ import {
   deleteComment,
   listCommentsForCell,
   listCommentsForView,
+  removeInteractionsCommentsForActionIds,
   setComment,
+  setCommentInactive,
 } from "../../../app/comments.js";
 import { createGridCommands } from "../../../app/grid-commands.js";
 
@@ -297,6 +299,69 @@ export function getCommentTests() {
         commands.deleteSelectedRows();
         assert.ok(!model.comments.actions["2"], "row comments removed");
         assert.strictEqual(model.actions.length, 1, "row removed from array");
+      },
+    },
+    {
+      name: "setCommentInactive toggles inactive state",
+      run(assert) {
+        const model = {
+          actions: [{ id: 1, name: "Bypass" }],
+          comments: createEmptyCommentMap(["actions"]),
+        };
+        const viewDef = { key: "actions", columns: [{ key: "name" }] };
+        const row = model.actions[0];
+        setComment(model, viewDef, row, viewDef.columns[0], { text: "note" });
+
+        const change = setCommentInactive(model, viewDef, row, viewDef.columns[0], true);
+        assert.ok(change, "inactive change recorded");
+        assert.strictEqual(
+          model.comments.actions["1"].name.inactive,
+          true,
+          "comment marked inactive",
+        );
+
+        const revert = setCommentInactive(model, viewDef, row, viewDef.columns[0], false);
+        assert.ok(revert, "reactivation change recorded");
+        assert.ok(
+          !model.comments.actions["1"].name.inactive,
+          "inactive flag removed",
+        );
+      },
+    },
+    {
+      name: "removeInteractionsCommentsForActionIds prunes matching rows",
+      run(assert) {
+        const model = {
+          comments: createEmptyCommentMap(["interactions"]),
+        };
+        const viewDef = { key: "interactions", columns: [{ key: "notes" }] };
+        setComment(
+          model,
+          viewDef,
+          { commentRowId: "ai|1|10|sig" },
+          viewDef.columns[0],
+          { text: "keep?" },
+        );
+        setComment(
+          model,
+          viewDef,
+          { commentRowId: "ai|2|10|sig" },
+          viewDef.columns[0],
+          { text: "stay" },
+        );
+
+        const removed = removeInteractionsCommentsForActionIds(model, [1]);
+        assert.strictEqual(Array.isArray(removed), true, "returns array");
+        assert.strictEqual(removed.length, 1, "one comment row removed");
+        assert.strictEqual(
+          model.comments.interactions["ai|1|10|sig"],
+          undefined,
+          "matching row deleted",
+        );
+        assert.ok(
+          model.comments.interactions["ai|2|10|sig"],
+          "non-matching row retained",
+        );
       },
     },
   ];

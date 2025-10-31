@@ -421,6 +421,8 @@ export function initCommentsUI(options = {}) {
 
   function matchesFilterEntry(entry) {
     if (!entry) return false;
+    if (entry.value && typeof entry.value === "object" && entry.value.inactive === true)
+      return false;
     if (filterState.rowIds && filterState.rowIds.length) {
       if (!filterState.rowIds.includes(entry.rowId)) return false;
     }
@@ -710,6 +712,9 @@ export function initCommentsUI(options = {}) {
     comments.forEach((entry, index) => {
       const item = document.createElement("li");
       item.className = "comment-sidebar__item";
+      if (entry?.value && typeof entry.value === "object" && entry.value.inactive === true) {
+        item.classList.add("comment-sidebar__item--inactive");
+      }
 
       const text = document.createElement("div");
       text.className = "comment-sidebar__item-text";
@@ -726,6 +731,9 @@ export function initCommentsUI(options = {}) {
       const metaText = document.createElement("span");
       metaText.className = "comment-sidebar__item-meta-text";
       const parts = [index === 0 ? "Primary" : `Entry ${index + 1}`];
+      if (entry?.value && typeof entry.value === "object" && entry.value.inactive === true) {
+        parts.push("Inactive");
+      }
       const colorLabel = getColorLabel(entry);
       if (colorLabel) parts.push(colorLabel);
       metaText.textContent = parts.join(" · ");

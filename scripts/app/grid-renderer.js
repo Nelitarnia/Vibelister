@@ -132,6 +132,7 @@ function createGridRenderer({
 
   function deriveCommentStatus(value) {
     if (!value || typeof value !== "object") return "default";
+    if (value.inactive === true) return "inactive";
     if (typeof value.status === "string" && value.status.trim())
       return value.status.trim().toLowerCase();
     if (value.resolved === true) return "resolved";

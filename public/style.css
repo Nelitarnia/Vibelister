@@ -678,6 +678,14 @@ body {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
+.comment-sidebar__item--inactive {
+  opacity: 0.65;
+}
+
+.comment-sidebar__item--inactive .comment-sidebar__item-meta-text {
+  color: #a8afc6;
+}
+
 .comment-sidebar__item:hover,
 .comment-sidebar__item:focus-visible {
   background: #1a2034;
@@ -849,6 +857,13 @@ body {
   background: rgba(129, 161, 255, 0.18);
   border-color: rgba(129, 161, 255, 0.4);
   color: #dbe3ff;
+}
+
+.cell__comment-badge[data-status="inactive"] {
+  background: rgba(130, 138, 160, 0.16);
+  border-color: rgba(130, 138, 160, 0.35);
+  color: #bfc5d8;
+  opacity: 0.7;
 }
 
 .cell__comment-badge[data-status^="severity-"] {

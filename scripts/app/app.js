@@ -24,6 +24,7 @@ import {
   getStructuredForKind,
   clearCellForKind,
 } from "../data/column-kinds.js";
+import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
   VIEWS,
   rebuildActionColumnsFromModifiers,
@@ -58,6 +59,8 @@ import {
   getInteractionsPair,
   getInteractionsRowCount,
 } from "./interactions.js";
+import { setCommentInactive } from "./comments.js";
+import { emitCommentChangeEvent } from "./comment-events.js";
 import {
   UI,
   PHASE_CAP,
@@ -361,6 +364,14 @@ function modIdFromKey(k) {
   return i >= 0 ? Number(s.slice(i + 1)) : NaN;
 }
 
+function isModStateBypassed(row, col) {
+  if (!row || !col) return false;
+  const id = modIdFromKey(col.key);
+  if (!Number.isFinite(id)) return false;
+  const raw = row?.modSet?.[id];
+  return Number(raw) === MOD_STATE_ID.BYPASS;
+}
+
 // User-defined modifier order (row order in Modifiers view)
 function getCell(r, c) {
   const vd = viewDef();
@@ -408,9 +419,10 @@ function setCell(r, c, v) {
   const vd = viewDef();
   const col = vd.columns[c];
 
-  return runModelMutation(
+  const result = runModelMutation(
     "setCell",
     () => {
+      const commentChanges = [];
       // Interactions: route by kind; default to meta-kind
       if (activeView === "interactions") {
         const k = String(col?.kind || "interactions");
@@ -420,6 +432,7 @@ function setCell(r, c, v) {
           view: "interactions",
           changed: wrote !== false,
           ensuredRows: 0,
+          commentChanges,
         };
       }
 
@@ -433,8 +446,24 @@ function setCell(r, c, v) {
 
       // Kind-backed columns
       if (col && col.kind) {
+        let wasBypassed = null;
+        if (col.kind === "modState") {
+          wasBypassed = isModStateBypassed(row, col);
+        }
         setCellForKind(col.kind, kindCtx({ r, c, col, row, v }), v);
         changed = true;
+        if (col.kind === "modState") {
+          const isBypassed = isModStateBypassed(row, col);
+          if (wasBypassed !== isBypassed) {
+            const change = setCommentInactive(model, vd, row, col, isBypassed);
+            if (change) {
+              commentChanges.push({
+                change,
+                target: { vd, rowIdentity: row, column: col },
+              });
+            }
+          }
+        }
       } else if (activeView === "actions" && col?.key === "phases") {
         const before = row?.phases;
         row.phases = parsePhasesSpec(v);
@@ -449,6 +478,7 @@ function setCell(r, c, v) {
         view: activeView,
         changed,
         ensuredRows: arr.length - beforeLen,
+        commentChanges,
       };
     },
     {
@@ -456,6 +486,13 @@ function setCell(r, c, v) {
       render: true,
     },
   );
+  if (result?.commentChanges?.length) {
+    for (const entry of result.commentChanges) {
+      if (!entry?.change) continue;
+      emitCommentChangeEvent(entry.change, entry.target || {});
+    }
+  }
+  return result;
 }
 
 // Deletion & regeneration helpers
@@ -519,13 +556,39 @@ const getStructuredCell = makeGetStructuredCell({
   isCanonical: isCanonicalStructuredPayload,
 });
 
-const applyStructuredCell = makeApplyStructuredCell({
+const baseApplyStructuredCell = makeApplyStructuredCell({
   viewDef,
   dataArray,
   applyStructuredForKind,
   kindCtx,
   getActiveView: () => activeView,
 });
+
+function applyStructuredCell(r, c, payload) {
+  const vd = viewDef();
+  if (!vd) return false;
+  const col = vd.columns?.[c];
+  const arr = dataArray();
+  const row = Array.isArray(arr) ? arr[r] : null;
+  let wasBypassed = null;
+  if (activeView !== "interactions" && col?.kind === "modState" && row) {
+    wasBypassed = isModStateBypassed(row, col);
+  }
+  const applied = baseApplyStructuredCell(r, c, payload);
+  if (
+    applied &&
+    activeView !== "interactions" &&
+    col?.kind === "modState" &&
+    row &&
+    wasBypassed !== isModStateBypassed(row, col)
+  ) {
+    const change = setCommentInactive(model, vd, row, col, isModStateBypassed(row, col));
+    if (change) {
+      emitCommentChangeEvent(change, { vd, rowIdentity: row, column: col });
+    }
+  }
+  return applied;
+}
 
 const editingController = createEditingController({
   sheet,
