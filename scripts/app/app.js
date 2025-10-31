@@ -419,6 +419,7 @@ function setCell(r, c, v) {
   const vd = viewDef();
   const col = vd.columns[c];
 
+  let shouldRebuildInteractions = false;
   const result = runModelMutation(
     "setCell",
     () => {
@@ -462,6 +463,7 @@ function setCell(r, c, v) {
                 target: { vd, rowIdentity: row, column: col },
               });
             }
+            shouldRebuildInteractions = true;
           }
         }
       } else if (activeView === "actions" && col?.key === "phases") {
@@ -486,11 +488,16 @@ function setCell(r, c, v) {
       render: true,
     },
   );
+  if (shouldRebuildInteractions) {
+    rebuildInteractionsInPlace();
+  }
   if (result?.commentChanges?.length) {
     for (const entry of result.commentChanges) {
       if (!entry?.change) continue;
       emitCommentChangeEvent(entry.change, entry.target || {});
     }
+  } else if (shouldRebuildInteractions) {
+    emitCommentChangeEvent(null, { viewKey: "interactions", force: true });
   }
   return result;
 }
@@ -579,12 +586,23 @@ function applyStructuredCell(r, c, payload) {
     applied &&
     activeView !== "interactions" &&
     col?.kind === "modState" &&
-    row &&
-    wasBypassed !== isModStateBypassed(row, col)
+    row
   ) {
-    const change = setCommentInactive(model, vd, row, col, isModStateBypassed(row, col));
-    if (change) {
-      emitCommentChangeEvent(change, { vd, rowIdentity: row, column: col });
+    const isBypassed = isModStateBypassed(row, col);
+    if (wasBypassed !== isBypassed) {
+      const change = setCommentInactive(model, vd, row, col, isBypassed);
+      rebuildInteractionsInPlace();
+      if (change) {
+        emitCommentChangeEvent(change, { vd, rowIdentity: row, column: col });
+      } else {
+        emitCommentChangeEvent(null, {
+          vd,
+          rowIdentity: row,
+          column: col,
+          force: true,
+          viewKey: "interactions",
+        });
+      }
     }
   }
   return applied;
