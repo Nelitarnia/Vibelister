@@ -39,19 +39,6 @@ function getEntryColorId(entry) {
   return raw ? raw.trim() : "";
 }
 
-function entriesMatch(a, b) {
-  if (!a || !b) return false;
-  if (a === b) return true;
-  if (a.cellKey && b.cellKey && a.cellKey === b.cellKey) return true;
-  return (
-    a.viewKey === b.viewKey &&
-    a.rowId === b.rowId &&
-    a.columnKey === b.columnKey &&
-    a.rowIndex === b.rowIndex &&
-    a.columnIndex === b.columnIndex
-  );
-}
-
 function buildPayload(existingEntry, text, color) {
   const base =
     existingEntry && existingEntry.value && typeof existingEntry.value === "object"
@@ -419,8 +406,14 @@ export function initCommentsUI(options = {}) {
     };
   }
 
+  function hasAvailableRow(entry) {
+    if (!entry) return false;
+    return Number.isInteger(entry.rowIndex) && entry.rowIndex >= 0;
+  }
+
   function matchesFilterEntry(entry) {
     if (!entry) return false;
+    if (!hasAvailableRow(entry)) return false;
     if (entry.value && typeof entry.value === "object" && entry.value.inactive === true)
       return false;
     if (filterState.rowIds && filterState.rowIds.length) {
@@ -548,55 +541,69 @@ export function initCommentsUI(options = {}) {
     if (targetIndex < 0) targetIndex = 0;
     let entry = filteredEntries[targetIndex];
     if (!entry) return null;
-    let active = typeof getActiveView === "function" ? getActiveView() : null;
-    const desiredView = entry.viewKey || null;
-    if (desiredView && desiredView !== active) {
-      if (!setActiveViewFn) {
-        statusBar?.set?.(`Switch to the ${desiredView} view to inspect this comment.`);
-        return null;
-      }
-      setActiveViewFn(desiredView);
-      active = typeof getActiveView === "function" ? getActiveView() : null;
-      if (active !== desiredView) {
-        statusBar?.set?.(`Unable to switch to the ${desiredView} view.`);
-        return null;
-      }
-      setFilter({ viewKey: desiredView }, { skipRebuild: true });
-      rebuildFilteredEntries();
-      if (!Array.isArray(filteredEntries) || !filteredEntries.length) {
-        statusBar?.set?.("No comments match the current filter.");
-        return null;
-      }
-      const refreshedIndex = filteredEntries.findIndex((candidate) =>
-        entriesMatch(candidate, entry),
-      );
-      if (refreshedIndex >= 0) {
-        targetIndex = refreshedIndex;
-        entry = filteredEntries[refreshedIndex];
-      } else if (targetIndex < filteredEntries.length) {
+
+    let attempts = 0;
+    while (entry && attempts < (filteredEntries.length || 1) + 5) {
+      attempts += 1;
+      let active = typeof getActiveView === "function" ? getActiveView() : null;
+      const desiredView = entry.viewKey || null;
+      if (desiredView && desiredView !== active) {
+        if (!setActiveViewFn) {
+          statusBar?.set?.(`Switch to the ${desiredView} view to inspect this comment.`);
+          return null;
+        }
+        setActiveViewFn(desiredView);
+        active = typeof getActiveView === "function" ? getActiveView() : null;
+        if (active !== desiredView) {
+          statusBar?.set?.(`Unable to switch to the ${desiredView} view.`);
+          return null;
+        }
+        setFilter({ viewKey: desiredView }, { skipRebuild: true });
+        rebuildFilteredEntries();
+        if (!Array.isArray(filteredEntries) || !filteredEntries.length) {
+          statusBar?.set?.("No comments match the current filter.");
+          filteredIndex = -1;
+          updateNavButtons();
+          return null;
+        }
+        if (targetIndex >= filteredEntries.length) targetIndex = filteredEntries.length - 1;
         entry = filteredEntries[targetIndex];
-      } else {
-        targetIndex = filteredEntries.length - 1;
-        entry = filteredEntries[targetIndex];
+        continue;
       }
-      if (!entry) return null;
+
+      if (!hasAvailableRow(entry)) {
+        const prevLength = filteredEntries.length;
+        filteredEntries.splice(targetIndex, 1);
+        if (filteredEntries.length !== prevLength) {
+          if (!filteredEntries.length) {
+            filteredIndex = -1;
+            updateNavButtons();
+            statusBar?.set?.("No comments match the current filter.");
+            return null;
+          }
+          if (targetIndex >= filteredEntries.length) targetIndex = filteredEntries.length - 1;
+          entry = filteredEntries[targetIndex];
+          updateNavButtons();
+          continue;
+        }
+      }
+
+      if (!Number.isInteger(entry.columnIndex) || entry.columnIndex < 0) {
+        statusBar?.set?.("Comment column is no longer available.");
+        return null;
+      }
+
+      SelectionCtl?.setActiveCell?.(entry.rowIndex, entry.columnIndex);
+      if (typeof ensureVisible === "function") {
+        const align = options && typeof options === "object" ? options.align : undefined;
+        if (align) ensureVisible(entry.rowIndex, entry.columnIndex, { align });
+        else ensureVisible(entry.rowIndex, entry.columnIndex);
+      }
+      filteredIndex = targetIndex;
+      return entry;
     }
-    if (!Number.isInteger(entry.rowIndex) || entry.rowIndex < 0) {
-      statusBar?.set?.("Comment row is no longer available.");
-      return null;
-    }
-    if (!Number.isInteger(entry.columnIndex) || entry.columnIndex < 0) {
-      statusBar?.set?.("Comment column is no longer available.");
-      return null;
-    }
-    SelectionCtl?.setActiveCell?.(entry.rowIndex, entry.columnIndex);
-    if (typeof ensureVisible === "function") {
-      const align = options && typeof options === "object" ? options.align : undefined;
-      if (align) ensureVisible(entry.rowIndex, entry.columnIndex, { align });
-      else ensureVisible(entry.rowIndex, entry.columnIndex);
-    }
-    filteredIndex = targetIndex;
-    return entry;
+
+    return null;
   }
 
   function stepFilteredEntry(step = 1, options = {}) {
