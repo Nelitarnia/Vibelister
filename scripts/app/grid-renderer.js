@@ -8,6 +8,7 @@ import {
   getEntityColorsFromRow,
   computeColorPreviewForColorColumn,
 } from "../data/color-utils.js";
+import { commentColorPresetById } from "../data/comment-colors.js";
 import { listCommentsForCell } from "./comments.js";
 
 function createGridRenderer({
@@ -131,6 +132,7 @@ function createGridRenderer({
 
   function deriveCommentStatus(value) {
     if (!value || typeof value !== "object") return "default";
+    if (value.inactive === true) return "inactive";
     if (typeof value.status === "string" && value.status.trim())
       return value.status.trim().toLowerCase();
     if (value.resolved === true) return "resolved";
@@ -138,6 +140,30 @@ function createGridRenderer({
     if (typeof value.severity === "string" && value.severity.trim())
       return `severity-${value.severity.trim().toLowerCase()}`;
     return "default";
+  }
+
+  function deriveCommentColorId(value) {
+    if (!value || typeof value !== "object") return "";
+    const raw = value.color;
+    if (typeof raw !== "string") return "";
+    const trimmed = raw.trim();
+    return trimmed || "";
+  }
+
+  function applyCommentBadgeColor(badge, colorId) {
+    if (!badge) return;
+    const preset = commentColorPresetById(colorId);
+    if (preset) {
+      badge.dataset.color = preset.id;
+      badge.style.background = preset.badgeBackground || "";
+      badge.style.borderColor = preset.badgeBorder || "";
+      badge.style.color = preset.badgeText || "";
+    } else {
+      if (badge.dataset.color) delete badge.dataset.color;
+      badge.style.background = "";
+      badge.style.borderColor = "";
+      badge.style.color = "";
+    }
   }
 
   function updateCommentBadge(cell, entries) {
@@ -149,11 +175,15 @@ function createGridRenderer({
     badge.textContent = "";
     badge.removeAttribute("title");
     cell.dataset.comment = hasComments ? "true" : "false";
-    if (!hasComments) return;
+    if (!hasComments) {
+      applyCommentBadgeColor(badge, "");
+      return;
+    }
     const count = entries.length;
     badge.textContent = count > 1 ? String(count) : "•";
     const primary = entries[0] || null;
     badge.dataset.status = deriveCommentStatus(primary?.value) || "default";
+    applyCommentBadgeColor(badge, deriveCommentColorId(primary?.value));
     const value = primary?.value;
     if (value && typeof value === "object") {
       const text =

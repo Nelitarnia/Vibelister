@@ -2,6 +2,7 @@ import { sanitizeRangePayload } from "../../../app/clipboard-codec.js";
 import { createGridCommands } from "../../../app/grid-commands.js";
 import { listCommentsForCell, setComment } from "../../../app/comments.js";
 import { makeMutationRunner } from "../../../data/mutation-runner.js";
+import { COMMENT_COLOR_PRESETS } from "../../../data/comment-colors.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 function createCommands(model, view, runner = null) {
@@ -48,6 +49,9 @@ function createCommands(model, view, runner = null) {
   });
 }
 
+const SAMPLE_COLOR = COMMENT_COLOR_PRESETS[0]?.id || "crimson";
+const SECONDARY_COLOR = COMMENT_COLOR_PRESETS[1]?.id || SAMPLE_COLOR;
+
 export function getClipboardTests() {
   return [
     {
@@ -63,7 +67,7 @@ export function getClipboardTests() {
                 colKey: "name",
                 comment: {
                   type: "comment",
-                  data: { value: { text: "hello" } },
+                  data: { value: { text: "hello", color: SAMPLE_COLOR } },
                 },
               },
             ],
@@ -77,7 +81,7 @@ export function getClipboardTests() {
           cell.comment,
           {
             type: "comment",
-            data: { value: { text: "hello" } },
+            data: { value: { text: "hello", color: SAMPLE_COLOR } },
           },
           "comment payload should round-trip through sanitizer",
         );
@@ -95,7 +99,7 @@ export function getClipboardTests() {
         };
         const column = view.columns[1];
 
-        setComment(model, view, rowA, column, { text: "copied" });
+        setComment(model, view, rowA, column, { text: "copied", color: SAMPLE_COLOR });
 
         const originalDocument = globalThis.document;
         globalThis.document = { dispatchEvent() {} };
@@ -116,11 +120,10 @@ export function getClipboardTests() {
 
           const destEntries = listCommentsForCell(model, view, rowB, column);
           assert.strictEqual(destEntries.length, 1, "destination comment recorded");
-          assert.deepStrictEqual(
-            destEntries[0].value,
-            { text: "copied" },
-            "destination comment payload matches source",
-          );
+          assert.deepStrictEqual(destEntries[0].value, {
+            text: "copied",
+            color: SAMPLE_COLOR,
+          });
         } finally {
           if (originalDocument === undefined) delete globalThis.document;
           else globalThis.document = originalDocument;
@@ -139,7 +142,10 @@ export function getClipboardTests() {
         };
         const column = view.columns[1];
 
-        setComment(model, view, rowA, column, { text: "history" });
+        setComment(model, view, rowA, column, {
+          text: "history",
+          color: SECONDARY_COLOR,
+        });
 
         const runner = makeMutationRunner({
           model,
@@ -192,7 +198,10 @@ export function getClipboardTests() {
 
           let destEntries = listCommentsForCell(model, view, rowB, column);
           assert.strictEqual(destEntries.length, 1, "comment applied during paste");
-          assert.deepStrictEqual(destEntries[0].value, { text: "history" });
+          assert.deepStrictEqual(destEntries[0].value, {
+            text: "history",
+            color: SECONDARY_COLOR,
+          });
 
           assert.strictEqual(runner.undo(), true, "undo succeeds");
           destEntries = listCommentsForCell(model, view, rowB, column);
@@ -201,7 +210,10 @@ export function getClipboardTests() {
           assert.strictEqual(runner.redo(), true, "redo succeeds");
           destEntries = listCommentsForCell(model, view, rowB, column);
           assert.strictEqual(destEntries.length, 1, "comment restored after redo");
-          assert.deepStrictEqual(destEntries[0].value, { text: "history" });
+          assert.deepStrictEqual(destEntries[0].value, {
+            text: "history",
+            color: SECONDARY_COLOR,
+          });
         } finally {
           if (originalDocument === undefined) delete globalThis.document;
           else globalThis.document = originalDocument;

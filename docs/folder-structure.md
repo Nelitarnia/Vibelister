@@ -34,6 +34,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   └── views.js
 │   ├── data/
 │   │   ├── color-utils.js
+│   │   ├── comment-colors.js
 │   │   ├── comments.js
 │   │   ├── column-kinds.js
 │   │   ├── constants.js
@@ -119,6 +120,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
 - `comments.js` exposes undo-friendly helpers for reading and mutating the normalized comment store so the rest of the app can work with stable row IDs and column keys.
+- `comment-events.js` centralizes the DOM event dispatch for comment mutations so grid commands and other controllers can signal UI refreshes without duplicating `CustomEvent` wiring.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `column-widths.js` captures default widths for each view, clones override metadata, and exposes helpers so state controllers can merge persisted sizing without bloating callers.
 - `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
@@ -137,6 +139,8 @@ This document outlines a maintainable directory layout tailored to the current c
 - `mod-state.js` centralizes the modifier-state descriptor (IDs, glyphs, parsing tokens) so column kinds, palette UI, persistence, and tests reuse the same definitions.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
 - `color-utils.js` offers shared normalization and contrast helpers so rendering modules and pickers reuse consistent color logic.
+- `comment-colors.js` centralizes the curated preset palette for comment badges and selectors, exposing helpers so UI code stays
+  in sync with the available options.
 - `comments.js` composes stable identifiers for per-row, per-view comment buckets and normalizes persisted maps so app state and
   migrations share the same helpers.
 

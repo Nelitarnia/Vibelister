@@ -322,6 +322,24 @@
         <div class="comment-sidebar__selection" id="comment-selection">
           Select a cell to manage comments.
         </div>
+        <div class="comment-sidebar__nav" id="comment-nav">
+          <button
+            type="button"
+            class="comment-sidebar__nav-button"
+            id="comment-prev"
+            aria-label="Go to previous comment"
+          >
+            <span class="comment-sidebar__nav-icon" aria-hidden="true">←</span>
+          </button>
+          <button
+            type="button"
+            class="comment-sidebar__nav-button"
+            id="comment-next"
+            aria-label="Go to next comment"
+          >
+            <span class="comment-sidebar__nav-icon" aria-hidden="true">→</span>
+          </button>
+        </div>
         <form class="comment-sidebar__editor" id="comment-editor" hidden>
           <label class="comment-sidebar__label" for="comment-text">Comment</label>
           <textarea
@@ -330,6 +348,8 @@
             rows="4"
             placeholder="Write a note for collaborators"
           ></textarea>
+          <label class="comment-sidebar__label" for="comment-color">Color</label>
+          <select class="comment-sidebar__select" id="comment-color"></select>
           <div class="comment-sidebar__editor-actions">
             <button type="submit" class="comment-sidebar__save" id="comment-save">
               Save

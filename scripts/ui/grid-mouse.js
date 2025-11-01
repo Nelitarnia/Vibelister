@@ -86,8 +86,12 @@ export function initGridMouse(deps) {
       selection.colAnchor = c;
     }
     if (!(e.shiftKey && SelectionCtl?.extendBoxTo)) {
-      sel.r = r;
-      sel.c = c;
+      if (SelectionCtl?.setActiveCell) {
+        SelectionCtl.setActiveCell(r, c);
+      } else {
+        sel.r = r;
+        sel.c = c;
+      }
     }
     ensureVisible(r, c);
     render();

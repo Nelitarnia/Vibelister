@@ -181,6 +181,136 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "Ctrl+Shift+L toggles comments sidebar",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: { tagName: "DIV" },
+        };
+
+        const navigatorStub = { platform: "Win" };
+
+        const editor = { style: { display: "none" } };
+
+        let toggles = 0;
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection: { rows: new Set(), cols: new Set() },
+          sel: { r: 0, c: 0 },
+          editor,
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [] }),
+          getRowCount: () => 0,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => null,
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          toggleCommentsSidebar: () => {
+            toggles += 1;
+          },
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const captureListener = keyListeners.find((entry) => entry.capture);
+          const bubbleListener = keyListeners.find((entry) => !entry.capture);
+
+          assert.ok(captureListener, "grid keydown listener should exist");
+          assert.ok(bubbleListener, "shortcut listener should be registered");
+
+          const captureEvent = {
+            key: "L",
+            ctrlKey: true,
+            shiftKey: true,
+            metaKey: false,
+            altKey: false,
+            preventDefault() {},
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+          captureListener.cb(captureEvent);
+
+          const bubbleEvent = {
+            key: "L",
+            ctrlKey: true,
+            shiftKey: true,
+            metaKey: false,
+            altKey: false,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+
+          bubbleListener.cb(bubbleEvent);
+
+          assert.strictEqual(toggles, 1, "comments toggle should be invoked once");
+          assert.strictEqual(
+            bubbleEvent.prevented,
+            true,
+            "shortcut should consume the event",
+          );
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
       name: "Ctrl+Shift+Arrow navigates interactions actions",
       run(assert) {
         const listeners = new Map();

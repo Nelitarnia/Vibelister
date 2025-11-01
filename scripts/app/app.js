@@ -24,6 +24,7 @@ import {
   getStructuredForKind,
   clearCellForKind,
 } from "../data/column-kinds.js";
+import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
   VIEWS,
   rebuildActionColumnsFromModifiers,
@@ -58,6 +59,8 @@ import {
   getInteractionsPair,
   getInteractionsRowCount,
 } from "./interactions.js";
+import { setCommentInactive } from "./comments.js";
+import { emitCommentChangeEvent } from "./comment-events.js";
 import {
   UI,
   PHASE_CAP,
@@ -140,10 +143,13 @@ const commentList = document.getElementById(Ids.commentList);
 const commentEmpty = document.getElementById(Ids.commentEmpty);
 const commentEditor = document.getElementById(Ids.commentEditor);
 const commentTextarea = document.getElementById(Ids.commentText);
+const commentColorSelect = document.getElementById(Ids.commentColor);
 const commentSaveButton = document.getElementById(Ids.commentSave);
 const commentDeleteButton = document.getElementById(Ids.commentDelete);
 const commentCancelButton = document.getElementById(Ids.commentCancel);
 const commentSelectionLabel = document.getElementById(Ids.commentSelection);
+const commentPrevButton = document.getElementById(Ids.commentPrev);
+const commentNextButton = document.getElementById(Ids.commentNext);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
 const { openSettingsDialog } = createSettingsController({ statusBar });
@@ -309,9 +315,12 @@ const commentsUI = initCommentsUI({
   emptyElement: commentEmpty,
   editorForm: commentEditor,
   textarea: commentTextarea,
+  colorSelect: commentColorSelect,
   saveButton: commentSaveButton,
   deleteButton: commentDeleteButton,
   cancelButton: commentCancelButton,
+  prevButton: commentPrevButton,
+  nextButton: commentNextButton,
   selectionLabel: commentSelectionLabel,
   SelectionCtl,
   selection,
@@ -321,6 +330,7 @@ const commentsUI = initCommentsUI({
   setCellComment,
   deleteCellComment,
   getActiveView: () => activeView,
+  setActiveView,
   viewDef,
   dataArray,
   render,
@@ -352,6 +362,14 @@ function modIdFromKey(k) {
   const s = String(k || "");
   const i = s.indexOf(":");
   return i >= 0 ? Number(s.slice(i + 1)) : NaN;
+}
+
+function isModStateBypassed(row, col) {
+  if (!row || !col) return false;
+  const id = modIdFromKey(col.key);
+  if (!Number.isFinite(id)) return false;
+  const raw = row?.modSet?.[id];
+  return Number(raw) === MOD_STATE_ID.BYPASS;
 }
 
 // User-defined modifier order (row order in Modifiers view)
@@ -401,9 +419,11 @@ function setCell(r, c, v) {
   const vd = viewDef();
   const col = vd.columns[c];
 
-  return runModelMutation(
+  let shouldRebuildInteractions = false;
+  const result = runModelMutation(
     "setCell",
     () => {
+      const commentChanges = [];
       // Interactions: route by kind; default to meta-kind
       if (activeView === "interactions") {
         const k = String(col?.kind || "interactions");
@@ -413,6 +433,7 @@ function setCell(r, c, v) {
           view: "interactions",
           changed: wrote !== false,
           ensuredRows: 0,
+          commentChanges,
         };
       }
 
@@ -426,8 +447,25 @@ function setCell(r, c, v) {
 
       // Kind-backed columns
       if (col && col.kind) {
+        let wasBypassed = null;
+        if (col.kind === "modState") {
+          wasBypassed = isModStateBypassed(row, col);
+        }
         setCellForKind(col.kind, kindCtx({ r, c, col, row, v }), v);
         changed = true;
+        if (col.kind === "modState") {
+          const isBypassed = isModStateBypassed(row, col);
+          if (wasBypassed !== isBypassed) {
+            const change = setCommentInactive(model, vd, row, col, isBypassed);
+            if (change) {
+              commentChanges.push({
+                change,
+                target: { vd, rowIdentity: row, column: col },
+              });
+            }
+            shouldRebuildInteractions = true;
+          }
+        }
       } else if (activeView === "actions" && col?.key === "phases") {
         const before = row?.phases;
         row.phases = parsePhasesSpec(v);
@@ -442,6 +480,7 @@ function setCell(r, c, v) {
         view: activeView,
         changed,
         ensuredRows: arr.length - beforeLen,
+        commentChanges,
       };
     },
     {
@@ -449,6 +488,18 @@ function setCell(r, c, v) {
       render: true,
     },
   );
+  if (shouldRebuildInteractions) {
+    rebuildInteractionsInPlace();
+  }
+  if (result?.commentChanges?.length) {
+    for (const entry of result.commentChanges) {
+      if (!entry?.change) continue;
+      emitCommentChangeEvent(entry.change, entry.target || {});
+    }
+  } else if (shouldRebuildInteractions) {
+    emitCommentChangeEvent(null, { viewKey: "interactions", force: true });
+  }
+  return result;
 }
 
 // Deletion & regeneration helpers
@@ -512,13 +563,50 @@ const getStructuredCell = makeGetStructuredCell({
   isCanonical: isCanonicalStructuredPayload,
 });
 
-const applyStructuredCell = makeApplyStructuredCell({
+const baseApplyStructuredCell = makeApplyStructuredCell({
   viewDef,
   dataArray,
   applyStructuredForKind,
   kindCtx,
   getActiveView: () => activeView,
 });
+
+function applyStructuredCell(r, c, payload) {
+  const vd = viewDef();
+  if (!vd) return false;
+  const col = vd.columns?.[c];
+  const arr = dataArray();
+  const row = Array.isArray(arr) ? arr[r] : null;
+  let wasBypassed = null;
+  if (activeView !== "interactions" && col?.kind === "modState" && row) {
+    wasBypassed = isModStateBypassed(row, col);
+  }
+  const applied = baseApplyStructuredCell(r, c, payload);
+  if (
+    applied &&
+    activeView !== "interactions" &&
+    col?.kind === "modState" &&
+    row
+  ) {
+    const isBypassed = isModStateBypassed(row, col);
+    if (wasBypassed !== isBypassed) {
+      const change = setCommentInactive(model, vd, row, col, isBypassed);
+      rebuildInteractionsInPlace();
+      if (change) {
+        emitCommentChangeEvent(change, { vd, rowIdentity: row, column: col });
+      } else {
+        emitCommentChangeEvent(null, {
+          vd,
+          rowIdentity: row,
+          column: col,
+          force: true,
+          viewKey: "interactions",
+        });
+      }
+    }
+  }
+  return applied;
+}
 
 const editingController = createEditingController({
   sheet,
@@ -642,6 +730,7 @@ const disposeKeys = initGridKeys({
   getPaletteAPI: () => paletteAPI,
   toggleInteractionsOutline: () => interactionsOutline?.toggle?.(),
   jumpToInteractionsAction: (delta) => interactionsOutline?.jumpToAction?.(delta),
+  toggleCommentsSidebar: () => commentsUI?.toggle?.(),
 });
 
 // Initialize palette (handles both Outcome and End cells)
