@@ -55,7 +55,7 @@ Note 2: It's good practice to give short names to Modifiers since horizontal spa
 
 This is a generated view which puts together the Actions and Inputs you've listed for systematic note taking.
 
-To help navigate Interactions, there is an Outline that can be brought out with Ctrl+Shift+O (or clicking the small button to the left). You can also immediately jump between actions with Ctrl+Shift+Up or Ctrl+Shift+Down.
+To help navigate Interactions, there is an Outline that can be brought out with Ctrl+Shift+O (or clicking the small button to the left). You can also immediately jump between actions with Ctrl+Shift+Up or Ctrl+Shift+Down, or step through each action and its variants with Ctrl+Shift+Alt+Up or Ctrl+Shift+Alt+Down.
 
 While adding Actions to the End-column, you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed". You can also see most recently added Actions to quickly select them by holding Ctrl while the palette is open.
 
