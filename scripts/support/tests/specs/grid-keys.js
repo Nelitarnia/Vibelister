@@ -770,6 +770,15 @@ export function getGridKeysTests() {
           globalSelectionCtl.applyHorizontalMode();
         };
 
+        const rowValues = {
+          2: {
+            1: "Alpha",
+            4: "Omega",
+          },
+        };
+
+        let cycleInvocations = 0;
+
         const dispose = initGridKeys({
           isEditing: () => false,
           getActiveView: () => "actions",
@@ -791,7 +800,9 @@ export function getGridKeysTests() {
           setCell: () => {},
           runModelTransaction: () => {},
           makeUndoConfig: () => ({}),
-          cycleView: () => {},
+          cycleView: () => {
+            cycleInvocations += 1;
+          },
           saveToDisk: () => {},
           openFromDisk: () => {},
           newProject: () => {},
@@ -802,7 +813,12 @@ export function getGridKeysTests() {
           addRowsAbove: () => {},
           addRowsBelow: () => {},
           model: {},
-          getCellText: () => "",
+          getCellText: (r, c) => {
+            const row = rowValues[r];
+            if (!row) return "";
+            const value = row[c];
+            return value == null ? "" : String(value);
+          },
           getStructuredCell: () => null,
           applyStructuredCell: () => {},
           status: { set() {} },
@@ -885,6 +901,376 @@ export function getGridKeysTests() {
             "repeated shift-up should collapse back to anchor",
           );
           assert.strictEqual(globalSel.r, 2, "active row should return to anchor");
+
+          shiftMode = false;
+          globalSelectionCtl.startSingle(2, 2);
+          globalSelectionCtl.applyHorizontalMode();
+          cycleInvocations = 0;
+
+          const ctrlRight = {
+            key: "ArrowRight",
+            ctrlKey: true,
+            metaKey: false,
+            altKey: false,
+            shiftKey: false,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+          dispatch(ctrlRight);
+          assert.strictEqual(
+            globalSel.c,
+            4,
+            "Ctrl+Right should jump to the next non-empty cell",
+          );
+          assert.strictEqual(ctrlRight.prevented, true, "Ctrl+Right should consume the event");
+          assert.strictEqual(cycleInvocations, 0, "Ctrl+Arrow should not cycle views");
+
+          const ctrlRightEdge = {
+            key: "ArrowRight",
+            ctrlKey: true,
+            metaKey: false,
+            altKey: false,
+            shiftKey: false,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+          dispatch(ctrlRightEdge);
+          assert.strictEqual(
+            globalSel.c,
+            5,
+            "Ctrl+Right should fall back to the row edge when no more content exists",
+          );
+
+          const ctrlLeftToValue = {
+            key: "ArrowLeft",
+            ctrlKey: true,
+            metaKey: false,
+            altKey: false,
+            shiftKey: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+          dispatch(ctrlLeftToValue);
+          assert.strictEqual(
+            globalSel.c,
+            4,
+            "Ctrl+Left should jump back to the previous non-empty cell",
+          );
+
+          const ctrlLeftPastContent = {
+            key: "ArrowLeft",
+            ctrlKey: true,
+            metaKey: false,
+            altKey: false,
+            shiftKey: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+          dispatch(ctrlLeftPastContent);
+          assert.strictEqual(
+            globalSel.c,
+            1,
+            "Ctrl+Left should continue past empty cells to earlier content",
+          );
+
+          const ctrlLeftEdge = {
+            key: "ArrowLeft",
+            ctrlKey: true,
+            metaKey: false,
+            altKey: false,
+            shiftKey: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+          dispatch(ctrlLeftEdge);
+          assert.strictEqual(
+            globalSel.c,
+            0,
+            "Ctrl+Left should land on the leftmost column when no content remains",
+          );
+
+          const ctrlLeftEdgeAgain = {
+            key: "ArrowLeft",
+            ctrlKey: true,
+            metaKey: false,
+            altKey: false,
+            shiftKey: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+          dispatch(ctrlLeftEdgeAgain);
+          assert.strictEqual(
+            globalSel.c,
+            0,
+            "Ctrl+Left should remain at the boundary when already at the edge",
+          );
+          assert.strictEqual(
+            cycleInvocations,
+            0,
+            "Ctrl+Arrow navigation should never trigger view changes",
+          );
+        } finally {
+          dispose?.();
+          resetSelectionState();
+        }
+      },
+    },
+    {
+      name: "Ctrl+Shift+Arrow cycles views while Ctrl+Arrow stays within the row",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: { tagName: "DIV" },
+        };
+
+        const navigatorStub = { platform: "Test" };
+
+        const editor = { style: { display: "none" } };
+        const view = {
+          columns: Array.from({ length: 5 }, (_, i) => ({ key: `col${i}` })),
+        };
+
+        resetSelectionState();
+        globalSelection.rows.add(0);
+        globalSelection.cols.add(1);
+        globalSelection.anchor = 0;
+        globalSelection.colAnchor = 1;
+        globalSel.r = 0;
+        globalSel.c = 1;
+
+        let shiftMode = false;
+        const clamp = (value, lo, hi) => Math.min(hi, Math.max(lo, value));
+        const moveSel = (dr, dc) => {
+          const maxC = view.columns.length ? view.columns.length - 1 : 0;
+          const nextR = clamp(globalSel.r + dr, 0, 9);
+          const nextC = clamp(globalSel.c + dc, 0, maxC);
+          if (shiftMode && globalSelectionCtl.extendBoxTo) {
+            globalSelectionCtl.extendBoxTo(nextR, nextC);
+          } else {
+            globalSelectionNS?.setColsAll?.(false);
+            globalSelectionCtl.startSingle(nextR, nextC);
+          }
+          globalSelectionCtl.applyHorizontalMode();
+        };
+
+        const rowValues = {
+          0: {
+            2: "Filled",
+          },
+        };
+
+        const cycleEvents = [];
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection: globalSelection,
+          sel: globalSel,
+          editor,
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel,
+          ensureVisible: () => {},
+          viewDef: () => view,
+          getRowCount: () => 10,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: (delta) => {
+            cycleEvents.push(delta);
+          },
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: (r, c) => {
+            const row = rowValues[r];
+            if (!row) return "";
+            const value = row[c];
+            return value == null ? "" : String(value);
+          },
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => null,
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const captureListener = keyListeners.find((entry) => entry.capture);
+          const bubbleListener = keyListeners.find((entry) => !entry.capture);
+          assert.ok(captureListener, "grid keydown listener should exist");
+          assert.ok(bubbleListener, "shortcut listener should exist");
+
+          function dispatchCapture(event) {
+            shiftMode = !!event.shiftKey;
+            event.preventDefault =
+              event.preventDefault ||
+              function () {
+                this.prevented = true;
+              };
+            event.stopPropagation = event.stopPropagation || (() => {});
+            event.stopImmediatePropagation =
+              event.stopImmediatePropagation || (() => {});
+            captureListener.cb(event);
+          }
+
+          function dispatchBubble(event) {
+            event.preventDefault =
+              event.preventDefault ||
+              function () {
+                this.prevented = true;
+              };
+            event.stopPropagation = event.stopPropagation || (() => {});
+            event.stopImmediatePropagation =
+              event.stopImmediatePropagation || (() => {});
+            bubbleListener.cb(event);
+          }
+
+          const ctrlRight = {
+            key: "ArrowRight",
+            ctrlKey: true,
+            metaKey: false,
+            shiftKey: false,
+            altKey: false,
+            prevented: false,
+          };
+          dispatchCapture(ctrlRight);
+          assert.strictEqual(
+            globalSel.c,
+            2,
+            "Ctrl+ArrowRight should reach the next populated cell",
+          );
+          assert.strictEqual(
+            cycleEvents.length,
+            0,
+            "Ctrl+Arrow without Shift should not request a view change",
+          );
+          dispatchBubble(ctrlRight);
+          assert.strictEqual(
+            cycleEvents.length,
+            0,
+            "Ctrl+Arrow without Shift should be ignored by shortcuts",
+          );
+
+          const ctrlShiftRight = {
+            key: "ArrowRight",
+            ctrlKey: true,
+            metaKey: false,
+            shiftKey: true,
+            altKey: false,
+            prevented: false,
+          };
+          dispatchCapture(ctrlShiftRight);
+          assert.strictEqual(
+            ctrlShiftRight.prevented || false,
+            false,
+            "Capture handler should allow Ctrl+Shift+Arrow to bubble",
+          );
+          const prevColumn = globalSel.c;
+          dispatchBubble(ctrlShiftRight);
+          assert.deepStrictEqual(
+            cycleEvents,
+            [1],
+            "Ctrl+Shift+ArrowRight should cycle forward",
+          );
+          assert.strictEqual(
+            ctrlShiftRight.prevented,
+            true,
+            "Shortcut handler should consume Ctrl+Shift navigation",
+          );
+          assert.strictEqual(
+            globalSel.c,
+            prevColumn,
+            "Ctrl+Shift+Arrow should not move the selection",
+          );
+
+          const ctrlShiftLeft = {
+            key: "ArrowLeft",
+            ctrlKey: true,
+            metaKey: false,
+            shiftKey: true,
+            altKey: false,
+            prevented: false,
+          };
+          dispatchCapture(ctrlShiftLeft);
+          dispatchBubble(ctrlShiftLeft);
+          assert.deepStrictEqual(
+            cycleEvents,
+            [1, -1],
+            "Ctrl+Shift+ArrowLeft should cycle backwards",
+          );
+          assert.strictEqual(
+            ctrlShiftLeft.prevented,
+            true,
+            "Ctrl+Shift+ArrowLeft should also be consumed",
+          );
+          assert.strictEqual(
+            globalSel.c,
+            prevColumn,
+            "Ctrl+Shift+ArrowLeft should leave the selection in place",
+          );
         } finally {
           dispose?.();
           resetSelectionState();
