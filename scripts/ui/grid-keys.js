@@ -108,6 +108,7 @@ export function initGridKeys(deps) {
     getPaletteAPI,
     toggleInteractionsOutline,
     jumpToInteractionsAction,
+    jumpToInteractionsVariant,
     toggleCommentsSidebar,
     window: winOverride,
     document: docOverride,
@@ -286,6 +287,23 @@ export function initGridKeys(deps) {
         if (!gridIsEditing()) {
           e.preventDefault();
           if (typeof redo === "function") redo();
+        }
+        return;
+      }
+    }
+
+    if (
+      !gridIsEditing() &&
+      e.shiftKey &&
+      e.altKey &&
+      (e.ctrlKey || e.metaKey) &&
+      (e.key === "ArrowUp" || e.key === "ArrowDown")
+    ) {
+      if (getActiveView && getActiveView() === "interactions") {
+        e.preventDefault();
+        if (typeof jumpToInteractionsVariant === "function") {
+          const delta = e.key === "ArrowUp" ? -1 : 1;
+          jumpToInteractionsVariant(delta);
         }
         return;
       }

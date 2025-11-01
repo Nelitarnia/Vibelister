@@ -259,6 +259,7 @@ export function getGridKeysTests() {
           getPaletteAPI: () => null,
           toggleInteractionsOutline: () => {},
           jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
           toggleCommentsSidebar: () => {
             toggles += 1;
           },
@@ -395,6 +396,7 @@ export function getGridKeysTests() {
           getPaletteAPI: () => null,
           toggleInteractionsOutline: () => {},
           jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
           toggleCommentsSidebar: () => {},
           window: windowStub,
           document: documentStub,
@@ -520,6 +522,7 @@ export function getGridKeysTests() {
           getPaletteAPI: () => null,
           toggleInteractionsOutline: () => {},
           jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
           toggleCommentsSidebar: () => {},
           window: macWindow,
           document: documentStub,
@@ -593,6 +596,7 @@ export function getGridKeysTests() {
         const editor = { style: { display: "none" } };
         const selection = { rows: new Set(), cols: new Set() };
         const jumpCalls = [];
+        const jumpVariantCalls = [];
 
         const dispose = initGridKeys({
           isEditing: () => false,
@@ -638,6 +642,9 @@ export function getGridKeysTests() {
           toggleInteractionsOutline: () => {},
           jumpToInteractionsAction: (delta) => {
             jumpCalls.push(delta);
+          },
+          jumpToInteractionsVariant: (delta) => {
+            jumpVariantCalls.push(delta);
           },
           window: windowStub,
           document: documentStub,
@@ -704,6 +711,60 @@ export function getGridKeysTests() {
             jumpCalls,
             [1, -1],
             "Meta+Shift+ArrowUp should jump to previous action",
+          );
+
+          const downVariantEvent = {
+            key: "ArrowDown",
+            ctrlKey: true,
+            metaKey: false,
+            altKey: true,
+            shiftKey: true,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+
+          captureListener.cb(downVariantEvent);
+
+          assert.strictEqual(
+            downVariantEvent.prevented,
+            true,
+            "Ctrl+Shift+Alt+ArrowDown should be consumed for variant navigation",
+          );
+          assert.deepStrictEqual(
+            jumpVariantCalls,
+            [1],
+            "Ctrl+Shift+Alt+ArrowDown should jump to next action or variant",
+          );
+
+          const upVariantEvent = {
+            key: "ArrowUp",
+            ctrlKey: false,
+            metaKey: true,
+            altKey: true,
+            shiftKey: true,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+
+          captureListener.cb(upVariantEvent);
+
+          assert.strictEqual(
+            upVariantEvent.prevented,
+            true,
+            "Meta+Shift+Alt+ArrowUp should also be consumed",
+          );
+          assert.deepStrictEqual(
+            jumpVariantCalls,
+            [1, -1],
+            "Meta+Shift+Alt+ArrowUp should jump to previous action or variant",
           );
         } finally {
           dispose?.();
@@ -827,6 +888,7 @@ export function getGridKeysTests() {
           getPaletteAPI: () => null,
           toggleInteractionsOutline: () => {},
           jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
           window: windowStub,
           document: documentStub,
           navigator: navigatorStub,
@@ -1151,6 +1213,7 @@ export function getGridKeysTests() {
           getPaletteAPI: () => null,
           toggleInteractionsOutline: () => {},
           jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
           window: windowStub,
           document: documentStub,
           navigator: navigatorStub,

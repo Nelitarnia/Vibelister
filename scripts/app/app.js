@@ -732,6 +732,8 @@ const disposeKeys = initGridKeys({
   getPaletteAPI: () => paletteAPI,
   toggleInteractionsOutline: () => interactionsOutline?.toggle?.(),
   jumpToInteractionsAction: (delta) => interactionsOutline?.jumpToAction?.(delta),
+  jumpToInteractionsVariant: (delta) =>
+    interactionsOutline?.jumpToVariant?.(delta),
   toggleCommentsSidebar: () => commentsUI?.toggle?.(),
 });
 

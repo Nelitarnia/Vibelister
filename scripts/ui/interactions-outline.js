@@ -423,6 +423,45 @@ export function createInteractionsOutline(options = {}) {
     return activateRow(target.rowIndex);
   }
 
+  function jumpToVariantInternal(offset) {
+    if (!Number.isFinite(offset)) return false;
+    const sourceEntries = showVariants
+      ? entries
+      : buildEntries(model, filter, true);
+    const navEntries = Array.isArray(sourceEntries)
+      ? sourceEntries.filter((entry) =>
+          entry && (entry.type === "action" || entry.type === "variant"),
+        )
+      : [];
+    if (!navEntries.length) return false;
+
+    const activeKey = resolveActiveKey(model, Selection, true);
+    let currentIdx = navEntries.findIndex((entry) => entry.key === activeKey);
+
+    if (currentIdx < 0 && Number.isFinite(sel?.r)) {
+      const row = Number(sel.r);
+      currentIdx = navEntries.findIndex((entry) => {
+        const start = Number(entry?.rowIndex);
+        const count = Number(entry?.rowCount);
+        if (!Number.isFinite(start) || !Number.isFinite(count) || count <= 0)
+          return false;
+        return row >= start && row < start + count;
+      });
+    }
+
+    const lastIdx = navEntries.length - 1;
+    let baseIdx = currentIdx;
+    if (baseIdx < 0) baseIdx = offset > 0 ? -1 : navEntries.length;
+    let targetIdx = baseIdx + offset;
+    if (targetIdx < 0) targetIdx = 0;
+    if (targetIdx > lastIdx) targetIdx = lastIdx;
+    if (currentIdx >= 0 && targetIdx === currentIdx) return false;
+
+    const target = navEntries[targetIdx];
+    if (!target) return false;
+    return activateRow(target.rowIndex);
+  }
+
   if (toggleButton) {
     toggleButton.addEventListener("click", () => {
       if (!active) return;
@@ -499,6 +538,9 @@ export function createInteractionsOutline(options = {}) {
     },
     jumpToAction(offset) {
       return jumpToActionInternal(offset);
+    },
+    jumpToVariant(offset) {
+      return jumpToVariantInternal(offset);
     },
     open: openPanel,
     close: closePanel,
