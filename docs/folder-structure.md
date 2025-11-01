@@ -16,6 +16,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
 │   │   ├── column-widths.js
+│   │   ├── comment-events.js
 │   │   ├── comments.js
 │   │   ├── diagnostics.js
 │   │   ├── editing-shortcuts.js
@@ -50,6 +51,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   └── tests/
 │   │       ├── specs/
 │   │       │   ├── assertions.js
+│   │       │   ├── clipboard.js
 │   │       │   ├── column-resize.js
 │   │       │   ├── column-kinds.js
 │   │       │   ├── comments.js

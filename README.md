@@ -43,10 +43,13 @@ For example: say you have a basic Attack in some game. You could maybe do the At
 
 Yes, combinatorial explosion is real, and you might end up with monstrous Modifier combos like "Attack (Slowed Down) (Lv. 5 Sword) (Falling)" and generate a thousand variations of Attack in a single swoop. To manage this, there are two systems at play:
 
-- You can set Modifier rules from a dialogue window. You could for example create a Modifier group like "Weapons" and give it a demand like ("exactly 1") so that only one in that Modifier group can exist simultaneously. These rules overlap, culling a lot of impossible variations upon generating Interactions.
-- You can set Modifiers bypassed for individual Actions in the Actions view by clicking on the Modifier columns. (There are three states total: off, on and bypassed.)
+- You can create Modifier rules from a dialogue window. Modifier groups allow you to limit how Modifiers combine with each other. You could for example create a Modifier group like "Weapons" and give it a demand like ("exactly 1") so that only one in that Modifier group can exist simultaneously.
 
-It's good practice to give short names to Modifiers since horizontal space may be scarce in the Interactions-view.
+- You can set some action-specific Modifier rules in the Actions view. There are four states total: Off, On, Bypassed and Required. "On" means that the Modifier is enabled for the current action. "Off" means it's not. "Bypassed" makes any Action variants using the Modifier to not become drawn in the Interactions-view - it's a way to allow you to filter the visibility of modified Actions in a non-destructive way. "Required" means that Action variations which do not include the chosen Modifier are not drawn in Interactions view.
+
+Note: setting a Modifier "Off" makes no mechanical difference compared to just leaving the cell empty, but it's there for more precise note taking.
+
+Note 2: It's good practice to give short names to Modifiers since horizontal space may be scarce in the Interactions-view.
 
 ## Interactions
 
@@ -91,9 +94,13 @@ While testing Actions vs Actions, you can choose to mirror the Phase 0 notes to 
 
 ## Other features
 
+You can create box-shaped multi-cell selections by holding down Shift while clicking cells or moving on the sheet with arrow keys.
+
 If you double tap Shift, you can change between normal selection mode and a horizontal selection mode which highlights and envelopes the entire row at once.
 
 You can undo any action which changes the core data model (editing cells, reordering rows, etc.) with Ctrl+z / Ctlr+y.
+
+You can leave comments (categorized by color) on any cell in the project, then quick jump between them using the arrows in the Comments sidebar. The keyboard shortcut for Comments sidebar is Ctrl+Shift+L.
 
 It's possible to save / load project files in .json-format. Note: on Firefox and Safari (which don't have the File System Access API), regular "Save" and "Save as..." instead default to "Export as JSON".
 
@@ -109,15 +116,11 @@ It's possible to save / load project files in .json-format. Note: on Firefox and
 ## Ideas for later
 
 - Freezing certain columns so that they always stay visible (like in Libreoffice Calc, etc.)
-- Drag 'n' drop box select?
-- Ability to create multi-selection with keyboard alone.
+- Ability to create selections with a rectangular select?
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
 - Being able to clean up your project file after larger refactoring.
 - Option to show the canonical IDs of data elements for debugging purposes.
-- Action-specific "required" rule for modifiers.
-  - This might add to the "tristate boolean" on Modifier columns, or possibly become a part of the Modifier rules dialogue.
 - Giving custom Phase rules to modified Actions.
-- Giving "tags" to cells (such as: "to test") and ability to quickly navigate between them.
 - Ability to jump between elements with a stable ID as if they were links for faster navigation.
 - Predictive analysis to auto-fill cells (maybe one day in the future...)
   - Ability to create Action types or categories would likely help guide this feature.
