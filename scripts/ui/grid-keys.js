@@ -454,7 +454,7 @@ export function initGridKeys(deps) {
     if (
       mod &&
       e.shiftKey &&
-      (e.key === "+" || e.key === "=") &&
+      e.key.toLowerCase() === "l" &&
       typeof toggleCommentsSidebar === "function"
     ) {
       e.preventDefault();

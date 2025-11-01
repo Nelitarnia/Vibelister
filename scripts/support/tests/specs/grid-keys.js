@@ -181,7 +181,7 @@ export function getGridKeysTests() {
       },
     },
     {
-      name: "Ctrl+Shift+Plus toggles comments sidebar",
+      name: "Ctrl+Shift+L toggles comments sidebar",
       run(assert) {
         const listeners = new Map();
         const windowStub = {
@@ -272,7 +272,7 @@ export function getGridKeysTests() {
           assert.ok(bubbleListener, "shortcut listener should be registered");
 
           const captureEvent = {
-            key: "+",
+            key: "L",
             ctrlKey: true,
             shiftKey: true,
             metaKey: false,
@@ -284,7 +284,7 @@ export function getGridKeysTests() {
           captureListener.cb(captureEvent);
 
           const bubbleEvent = {
-            key: "+",
+            key: "L",
             ctrlKey: true,
             shiftKey: true,
             metaKey: false,
