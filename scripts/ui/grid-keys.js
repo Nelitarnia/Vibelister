@@ -453,8 +453,8 @@ export function initGridKeys(deps) {
       saveToDisk(false);
       return;
     }
-    if (mod && e.shiftKey && plusLike) {
-      if (e.altKey) {
+    if (mod && plusLike && e.altKey) {
+      if (e.shiftKey) {
         if (typeof addRowsBelow === "function") {
           e.preventDefault();
           addRowsBelow();

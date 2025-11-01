@@ -410,8 +410,8 @@ export function getGridKeysTests() {
             key: "=",
             ctrlKey: true,
             metaKey: false,
-            shiftKey: true,
-            altKey: false,
+            shiftKey: false,
+            altKey: true,
             prevented: false,
             preventDefault() {
               this.prevented = true;
@@ -422,12 +422,12 @@ export function getGridKeysTests() {
 
           bubbleListener.cb(eventAbove);
 
-          assert.strictEqual(aboveCalls, 1, "Ctrl+Shift+= should add rows above");
-          assert.strictEqual(belowCalls, 0, "Ctrl+Shift+= should not add rows below");
+          assert.strictEqual(aboveCalls, 1, "Ctrl+Alt+= should add rows above");
+          assert.strictEqual(belowCalls, 0, "Ctrl+Alt+= should not add rows below");
           assert.strictEqual(
             eventAbove.prevented,
             true,
-            "Ctrl+Shift+= should consume the event",
+            "Ctrl+Alt+= should consume the event",
           );
 
           const eventBelow = {
@@ -535,8 +535,8 @@ export function getGridKeysTests() {
             key: "=",
             ctrlKey: false,
             metaKey: true,
-            shiftKey: true,
-            altKey: false,
+            shiftKey: false,
+            altKey: true,
             prevented: false,
             preventDefault() {
               this.prevented = true;
@@ -547,11 +547,11 @@ export function getGridKeysTests() {
 
           macBubble.cb(macEvent);
 
-          assert.strictEqual(macAbove, 1, "Cmd+Shift+= should add rows above");
+          assert.strictEqual(macAbove, 1, "Cmd+Alt+= should add rows above");
           assert.strictEqual(
             macEvent.prevented,
             true,
-            "Cmd+Shift+= should consume the event",
+            "Cmd+Alt+= should consume the event",
           );
         } finally {
           macDispose?.();
