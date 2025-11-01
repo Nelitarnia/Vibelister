@@ -716,6 +716,8 @@ const disposeKeys = initGridKeys({
   runSelfTests,
   deleteRows: deleteSelectedRows,
   clearCells: clearSelectedCells,
+  addRowsAbove,
+  addRowsBelow,
 
   // clipboard helpers
   model,
