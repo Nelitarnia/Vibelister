@@ -308,6 +308,21 @@ export function initGridKeys(deps) {
       }
     }
 
+    if (
+      !gridIsEditing() &&
+      !e.shiftKey &&
+      !e.altKey &&
+      (e.ctrlKey || e.metaKey) &&
+      (e.key === "ArrowRight" || e.key === "ArrowLeft")
+    ) {
+      e.preventDefault();
+      const dir = e.key === "ArrowRight" ? 1 : -1;
+      const target = findNextContentColumn(sel.r, sel.c, dir);
+      const delta = Number.isFinite(target) ? target - sel.c : 0;
+      if (delta !== 0) moveSel(0, delta);
+      return;
+    }
+
     // In-cell editing mode
     if (gridIsEditing()) {
       if (paletteIsOpen()) {
@@ -397,22 +412,22 @@ export function initGridKeys(deps) {
       beginEdit(sel.r, sel.c);
       return;
     }
-    if (e.key === "ArrowLeft") {
+    if (!e.ctrlKey && !e.metaKey && e.key === "ArrowLeft") {
       e.preventDefault();
       moveSel(0, -1);
       return;
     }
-    if (e.key === "ArrowRight") {
+    if (!e.ctrlKey && !e.metaKey && e.key === "ArrowRight") {
       e.preventDefault();
       moveSel(0, 1);
       return;
     }
-    if (e.key === "ArrowUp") {
+    if (!e.ctrlKey && !e.metaKey && e.key === "ArrowUp") {
       e.preventDefault();
       moveSel(-1, 0);
       return;
     }
-    if (e.key === "ArrowDown") {
+    if (!e.ctrlKey && !e.metaKey && e.key === "ArrowDown") {
       e.preventDefault();
       moveSel(1, 0);
       return;
@@ -503,7 +518,12 @@ export function initGridKeys(deps) {
       runSelfTests();
       return;
     }
-    if (mod && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+    if (
+      mod &&
+      e.shiftKey &&
+      !e.altKey &&
+      (e.key === "ArrowRight" || e.key === "ArrowLeft")
+    ) {
       if (editor.style.display !== "none") return; // don't cycle while editing
       e.preventDefault();
       cycleView(e.key === "ArrowRight" ? 1 : -1);
@@ -521,6 +541,68 @@ export function initGridKeys(deps) {
   function getCellKey(r, c) {
     const cd = viewDef().columns[c];
     return cd && cd.key;
+  }
+
+  function getColumnCount() {
+    const cols = viewDef()?.columns;
+    return Array.isArray(cols) ? cols.length : 0;
+  }
+
+  function cellHasContent(r, c) {
+    if (!Number.isFinite(r) || !Number.isFinite(c)) return false;
+    const total = getColumnCount();
+    if (!total) return false;
+    if (c < 0 || c >= total) return false;
+    if (typeof getCellText === "function") {
+      try {
+        const raw = getCellText(r, c);
+        if (raw == null) return false;
+        const text = typeof raw === "string" ? raw : String(raw);
+        return text.trim() !== "";
+      } catch (_) {
+        return false;
+      }
+    }
+    if (typeof dataArray === "function") {
+      try {
+        const rows = dataArray();
+        if (!Array.isArray(rows)) return false;
+        const row = rows[r];
+        if (Array.isArray(row)) {
+          const value = row[c];
+          if (value == null) return false;
+          return typeof value === "string" ? value.trim() !== "" : true;
+        }
+        if (row && typeof row === "object") {
+          const key = getCellKey(r, c);
+          if (key == null) return false;
+          if (!Object.prototype.hasOwnProperty.call(row, key)) return false;
+          const value = row[key];
+          if (value == null) return false;
+          return typeof value === "string" ? value.trim() !== "" : true;
+        }
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  function findNextContentColumn(r, startC, dir) {
+    const total = getColumnCount();
+    if (!total) return Number.isFinite(startC) ? startC : 0;
+    const current = Number.isFinite(startC)
+      ? Math.min(Math.max(Math.floor(startC), 0), total - 1)
+      : dir > 0
+      ? 0
+      : total - 1;
+    const step = dir > 0 ? 1 : -1;
+    let c = current + step;
+    while (c >= 0 && c < total) {
+      if (cellHasContent(r, c)) return c;
+      c += step;
+    }
+    return dir > 0 ? total - 1 : 0;
   }
 
   function getSelectedRowsList() {
