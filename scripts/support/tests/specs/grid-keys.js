@@ -124,6 +124,8 @@ export function getGridKeysTests() {
           runSelfTests: () => {},
           deleteRows: () => {},
           clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
           model: {},
           getCellText: () => "",
           getStructuredCell: () => null,
@@ -245,6 +247,8 @@ export function getGridKeysTests() {
           runSelfTests: () => {},
           deleteRows: () => {},
           clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
           model: {},
           getCellText: () => "",
           getStructuredCell: () => null,
@@ -307,6 +311,250 @@ export function getGridKeysTests() {
           );
         } finally {
           dispose?.();
+        }
+      },
+    },
+    {
+      name: "Add row shortcuts trigger the correct actions",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: { tagName: "DIV" },
+        };
+
+        const editor = { style: { display: "none" } };
+        const navigatorStub = { platform: "Win" };
+
+        let aboveCalls = 0;
+        let belowCalls = 0;
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection: { rows: new Set(), cols: new Set() },
+          sel: { r: 0, c: 0 },
+          editor,
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [] }),
+          getRowCount: () => 0,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {
+            aboveCalls += 1;
+          },
+          addRowsBelow: () => {
+            belowCalls += 1;
+          },
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => null,
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          toggleCommentsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const bubbleListener = keyListeners.find((entry) => !entry.capture);
+          assert.ok(bubbleListener, "shortcut listener should exist");
+
+          const eventAbove = {
+            key: "=",
+            ctrlKey: true,
+            metaKey: false,
+            shiftKey: false,
+            altKey: true,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+
+          bubbleListener.cb(eventAbove);
+
+          assert.strictEqual(aboveCalls, 1, "Ctrl+Alt+= should add rows above");
+          assert.strictEqual(belowCalls, 0, "Ctrl+Alt+= should not add rows below");
+          assert.strictEqual(
+            eventAbove.prevented,
+            true,
+            "Ctrl+Alt+= should consume the event",
+          );
+
+          const eventBelow = {
+            key: "+",
+            ctrlKey: true,
+            metaKey: false,
+            shiftKey: true,
+            altKey: true,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+
+          bubbleListener.cb(eventBelow);
+
+          assert.strictEqual(aboveCalls, 1, "Ctrl+Alt+Shift+= should not add rows above");
+          assert.strictEqual(belowCalls, 1, "Ctrl+Alt+Shift+= should add rows below");
+          assert.strictEqual(
+            eventBelow.prevented,
+            true,
+            "Ctrl+Alt+Shift+= should consume the event",
+          );
+        } finally {
+          dispose?.();
+        }
+
+        const macListeners = new Map();
+        const macWindow = {
+          listeners: macListeners,
+          addEventListener(type, cb, capture) {
+            const arr = macListeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            macListeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = macListeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            macListeners.set(type, arr);
+          },
+        };
+
+        let macAbove = 0;
+        const macNavigator = { platform: "MacIntel" };
+        const macDispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection: { rows: new Set(), cols: new Set() },
+          sel: { r: 0, c: 0 },
+          editor,
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [] }),
+          getRowCount: () => 0,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {
+            macAbove += 1;
+          },
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => null,
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          toggleCommentsSidebar: () => {},
+          window: macWindow,
+          document: documentStub,
+          navigator: macNavigator,
+        });
+
+        try {
+          const macKeyListeners = macListeners.get("keydown") || [];
+          const macBubble = macKeyListeners.find((entry) => !entry.capture);
+          assert.ok(macBubble, "Mac shortcut listener should exist");
+
+          const macEvent = {
+            key: "=",
+            ctrlKey: false,
+            metaKey: true,
+            shiftKey: false,
+            altKey: true,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+          };
+
+          macBubble.cb(macEvent);
+
+          assert.strictEqual(macAbove, 1, "Cmd+Alt+= should add rows above");
+          assert.strictEqual(
+            macEvent.prevented,
+            true,
+            "Cmd+Alt+= should consume the event",
+          );
+        } finally {
+          macDispose?.();
         }
       },
     },
@@ -375,6 +623,8 @@ export function getGridKeysTests() {
           runSelfTests: () => {},
           deleteRows: () => {},
           clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
           model: {},
           getCellText: () => "",
           getStructuredCell: () => null,
@@ -549,6 +799,8 @@ export function getGridKeysTests() {
           runSelfTests: () => {},
           deleteRows: () => {},
           clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
           model: {},
           getCellText: () => "",
           getStructuredCell: () => null,

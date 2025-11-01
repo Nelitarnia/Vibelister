@@ -93,6 +93,8 @@ export function initGridKeys(deps) {
     // deletion
     deleteRows,
     clearCells,
+    addRowsAbove,
+    addRowsBelow,
     // NEW: model & cell text getter for clipboard ops
     model,
     getCellText,
@@ -438,11 +440,31 @@ export function initGridKeys(deps) {
     const platform = typeof nav?.platform === "string" ? nav.platform : "";
     const isMac = platform.includes("Mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
+    const keyRaw = e.key;
+    const keyLower = String(keyRaw || "").toLowerCase();
+    const plusLike =
+      keyRaw === "=" ||
+      keyRaw === "+" ||
+      keyRaw === "Add" ||
+      keyLower === "add";
 
-    if (mod && e.key.toLowerCase() === "s") {
+    if (mod && keyLower === "s") {
       e.preventDefault();
       saveToDisk(false);
       return;
+    }
+    if (mod && plusLike && e.altKey) {
+      if (e.shiftKey) {
+        if (typeof addRowsBelow === "function") {
+          e.preventDefault();
+          addRowsBelow();
+          return;
+        }
+      } else if (typeof addRowsAbove === "function") {
+        e.preventDefault();
+        addRowsAbove();
+        return;
+      }
     }
     if (mod && e.shiftKey && e.key.toLowerCase() === "o") {
       e.preventDefault();
@@ -454,19 +476,19 @@ export function initGridKeys(deps) {
     if (
       mod &&
       e.shiftKey &&
-      e.key.toLowerCase() === "l" &&
+      keyLower === "l" &&
       typeof toggleCommentsSidebar === "function"
     ) {
       e.preventDefault();
       toggleCommentsSidebar();
       return;
     }
-    if (mod && e.key.toLowerCase() === "o") {
+    if (mod && keyLower === "o") {
       e.preventDefault();
       openFromDisk();
       return;
     }
-    if (mod && e.key.toLowerCase() === "n") {
+    if (mod && keyLower === "n") {
       e.preventDefault();
       newProject();
       return;
