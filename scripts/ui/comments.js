@@ -184,15 +184,20 @@ export function initCommentsUI(options = {}) {
     }
   }
 
-  function setColorSelectValue(colorId) {
+  function setColorSelectValue(colorId, options = {}) {
+    const { updateFilter = true, updateLastSelected = updateFilter } = options;
     const normalized = normalizeColorId(colorId);
     const target = normalized || fallbackColorId;
-    lastSelectedColor = target;
+    if (updateLastSelected) {
+      lastSelectedColor = target;
+    }
     if (colorSelectEl && colorSelectEl.value !== target) {
       colorSelectEl.value = target;
     }
     updateColorSelectAppearance(target);
-    setFilter({ colorIds: target ? [target] : null });
+    if (updateFilter) {
+      setFilter({ colorIds: target ? [target] : null });
+    }
     return target;
   }
 
@@ -890,9 +895,15 @@ export function initCommentsUI(options = {}) {
     comments = Array.isArray(entries) ? entries : [];
     if (colorSelectEl && (!editorForm || editorForm.hidden)) {
       if (comments.length) {
-        setColorSelectValue(getEntryColor(comments[0]) || fallbackColorId);
+        setColorSelectValue(getEntryColor(comments[0]) || fallbackColorId, {
+          updateFilter: false,
+          updateLastSelected: false,
+        });
       } else {
-        setColorSelectValue(lastSelectedColor || fallbackColorId);
+        setColorSelectValue(lastSelectedColor || fallbackColorId, {
+          updateFilter: false,
+          updateLastSelected: false,
+        });
       }
     }
     if (!comments.length) stopEditing();
@@ -915,7 +926,10 @@ export function initCommentsUI(options = {}) {
     }
     if (colorSelectEl) {
       const entryColor = getEntryColor(editingEntry);
-      setColorSelectValue(entryColor || lastSelectedColor || fallbackColorId);
+      setColorSelectValue(entryColor || lastSelectedColor || fallbackColorId, {
+        updateFilter: false,
+        updateLastSelected: false,
+      });
     }
     if (deleteButton) deleteButton.disabled = !editingEntry;
   }
