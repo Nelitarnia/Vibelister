@@ -143,6 +143,7 @@ export function initCommentsUI(options = {}) {
     DEFAULT_COMMENT_COLOR_ID ||
     "";
   let lastSelectedColor = fallbackColorId;
+  let colorCounts = new Map();
   let colorSelectHandler = null;
   let prevClickHandler = null;
   let nextClickHandler = null;
@@ -206,19 +207,58 @@ export function initCommentsUI(options = {}) {
     return setColorSelectValue(lastSelectedColor || fallbackColorId);
   }
 
+  function getColorCount(colorId) {
+    if (!colorId || !colorCounts) return 0;
+    return colorCounts.get(colorId) || 0;
+  }
+
+  function formatColorOptionText(label, count) {
+    if (!label) return "";
+    if (!count) return label;
+    const noun = count === 1 ? "note" : "notes";
+    return `${label} — ${count} ${noun}`;
+  }
+
+  function updateColorOptionCounts() {
+    if (!colorSelectEl) return;
+    const options = colorSelectEl.options;
+    if (!options) return;
+    for (const option of options) {
+      if (!option || typeof option.value !== "string") continue;
+      const preset = colorMap.get(option.value);
+      if (preset) {
+        option.textContent = formatColorOptionText(
+          preset.label,
+          getColorCount(preset.id),
+        );
+      } else if (option.dataset && option.dataset.label) {
+        option.textContent = formatColorOptionText(
+          option.dataset.label,
+          getColorCount(option.value),
+        );
+      }
+    }
+  }
+
   function ensureColorOptions() {
     if (!colorSelectEl) return;
     while (colorSelectEl.firstChild) colorSelectEl.removeChild(colorSelectEl.firstChild);
     if (!colorMap.size) {
       const option = document.createElement("option");
       option.value = fallbackColorId;
-      option.textContent = fallbackColorId || "Default";
+      const label = fallbackColorId || "Default";
+      option.dataset.label = label;
+      option.textContent = formatColorOptionText(label, getColorCount(fallbackColorId));
       colorSelectEl.appendChild(option);
     } else {
       for (const preset of colorMap.values()) {
         const option = document.createElement("option");
         option.value = preset.id;
-        option.textContent = preset.label;
+        option.dataset.label = preset.label;
+        option.textContent = formatColorOptionText(
+          preset.label,
+          getColorCount(preset.id),
+        );
         colorSelectEl.appendChild(option);
       }
     }
@@ -411,6 +451,20 @@ export function initCommentsUI(options = {}) {
     return Number.isInteger(entry.rowIndex) && entry.rowIndex >= 0;
   }
 
+  function getCountableColorId(entry) {
+    if (!entry) return "";
+    if (!hasAvailableRow(entry)) return "";
+    if (entry?.value && typeof entry.value === "object" && entry.value.inactive === true)
+      return "";
+    const entryColorId = getEntryColorId(entry);
+    const normalized = normalizeColorId(entryColorId);
+    if (normalized) return normalized;
+    if (!entryColorId && fallbackColorId && colorMap.has(fallbackColorId)) {
+      return fallbackColorId;
+    }
+    return "";
+  }
+
   function matchesFilterEntry(entry) {
     if (!entry) return false;
     if (!hasAvailableRow(entry)) return false;
@@ -505,13 +559,22 @@ export function initCommentsUI(options = {}) {
     const traversal = buildViewTraversalOrder(baseViewKey);
     if (!traversal.length) {
       filteredEntries = [];
+      colorCounts = new Map();
+      updateColorOptionCounts();
       filteredIndex = -1;
       updateNavButtons();
       return;
     }
 
     const nextEntries = [];
+    const nextColorCounts = new Map();
     let interactionsResolver = null;
+
+    const recordColorUsage = (entry) => {
+      const colorId = getCountableColorId(entry);
+      if (!colorId) return;
+      nextColorCounts.set(colorId, (nextColorCounts.get(colorId) || 0) + 1);
+    };
 
     for (const key of traversal) {
       const definition = resolveViewDefinitionForFilter(key);
@@ -525,12 +588,16 @@ export function initCommentsUI(options = {}) {
       } else {
         options = { rows: rowsForViewKey(key) };
       }
-      const viewEntries = listCommentsForView(model, definition, options).filter(
-        (entry) => matchesFilterEntry(entry),
-      );
-      if (viewEntries.length) nextEntries.push(...viewEntries);
+      const viewEntries = listCommentsForView(model, definition, options);
+      if (!Array.isArray(viewEntries) || !viewEntries.length) continue;
+      for (const entry of viewEntries) {
+        recordColorUsage(entry);
+        if (matchesFilterEntry(entry)) nextEntries.push(entry);
+      }
     }
 
+    colorCounts = nextColorCounts;
+    updateColorOptionCounts();
     filteredEntries = nextEntries;
     syncFilteredIndexToSelection();
     updateNavButtons();
