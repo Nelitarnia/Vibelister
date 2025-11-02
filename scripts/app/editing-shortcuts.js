@@ -216,29 +216,48 @@ export function createEditingController({
     if (palette?.closeColor) palette.closeColor();
   }
 
-  function advanceSelectionAfterPaletteTab(shift) {
+  function moveSelectionForTab(shift, options = {}) {
+    const { collapseSelection = true } = options;
     const cols = viewDef()?.columns || [];
     if (!cols.length) return;
     const maxC = cols.length - 1;
-    let nextR = sel.r;
-    let nextC = sel.c;
+    const rowCount =
+      typeof getRowCount === "function" ? Math.max(0, getRowCount()) : 0;
+    const maxR = rowCount > 0 ? rowCount - 1 : 0;
+    let nextR = Number.isFinite(sel.r) ? sel.r : 0;
+    let nextC = Number.isFinite(sel.c) ? sel.c : 0;
     if (shift) {
       if (nextC > 0) nextC--;
       else {
         nextC = maxC;
         nextR = Math.max(0, nextR - 1);
       }
-    } else {
-      if (nextC < maxC) nextC++;
-      else {
-        nextC = 0;
-        nextR = Math.min(getRowCount() - 1, nextR + 1);
-      }
+    } else if (nextC < maxC) nextC++;
+    else {
+      nextC = 0;
+      nextR = Math.min(maxR, nextR + 1);
     }
-    sel.r = nextR;
-    sel.c = nextC;
+    nextR = Math.max(0, Math.min(maxR, nextR));
+    nextC = Math.max(0, Math.min(maxC, nextC));
+    if (collapseSelection) {
+      if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
+      if (SelectionCtl?.startSingle) SelectionCtl.startSingle(nextR, nextC);
+      else {
+        sel.r = nextR;
+        sel.c = nextC;
+      }
+      updateSelectionSnapshot?.({ row: sel.r, col: sel.c });
+      SelectionCtl?.applyHorizontalMode?.();
+    } else {
+      sel.r = nextR;
+      sel.c = nextC;
+    }
     ensureVisible(sel.r, sel.c);
     render();
+  }
+
+  function advanceSelectionAfterPaletteTab(shift) {
+    moveSelectionForTab(shift, { collapseSelection: false });
   }
 
   function moveSel(dr, dc, edit = false) {
@@ -329,6 +348,7 @@ export function createEditingController({
     endEdit,
     endEditIfOpen,
     advanceSelectionAfterPaletteTab,
+    moveSelectionForTab,
     moveSel,
     getCellRect,
     isEditing,
