@@ -344,6 +344,7 @@ const commentsUI = initCommentsUI({
 
 initColumnResize({
   container: colHdrs,
+  sheet,
   model,
   getActiveView: () => activeView,
   viewDef,
