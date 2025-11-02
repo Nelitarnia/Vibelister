@@ -73,6 +73,7 @@ export function initGridKeys(deps) {
     beginEdit,
     endEdit,
     moveSel,
+    moveSelectionForTab,
     ensureVisible,
     viewDef,
     getRowCount,
@@ -381,26 +382,28 @@ export function initGridKeys(deps) {
       if (e.key === "Tab") {
         e.preventDefault();
         endEdit(true);
-        const maxC = viewDef().columns.length - 1;
-        let r = sel.r,
-          c = sel.c;
-        if (e.shiftKey) {
-          if (c > 0) c--;
-          else {
-            c = maxC;
-            r = Math.max(0, r - 1);
-          }
+        if (typeof moveSelectionForTab === "function") {
+          moveSelectionForTab(e.shiftKey, { collapseSelection: false });
         } else {
-          if (c < maxC) c++;
+          const maxC = viewDef().columns.length - 1;
+          let r = sel.r;
+          let c = sel.c;
+          if (e.shiftKey) {
+            if (c > 0) c--;
+            else {
+              c = maxC;
+              r = Math.max(0, r - 1);
+            }
+          } else if (c < maxC) c++;
           else {
             c = 0;
             r = Math.min(getRowCount() - 1, r + 1);
           }
+          sel.r = r;
+          sel.c = c;
+          ensureVisible(sel.r, sel.c);
+          render();
         }
-        sel.r = r;
-        sel.c = c;
-        ensureVisible(sel.r, sel.c);
-        render();
         return;
       }
       return;
@@ -452,7 +455,9 @@ export function initGridKeys(deps) {
     }
     if (e.key === "Tab") {
       e.preventDefault();
-      moveSel(0, e.shiftKey ? -1 : 1);
+      if (typeof moveSelectionForTab === "function")
+        moveSelectionForTab(e.shiftKey);
+      else moveSel(0, e.shiftKey ? -1 : 1);
       return;
     }
 

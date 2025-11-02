@@ -643,6 +643,7 @@ const {
   endEdit,
   endEditIfOpen,
   moveSel,
+  moveSelectionForTab,
   advanceSelectionAfterPaletteTab,
   getCellRect,
   isEditing,
@@ -695,6 +696,7 @@ const disposeKeys = initGridKeys({
   beginEdit,
   endEdit,
   moveSel,
+  moveSelectionForTab,
   ensureVisible,
 
   viewDef,
