@@ -457,8 +457,40 @@ export function createInteractionsOutline(options = {}) {
     if (targetIdx > lastIdx) targetIdx = lastIdx;
     if (currentIdx >= 0 && targetIdx === currentIdx) return false;
 
-    const target = navEntries[targetIdx];
+    const toRowNumber = (entry) => {
+      const value = Number(entry?.rowIndex);
+      return Number.isFinite(value) ? value : NaN;
+    };
+
+    let target = navEntries[targetIdx];
     if (!target) return false;
+
+    const currentRow = Number(sel?.r);
+    if (Number.isFinite(currentRow)) {
+      const step = offset > 0 ? 1 : -1;
+      let probeIdx = targetIdx;
+      let probe = target;
+      while (probe) {
+        const probeRow = toRowNumber(probe);
+        if (!Number.isFinite(probeRow) || probeRow !== currentRow) break;
+        const nextIdx = probeIdx + step;
+        if (nextIdx < 0 || nextIdx > lastIdx) break;
+        probeIdx = nextIdx;
+        probe = navEntries[probeIdx];
+      }
+      if (probe) {
+        const probeRow = toRowNumber(probe);
+        if (Number.isFinite(probeRow) && probeRow !== currentRow) {
+          targetIdx = probeIdx;
+          target = probe;
+        } else if (Number.isFinite(probeRow) && probeRow === currentRow) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+
     return activateRow(target.rowIndex);
   }
 
