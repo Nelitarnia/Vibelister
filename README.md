@@ -16,6 +16,8 @@ Keeping track of how these states change is sometimes a major part of video game
 
 Download the files and use "run.bat". In most modern browsers, executing code directly from local files is blocked for security reasons, so the .bat file opens a temporary local server which runs the program.
 
+Installing Python is a necessary prerequisite for this step. You can get it from [here](https://www.python.org/downloads/), and during installation remember to enable “Add Python to PATH.”
+
 ---
 
 # Repository organization roadmap
