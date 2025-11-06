@@ -2,6 +2,7 @@
 // Keeps schema minimal, verifies canonical shape, and provides read/write helpers.
 
 import { cloneCommentValue } from "./comments.js";
+import { normalizeInteractionTags } from "./interactions.js";
 
 // --- MIME ---------------------------------------------------------------
 export const MIME_CELL = "application/x-gridcell+json";
@@ -32,6 +33,7 @@ export function sanitizeStructuredPayload(payload) {
     input: ["id"],
     outcome: ["outcomeId"],
     end: ["endActionId", "endVariantSig"],
+    tag: ["tags"],
     modifierState: ["value"],
     comment: ["viewKey", "rowId", "columnKey", "cellKey", "value"],
   };
@@ -64,6 +66,10 @@ export function sanitizeStructuredPayload(payload) {
       out.data.endActionId = d.id;
     }
   }
+  if (type === "tag") {
+    const normalized = normalizeInteractionTags(out.data.tags);
+    out.data.tags = normalized;
+  }
 
   // Minimal validity checks after normalization
   if (type === "action" && typeof out.data.id !== "number") return null;
@@ -75,6 +81,7 @@ export function sanitizeStructuredPayload(payload) {
     if (!Number.isFinite(value)) return null;
     out.data.value = value;
   }
+  if (type === "tag" && !Array.isArray(out.data.tags)) return null;
 
   return out;
 }

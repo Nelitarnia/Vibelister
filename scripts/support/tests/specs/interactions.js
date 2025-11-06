@@ -11,6 +11,7 @@ import {
   getInteractionsRowCount,
   collectInteractionTags,
 } from "../../../app/interactions.js";
+import { sanitizeStructuredPayload } from "../../../app/clipboard-codec.js";
 import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
@@ -417,6 +418,13 @@ export function getInteractionsTests() {
           "structured tag payload carries normalized list",
         );
 
+        const sanitized = sanitizeStructuredPayload(payload);
+        assert.deepStrictEqual(
+          sanitized,
+          { type: "tag", data: { tags: ["rush", "momentum+"] } },
+          "tag payload survives clipboard sanitization",
+        );
+
         addInput("Kick");
         buildInteractionsPairs(model);
         setInteractionsCell(model, status, tagView, 1, 0, ["setup"]);
@@ -813,6 +821,7 @@ export function getInteractionsTests() {
             { key: "p1:outcome" },
             { key: "p2:outcome" },
             { key: "p1:end" },
+            { key: "p2:tag" },
           ],
         };
         assert.ok(
@@ -826,6 +835,10 @@ export function getInteractionsTests() {
         assert.ok(
           isInteractionPhaseColumnActiveForRow(model, viewDef, 0, 2),
           "phase 1 end active",
+        );
+        assert.ok(
+          !isInteractionPhaseColumnActiveForRow(model, viewDef, 0, 3),
+          "phase 2 tag inactive",
         );
       },
     },
