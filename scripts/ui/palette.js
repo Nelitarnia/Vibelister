@@ -275,6 +275,7 @@ export function initPalette(ctx) {
       filterFn: () => true,
       domId: "universalPalette",
       supportsRecentToggle: true,
+      selectTextOnOpen: false,
       parseInitial: (s) => String(s || ""),
       parseQuery: (raw) => {
         const full = String(raw || "");
@@ -559,15 +560,24 @@ export function initPalette(ctx) {
         editor.value = queryText;
       } catch (_) {}
       pal.query = queryText;
-      if (editor.select) {
+      const shouldSelectAll = pal.mode?.selectTextOnOpen !== false;
+      if (typeof editor.setSelectionRange === "function" || editor.select) {
         setTimeout(() => {
           if (!pal.isOpen) return;
           try {
-            editor.setSelectionRange(0, editor.value.length);
+            if (typeof editor.setSelectionRange === "function") {
+              if (shouldSelectAll) editor.setSelectionRange(0, editor.value.length);
+              else {
+                const end = editor.value.length;
+                editor.setSelectionRange(end, end);
+              }
+            } else if (shouldSelectAll && editor.select) editor.select();
           } catch (_) {
-            try {
-              editor.select();
-            } catch (_) {}
+            if (shouldSelectAll && editor.select) {
+              try {
+                editor.select();
+              } catch (_) {}
+            }
           }
         }, 0);
       }

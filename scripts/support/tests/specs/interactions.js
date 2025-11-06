@@ -1100,6 +1100,16 @@ export function getInteractionsTests() {
         setInteractionsCell(model, status, tagView, 1, 0, ["setup"]);
 
         const { documentStub, host, editor, sheet } = makePaletteEnvironment();
+        let selectionRange = null;
+        editor.setSelectionRange = (start, end) => {
+          selectionRange = [start, end];
+        };
+        const originalSetTimeout = globalThis.setTimeout;
+        const scheduled = [];
+        globalThis.setTimeout = (fn) => {
+          if (typeof fn === "function") scheduled.push(fn);
+          return 1;
+        };
         const palette = initPalette({
           editor,
           sheet,
@@ -1118,13 +1128,30 @@ export function getInteractionsTests() {
           document: documentStub,
         });
 
-        const opened = palette.openForCurrentCell({
-          r: 0,
-          c: 0,
-          initialText: "rush, ",
-          focusEditor: false,
-        });
+        let opened;
+        try {
+          opened = palette.openForCurrentCell({
+            r: 0,
+            c: 0,
+            initialText: "rush, ",
+            focusEditor: false,
+          });
+        } finally {
+          globalThis.setTimeout = originalSetTimeout;
+        }
+        for (const task of scheduled) {
+          try {
+            task();
+          } catch (_) {
+            /* noop */
+          }
+        }
         assert.ok(opened, "palette opened for tag column");
+        assert.deepStrictEqual(
+          selectionRange,
+          [6, 6],
+          "tag editor keeps caret at end instead of selecting all text",
+        );
 
         const paletteRoot = host.children.find(
           (child) => child && child.id === "universalPalette",
