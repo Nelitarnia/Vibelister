@@ -32,8 +32,9 @@ function normalizeTagList(value) {
   const seen = new Set();
   const tags = [];
   for (const tag of expandTagCandidates(value)) {
-    if (!seen.has(tag)) {
-      seen.add(tag);
+    const key = tag.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
       tags.push(tag);
     }
   }
@@ -42,6 +43,37 @@ function normalizeTagList(value) {
 
 function formatTagList(value) {
   return Array.isArray(value) && value.length ? value.join(", ") : "";
+}
+
+export function normalizeInteractionTags(value) {
+  return normalizeTagList(value);
+}
+
+export function collectInteractionTags(model) {
+  const notes = model?.notes;
+  if (!notes || typeof notes !== "object") return [];
+  const seen = new Set();
+  const tags = [];
+  for (const note of Object.values(notes)) {
+    if (!note || typeof note !== "object") continue;
+    const normalized = normalizeTagList(note.tags);
+    if (!normalized.length) continue;
+    for (const tag of normalized) {
+      if (seen.has(tag)) continue;
+      seen.add(tag);
+      tags.push(tag);
+    }
+  }
+  tags.sort((a, b) => {
+    const lowerA = a.toLowerCase();
+    const lowerB = b.toLowerCase();
+    if (lowerA === lowerB) {
+      if (a === b) return 0;
+      return a < b ? -1 : 1;
+    }
+    return lowerA < lowerB ? -1 : 1;
+  });
+  return tags;
 }
 
 // Key builder

@@ -6,6 +6,10 @@ import {
   getInteractionsPair,
   getInteractionsRowCount,
 } from "../app/interactions-data.js";
+import {
+  collectInteractionTags,
+  normalizeInteractionTags,
+} from "../app/interactions.js";
 
 // palette.js — one elegant, configurable dropdown for stable-ID cells.
 //
@@ -19,6 +23,7 @@ import {
 //   - 'outcome' → for ^p\\d+:outcome$ and legacy 'result'
 //   - 'end'     → for ^p\\d+:end$ (Action + optional variant)
 //   - 'modifierState' → for Actions view modifier compatibility columns
+//   - 'tag'     → for ^p\\d+:tag$ (Interactions phase tags)
 //
 // You can add more modes later by extending MODE_MAP.
 
@@ -262,6 +267,113 @@ export function initPalette(ctx) {
       },
       recentKeyOf: (it) =>
         `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
+    },
+    {
+      name: "tag",
+      testKey: (key) => /^p\d+:tag$/.test(String(key || "")),
+      consumeTyping: false,
+      filterFn: () => true,
+      domId: "universalPalette",
+      supportsRecentToggle: true,
+      parseInitial: (s) => String(s || ""),
+      parseQuery: (raw) => {
+        const full = String(raw || "");
+        const parts = full.split(",");
+        const trailingComma = /,\s*$/.test(full);
+        const committed = [];
+        let activeRaw = "";
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i].trim();
+          const isLast = i === parts.length - 1;
+          if (isLast && !trailingComma) activeRaw = part;
+          else if (part) committed.push(part);
+        }
+        const baseNormalized = normalizeInteractionTags(committed);
+        const typedSource = trailingComma
+          ? committed
+          : activeRaw
+            ? committed.concat(activeRaw)
+            : committed;
+        const typedNormalized = normalizeInteractionTags(typedSource);
+        return {
+          full,
+          committed,
+          activeRaw,
+          activeLower: activeRaw.toLowerCase(),
+          trailingComma,
+          baseNormalized,
+          typedNormalized,
+        };
+      },
+      makeItems: (model, parsed) => {
+        const typedNormalized = Array.isArray(parsed.typedNormalized)
+          ? parsed.typedNormalized
+          : [];
+        const baseNormalized = Array.isArray(parsed.baseNormalized)
+          ? parsed.baseNormalized
+          : [];
+        const activeRaw = parsed.activeRaw || "";
+        const arraysEqual = (a = [], b = []) =>
+          a.length === b.length && a.every((value, index) => value === b[index]);
+        const typedDisplay = typedNormalized.length
+          ? typedNormalized.join(", ")
+          : "Clear tags";
+        let typedDescription;
+        if (typedNormalized.length) {
+          if (arraysEqual(typedNormalized, baseNormalized))
+            typedDescription = "Keep current tags";
+          else if (activeRaw && !parsed.trailingComma)
+            typedDescription = `Apply tags, including “${activeRaw}”`;
+          else typedDescription = "Apply tags";
+        } else {
+          typedDescription = baseNormalized.length
+            ? "Remove all tags"
+            : "No tags assigned";
+        }
+
+        const items = [
+          {
+            display: typedDisplay,
+            description: typedDescription,
+            data: { tags: typedNormalized },
+            isCurrent: arraysEqual(typedNormalized, baseNormalized),
+          },
+        ];
+
+        const catalog = collectInteractionTags(model) || [];
+        if (catalog.length) {
+          const skip = new Set(
+            typedNormalized.map((tag) => tag.toLowerCase()),
+          );
+          for (const tag of catalog) {
+            const lower = tag.toLowerCase();
+            if (skip.has(lower)) continue;
+            if (parsed.activeLower && !lower.includes(parsed.activeLower)) continue;
+            const nextTags = normalizeInteractionTags([
+              ...baseNormalized,
+              tag,
+            ]);
+            items.push({
+              display: tag,
+              description: baseNormalized.length
+                ? `Add tag → ${nextTags.join(", ")}`
+                : `Set tag to “${tag}”`,
+              data: { tags: nextTags },
+            });
+          }
+        }
+
+        return items;
+      },
+      commit: (it) => {
+        const normalized = normalizeInteractionTags(it?.data?.tags);
+        setCell(sel.r, sel.c, normalized);
+        render();
+      },
+      recentKeyOf: (it) => {
+        const tags = normalizeInteractionTags(it?.data?.tags);
+        return `t:${tags.join("\u0001")}`;
+      },
     },
   ];
 

@@ -9,6 +9,7 @@ import {
   isInteractionPhaseColumnActiveForRow,
   getInteractionsPair,
   getInteractionsRowCount,
+  collectInteractionTags,
 } from "../../../app/interactions.js";
 import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
@@ -54,6 +55,94 @@ function findPairIndex(model, predicate) {
     if (pair && predicate(pair)) return r;
   }
   return -1;
+}
+
+class PaletteStubElement {
+  constructor(tag, isFragment = false) {
+    this.tag = tag;
+    this.isFragment = isFragment;
+    this._children = [];
+    this.style = {};
+    this.dataset = {};
+    this.attributes = {};
+    this.className = "";
+    this.parentElement = null;
+    this._textContent = "";
+    this.id = "";
+  }
+
+  appendChild(child) {
+    if (!child) return child;
+    if (child.isFragment) {
+      child._children.forEach((node) => this.appendChild(node));
+      return child;
+    }
+    this._children.push(child);
+    child.parentElement = this;
+    return child;
+  }
+
+  get children() {
+    return this._children;
+  }
+
+  set innerHTML(value) {
+    this._children = [];
+    this._textContent = typeof value === "string" ? value : "";
+  }
+
+  set textContent(value) {
+    this._children = [];
+    this._textContent = typeof value === "string" ? value : String(value ?? "");
+  }
+
+  get textContent() {
+    return this._textContent;
+  }
+
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
+    if (name === "id") this.id = String(value);
+  }
+
+  removeAttribute(name) {
+    delete this.attributes[name];
+    if (name === "id") this.id = "";
+  }
+
+  contains(target) {
+    if (!target) return false;
+    if (target === this) return true;
+    return this._children.some((child) => child.contains?.(target));
+  }
+
+  scrollIntoView() {}
+}
+
+function makePaletteEnvironment() {
+  const host = new PaletteStubElement("div");
+  const documentStub = {
+    createElement(tag) {
+      return new PaletteStubElement(tag);
+    },
+    createDocumentFragment() {
+      return new PaletteStubElement("#fragment", true);
+    },
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    activeElement: null,
+  };
+  const editor = {
+    style: {},
+    parentElement: host,
+    addEventListener: () => {},
+    focus: () => {},
+    setSelectionRange: () => {},
+    select: () => {},
+    value: "",
+  };
+  const sheet = { addEventListener: () => {} };
+  return { host, documentStub, editor, sheet };
 }
 
 export function getInteractionsTests() {
@@ -281,6 +370,98 @@ export function getInteractionsTests() {
           plainCellText(pastedEnd),
           "Attack",
           "pasted end visible",
+        );
+      },
+    },
+    {
+      name: "tag cells normalize, copy, and clear values",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        addAction("Strike");
+        addInput("Tap");
+        buildInteractionsPairs(model);
+        const tagView = { columns: [{ key: "p0:tag" }] };
+        const status = { set() {} };
+
+        setInteractionsCell(
+          model,
+          status,
+          tagView,
+          0,
+          0,
+          " rush , momentum+, Rush ",
+        );
+        const pair0 = getInteractionsPair(model, 0);
+        const noteKey0 = noteKeyForPair(pair0, 0);
+        assert.deepStrictEqual(
+          model.notes[noteKey0]?.tags,
+          ["rush", "momentum+"],
+          "tags normalized and deduplicated",
+        );
+        assert.strictEqual(
+          getInteractionsCell(model, tagView, 0, 0),
+          "rush, momentum+",
+          "formatted tag cell text",
+        );
+        assert.deepStrictEqual(
+          collectInteractionTags(model),
+          ["momentum+", "rush"],
+          "collectInteractionTags gathers saved tags",
+        );
+
+        const payload = getStructuredCellInteractions(model, tagView, 0, 0);
+        assert.strictEqual(payload?.type, "tag", "structured tag payload type");
+        assert.deepStrictEqual(
+          payload?.data?.tags,
+          ["rush", "momentum+"],
+          "structured tag payload carries normalized list",
+        );
+
+        addInput("Kick");
+        buildInteractionsPairs(model);
+        setInteractionsCell(model, status, tagView, 1, 0, ["setup"]);
+        assert.deepStrictEqual(
+          collectInteractionTags(model),
+          ["momentum+", "rush", "setup"],
+          "tag catalog aggregates multiple rows",
+        );
+
+        addInput("Throw");
+        buildInteractionsPairs(model);
+        const applied = applyStructuredCellInteractions(
+          (r, c, v) => setInteractionsCell(model, status, tagView, r, c, v),
+          tagView,
+          2,
+          0,
+          payload,
+          model,
+        );
+        assert.ok(applied, "tag payload applied to third row");
+        assert.strictEqual(
+          getInteractionsCell(model, tagView, 2, 0),
+          "rush, momentum+",
+          "copied tag payload visible",
+        );
+
+        const clearedFirst = clearInteractionsCell(model, tagView, 0, 0);
+        assert.ok(clearedFirst, "clearing tag cell removes first row value");
+        assert.strictEqual(
+          getInteractionsCell(model, tagView, 0, 0),
+          "",
+          "cleared tag cell blank",
+        );
+        assert.deepStrictEqual(
+          collectInteractionTags(model),
+          ["momentum+", "rush", "setup"],
+          "remaining rows still contribute to catalog",
+        );
+
+        const clearedThird = clearInteractionsCell(model, tagView, 2, 0);
+        assert.ok(clearedThird, "clearing structured target row succeeds");
+        assert.deepStrictEqual(
+          collectInteractionTags(model),
+          ["setup"],
+          "catalog reflects final tag set",
         );
       },
     },
@@ -836,74 +1017,7 @@ export function getInteractionsTests() {
         };
         model.interactionsPairs = [];
 
-        class StubElement {
-          constructor(tag, isFragment = false) {
-            this.tag = tag;
-            this.isFragment = isFragment;
-            this._children = [];
-            this.style = {};
-            this.dataset = {};
-            this.attributes = {};
-            this.className = "";
-            this.parentElement = null;
-            this._textContent = "";
-          }
-          appendChild(child) {
-            if (!child) return child;
-            if (child.isFragment) {
-              child._children.forEach((node) => this.appendChild(node));
-              return child;
-            }
-            this._children.push(child);
-            child.parentElement = this;
-            return child;
-          }
-          get children() {
-            return this._children;
-          }
-          set innerHTML(value) {
-            this._children = [];
-            this._textContent = typeof value === "string" ? value : "";
-          }
-          set textContent(value) {
-            this._children = [];
-            this._textContent =
-              typeof value === "string" ? value : String(value ?? "");
-          }
-          get textContent() {
-            return this._textContent;
-          }
-          setAttribute(name, value) {
-            this.attributes[name] = String(value);
-          }
-          removeAttribute(name) {
-            delete this.attributes[name];
-          }
-          scrollIntoView() {}
-        }
-
-        const documentStub = {
-          createElement(tag) {
-            return new StubElement(tag);
-          },
-          createDocumentFragment() {
-            return new StubElement("#fragment", true);
-          },
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          activeElement: null,
-        };
-        const host = new StubElement("div");
-        const editor = {
-          style: {},
-          parentElement: host,
-          addEventListener: () => {},
-          focus: () => {},
-          setSelectionRange: () => {},
-          select: () => {},
-          value: "",
-        };
-        const sheet = { addEventListener: () => {} };
+        const { documentStub, host, editor, sheet } = makePaletteEnvironment();
         const palette = initPalette({
           editor,
           sheet,
@@ -954,6 +1068,75 @@ export function getInteractionsTests() {
           fallSpan?.style?.color,
           "#33ff66",
           "Fall span uses modifier color",
+        );
+      },
+    },
+    {
+      name: "tag palette suggests existing tags",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        addAction("Strike");
+        addInput("Tap");
+        buildInteractionsPairs(model);
+        const tagView = { columns: [{ key: "p0:tag" }] };
+        const status = { set() {} };
+
+        setInteractionsCell(model, status, tagView, 0, 0, ["rush"]);
+        addInput("Kick");
+        buildInteractionsPairs(model);
+        setInteractionsCell(model, status, tagView, 1, 0, ["setup"]);
+
+        const { documentStub, host, editor, sheet } = makePaletteEnvironment();
+        const palette = initPalette({
+          editor,
+          sheet,
+          getActiveView: () => "interactions",
+          viewDef: () => ({ columns: [{ key: "p0:tag" }] }),
+          sel: { r: 0, c: 0 },
+          model,
+          setCell: (r, c, value) =>
+            setInteractionsCell(model, status, tagView, r, c, value),
+          render: () => {},
+          getCellRect: () => ({ left: 0, top: 0, width: 200, height: 24 }),
+          HEADER_HEIGHT: 0,
+          endEdit: () => {},
+          moveSelectionForTab: () => {},
+          moveSelectionForEnter: () => {},
+          document: documentStub,
+        });
+
+        const opened = palette.openForCurrentCell({
+          r: 0,
+          c: 0,
+          initialText: "rush, ",
+          focusEditor: false,
+        });
+        assert.ok(opened, "palette opened for tag column");
+
+        const paletteRoot = host.children.find(
+          (child) => child && child.id === "universalPalette",
+        );
+        assert.ok(paletteRoot, "palette root appended to host");
+        const listEl = paletteRoot?.children?.[0];
+        assert.ok(listEl, "palette list rendered");
+
+        const items = listEl.children.filter((child) => child.className === "pal-item");
+        assert.ok(items.length >= 2, "palette lists typed entry and suggestion");
+
+        const firstItem = items[0];
+        const firstLabel = firstItem.children?.[0]?.textContent || firstItem.textContent;
+        assert.strictEqual(firstLabel, "rush", "typed tags appear first");
+        const firstDesc = firstItem.children?.[1]?.textContent || "";
+        assert.strictEqual(firstDesc, "Keep current tags", "typed entry describes current state");
+
+        const suggestion = items.find(
+          (child) => child.children?.[0]?.textContent === "setup",
+        );
+        assert.ok(suggestion, "existing tag suggested");
+        const suggestionDesc = suggestion.children?.[1]?.textContent || "";
+        assert.ok(
+          /Add tag/.test(suggestionDesc),
+          "suggestion indicates it will add the tag",
         );
       },
     },
