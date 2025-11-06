@@ -38,7 +38,7 @@ export function visibleRows(top, height, rowHeight, rowCount) {
 
 // Phases helpers
 export function parsePhaseKey(k) {
-  const m = /^p(\d+):(outcome|end)$/.exec(String(k || ""));
+  const m = /^p(\d+):(outcome|end|tag)$/.exec(String(k || ""));
   return m ? { p: Number(m[1]), field: m[2] } : null;
 }
 export function parsePhasesSpec(text) {
