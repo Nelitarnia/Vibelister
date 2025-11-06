@@ -364,5 +364,46 @@ export function getColumnResizeTests() {
         }
       },
     },
+    {
+      name: "auto scroll does not fight the drag direction",
+      run(assert) {
+        const harness = createResizeHarness();
+        harness.windowStub.setInterval = () => {
+          throw new Error("auto-scroll should not start");
+        };
+        harness.windowStub.clearInterval = () => {};
+        let dispose;
+
+        try {
+          dispose = harness.init();
+
+          const pointerId = 23;
+          const startX = harness.containerRect.right - 8;
+          harness.container.dispatch("pointerdown", {
+            button: 0,
+            detail: 0,
+            pointerId,
+            clientX: startX,
+            target: harness.eventTarget,
+            preventDefault() {},
+          });
+
+          harness.windowStub.dispatch("pointermove", {
+            pointerId,
+            clientX: startX - 24,
+          });
+
+          assert.strictEqual(harness.mutationLog.length > 0, true);
+          const resizeResult =
+            harness.mutationLog[harness.mutationLog.length - 1];
+          assert.strictEqual(resizeResult.width, harness.startWidth - 24);
+          assert.strictEqual(harness.sheet.scrollLeft, 0);
+
+          harness.windowStub.dispatch("pointerup", { pointerId });
+        } finally {
+          dispose?.();
+        }
+      },
+    },
   ];
 }

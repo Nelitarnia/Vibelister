@@ -203,12 +203,32 @@ export function initColumnResize(options = {}) {
       return;
     }
 
-    let direction = 0;
-    if (clientX >= rect.right - AUTO_SCROLL_THRESHOLD) {
-      direction = 1;
-    } else if (clientX <= rect.left + AUTO_SCROLL_THRESHOLD) {
-      direction = -1;
+    const pointerX =
+      clientX ?? resizeState?.lastClientX ?? resizeState?.startX ?? null;
+    if (!Number.isFinite(pointerX)) {
+      stopAutoScroll();
+      return;
     }
+
+    const thresholdLeft = rect.left + AUTO_SCROLL_THRESHOLD;
+    const thresholdRight = rect.right - AUTO_SCROLL_THRESHOLD;
+
+    let wantLeft = pointerX <= thresholdLeft;
+    let wantRight = pointerX >= thresholdRight;
+
+    if (wantLeft && wantRight) {
+      wantLeft = wantRight = false;
+    }
+
+    if (resizeState && Number.isFinite(resizeState.startX)) {
+      const deltaFromStart = pointerX - resizeState.startX;
+      if (wantLeft && deltaFromStart > 0) wantLeft = false;
+      if (wantRight && deltaFromStart < 0) wantRight = false;
+    }
+
+    let direction = 0;
+    if (wantRight) direction = 1;
+    else if (wantLeft) direction = -1;
 
     if (direction !== 0) {
       const maxScroll = Math.max(
