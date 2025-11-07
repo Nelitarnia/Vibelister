@@ -121,7 +121,19 @@ export function initColumnResize(options = {}) {
       (Number(sheet.scrollWidth) || 0) - (Number(sheet.clientWidth) || 0),
     );
     if (direction < 0 && sheet.scrollLeft <= 0) direction = 0;
-    if (direction > 0 && sheet.scrollLeft >= maxScrollLeft) direction = 0;
+    if (direction > 0 && sheet.scrollLeft >= maxScrollLeft) {
+      let pointerBeyondRight = false;
+      const pointerX = resizeState.lastClientX ?? resizeState.startX;
+      if (Number.isFinite(pointerX)) {
+        const rect = getAutoScrollRect();
+        if (rect && pointerX >= rect.right + AUTO_SCROLL_ACTIVATION_MARGIN) {
+          pointerBeyondRight = true;
+        }
+      }
+      if (!pointerBeyondRight) {
+        direction = 0;
+      }
+    }
 
     if (direction === 0) {
       stopAutoScroll();
@@ -153,22 +165,17 @@ export function initColumnResize(options = {}) {
       const prev = sheet.scrollLeft;
       const delta = autoScrollDirection * AUTO_SCROLL_STEP;
       const next = Math.max(0, Math.min(maxScroll, prev + delta));
-      if (next === prev) {
-        stopAutoScroll();
-        return;
-      }
-
       sheet.scrollLeft = next;
       updateWidth(resizeState.lastClientX ?? resizeState.startX);
 
+      let stillBeyondRight = false;
+      let stillBeyondLeft = false;
       const rect = getAutoScrollRect();
       if (rect) {
         const clientX = resizeState.lastClientX ?? resizeState.startX;
         if (clientX != null) {
-          const stillBeyondRight =
-            clientX >= rect.right + AUTO_SCROLL_STOP_MARGIN;
-          const stillBeyondLeft =
-            clientX <= rect.left - AUTO_SCROLL_STOP_MARGIN;
+          stillBeyondRight = clientX >= rect.right + AUTO_SCROLL_STOP_MARGIN;
+          stillBeyondLeft = clientX <= rect.left - AUTO_SCROLL_STOP_MARGIN;
           if (
             (autoScrollDirection > 0 && !stillBeyondRight) ||
             (autoScrollDirection < 0 && !stillBeyondLeft)
@@ -179,9 +186,12 @@ export function initColumnResize(options = {}) {
         }
       }
 
-      if (
-        (autoScrollDirection < 0 && next <= 0) ||
-        (autoScrollDirection > 0 && next >= maxScroll)
+      if (autoScrollDirection < 0 && next <= 0) {
+        stopAutoScroll();
+      } else if (
+        autoScrollDirection > 0 &&
+        next >= maxScroll &&
+        !stillBeyondRight
       ) {
         stopAutoScroll();
       }
@@ -253,7 +263,11 @@ export function initColumnResize(options = {}) {
       );
       if (direction < 0 && sheet.scrollLeft <= 0) {
         direction = 0;
-      } else if (direction > 0 && sheet.scrollLeft >= maxScroll) {
+      } else if (
+        direction > 0 &&
+        sheet.scrollLeft >= maxScroll &&
+        !(rect && pointerX >= rect.right + AUTO_SCROLL_ACTIVATION_MARGIN)
+      ) {
         direction = 0;
       }
     }

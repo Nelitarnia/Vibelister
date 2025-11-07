@@ -508,5 +508,83 @@ export function getColumnResizeTests() {
         }
       },
     },
+    {
+      name: "auto scroll keeps running at the right edge while resizing",
+      run(assert) {
+        const harness = createResizeHarness();
+        const rafCallbacks = new Map();
+        let nextFrameId = 0;
+        harness.windowStub.requestAnimationFrame = (cb) => {
+          const id = ++nextFrameId;
+          rafCallbacks.set(id, cb);
+          return id;
+        };
+        harness.windowStub.cancelAnimationFrame = (id) => {
+          rafCallbacks.delete(id);
+        };
+        harness.windowStub.setInterval = () => {
+          throw new Error("should use requestAnimationFrame");
+        };
+        harness.windowStub.clearInterval = () => {};
+
+        function runFrame() {
+          const callbacks = [...rafCallbacks.values()];
+          rafCallbacks.clear();
+          for (const cb of callbacks) {
+            cb();
+          }
+        }
+
+        let dispose;
+
+        try {
+          dispose = harness.init();
+
+          const pointerId = 53;
+          const startX = harness.sheetRect.right - 6;
+          const initialMaxScroll =
+            (Number(harness.sheet.scrollWidth) || 0) -
+            (Number(harness.sheet.clientWidth) || 0);
+          harness.sheet.scrollLeft = initialMaxScroll;
+
+          harness.container.dispatch("pointerdown", {
+            button: 0,
+            detail: 0,
+            pointerId,
+            clientX: startX,
+            target: harness.eventTarget,
+            preventDefault() {},
+          });
+
+          harness.windowStub.dispatch("pointermove", {
+            pointerId,
+            clientX: startX + 28,
+          });
+
+          assert.strictEqual(rafCallbacks.size > 0, true);
+
+          runFrame();
+
+          assert.strictEqual(rafCallbacks.size > 0, true);
+          assert.strictEqual(harness.sheet.scrollLeft, initialMaxScroll);
+
+          harness.sheet.scrollWidth += 320;
+
+          runFrame();
+
+          const newMaxScroll =
+            (Number(harness.sheet.scrollWidth) || 0) -
+            (Number(harness.sheet.clientWidth) || 0);
+          const expectedScroll = Math.min(initialMaxScroll + 24, newMaxScroll);
+          assert.strictEqual(harness.sheet.scrollLeft, expectedScroll);
+
+          harness.windowStub.dispatch("pointerup", { pointerId });
+
+          assert.strictEqual(rafCallbacks.size, 0);
+        } finally {
+          dispose?.();
+        }
+      },
+    },
   ];
 }
