@@ -72,6 +72,19 @@ export function initColumnResize(options = {}) {
     return vd.columns;
   }
 
+  function getAutoScrollRect() {
+    const readRect = (node) => {
+      if (!node || typeof node.getBoundingClientRect !== "function") return null;
+      const rect = node.getBoundingClientRect();
+      if (!rect) return null;
+      const { left, right } = rect;
+      if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+      return rect;
+    };
+
+    return readRect(sheet) || readRect(container) || null;
+  }
+
   function stopAutoScroll() {
     if (autoScrollHandle == null) return;
     if (autoScrollMode === "raf") {
@@ -148,10 +161,10 @@ export function initColumnResize(options = {}) {
       sheet.scrollLeft = next;
       updateWidth(resizeState.lastClientX ?? resizeState.startX);
 
-      if (typeof container?.getBoundingClientRect === "function") {
-        const rect = container.getBoundingClientRect();
+      const rect = getAutoScrollRect();
+      if (rect) {
         const clientX = resizeState.lastClientX ?? resizeState.startX;
-        if (rect && clientX != null) {
+        if (clientX != null) {
           const stillBeyondRight =
             clientX >= rect.right + AUTO_SCROLL_STOP_MARGIN;
           const stillBeyondLeft =
@@ -195,12 +208,12 @@ export function initColumnResize(options = {}) {
   }
 
   function maybeAutoScroll(clientX) {
-    if (!sheet || typeof container?.getBoundingClientRect !== "function") {
+    if (!sheet) {
       stopAutoScroll();
       return;
     }
 
-    const rect = container.getBoundingClientRect();
+    const rect = getAutoScrollRect();
     if (!rect) {
       stopAutoScroll();
       return;

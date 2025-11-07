@@ -115,10 +115,14 @@ function createResizeHarness({
   const headerClassList = makeClassList();
   const handleClassList = makeClassList();
   const containerRect = { left: 0, right: 400 };
+  const sheetRect = { left: 0, right: 400 };
   const sheet = {
     scrollLeft: 0,
     scrollWidth: 2000,
     clientWidth: 400,
+    getBoundingClientRect() {
+      return sheetRect;
+    },
   };
 
   const header = {
@@ -225,6 +229,7 @@ function createResizeHarness({
     handleClassList,
     containerClassList,
     containerRect,
+    sheetRect,
     getCurrentWidth: () => currentWidth,
     runModelMutation,
     beginUndoableTransaction,
@@ -397,6 +402,50 @@ export function getColumnResizeTests() {
           const resizeResult =
             harness.mutationLog[harness.mutationLog.length - 1];
           assert.strictEqual(resizeResult.width, harness.startWidth - 24);
+          assert.strictEqual(harness.sheet.scrollLeft, 0);
+
+          harness.windowStub.dispatch("pointerup", { pointerId });
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
+      name: "auto scroll waits until the pointer leaves the sheet viewport",
+      run(assert) {
+        const harness = createResizeHarness();
+        harness.windowStub.setInterval = () => {
+          throw new Error("auto-scroll should not start");
+        };
+        harness.windowStub.clearInterval = () => {};
+        let dispose;
+
+        try {
+          dispose = harness.init();
+
+          const pointerId = 29;
+          const startX = 180;
+          harness.container.dispatch("pointerdown", {
+            button: 0,
+            detail: 0,
+            pointerId,
+            clientX: startX,
+            target: harness.eventTarget,
+            preventDefault() {},
+          });
+
+          harness.containerRect.left = -160;
+          harness.containerRect.right = 240;
+
+          harness.windowStub.dispatch("pointermove", {
+            pointerId,
+            clientX: startX + 100,
+          });
+
+          assert.strictEqual(harness.mutationLog.length > 0, true);
+          const resizeResult =
+            harness.mutationLog[harness.mutationLog.length - 1];
+          assert.strictEqual(resizeResult.width, harness.startWidth + 100);
           assert.strictEqual(harness.sheet.scrollLeft, 0);
 
           harness.windowStub.dispatch("pointerup", { pointerId });
