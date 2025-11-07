@@ -42,7 +42,8 @@ export function initColumnResize(options = {}) {
   const clearIntervalFn = win?.clearInterval?.bind(win) ??
     globalThis.clearInterval?.bind(globalThis);
 
-  const AUTO_SCROLL_THRESHOLD = 32;
+  const AUTO_SCROLL_ACTIVATION_MARGIN = 12;
+  const AUTO_SCROLL_STOP_MARGIN = 4;
   const AUTO_SCROLL_STEP = 24;
   const AUTO_SCROLL_INTERVAL = 16;
 
@@ -151,11 +152,13 @@ export function initColumnResize(options = {}) {
         const rect = container.getBoundingClientRect();
         const clientX = resizeState.lastClientX ?? resizeState.startX;
         if (rect && clientX != null) {
-          const nearRight = clientX >= rect.right - AUTO_SCROLL_THRESHOLD;
-          const nearLeft = clientX <= rect.left + AUTO_SCROLL_THRESHOLD;
+          const stillBeyondRight =
+            clientX >= rect.right + AUTO_SCROLL_STOP_MARGIN;
+          const stillBeyondLeft =
+            clientX <= rect.left - AUTO_SCROLL_STOP_MARGIN;
           if (
-            (autoScrollDirection > 0 && !nearRight) ||
-            (autoScrollDirection < 0 && !nearLeft)
+            (autoScrollDirection > 0 && !stillBeyondRight) ||
+            (autoScrollDirection < 0 && !stillBeyondLeft)
           ) {
             stopAutoScroll();
             return;
@@ -210,11 +213,11 @@ export function initColumnResize(options = {}) {
       return;
     }
 
-    const thresholdLeft = rect.left + AUTO_SCROLL_THRESHOLD;
-    const thresholdRight = rect.right - AUTO_SCROLL_THRESHOLD;
+    const activationLeft = rect.left - AUTO_SCROLL_ACTIVATION_MARGIN;
+    const activationRight = rect.right + AUTO_SCROLL_ACTIVATION_MARGIN;
 
-    let wantLeft = pointerX <= thresholdLeft;
-    let wantRight = pointerX >= thresholdRight;
+    let wantLeft = pointerX <= activationLeft;
+    let wantRight = pointerX >= activationRight;
 
     if (wantLeft && wantRight) {
       wantLeft = wantRight = false;
