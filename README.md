@@ -67,6 +67,8 @@ Although the default mode in Interactions is comparing Actions vs Inputs (AI), p
 
 Actions have nuance: their different parts often have different rules. For example, the buffers might work completely differently during start-up and cooldown. To allow examining the "timeline" of an Action in a closer detail, you can give Actions a number which represents their Phases.
 
+Each phase features an Outcome-, End- (the end state of the input test) and Tag- column. The purpose of Tag is to bridge the gap between purely formal note-taking and freeform notes: you should use it to add lesser effects (like UI-only changes) that at least for the time being don't require their own Action or Modifier to keep a track of.
+
 The Phase-column in Actions view allows a list of numbers ("1,2,3"), a range of numbers (1..5) or giving labels to Phases (1:start-up, 2:active, 3:cooldown). These labels will be visible in Interactions view if added, but they're optional.
 
 Interactions-view expands horizontally to fit whatever is the highest Phase count in any Action. (Capped to 12 at the moment.) Furthermore, unused Phases in each Action are grayed out to give a visual guide to the range of the current Action.
