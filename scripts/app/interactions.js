@@ -12,6 +12,70 @@ import {
 
 export { getInteractionsRowCount, getPairFromIndex as getInteractionsPair };
 
+function expandTagCandidates(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap((v) => expandTagCandidates(v));
+  }
+  if (value && typeof value === "object") {
+    if ("tags" in value) return expandTagCandidates(value.tags);
+    if ("tag" in value) return expandTagCandidates(value.tag);
+  }
+  if (value == null) return [];
+  const text = typeof value === "string" ? value : String(value);
+  return text
+    .split(/[\n,]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function normalizeTagList(value) {
+  const seen = new Set();
+  const tags = [];
+  for (const tag of expandTagCandidates(value)) {
+    const key = tag.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      tags.push(tag);
+    }
+  }
+  return tags;
+}
+
+function formatTagList(value) {
+  return Array.isArray(value) && value.length ? value.join(", ") : "";
+}
+
+export function normalizeInteractionTags(value) {
+  return normalizeTagList(value);
+}
+
+export function collectInteractionTags(model) {
+  const notes = model?.notes;
+  if (!notes || typeof notes !== "object") return [];
+  const seen = new Set();
+  const tags = [];
+  for (const note of Object.values(notes)) {
+    if (!note || typeof note !== "object") continue;
+    const normalized = normalizeTagList(note.tags);
+    if (!normalized.length) continue;
+    for (const tag of normalized) {
+      if (seen.has(tag)) continue;
+      seen.add(tag);
+      tags.push(tag);
+    }
+  }
+  tags.sort((a, b) => {
+    const lowerA = a.toLowerCase();
+    const lowerB = b.toLowerCase();
+    if (lowerA === lowerB) {
+      if (a === b) return 0;
+      return a < b ? -1 : 1;
+    }
+    return lowerA < lowerB ? -1 : 1;
+  });
+  return tags;
+}
+
 // Key builder
 export function noteKeyForPair(pair, phase) {
   const kind = pair && pair.kind ? String(pair.kind).toUpperCase() : "AI";
@@ -40,7 +104,11 @@ export function isInteractionPhaseColumnActiveForRow(
   const col = colOverride || viewDef.columns[c];
   if (!col) return false;
   const pk = parsePhaseKey(col.key);
-  if (!pk || (pk.field !== "outcome" && pk.field !== "end")) return true;
+  if (
+    !pk ||
+    (pk.field !== "outcome" && pk.field !== "end" && pk.field !== "tag")
+  )
+    return true;
   const pair = getPairFromIndex(model, r);
   if (!pair) return false;
   const action = Array.isArray(model.actions)
@@ -119,6 +187,13 @@ export function getInteractionsCell(model, viewDef, r, c) {
     return "";
   }
 
+  if (pk.field === "tag") {
+    if (note.tags == null) return "";
+    if (Array.isArray(note.tags)) return formatTagList(note.tags);
+    const normalized = normalizeTagList(note.tags);
+    return formatTagList(normalized);
+  }
+
   return "";
 }
 
@@ -164,6 +239,13 @@ export function getStructuredCellInteractions(model, viewDef, r, c) {
       };
     }
     return null; // legacy free-text is readable in UI but never exported to clipboard
+  }
+  if (pk.field === "tag") {
+    if (note.tags != null) {
+      const tags = normalizeTagList(note.tags);
+      if (tags.length) return { type: "tag", data: { tags } };
+    }
+    return null;
   }
   return null;
 }
@@ -328,6 +410,28 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
         "End expects an Action ID (use the palette or structured paste).";
     return false;
   }
+
+  if (pk.field === "tag") {
+    if (
+      value == null ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      if ("tags" in note) delete note.tags;
+      if (Object.keys(note).length === 0) delete model.notes[k];
+      return true;
+    }
+    const tags = normalizeTagList(value);
+    if (!tags.length) {
+      if ("tags" in note) delete note.tags;
+      if (Object.keys(note).length === 0) delete model.notes[k];
+      return true;
+    }
+    note.tags = tags;
+    return true;
+  }
+
+  return false;
 }
 
 export function applyStructuredCellInteractions(
@@ -347,17 +451,24 @@ export function applyStructuredCellInteractions(
 
   // Normalize to the destination column.
   // Accept:
-  //   • Wrapped: { type:'outcome'|'end', data:{...} }
+  //   • Wrapped: { type:'outcome'|'end'|'tag', data:{...} }
   //   • Bare outcome:  { outcomeId } or Number
   //   • Bare end:      { endActionId, endVariantSig? } or Number (→ endActionId)
+  //   • Bare tags:     Array | comma text | { tags }
   //   • Action ref → End: { type:'action', data:{ id } } (map to { endActionId:id })
-  const field = String(pk.field || "").toLowerCase(); // 'outcome' | 'end'
+  const field = String(pk.field || "").toLowerCase(); // 'outcome' | 'end' | 'tag'
   let type = payload?.type ? String(payload.type).toLowerCase() : null;
   let data = payload && typeof payload.data === "object" ? payload.data : null;
 
   // 1) If missing wrapper or data, wrap from destination field
   if (!type || !data) {
-    const bare = payload && !payload.type ? payload : data || payload;
+    const hasType = !!(payload && payload.type);
+    const hasDataProp =
+      hasType &&
+      payload &&
+      typeof payload === "object" &&
+      Object.prototype.hasOwnProperty.call(payload, "data");
+    const bare = data ?? (hasDataProp ? payload.data : payload);
     if (field === "outcome") {
       type = "outcome";
       data =
@@ -378,6 +489,18 @@ export function applyStructuredCellInteractions(
       } else {
         // leave as-is; may be action-ref handled below
       }
+    } else if (field === "tag") {
+      type = "tag";
+      if (bare == null) data = { tags: [] };
+      else if (
+        bare &&
+        typeof bare === "object" &&
+        (Array.isArray(bare.tags) || typeof bare.tags === "string")
+      ) {
+        data = { tags: bare.tags };
+      } else {
+        data = { tags: bare };
+      }
     }
   }
 
@@ -395,10 +518,15 @@ export function applyStructuredCellInteractions(
     };
   }
 
+  if (field === "tag" && type === "tag" && (data == null || data === undefined)) {
+    data = { tags: [] };
+  }
+
   // 3) Bail if the wrapper still doesn't match the destination
   if (
     (field === "outcome" && type !== "outcome") ||
     (field === "end" && type !== "end") ||
+    (field === "tag" && type !== "tag") ||
     !data
   ) {
     return false;
@@ -423,6 +551,9 @@ export function applyStructuredCellInteractions(
       endActionId: eid,
       endVariantSig: evs,
     });
+  } else if (field === "tag" && type === "tag") {
+    const tags = normalizeTagList(data && "tags" in data ? data.tags : data);
+    wrote = !!setInteractionsCell(model, null, viewDef, r, c, tags);
   } else {
     return wrote;
   }
@@ -485,6 +616,11 @@ export function clearInteractionsCell(model, viewDef, r, c) {
       delete note.endFree;
       changed = true;
     }
+  } else if (pk.field === "tag") {
+    if ("tags" in note) {
+      delete note.tags;
+      changed = true;
+    }
   }
 
   if (!Object.keys(note).length) delete model.notes[k];
@@ -537,6 +673,13 @@ export function clearInteractionsSelection(
       }
       return true;
     }
+    if (pk && pk.field === "tag") {
+      if ("tags" in note) {
+        delete note.tags;
+        cleared++;
+      }
+      return true;
+    }
     if (key === "notes") {
       if ("notes" in note) {
         delete note.notes;
@@ -560,7 +703,7 @@ export function clearInteractionsSelection(
         if (
           !(
             key === "notes" ||
-            (pk && (pk.field === "outcome" || pk.field === "end"))
+            (pk && (pk.field === "outcome" || pk.field === "end" || pk.field === "tag"))
           )
         )
           continue;
@@ -593,7 +736,8 @@ export function clearInteractionsSelection(
         const key = String(column?.key || "");
         const pk = parsePhaseKey(key);
         const editable =
-          key === "notes" || (pk && (pk.field === "outcome" || pk.field === "end"));
+          key === "notes" ||
+          (pk && (pk.field === "outcome" || pk.field === "end" || pk.field === "tag"));
         return editable ? { key, pk, column } : null;
       })
       .filter(Boolean);
@@ -601,11 +745,11 @@ export function clearInteractionsSelection(
     if (!editableCols.length) {
       if (status?.set)
         status.set(
-          "Nothing to delete here: select an Outcome, End, or Notes cell.",
+          "Nothing to delete here: select an Outcome, End, Tag, or Notes cell.",
         );
       else if (status)
         status.textContent =
-          "Nothing to delete here: select an Outcome, End, or Notes cell.";
+          "Nothing to delete here: select an Outcome, End, Tag, or Notes cell.";
       return;
     }
 
@@ -648,5 +792,7 @@ export function isInteractionsCellEditable(viewDef, r, c) {
   const key = String(col.key || "");
   if (key === "notes") return true;
   const pk = parsePhaseKey(key);
-  return !!(pk && (pk.field === "outcome" || pk.field === "end"));
+  return !!(
+    pk && (pk.field === "outcome" || pk.field === "end" || pk.field === "tag")
+  );
 }

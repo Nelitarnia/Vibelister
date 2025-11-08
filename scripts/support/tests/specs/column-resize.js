@@ -115,10 +115,14 @@ function createResizeHarness({
   const headerClassList = makeClassList();
   const handleClassList = makeClassList();
   const containerRect = { left: 0, right: 400 };
+  const sheetRect = { left: 0, right: 400 };
   const sheet = {
     scrollLeft: 0,
     scrollWidth: 2000,
     clientWidth: 400,
+    getBoundingClientRect() {
+      return sheetRect;
+    },
   };
 
   const header = {
@@ -225,6 +229,7 @@ function createResizeHarness({
     handleClassList,
     containerClassList,
     containerRect,
+    sheetRect,
     getCurrentWidth: () => currentWidth,
     runModelMutation,
     beginUndoableTransaction,
@@ -359,6 +364,223 @@ export function getColumnResizeTests() {
           assert.strictEqual(resizeResult.width, harness.startWidth + 75);
 
           harness.windowStub.dispatch("pointerup", { pointerId });
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
+      name: "auto scroll does not fight the drag direction",
+      run(assert) {
+        const harness = createResizeHarness();
+        harness.windowStub.setInterval = () => {
+          throw new Error("auto-scroll should not start");
+        };
+        harness.windowStub.clearInterval = () => {};
+        let dispose;
+
+        try {
+          dispose = harness.init();
+
+          const pointerId = 23;
+          const startX = harness.containerRect.right - 8;
+          harness.container.dispatch("pointerdown", {
+            button: 0,
+            detail: 0,
+            pointerId,
+            clientX: startX,
+            target: harness.eventTarget,
+            preventDefault() {},
+          });
+
+          harness.windowStub.dispatch("pointermove", {
+            pointerId,
+            clientX: startX - 24,
+          });
+
+          assert.strictEqual(harness.mutationLog.length > 0, true);
+          const resizeResult =
+            harness.mutationLog[harness.mutationLog.length - 1];
+          assert.strictEqual(resizeResult.width, harness.startWidth - 24);
+          assert.strictEqual(harness.sheet.scrollLeft, 0);
+
+          harness.windowStub.dispatch("pointerup", { pointerId });
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
+      name: "auto scroll waits until the pointer leaves the sheet viewport",
+      run(assert) {
+        const harness = createResizeHarness();
+        harness.windowStub.setInterval = () => {
+          throw new Error("auto-scroll should not start");
+        };
+        harness.windowStub.clearInterval = () => {};
+        let dispose;
+
+        try {
+          dispose = harness.init();
+
+          const pointerId = 29;
+          const startX = 180;
+          harness.container.dispatch("pointerdown", {
+            button: 0,
+            detail: 0,
+            pointerId,
+            clientX: startX,
+            target: harness.eventTarget,
+            preventDefault() {},
+          });
+
+          harness.containerRect.left = -160;
+          harness.containerRect.right = 240;
+
+          harness.windowStub.dispatch("pointermove", {
+            pointerId,
+            clientX: startX + 100,
+          });
+
+          assert.strictEqual(harness.mutationLog.length > 0, true);
+          const resizeResult =
+            harness.mutationLog[harness.mutationLog.length - 1];
+          assert.strictEqual(resizeResult.width, harness.startWidth + 100);
+          assert.strictEqual(harness.sheet.scrollLeft, 0);
+
+          harness.windowStub.dispatch("pointerup", { pointerId });
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
+      name: "auto scroll waits for the pointer to leave the viewport",
+      run(assert) {
+        const harness = createResizeHarness();
+        harness.windowStub.requestAnimationFrame = () => {
+          throw new Error("auto-scroll should not start");
+        };
+        harness.windowStub.cancelAnimationFrame = () => {};
+        harness.windowStub.setInterval = () => {
+          throw new Error("auto-scroll should not start");
+        };
+        harness.windowStub.clearInterval = () => {};
+        let dispose;
+
+        try {
+          dispose = harness.init();
+
+          const pointerId = 37;
+          const startX = harness.containerRect.right - 8;
+          harness.container.dispatch("pointerdown", {
+            button: 0,
+            detail: 0,
+            pointerId,
+            clientX: startX,
+            target: harness.eventTarget,
+            preventDefault() {},
+          });
+
+          harness.windowStub.dispatch("pointermove", {
+            pointerId,
+            clientX: startX + 6,
+          });
+
+          assert.strictEqual(harness.mutationLog.length > 0, true);
+          const resizeResult =
+            harness.mutationLog[harness.mutationLog.length - 1];
+          assert.strictEqual(resizeResult.width, harness.startWidth + 6);
+          assert.strictEqual(harness.sheet.scrollLeft, 0);
+
+          harness.windowStub.dispatch("pointermove", {
+            pointerId,
+            clientX: startX + 8,
+          });
+
+          const latest = harness.mutationLog[harness.mutationLog.length - 1];
+          assert.strictEqual(latest.width, harness.startWidth + 8);
+          assert.strictEqual(harness.sheet.scrollLeft, 0);
+
+          harness.windowStub.dispatch("pointerup", { pointerId });
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
+      name: "auto scroll keeps running at the right edge while resizing",
+      run(assert) {
+        const harness = createResizeHarness();
+        const rafCallbacks = new Map();
+        let nextFrameId = 0;
+        harness.windowStub.requestAnimationFrame = (cb) => {
+          const id = ++nextFrameId;
+          rafCallbacks.set(id, cb);
+          return id;
+        };
+        harness.windowStub.cancelAnimationFrame = (id) => {
+          rafCallbacks.delete(id);
+        };
+        harness.windowStub.setInterval = () => {
+          throw new Error("should use requestAnimationFrame");
+        };
+        harness.windowStub.clearInterval = () => {};
+
+        function runFrame() {
+          const callbacks = [...rafCallbacks.values()];
+          rafCallbacks.clear();
+          for (const cb of callbacks) {
+            cb();
+          }
+        }
+
+        let dispose;
+
+        try {
+          dispose = harness.init();
+
+          const pointerId = 53;
+          const startX = harness.sheetRect.right - 6;
+          const initialMaxScroll =
+            (Number(harness.sheet.scrollWidth) || 0) -
+            (Number(harness.sheet.clientWidth) || 0);
+          harness.sheet.scrollLeft = initialMaxScroll;
+
+          harness.container.dispatch("pointerdown", {
+            button: 0,
+            detail: 0,
+            pointerId,
+            clientX: startX,
+            target: harness.eventTarget,
+            preventDefault() {},
+          });
+
+          harness.windowStub.dispatch("pointermove", {
+            pointerId,
+            clientX: startX + 28,
+          });
+
+          assert.strictEqual(rafCallbacks.size > 0, true);
+
+          runFrame();
+
+          assert.strictEqual(rafCallbacks.size > 0, true);
+          assert.strictEqual(harness.sheet.scrollLeft, initialMaxScroll);
+
+          harness.sheet.scrollWidth += 320;
+
+          runFrame();
+
+          const newMaxScroll =
+            (Number(harness.sheet.scrollWidth) || 0) -
+            (Number(harness.sheet.clientWidth) || 0);
+          const expectedScroll = Math.min(initialMaxScroll + 24, newMaxScroll);
+          assert.strictEqual(harness.sheet.scrollLeft, expectedScroll);
+
+          harness.windowStub.dispatch("pointerup", { pointerId });
+
+          assert.strictEqual(rafCallbacks.size, 0);
         } finally {
           dispose?.();
         }

@@ -261,6 +261,13 @@ export function buildInteractionPhaseColumns(model, selectedRowIndex = 0) {
       defaultWidth: 220,
       kind: "interactions",
     });
+    phases.push({
+      key: `p${p}:tag`,
+      title: `P${p}: Tag`,
+      width: 160,
+      defaultWidth: 160,
+      kind: "interactions",
+    });
   }
   const tail = [
     {

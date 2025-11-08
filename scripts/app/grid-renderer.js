@@ -592,7 +592,7 @@ function createGridRenderer({
               const pNum = Number(s.slice(1, i));
               const field = s.slice(i + 1);
               if (
-                (field === "outcome" || field === "end") &&
+                (field === "outcome" || field === "end" || field === "tag") &&
                 Number.isFinite(pNum)
               ) {
                 const pair = getInteractionsPair(model, r);
