@@ -85,6 +85,28 @@ export function initColumnResize(options = {}) {
     return readRect(sheet) || readRect(container) || null;
   }
 
+  function clampEdgeMargin(rect, margin) {
+    if (!rect) return 0;
+    const width = Number(rect.right) - Number(rect.left);
+    if (!Number.isFinite(width) || width <= 0) return 0;
+    const half = width / 2;
+    if (!Number.isFinite(margin) || margin <= 0) return 0;
+    return Math.max(0, Math.min(margin, half));
+  }
+
+  function makeEdgeBounds(rect, margin) {
+    if (!rect) return { left: -Infinity, right: Infinity };
+    const safeMargin = clampEdgeMargin(rect, margin);
+    const left = Number(rect.left) + safeMargin;
+    const right = Number(rect.right) - safeMargin;
+    if (!Number.isFinite(left) || !Number.isFinite(right)) {
+      return { left: -Infinity, right: Infinity };
+    }
+    if (left <= right) return { left, right };
+    const mid = (left + right) / 2;
+    return { left: mid, right: mid };
+  }
+
   function stopAutoScroll() {
     if (autoScrollHandle == null) return;
     if (autoScrollMode === "raf") {
@@ -122,15 +144,16 @@ export function initColumnResize(options = {}) {
     );
     if (direction < 0 && sheet.scrollLeft <= 0) direction = 0;
     if (direction > 0 && sheet.scrollLeft >= maxScrollLeft) {
-      let pointerBeyondRight = false;
+      let pointerNearRight = false;
       const pointerX = resizeState.lastClientX ?? resizeState.startX;
       if (Number.isFinite(pointerX)) {
         const rect = getAutoScrollRect();
-        if (rect && pointerX >= rect.right + AUTO_SCROLL_ACTIVATION_MARGIN) {
-          pointerBeyondRight = true;
+        if (rect) {
+          const { right } = makeEdgeBounds(rect, AUTO_SCROLL_ACTIVATION_MARGIN);
+          if (pointerX >= right) pointerNearRight = true;
         }
       }
-      if (!pointerBeyondRight) {
+      if (!pointerNearRight) {
         direction = 0;
       }
     }
@@ -174,8 +197,9 @@ export function initColumnResize(options = {}) {
       if (rect) {
         const clientX = resizeState.lastClientX ?? resizeState.startX;
         if (clientX != null) {
-          stillBeyondRight = clientX >= rect.right + AUTO_SCROLL_STOP_MARGIN;
-          stillBeyondLeft = clientX <= rect.left - AUTO_SCROLL_STOP_MARGIN;
+          const bounds = makeEdgeBounds(rect, AUTO_SCROLL_STOP_MARGIN);
+          stillBeyondRight = clientX >= bounds.right;
+          stillBeyondLeft = clientX <= bounds.left;
           if (
             (autoScrollDirection > 0 && !stillBeyondRight) ||
             (autoScrollDirection < 0 && !stillBeyondLeft)
@@ -188,11 +212,7 @@ export function initColumnResize(options = {}) {
 
       if (autoScrollDirection < 0 && next <= 0) {
         stopAutoScroll();
-      } else if (
-        autoScrollDirection > 0 &&
-        next >= maxScroll &&
-        !stillBeyondRight
-      ) {
+      } else if (autoScrollDirection > 0 && next >= maxScroll && !stillBeyondRight) {
         stopAutoScroll();
       }
     };
@@ -236,11 +256,10 @@ export function initColumnResize(options = {}) {
       return;
     }
 
-    const activationLeft = rect.left - AUTO_SCROLL_ACTIVATION_MARGIN;
-    const activationRight = rect.right + AUTO_SCROLL_ACTIVATION_MARGIN;
+    const activationBounds = makeEdgeBounds(rect, AUTO_SCROLL_ACTIVATION_MARGIN);
 
-    let wantLeft = pointerX <= activationLeft;
-    let wantRight = pointerX >= activationRight;
+    let wantLeft = pointerX <= activationBounds.left;
+    let wantRight = pointerX >= activationBounds.right;
 
     if (wantLeft && wantRight) {
       wantLeft = wantRight = false;
@@ -263,12 +282,9 @@ export function initColumnResize(options = {}) {
       );
       if (direction < 0 && sheet.scrollLeft <= 0) {
         direction = 0;
-      } else if (
-        direction > 0 &&
-        sheet.scrollLeft >= maxScroll &&
-        !(rect && pointerX >= rect.right + AUTO_SCROLL_ACTIVATION_MARGIN)
-      ) {
-        direction = 0;
+      } else if (direction > 0 && sheet.scrollLeft >= maxScroll) {
+        const { right } = makeEdgeBounds(rect, AUTO_SCROLL_ACTIVATION_MARGIN);
+        if (pointerX < right) direction = 0;
       }
     }
 

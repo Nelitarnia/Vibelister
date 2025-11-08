@@ -472,7 +472,7 @@ export function getColumnResizeTests() {
           dispose = harness.init();
 
           const pointerId = 37;
-          const startX = harness.containerRect.right - 8;
+          const startX = harness.containerRect.right - 40;
           harness.container.dispatch("pointerdown", {
             button: 0,
             detail: 0,
@@ -495,11 +495,11 @@ export function getColumnResizeTests() {
 
           harness.windowStub.dispatch("pointermove", {
             pointerId,
-            clientX: startX + 8,
+            clientX: startX + 20,
           });
 
           const latest = harness.mutationLog[harness.mutationLog.length - 1];
-          assert.strictEqual(latest.width, harness.startWidth + 8);
+          assert.strictEqual(latest.width, harness.startWidth + 20);
           assert.strictEqual(harness.sheet.scrollLeft, 0);
 
           harness.windowStub.dispatch("pointerup", { pointerId });
