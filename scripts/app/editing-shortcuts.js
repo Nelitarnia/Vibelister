@@ -245,13 +245,36 @@ export function createEditingController({
       else {
         sel.r = nextR;
         sel.c = nextC;
+        if (selection?.rows) {
+          selection.rows.clear();
+          selection.rows.add(nextR);
+          selection.anchor = nextR;
+        }
+        if (selection?.cols && !selection.colsAll) {
+          selection.cols.clear();
+          selection.cols.add(nextC);
+          selection.colAnchor = nextC;
+        }
       }
-      updateSelectionSnapshot?.({ row: sel.r, col: sel.c });
-      SelectionCtl?.applyHorizontalMode?.();
     } else {
-      sel.r = nextR;
-      sel.c = nextC;
+      if (selection?.rows && selection.rows.size <= 1) {
+        selection.rows.clear();
+        selection.rows.add(nextR);
+        selection.anchor = nextR;
+      }
+      if (SelectionCtl?.setActiveCell) SelectionCtl.setActiveCell(nextR, nextC);
+      else {
+        sel.r = nextR;
+        sel.c = nextC;
+        if (selection?.cols && !selection.colsAll) {
+          selection.cols.clear();
+          selection.cols.add(nextC);
+          selection.colAnchor = nextC;
+        }
+      }
     }
+    updateSelectionSnapshot?.({ row: sel.r, col: sel.c });
+    SelectionCtl?.applyHorizontalMode?.();
     ensureVisible(sel.r, sel.c);
     render();
   }
