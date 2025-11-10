@@ -91,6 +91,15 @@ export function initMenus(deps) {
   const undoItem = el(Ids.editUndo);
   const redoItem = el(Ids.editRedo);
 
+  const undoShortcutSuffix = " (Ctrl/Cmd+Z)";
+  const redoShortcutSuffix = " (Ctrl/Cmd+Y)";
+
+  function buildUndoRedoLabel(base, formatted, shortcutSuffix) {
+    return formatted
+      ? `${base} ${formatted}${shortcutSuffix}`
+      : `${base}${shortcutSuffix}`;
+  }
+
   function refreshUndoMenu() {
     if (typeof getUndoState !== "function") return;
     let state = null;
@@ -109,13 +118,13 @@ export function initMenus(deps) {
     if (undoItem) {
       undoItem.disabled = !(state?.canUndo);
       const formatted = formatLabel(undoLabel);
-      undoItem.textContent = formatted ? `Undo ${formatted}` : "Undo";
+      undoItem.textContent = buildUndoRedoLabel("Undo", formatted, undoShortcutSuffix);
     }
     const redoLabel = state?.redoLabel ? String(state.redoLabel) : "";
     if (redoItem) {
       redoItem.disabled = !(state?.canRedo);
       const formatted = formatLabel(redoLabel);
-      redoItem.textContent = formatted ? `Redo ${formatted}` : "Redo";
+      redoItem.textContent = buildUndoRedoLabel("Redo", formatted, redoShortcutSuffix);
     }
   }
 
