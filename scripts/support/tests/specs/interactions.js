@@ -11,6 +11,8 @@ import {
   getInteractionsRowCount,
   collectInteractionTags,
 } from "../../../app/interactions.js";
+import { createInteractionTagManager } from "../../../app/interaction-tags.js";
+import { INTERACTION_TAGS_EVENT } from "../../../app/tag-events.js";
 import { sanitizeStructuredPayload } from "../../../app/clipboard-codec.js";
 import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
@@ -471,6 +473,209 @@ export function getInteractionsTests() {
           ["setup"],
           "catalog reflects final tag set",
         );
+      },
+    },
+    {
+      name: "interaction tag edits dispatch tag update events",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        addAction("Strike");
+        addInput("Tap");
+        buildInteractionsPairs(model);
+        const tagView = { columns: [{ key: "p0:tag" }] };
+        const status = { set() {} };
+
+        const originalDocument = globalThis.document;
+        const originalCustomEvent = globalThis.CustomEvent;
+        const events = [];
+        globalThis.CustomEvent = function (type, params) {
+          this.type = type;
+          this.detail = params?.detail;
+        };
+        globalThis.document = {
+          dispatchEvent(evt) {
+            events.push(evt);
+            return true;
+          },
+        };
+
+        try {
+          const setResult = setInteractionsCell(model, status, tagView, 0, 0, [
+            "rush",
+          ]);
+          assert.ok(setResult, "setting tag should succeed");
+          assert.strictEqual(events.length, 1, "setting tags emits an event");
+          const setEvent = events.pop();
+          assert.strictEqual(
+            setEvent.type,
+            INTERACTION_TAGS_EVENT,
+            "set event type matches",
+          );
+          assert.strictEqual(setEvent.detail.reason, "setCell", "set reason");
+          assert.deepStrictEqual(
+            setEvent.detail.tags,
+            ["rush"],
+            "set event carries tag payload",
+          );
+
+          const clearResult = setInteractionsCell(model, status, tagView, 0, 0, []);
+          assert.ok(clearResult, "clearing tags via setInteractionsCell works");
+          assert.strictEqual(events.length, 1, "clearing emits an event");
+          const clearEvent = events.pop();
+          assert.strictEqual(
+            clearEvent.detail.reason,
+            "clearCell",
+            "clear event reason",
+          );
+          assert.strictEqual(clearEvent.detail.count, 1, "clear count matches");
+
+          setInteractionsCell(model, status, tagView, 0, 0, [
+            "setup",
+            "advantage",
+          ]);
+          events.length = 0;
+          const clearedDirect = clearInteractionsCell(model, tagView, 0, 0);
+          assert.ok(clearedDirect, "clearInteractionsCell removes tags");
+          assert.strictEqual(events.length, 1, "clearInteractionsCell emits");
+          const clearCellEvent = events.pop();
+          assert.deepStrictEqual(
+            clearCellEvent.detail.tags,
+            ["setup", "advantage"],
+            "clear event preserves previous tags",
+          );
+
+          setInteractionsCell(model, status, tagView, 0, 0, ["again"]);
+          events.length = 0;
+          const selection = { rows: new Set([0]), cols: new Set([0]), colsAll: false };
+          const sel = { r: 0, c: 0 };
+          const selectionClear = clearInteractionsSelection(
+            model,
+            tagView,
+            selection,
+            sel,
+            "clearSelection",
+            status,
+            () => {},
+          );
+          assert.ok(selectionClear?.cleared > 0, "selection clear removes tags");
+          assert.ok(events.length >= 1, "selection clear dispatches event");
+          const selectionEvent = events[events.length - 1];
+          assert.strictEqual(
+            selectionEvent.detail.reason,
+            "clearSelection",
+            "selection event reason",
+          );
+        } finally {
+          if (originalCustomEvent === undefined) delete globalThis.CustomEvent;
+          else globalThis.CustomEvent = originalCustomEvent;
+          if (originalDocument === undefined) delete globalThis.document;
+          else globalThis.document = originalDocument;
+        }
+      },
+    },
+    {
+      name: "interaction tag manager renames and deletes tags via mutation runner",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        addAction("Strike");
+        addInput("Tap");
+        addInput("Hold");
+        buildInteractionsPairs(model);
+        const tagView = { columns: [{ key: "p0:tag" }] };
+        const status = { set() {} };
+
+        setInteractionsCell(model, status, tagView, 0, 0, ["rush", "setup"]);
+        setInteractionsCell(model, status, tagView, 1, 0, ["rush"]);
+
+        const undoConfigs = [];
+        const mutationCalls = [];
+        const events = [];
+        const originalDocument = globalThis.document;
+        const originalCustomEvent = globalThis.CustomEvent;
+        globalThis.CustomEvent = function (type, params) {
+          this.type = type;
+          this.detail = params?.detail;
+        };
+        globalThis.document = {
+          dispatchEvent(evt) {
+            events.push(evt);
+            return true;
+          },
+        };
+
+        const makeUndoConfig = (options) => {
+          undoConfigs.push(options);
+          return options;
+        };
+        const runModelMutation = (label, mutate, options = {}) => {
+          mutationCalls.push({ label, options });
+          const result = mutate();
+          if (typeof options.after === "function") options.after(result);
+          return result;
+        };
+
+        try {
+          const manager = createInteractionTagManager({
+            model,
+            runModelMutation,
+            makeUndoConfig,
+            statusBar: status,
+          });
+
+          const renameResult = manager.renameTag("rush", "momentum");
+          assert.strictEqual(
+            renameResult.replacements,
+            2,
+            "rename updates all matching tags",
+          );
+          assert.deepStrictEqual(
+            collectInteractionTags(model).sort(),
+            ["momentum", "setup"],
+            "catalog reflects renamed tag",
+          );
+          assert.ok(
+            events.some((evt) => evt.detail?.reason === "rename"),
+            "rename emits tag event",
+          );
+
+          const renameUndo = undoConfigs[0];
+          assert.strictEqual(renameUndo.includeLocation, false, "rename undo omits location");
+          assert.strictEqual(renameUndo.includeColumn, false, "rename undo omits column");
+
+          events.length = 0;
+
+          const deleteResult = manager.deleteTag("setup");
+          assert.strictEqual(deleteResult.removals, 1, "delete removes matching tags");
+          assert.deepStrictEqual(
+            collectInteractionTags(model),
+            ["momentum"],
+            "catalog retains remaining tag",
+          );
+          assert.ok(
+            events.some((evt) => evt.detail?.reason === "delete"),
+            "delete emits tag event",
+          );
+
+          const deleteUndo = undoConfigs[1];
+          assert.strictEqual(deleteUndo.includeLocation, false, "delete undo omits location");
+          assert.strictEqual(deleteUndo.includeColumn, false, "delete undo omits column");
+
+          assert.strictEqual(
+            mutationCalls[0].label,
+            "renameInteractionTag",
+            "rename mutation label captured",
+          );
+          assert.strictEqual(
+            mutationCalls[1].label,
+            "deleteInteractionTag",
+            "delete mutation label captured",
+          );
+        } finally {
+          if (originalCustomEvent === undefined) delete globalThis.CustomEvent;
+          else globalThis.CustomEvent = originalCustomEvent;
+          if (originalDocument === undefined) delete globalThis.document;
+          else globalThis.document = originalDocument;
+        }
       },
     },
     {
