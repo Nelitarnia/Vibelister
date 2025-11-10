@@ -9,6 +9,7 @@ import {
   getInteractionsPair as getPairFromIndex,
   getInteractionsRowCount,
 } from "./interactions-data.js";
+import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
 export { getInteractionsRowCount, getPairFromIndex as getInteractionsPair };
 
@@ -47,6 +48,15 @@ function formatTagList(value) {
 
 export function normalizeInteractionTags(value) {
   return normalizeTagList(value);
+}
+
+function areTagListsEqual(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return Array.isArray(a) === Array.isArray(b);
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 export function collectInteractionTags(model) {
@@ -412,22 +422,60 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
   }
 
   if (pk.field === "tag") {
+    const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
+    const previousCount = previous.length;
+
     if (
       value == null ||
       value === "" ||
       (Array.isArray(value) && value.length === 0)
     ) {
+      const hadTags = previousCount > 0;
       if ("tags" in note) delete note.tags;
       if (Object.keys(note).length === 0) delete model.notes[k];
+      if (hadTags) {
+        emitInteractionTagChangeEvent(null, {
+          reason: "clearCell",
+          noteKey: k,
+          phase: pk.p,
+          pair,
+          tags: previous,
+          count: previousCount,
+        });
+      }
       return true;
     }
+
     const tags = normalizeTagList(value);
     if (!tags.length) {
+      const hadTags = previousCount > 0;
       if ("tags" in note) delete note.tags;
       if (Object.keys(note).length === 0) delete model.notes[k];
+      if (hadTags) {
+        emitInteractionTagChangeEvent(null, {
+          reason: "clearCell",
+          noteKey: k,
+          phase: pk.p,
+          pair,
+          tags: previous,
+          count: previousCount,
+        });
+      }
       return true;
     }
+
+    const changed = !areTagListsEqual(previous, tags);
     note.tags = tags;
+    if (changed || (!previousCount && tags.length)) {
+      emitInteractionTagChangeEvent({ type: "set" }, {
+        reason: "setCell",
+        noteKey: k,
+        phase: pk.p,
+        pair,
+        tags,
+        count: tags.length,
+      });
+    }
     return true;
   }
 
@@ -617,9 +665,20 @@ export function clearInteractionsCell(model, viewDef, r, c) {
       changed = true;
     }
   } else if (pk.field === "tag") {
+    const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
     if ("tags" in note) {
       delete note.tags;
       changed = true;
+      if (previous.length) {
+        emitInteractionTagChangeEvent(null, {
+          reason: "clearCell",
+          noteKey: k,
+          phase: pk.p,
+          pair,
+          tags: previous,
+          count: previous.length,
+        });
+      }
     }
   }
 
@@ -646,7 +705,8 @@ export function clearInteractionsSelection(
     : [sel.r];
 
   let cleared = 0;
-  function clearField(note, key, pk) {
+  const tagEvents = [];
+  function clearField(note, key, pk, context = {}) {
     if (pk && pk.field === "outcome") {
       if ("outcomeId" in note) {
         delete note.outcomeId;
@@ -674,7 +734,16 @@ export function clearInteractionsSelection(
       return true;
     }
     if (pk && pk.field === "tag") {
+      const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
       if ("tags" in note) {
+        if (previous.length) {
+          tagEvents.push({
+            noteKey: context.noteKey || null,
+            pair: context.pair || null,
+            phase: pk?.p,
+            tags: previous,
+          });
+        }
         delete note.tags;
         cleared++;
       }
@@ -709,7 +778,7 @@ export function clearInteractionsSelection(
           continue;
         const k = noteKeyForPair(pair, pk ? pk.p : undefined);
         const note = model.notes[k] || (model.notes[k] = {});
-        clearField(note, key, pk);
+        clearField(note, key, pk, { noteKey: k, pair, phase: pk ? pk.p : undefined });
         if (Object.keys(note).length === 0) delete model.notes[k];
         if (pk && pk.field === "outcome") {
           mirrorAaPhase0Outcome(model, pair, pk.p);
@@ -765,12 +834,27 @@ export function clearInteractionsSelection(
         if (commentChange) cleared++;
         if (!note) continue;
         const clearedBefore = cleared;
-        clearField(note, key, pk);
+        clearField(note, key, pk, { noteKey, pair, phase });
         if (Object.keys(note).length === 0) delete model.notes[noteKey];
         if (pk && pk.field === "outcome" && cleared !== clearedBefore) {
           mirrorAaPhase0Outcome(model, pair, pk.p);
         }
       }
+    }
+  }
+
+  if (tagEvents.length) {
+    for (const entry of tagEvents) {
+      const tags = Array.isArray(entry?.tags) ? entry.tags : [];
+      if (!tags.length) continue;
+      emitInteractionTagChangeEvent(null, {
+        reason: "clearSelection",
+        noteKey: entry.noteKey || null,
+        pair: entry.pair || null,
+        phase: entry.phase,
+        tags,
+        count: tags.length,
+      });
     }
   }
 

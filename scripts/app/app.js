@@ -11,6 +11,8 @@ import { initColorPicker } from "../ui/color-picker.js";
 import { initColumnResize } from "../ui/column-resize.js";
 import { initStatusBar } from "../ui/status.js";
 import { initCommentsUI } from "../ui/comments.js";
+import { createSidePanelHost } from "../ui/side-panel.js";
+import { initTagSidebar } from "../ui/tags.js";
 import {
   isCanonicalStructuredPayload,
   makeGetStructuredCell,
@@ -92,6 +94,8 @@ import { createSettingsController } from "./settings-controller.js";
 import { createGridCommands } from "./grid-commands.js";
 import { createGridRenderer } from "./grid-renderer.js";
 import { createDiagnosticsController } from "./diagnostics.js";
+import { createInteractionTagManager } from "./interaction-tags.js";
+import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
 function initA11y() {
   statusBar?.ensureLiveRegion();
@@ -136,9 +140,19 @@ const projectNameEl = document.getElementById(Ids.projectName);
 const undoMenuItem = document.getElementById(Ids.editUndo);
 const redoMenuItem = document.getElementById(Ids.editRedo);
 const commentToggleButton = document.getElementById(Ids.commentToggle);
+const tagToggleButton = document.getElementById(Ids.tagToggle);
 const commentAddButton = document.getElementById(Ids.commentAdd);
-const commentSidebar = document.getElementById(Ids.commentSidebar);
-const commentCloseButton = document.getElementById(Ids.commentClose);
+const sidePanel = document.getElementById(Ids.sidePanel);
+const sidePanelTitle = document.getElementById(Ids.sidePanelTitle);
+const sidePanelCloseButton = document.getElementById(Ids.sidePanelClose);
+const commentPane = document.getElementById(Ids.commentSidebar);
+const tagPane = document.getElementById(Ids.tagSidebar);
+const tagForm = document.getElementById(Ids.tagForm);
+const tagInput = document.getElementById(Ids.tagInput);
+const tagRenameButton = document.getElementById(Ids.tagRename);
+const tagDeleteButton = document.getElementById(Ids.tagDelete);
+const tagList = document.getElementById(Ids.tagList);
+const tagEmpty = document.getElementById(Ids.tagEmpty);
 const commentList = document.getElementById(Ids.commentList);
 const commentEmpty = document.getElementById(Ids.commentEmpty);
 const commentEditor = document.getElementById(Ids.commentEditor);
@@ -151,6 +165,13 @@ const commentSelectionLabel = document.getElementById(Ids.commentSelection);
 const commentPrevButton = document.getElementById(Ids.commentPrev);
 const commentNextButton = document.getElementById(Ids.commentNext);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
+
+const sidePanelHost = createSidePanelHost({
+  container: sidePanel,
+  titleElement: sidePanelTitle,
+  closeButton: sidePanelCloseButton,
+  defaultTitle: "Comments",
+});
 
 const { openSettingsDialog } = createSettingsController({ statusBar });
 
@@ -309,8 +330,11 @@ const {
 const commentsUI = initCommentsUI({
   toggleButton: commentToggleButton,
   addButton: commentAddButton,
-  sidebar: commentSidebar,
-  closeButton: commentCloseButton,
+  sidebar: commentPane,
+  panelHost: sidePanelHost,
+  panelId: "comments",
+  panelTitle: "Comments",
+  closeButton: sidePanelCloseButton,
   listElement: commentList,
   emptyElement: commentEmpty,
   editorForm: commentEditor,
@@ -340,6 +364,30 @@ const commentsUI = initCommentsUI({
   VIEWS,
   noteKeyForPair,
   getInteractionsPair,
+});
+
+const tagManager = createInteractionTagManager({
+  model,
+  runModelMutation,
+  makeUndoConfig,
+  statusBar,
+});
+
+const tagUI = initTagSidebar({
+  panelHost: sidePanelHost,
+  panelId: "tags",
+  panelTitle: "Tags",
+  sidebar: tagPane,
+  toggleButton: tagToggleButton,
+  form: tagForm,
+  input: tagInput,
+  renameButton: tagRenameButton,
+  deleteButton: tagDeleteButton,
+  listElement: tagList,
+  emptyElement: tagEmpty,
+  tagManager,
+  model,
+  statusBar,
 });
 
 initColumnResize({
@@ -668,7 +716,11 @@ const {
   setProjectNameFromFile,
   getSuggestedName,
   closeMenus: () => menusAPI?.closeAllMenus?.(),
-  onModelReset: () => interactionsOutline?.refresh?.(),
+  onModelReset: () => {
+    interactionsOutline?.refresh?.();
+    tagUI?.refresh?.();
+    emitInteractionTagChangeEvent(null, { reason: "reset", force: true });
+  },
 });
 
 const { runSelfTests } = createDiagnosticsController({
@@ -738,6 +790,7 @@ const disposeKeys = initGridKeys({
   jumpToInteractionsVariant: (delta) =>
     interactionsOutline?.jumpToVariant?.(delta),
   toggleCommentsSidebar: () => commentsUI?.toggle?.(),
+  toggleTagsSidebar: () => tagUI?.toggle?.(),
 });
 
 // Initialize palette (handles both Outcome and End cells)

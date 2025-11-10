@@ -104,7 +104,7 @@ If you double tap Shift, you can change between normal selection mode and a hori
 
 You can undo any action which changes the core data model (editing cells, reordering rows, etc.) with Ctrl+z / Ctlr+y.
 
-You can leave comments (categorized by color) on any cell in the project, then quick jump between them using the arrows in the Comments sidebar. The keyboard shortcut for Comments sidebar is Ctrl+Shift+L.
+You can leave comments (categorized by color) on any cell in the project, then quick jump between them using the arrows in the Comments sidebar. The keyboard shortcuts for the side panels are Ctrl+Shift+L for Comments and Ctrl+Shift+X for Tags.
 
 It's possible to save / load project files in .json-format. Note: on Firefox and Safari (which don't have the File System Access API), regular "Save" and "Save as..." instead default to "Export as JSON".
 

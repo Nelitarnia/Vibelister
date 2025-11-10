@@ -55,6 +55,9 @@ export function initCommentsUI(options = {}) {
     toggleButton,
     addButton,
     sidebar,
+    panelHost,
+    panelId = "comments",
+    panelTitle = "Comments",
     closeButton,
     listElement,
     emptyElement,
@@ -90,7 +93,11 @@ export function initCommentsUI(options = {}) {
 
   if (!sidebar || !toggleButton) return null;
 
-  let isOpen = sidebar.dataset.open === "true";
+  const paneEl = sidebar;
+  const host = panelHost || null;
+  let paneHandle = null;
+  let detachHostToggle = null;
+  let isOpen = false;
   let editingEntry = null;
   let comments = [];
   let selectionUnsub = null;
@@ -756,14 +763,55 @@ export function initCommentsUI(options = {}) {
     return Number.isFinite(sel?.r) && Number.isFinite(sel?.c);
   }
 
+  function isPaneOpen() {
+    if (paneHandle && typeof paneHandle.isOpen === "function") {
+      return !!paneHandle.isOpen();
+    }
+    return !!isOpen;
+  }
+
   function updateToggleState() {
-    toggleButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    sidebar.dataset.open = isOpen ? "true" : "false";
-    sidebar.setAttribute("aria-hidden", isOpen ? "false" : "true");
+    const expanded = isPaneOpen();
+    toggleButton.setAttribute("aria-expanded", expanded ? "true" : "false");
+    if (!paneHandle && paneEl) {
+      paneEl.dataset.open = expanded ? "true" : "false";
+      paneEl.setAttribute("aria-hidden", expanded ? "false" : "true");
+    }
+  }
+
+  if (host && typeof host.registerPane === "function") {
+    paneHandle = host.registerPane({
+      id: panelId,
+      element: paneEl,
+      title: panelTitle,
+      onShow: () => {
+        isOpen = true;
+        updateToggleState();
+      },
+      onHide: () => {
+        isOpen = false;
+        updateToggleState();
+        stopEditing();
+      },
+    });
+    if (paneHandle && typeof paneHandle.isOpen === "function") {
+      isOpen = !!paneHandle.isOpen();
+    }
+    if (host && typeof host.attachToggle === "function") {
+      detachHostToggle = host.attachToggle(toggleButton, panelId);
+    }
+  } else if (paneEl) {
+    isOpen = paneEl.dataset.open === "true";
+    paneEl.setAttribute("aria-hidden", isOpen ? "false" : "true");
   }
 
   function setOpen(next) {
     const desired = !!next;
+    if (paneHandle) {
+      if (desired) paneHandle.open();
+      else paneHandle.close();
+      return;
+    }
     if (isOpen === desired) return;
     isOpen = desired;
     updateToggleState();
@@ -771,6 +819,10 @@ export function initCommentsUI(options = {}) {
   }
 
   function ensureOpen() {
+    if (paneHandle) {
+      paneHandle.open();
+      return;
+    }
     if (!isOpen) {
       isOpen = true;
       updateToggleState();
@@ -778,6 +830,10 @@ export function initCommentsUI(options = {}) {
   }
 
   function closeSidebar() {
+    if (paneHandle) {
+      paneHandle.close();
+      return;
+    }
     if (!isOpen) return;
     isOpen = false;
     updateToggleState();
@@ -990,12 +1046,14 @@ export function initCommentsUI(options = {}) {
     syncFromSelection();
   }
 
-  const toggleHandler = () => setOpen(!isOpen);
+  const toggleHandler = () => setOpen(!isPaneOpen());
   const addHandler = () => startEditing();
   const closeHandler = () => closeSidebar();
   const cancelHandler = () => stopEditing();
 
-  toggleButton.addEventListener("click", toggleHandler);
+  if (!detachHostToggle) {
+    toggleButton.addEventListener("click", toggleHandler);
+  }
   addButton?.addEventListener("click", addHandler);
   closeButton?.addEventListener("click", closeHandler);
   cancelButton?.addEventListener("click", cancelHandler);
@@ -1033,8 +1091,8 @@ export function initCommentsUI(options = {}) {
     setOpen,
     open: () => setOpen(true),
     close: () => setOpen(false),
-    toggle: () => setOpen(!isOpen),
-    isOpen: () => isOpen,
+    toggle: () => setOpen(!isPaneOpen()),
+    isOpen: () => isPaneOpen(),
     getFilter,
     setFilter: (next, options) => setFilter(next, options),
     getFilteredEntries,
@@ -1043,7 +1101,12 @@ export function initCommentsUI(options = {}) {
     stepFilteredEntry,
     forEachFilteredEntry,
     destroy() {
-      toggleButton.removeEventListener("click", toggleHandler);
+      if (detachHostToggle) {
+        detachHostToggle();
+        detachHostToggle = null;
+      } else {
+        toggleButton.removeEventListener("click", toggleHandler);
+      }
       addButton?.removeEventListener("click", addHandler);
       closeButton?.removeEventListener("click", closeHandler);
       cancelButton?.removeEventListener("click", cancelHandler);

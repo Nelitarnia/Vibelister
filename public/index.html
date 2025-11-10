@@ -193,9 +193,20 @@
           class="toolbar-button"
           id="comment-toggle"
           aria-expanded="false"
-          aria-controls="comment-sidebar"
+          aria-controls="side-panel"
+          title="Toggle Comments sidebar (Ctrl+Shift+L)"
         >
           Comments ▾
+        </button>
+        <button
+          type="button"
+          class="toolbar-button"
+          id="tag-toggle"
+          aria-expanded="false"
+          aria-controls="side-panel"
+          title="Toggle Tags sidebar (Ctrl+Shift+X)"
+        >
+          Tags ▾
         </button>
       </div>
       <span class="status" id="status">Ready</span>
@@ -303,69 +314,118 @@
         <textarea class="editor" id="editor"></textarea>
       </div>
       <aside
-        class="comment-sidebar"
-        id="comment-sidebar"
+        class="comment-sidebar side-panel"
+        id="side-panel"
         data-open="false"
         aria-hidden="true"
       >
-        <div class="comment-sidebar__header">
-          <span class="comment-sidebar__title">Comments</span>
+        <div class="comment-sidebar__header side-panel__header">
+          <span class="comment-sidebar__title side-panel__title" id="side-panel-title"
+            >Comments</span
+          >
           <button
             type="button"
-            class="comment-sidebar__close"
-            id="comment-close"
-            aria-label="Hide comments"
+            class="comment-sidebar__close side-panel__close"
+            id="side-panel-close"
+            aria-label="Hide side panel"
           >
             Close
           </button>
         </div>
-        <div class="comment-sidebar__selection" id="comment-selection">
-          Select a cell to manage comments.
-        </div>
-        <div class="comment-sidebar__nav" id="comment-nav">
-          <button
-            type="button"
-            class="comment-sidebar__nav-button"
-            id="comment-prev"
-            aria-label="Go to previous comment"
+        <div class="side-panel__content">
+          <section
+            class="side-panel__pane"
+            id="comment-pane"
+            data-pane="comments"
+            hidden
           >
-            <span class="comment-sidebar__nav-icon" aria-hidden="true">←</span>
-          </button>
-          <button
-            type="button"
-            class="comment-sidebar__nav-button"
-            id="comment-next"
-            aria-label="Go to next comment"
+            <div class="comment-sidebar__selection" id="comment-selection">
+              Select a cell to manage comments.
+            </div>
+            <div class="comment-sidebar__nav" id="comment-nav">
+              <button
+                type="button"
+                class="comment-sidebar__nav-button"
+                id="comment-prev"
+                aria-label="Go to previous comment"
+              >
+                <span class="comment-sidebar__nav-icon" aria-hidden="true">←</span>
+              </button>
+              <button
+                type="button"
+                class="comment-sidebar__nav-button"
+                id="comment-next"
+                aria-label="Go to next comment"
+              >
+                <span class="comment-sidebar__nav-icon" aria-hidden="true">→</span>
+              </button>
+            </div>
+            <form class="comment-sidebar__editor" id="comment-editor" hidden>
+              <label class="comment-sidebar__label" for="comment-text">Comment</label>
+              <textarea
+                class="comment-sidebar__textarea"
+                id="comment-text"
+                rows="4"
+                placeholder="Write a note for collaborators"
+              ></textarea>
+              <label class="comment-sidebar__label" for="comment-color">Color</label>
+              <select class="comment-sidebar__select" id="comment-color"></select>
+              <div class="comment-sidebar__editor-actions">
+                <button type="submit" class="comment-sidebar__save" id="comment-save">
+                  Save
+                </button>
+                <button type="button" class="comment-sidebar__delete" id="comment-delete">
+                  Delete
+                </button>
+                <button type="button" class="comment-sidebar__cancel" id="comment-cancel">
+                  Cancel
+                </button>
+              </div>
+            </form>
+            <div class="comment-sidebar__empty" id="comment-empty">
+              No cell selected.
+            </div>
+            <ul class="comment-sidebar__list" id="comment-list"></ul>
+          </section>
+          <section
+            class="side-panel__pane tag-sidebar"
+            id="tag-pane"
+            data-pane="tags"
+            hidden
           >
-            <span class="comment-sidebar__nav-icon" aria-hidden="true">→</span>
-          </button>
+            <form class="tag-sidebar__form" id="tag-form" autocomplete="off">
+              <label class="tag-sidebar__label" for="tag-input">Tag name</label>
+              <input
+                type="text"
+                class="tag-sidebar__input"
+                id="tag-input"
+                placeholder="Select or type a tag"
+              />
+              <div class="tag-sidebar__actions">
+                <button
+                  type="submit"
+                  class="tag-sidebar__rename"
+                  id="tag-rename"
+                >
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  class="tag-sidebar__delete"
+                  id="tag-delete"
+                >
+                  Delete
+                </button>
+              </div>
+            </form>
+            <div class="tag-sidebar__body">
+              <div class="tag-sidebar__empty" id="tag-empty">
+                No tags assigned yet.
+              </div>
+              <ul class="tag-sidebar__list" id="tag-list"></ul>
+            </div>
+          </section>
         </div>
-        <form class="comment-sidebar__editor" id="comment-editor" hidden>
-          <label class="comment-sidebar__label" for="comment-text">Comment</label>
-          <textarea
-            class="comment-sidebar__textarea"
-            id="comment-text"
-            rows="4"
-            placeholder="Write a note for collaborators"
-          ></textarea>
-          <label class="comment-sidebar__label" for="comment-color">Color</label>
-          <select class="comment-sidebar__select" id="comment-color"></select>
-          <div class="comment-sidebar__editor-actions">
-            <button type="submit" class="comment-sidebar__save" id="comment-save">
-              Save
-            </button>
-            <button type="button" class="comment-sidebar__delete" id="comment-delete">
-              Delete
-            </button>
-            <button type="button" class="comment-sidebar__cancel" id="comment-cancel">
-              Cancel
-            </button>
-          </div>
-        </form>
-        <div class="comment-sidebar__empty" id="comment-empty">
-          No cell selected.
-        </div>
-        <ul class="comment-sidebar__list" id="comment-list"></ul>
       </aside>
     </div>
 
