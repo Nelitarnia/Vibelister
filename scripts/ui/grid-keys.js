@@ -111,6 +111,7 @@ export function initGridKeys(deps) {
     jumpToInteractionsAction,
     jumpToInteractionsVariant,
     toggleCommentsSidebar,
+    toggleTagsSidebar,
     window: winOverride,
     document: docOverride,
     navigator: navOverride,
@@ -519,6 +520,16 @@ export function initGridKeys(deps) {
     ) {
       e.preventDefault();
       toggleCommentsSidebar();
+      return;
+    }
+    if (
+      mod &&
+      e.shiftKey &&
+      keyLower === "x" &&
+      typeof toggleTagsSidebar === "function"
+    ) {
+      e.preventDefault();
+      toggleTagsSidebar();
       return;
     }
     if (mod && keyLower === "o") {

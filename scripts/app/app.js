@@ -790,6 +790,7 @@ const disposeKeys = initGridKeys({
   jumpToInteractionsVariant: (delta) =>
     interactionsOutline?.jumpToVariant?.(delta),
   toggleCommentsSidebar: () => commentsUI?.toggle?.(),
+  toggleTagsSidebar: () => tagUI?.toggle?.(),
 });
 
 // Initialize palette (handles both Outcome and End cells)
