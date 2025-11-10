@@ -95,6 +95,7 @@ import { createGridCommands } from "./grid-commands.js";
 import { createGridRenderer } from "./grid-renderer.js";
 import { createDiagnosticsController } from "./diagnostics.js";
 import { createInteractionTagManager } from "./interaction-tags.js";
+import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
 function initA11y() {
   statusBar?.ensureLiveRegion();
@@ -715,7 +716,11 @@ const {
   setProjectNameFromFile,
   getSuggestedName,
   closeMenus: () => menusAPI?.closeAllMenus?.(),
-  onModelReset: () => interactionsOutline?.refresh?.(),
+  onModelReset: () => {
+    interactionsOutline?.refresh?.();
+    tagUI?.refresh?.();
+    emitInteractionTagChangeEvent(null, { reason: "reset", force: true });
+  },
 });
 
 const { runSelfTests } = createDiagnosticsController({

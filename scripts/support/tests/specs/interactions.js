@@ -641,6 +641,22 @@ export function getInteractionsTests() {
           const renameUndo = undoConfigs[0];
           assert.strictEqual(renameUndo.includeLocation, false, "rename undo omits location");
           assert.strictEqual(renameUndo.includeColumn, false, "rename undo omits column");
+          assert.strictEqual(
+            typeof renameUndo.applyAttachments,
+            "function",
+            "rename undo attaches tag refresh hook",
+          );
+
+          events.length = 0;
+          renameUndo.applyAttachments?.(null, "undo");
+          assert.ok(
+            events.some((evt) => evt.detail?.reason === "undo"),
+            "undo emits tag refresh event",
+          );
+          assert.ok(
+            events.some((evt) => evt.detail?.force === true),
+            "undo event forces sidebar refresh",
+          );
 
           events.length = 0;
 
@@ -659,6 +675,22 @@ export function getInteractionsTests() {
           const deleteUndo = undoConfigs[1];
           assert.strictEqual(deleteUndo.includeLocation, false, "delete undo omits location");
           assert.strictEqual(deleteUndo.includeColumn, false, "delete undo omits column");
+          assert.strictEqual(
+            typeof deleteUndo.applyAttachments,
+            "function",
+            "delete undo attaches tag refresh hook",
+          );
+
+          events.length = 0;
+          deleteUndo.applyAttachments?.(null, "redo");
+          assert.ok(
+            events.some((evt) => evt.detail?.reason === "redo"),
+            "redo emits tag refresh event",
+          );
+          assert.ok(
+            events.some((evt) => evt.detail?.force === true),
+            "redo event forces sidebar refresh",
+          );
 
           assert.strictEqual(
             mutationCalls[0].label,

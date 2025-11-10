@@ -159,9 +159,9 @@ export function createInteractionTagManager(options = {}) {
       return result;
     }
 
-    return runModelMutation("renameInteractionTag", mutate, {
-      render: true,
-      undo: makeUndoConfig?.({
+    let undoConfig = null;
+    if (typeof makeUndoConfig === "function") {
+      undoConfig = makeUndoConfig({
         label: (res) => {
           const target = res?.from || from;
           return target ? `rename ${target}` : "rename tag";
@@ -169,7 +169,22 @@ export function createInteractionTagManager(options = {}) {
         shouldRecord: (res) => (res?.replacements ?? 0) > 0,
         includeLocation: false,
         includeColumn: false,
-      }),
+      });
+      if (undoConfig && typeof undoConfig === "object") {
+        const originalApply = undoConfig.applyAttachments;
+        undoConfig.applyAttachments = (attachments, direction, context) => {
+          if (typeof originalApply === "function") {
+            originalApply(attachments, direction, context);
+          }
+          const reason = direction === "undo" || direction === "redo" ? direction : "history";
+          emitInteractionTagChangeEvent(null, { reason, force: true });
+        };
+      }
+    }
+
+    return runModelMutation("renameInteractionTag", mutate, {
+      render: true,
+      undo: undoConfig || undefined,
       after: handleResult,
     });
   }
@@ -207,9 +222,9 @@ export function createInteractionTagManager(options = {}) {
       return result;
     }
 
-    return runModelMutation("deleteInteractionTag", mutate, {
-      render: true,
-      undo: makeUndoConfig?.({
+    let undoConfig = null;
+    if (typeof makeUndoConfig === "function") {
+      undoConfig = makeUndoConfig({
         label: (res) => {
           const tag = res?.tag || target;
           return tag ? `delete ${tag}` : "delete tag";
@@ -217,7 +232,22 @@ export function createInteractionTagManager(options = {}) {
         shouldRecord: (res) => (res?.removals ?? 0) > 0,
         includeLocation: false,
         includeColumn: false,
-      }),
+      });
+      if (undoConfig && typeof undoConfig === "object") {
+        const originalApply = undoConfig.applyAttachments;
+        undoConfig.applyAttachments = (attachments, direction, context) => {
+          if (typeof originalApply === "function") {
+            originalApply(attachments, direction, context);
+          }
+          const reason = direction === "undo" || direction === "redo" ? direction : "history";
+          emitInteractionTagChangeEvent(null, { reason, force: true });
+        };
+      }
+    }
+
+    return runModelMutation("deleteInteractionTag", mutate, {
+      render: true,
+      undo: undoConfig || undefined,
       after: handleResult,
     });
   }
