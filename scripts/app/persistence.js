@@ -69,6 +69,12 @@ export function createPersistenceController({
     return DEFAULT_MOD_FALLBACK;
   }
 
+  function normalizeProjectInfo(value) {
+    if (value == null) return "";
+    const text = String(value);
+    return text.replace(/\r\n?/g, "\n");
+  }
+
   function getFsModule() {
     if (!fsModulePromise) {
       fsModulePromise = Promise.resolve()
@@ -113,6 +119,7 @@ export function createPersistenceController({
     if (!o.meta)
       o.meta = { schema: 0, projectName: "", interactionsMode: "AI", columnWidths: {} };
     if (typeof o.meta.projectName !== "string") o.meta.projectName = "";
+    o.meta.projectInfo = normalizeProjectInfo(o.meta.projectInfo);
     if (
       !("interactionsMode" in o.meta) ||
       (o.meta.interactionsMode !== "AI" && o.meta.interactionsMode !== "AA")
@@ -221,6 +228,7 @@ export function createPersistenceController({
       meta: {
         schema: SCHEMA_VERSION,
         projectName: "",
+        projectInfo: "",
         interactionsMode: "AI",
         columnWidths: {},
         commentFilter: {},

@@ -71,6 +71,7 @@
 * Project-level metadata.
 * * schema: monotonically increasing integer for migrations
 * * projectName: user-visible name (usually filename stem)
+* * projectInfo: free-form project-level notes
 * * interactionsMode: 'AI' or 'AA'
 * * columnWidths: per-view column overrides (Record<viewKey, number>)
 * * commentFilter: persisted sidebar filter state
@@ -79,6 +80,7 @@
      * @typedef {{
      *   schema: number,
      *   projectName: string,
+     *   projectInfo: string,
      *   interactionsMode: InteractionsMode,
      *   columnWidths: Record<string, number>,
      *   commentFilter?: {

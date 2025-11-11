@@ -27,6 +27,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── interactions-data.js
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
+│   │   ├── project-info-controller.js
 │   │   ├── selection.js
 │   │   ├── settings-controller.js
 │   │   ├── types.js
@@ -80,6 +81,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │       ├── interactions-outline.js
 │       ├── menus.js
 │       ├── palette.js
+│       ├── project-info.js
 │       ├── rules.js
 │       ├── settings.js
 │       └── status.js
@@ -129,6 +131,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `column-widths.js` captures default widths for each view, clones override metadata, and exposes helpers so state controllers can merge persisted sizing without bloating callers.
 - `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
 - `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.
+- `project-info-controller.js` manages the modal lifecycle and persistence handshake for project notes so the bootstrap sequence only needs to expose the entry point to menus.
 - `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
 - `user-settings.js` defines the persisted defaults, schema metadata, and sanitizers for color preferences so both the controller and UI can trust incoming payloads.
 - `view-state.js` owns per-view selection snapshots and cached column layouts so `app.js` only orchestrates switching and rendering logic.
@@ -156,6 +159,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `side-panel.js` manages the shared right-hand sidebar host so comments and tags can register panes and share toggles without conflicting state.
 - `tags.js` drives the interaction tag sidebar UI, coordinating host toggles, list rendering, and bulk rename/delete actions through the shared tag manager.
 - `settings.js` renders the modal for customizing palette colors and keeps the dialog in sync with the sanitized `user-settings` payloads.
+- `project-info.js` renders the project notes dialog, providing a textarea host and dispatching change events so controllers can persist updates without duplicating DOM wiring.
 
 #### `scripts/support/`
 
