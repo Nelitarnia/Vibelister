@@ -12,6 +12,7 @@ export function initMenus(deps) {
     runSelfTests,
     model, // for Rules dialog
     openSettings,
+    openProjectInfo,
     addRowsAbove,
     addRowsBelow,
     clearCells,
@@ -146,6 +147,12 @@ export function initMenus(deps) {
   el(Ids.fileSaveAs)?.addEventListener("click", () => {
     closeAllMenus();
     saveToDisk(true);
+  });
+  el(Ids.fileProjectInfo)?.addEventListener("click", async () => {
+    closeAllMenus();
+    if (typeof openProjectInfo === "function") {
+      await openProjectInfo();
+    }
   });
   el(Ids.fileExportJson)?.addEventListener("click", () => {
     closeAllMenus();

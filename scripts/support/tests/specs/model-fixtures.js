@@ -2,7 +2,7 @@ import { createEmptyCommentMap } from "../../../data/comments.js";
 
 export function makeModelFixture() {
   const model = {
-    meta: { schema: 0, projectName: "", interactionsMode: "AI" },
+    meta: { schema: 0, projectName: "", projectInfo: "", interactionsMode: "AI" },
     actions: [],
     inputs: [],
     modifiers: [],

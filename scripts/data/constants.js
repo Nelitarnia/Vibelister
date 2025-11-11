@@ -55,6 +55,7 @@ export const Ids = Object.freeze({
   fileOpenDisk: "file-open-disk",
   fileSaveDisk: "file-save-disk",
   fileSaveAs: "file-save-as",
+  fileProjectInfo: "file-project-info",
   fileExportJson: "file-export-json",
   editUndo: "edit-undo",
   editRedo: "edit-redo",

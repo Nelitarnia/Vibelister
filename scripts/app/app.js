@@ -96,6 +96,7 @@ import { createGridRenderer } from "./grid-renderer.js";
 import { createDiagnosticsController } from "./diagnostics.js";
 import { createInteractionTagManager } from "./interaction-tags.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
+import { createProjectInfoController } from "./project-info-controller.js";
 
 function initA11y() {
   statusBar?.ensureLiveRegion();
@@ -106,6 +107,7 @@ const model = {
   meta: {
     schema: SCHEMA_VERSION,
     projectName: "",
+    projectInfo: "",
     interactionsMode: "AI",
     columnWidths: {},
     commentFilter: { viewKey: "actions" },
@@ -325,6 +327,13 @@ const {
   parsePhaseKey,
   noteKeyForPair,
   getInteractionsPair,
+});
+
+const { openProjectInfoDialog: openProjectInfo } = createProjectInfoController({
+  model,
+  runModelMutation,
+  makeUndoConfig,
+  statusBar,
 });
 
 const commentsUI = initCommentsUI({
@@ -1072,6 +1081,7 @@ menusAPI = initMenus({
   runSelfTests,
   model,
   openSettings: openSettingsDialog,
+  openProjectInfo,
   addRowsAbove,
   addRowsBelow,
   clearCells: () => clearSelectedCells({}),

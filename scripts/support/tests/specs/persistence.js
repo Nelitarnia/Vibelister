@@ -14,7 +14,12 @@ export function getPersistenceTests() {
           openJson: async () => ({
             name: "project.json",
             data: {
-              meta: { schema: 0, projectName: "", interactionsMode: "AI" },
+              meta: {
+                schema: 0,
+                projectName: "",
+                projectInfo: "",
+                interactionsMode: "AI",
+              },
               actions: [
                 { id: 1, name: "Alpha", modSet: {} },
                 { id: 2, name: "   ", modSet: {} },
@@ -84,7 +89,12 @@ export function getPersistenceTests() {
           openJson: async () => ({
             name: "project.json",
             data: {
-              meta: { schema: 0, projectName: "", interactionsMode: "AI" },
+              meta: {
+                schema: 0,
+                projectName: "",
+                projectInfo: "",
+                interactionsMode: "AI",
+              },
               actions: [],
               inputs: [],
               modifiers: [],
@@ -162,7 +172,12 @@ export function getPersistenceTests() {
           openJson: async () => ({
             name: "project.json",
             data: {
-              meta: { schema: 0, projectName: "", interactionsMode: "AI" },
+              meta: {
+                schema: 0,
+                projectName: "",
+                projectInfo: "",
+                interactionsMode: "AI",
+              },
               actions: [
                 {
                   id: 1,
@@ -254,7 +269,12 @@ export function getPersistenceTests() {
         });
 
         const legacy = {
-          meta: { schema: 0, projectName: "", interactionsMode: "AI" },
+          meta: {
+            schema: 0,
+            projectName: "",
+            projectInfo: "",
+            interactionsMode: "AI",
+          },
           actions: [],
           inputs: [],
           modifiers: [],
