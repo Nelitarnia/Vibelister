@@ -67,7 +67,7 @@ Although the default mode in Interactions is comparing Actions vs Inputs (AI), p
 
 Actions have nuance: their different parts often have different rules. For example, the buffers might work completely differently during start-up and cooldown. To allow examining the "timeline" of an Action in a closer detail, you can give Actions a number which represents their Phases.
 
-Each phase features an Outcome-, End- (the end state of the input test) and Tag- column. The purpose of Tag is to bridge the gap between purely formal note-taking and freeform notes: you should use it to add lesser effects (like UI-only changes) that at least for the time being don't require their own Action or Modifier to keep a track of.
+Each phase features an Outcome-, End- (the end state of the input test) and Tag- column. The purpose of Tags is to bridge the gap between purely formal note-taking and freeform notes: you should use it to add lesser effects (like UI-only changes) that at least for the time being don't require their own Action or Modifier to keep a track of. The keyboard shortcut for opening the tag panel is Ctrl+Shift+X.
 
 The Phase-column in Actions view allows a list of numbers ("1,2,3"), a range of numbers (1..5) or giving labels to Phases (1:start-up, 2:active, 3:cooldown). These labels will be visible in Interactions view if added, but they're optional.
 
@@ -104,9 +104,11 @@ If you double tap Shift, you can change between normal selection mode and a hori
 
 You can undo any action which changes the core data model (editing cells, reordering rows, etc.) with Ctrl+z / Ctlr+y.
 
-You can leave comments (categorized by color) on any cell in the project, then quick jump between them using the arrows in the Comments sidebar. The keyboard shortcuts for the side panels are Ctrl+Shift+L for Comments and Ctrl+Shift+X for Tags.
+You can leave comments (categorized by color) on any cell in the project, then quick jump between them using the arrows in the Comments sidebar. The keyboard shortcut for the comment side panel is Ctrl+Shift+L.
 
 It's possible to save / load project files in .json-format. Note: on Firefox and Safari (which don't have the File System Access API), regular "Save" and "Save as..." instead default to "Export as JSON".
+
+You can write general project notes in File -> Project Info.
 
 ---
 
@@ -115,12 +117,11 @@ It's possible to save / load project files in .json-format. Note: on Firefox and
 ## Known bugs
 
 - Drop-down palettes at the bottom of the screen in Interactions-view go partially out of screen.
-- Drop down menu text for undo/redo loses the "ctrl+z" / "ctrl+y" hotkey instruction at runtime.
 
 ## Ideas for later
 
 - Freezing certain columns so that they always stay visible (like in Libreoffice Calc, etc.)
-- Ability to create selections with a rectangular select?
+- Ability to create rectangular selections by dragging.
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
 - Being able to clean up your project file after larger refactoring.
 - Option to show the canonical IDs of data elements for debugging purposes.
