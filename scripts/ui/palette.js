@@ -474,6 +474,15 @@ export function initPalette(ctx) {
 
     let rowIndex = Number.isFinite(sel?.r) ? sel.r : NaN;
     let colIndex = Number.isFinite(sel?.c) ? sel.c : NaN;
+    const marginBelowCell = 6;
+    const resolveCellHeight = (maybeRect) => {
+      const rectHeight = Number(maybeRect?.height);
+      if (Number.isFinite(rectHeight) && rectHeight > 0) return rectHeight;
+      const editorHeight = Number(editor?.offsetHeight);
+      if (Number.isFinite(editorHeight) && editorHeight > 0) return editorHeight;
+      return 24;
+    };
+
     if (targetArg) {
       if (Number.isFinite(targetArg.r)) rowIndex = targetArg.r;
       if (Number.isFinite(targetArg.c)) colIndex = targetArg.c;
@@ -507,11 +516,11 @@ export function initPalette(ctx) {
       }
       if (rect) {
         left = Number(rect.left) || 0;
-        top = Number(rect.top) || 0;
+        top = (Number(rect.top) || 0) + resolveCellHeight(rect) + marginBelowCell;
         width = Math.max(200, Number(rect.width) || 0);
       } else {
         left = 0;
-        top = HEADER_HEIGHT;
+        top = HEADER_HEIGHT + resolveCellHeight(rect) + marginBelowCell;
         width = 200;
       }
     } else if (arg1 && typeof arg1 === "object") {
@@ -524,11 +533,38 @@ export function initPalette(ctx) {
       top = Number(arg2) || 0;
       width = Number(arg3) || 0;
       initialText = typeof arg4 === "string" ? arg4 : "";
-      top += HEADER_HEIGHT;
+      top += HEADER_HEIGHT + resolveCellHeight(null) + marginBelowCell;
     }
     width = Math.max(200, width);
+    let finalTop = top;
+    if (pal.el) {
+      const style = pal.el.style;
+      const restoreDisplay = style.display;
+      const restoreVisibility = style.visibility;
+      if (style.display === "none") {
+        style.visibility = "hidden";
+        style.display = "block";
+      }
+      let paletteHeight = pal.el.offsetHeight || pal.el.scrollHeight || 0;
+      if (!paletteHeight) {
+        const parsedMax = Number.parseFloat(style.maxHeight);
+        if (Number.isFinite(parsedMax) && parsedMax > 0) paletteHeight = parsedMax;
+      }
+      if (style.display !== restoreDisplay) {
+        style.display = restoreDisplay;
+        style.visibility = restoreVisibility;
+      }
+      const sheetRect = sheet?.getBoundingClientRect?.();
+      if (sheetRect && paletteHeight) {
+        const minTop = sheetRect.top;
+        const maxTop = sheetRect.bottom - paletteHeight;
+        if (Number.isFinite(minTop) && Number.isFinite(maxTop)) {
+          finalTop = Math.min(Math.max(finalTop, minTop), Math.max(minTop, maxTop));
+        }
+      }
+    }
     pal.left = left;
-    pal.top = top;
+    pal.top = finalTop;
     pal.width = width;
     Object.assign(pal.el.style, {
       left: pal.left + "px",
