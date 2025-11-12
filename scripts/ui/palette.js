@@ -557,7 +557,10 @@ export function initPalette(ctx) {
       }
       const sheetRect = sheet?.getBoundingClientRect?.();
       if (sheetRect && paletteHeight) {
-        const minTop = sheetRect.top;
+        const headerOffset = Number.isFinite(HEADER_HEIGHT)
+          ? HEADER_HEIGHT
+          : Number.parseFloat(HEADER_HEIGHT) || 0;
+        const minTop = sheetRect.top + Math.max(0, headerOffset || 0);
         const maxTop = sheetRect.bottom - paletteHeight;
         if (Number.isFinite(minTop) && Number.isFinite(maxTop)) {
           finalTop = Math.min(Math.max(finalTop, minTop), Math.max(minTop, maxTop));
