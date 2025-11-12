@@ -525,8 +525,9 @@ export function initPalette(ctx) {
       }
     } else if (arg1 && typeof arg1 === "object") {
       left = Number(arg1.left) || 0;
-      top = Number(arg1.top) || 0;
+      const baseTop = Number(arg1.top) || 0;
       width = Number(arg1.width) || 0;
+      top = baseTop + resolveCellHeight(arg1) + marginBelowCell;
       initialText = typeof arg2 === "string" ? arg2 : "";
     } else {
       left = Number(arg1) || 0;
