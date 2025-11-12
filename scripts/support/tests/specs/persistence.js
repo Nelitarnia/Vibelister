@@ -79,6 +79,47 @@ export function getPersistenceTests() {
       },
     },
     {
+      name: "openFromDisk reports file size errors",
+      async run(assert) {
+        const { model } = makeModelFixture();
+        let statusMessage = "";
+        const loadFsModule = async () => ({
+          openJson: async () => {
+            throw new Error("Project file is too large (max 5 MB)");
+          },
+        });
+
+        const statusBar = {
+          set(message) {
+            statusMessage = message;
+          },
+        };
+
+        const controller = createPersistenceController({
+          model,
+          statusBar,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule,
+        });
+
+        await controller.openFromDisk();
+
+        assert.strictEqual(
+          statusMessage,
+          "Open failed: Project file is too large (max 5 MB)",
+          "status bar should surface file size errors",
+        );
+      },
+    },
+    {
       name: "saveToDisk uses injected fs module",
       async run(assert) {
         const { model } = makeModelFixture();

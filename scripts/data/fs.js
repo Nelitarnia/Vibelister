@@ -1,6 +1,14 @@
 // fs.js - Pogressive file IO (Chromium gets File System Access; others get input/download fallbacks)
 
 export const hasFS = !!(window.showOpenFilePicker && window.showSaveFilePicker);
+const MAX_PROJECT_BYTES = 5 * 1024 * 1024;
+const MAX_PROJECT_LABEL = "5 MB";
+
+function ensureFileWithinLimit(file) {
+  if (typeof file?.size === "number" && file.size > MAX_PROJECT_BYTES) {
+    throw new Error(`Project file is too large (max ${MAX_PROJECT_LABEL})`);
+  }
+}
 const lastHandles = new Map();
 const DEFAULT_HANDLE_KEY = "project";
 
@@ -37,11 +45,13 @@ export async function openJson(options = {}) {
       multiple,
     });
     const file = await h.getFile();
+    ensureFileWithinLimit(file);
     const text = await file.text();
     setHandle(handleKey, h);
     return { data: JSON.parse(text), name: file.name, handle: h };
   } else {
     const file = await pickViaInput(accept || ".json,application/json");
+    ensureFileWithinLimit(file);
     const text = await file.text();
     return { data: JSON.parse(text), name: file.name, handle: null };
   }
