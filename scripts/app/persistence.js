@@ -1,6 +1,9 @@
 import {
   DEFAULT_OUTCOMES,
   DEFAULT_OUTCOME_COLORS,
+  DEFAULT_OUTCOME_NOTES,
+  DEFAULT_OUTCOME_MIRRORED,
+  DEFAULT_OUTCOME_DUAL_OF,
   MOD,
   SCHEMA_VERSION,
 } from "../data/constants.js";
@@ -97,15 +100,27 @@ export function createPersistenceController({
     ensureMinRows(model.inputs, N);
     ensureMinRows(model.modifiers, N);
     if (!model.outcomes || !model.outcomes.length) {
+      const seededRows = [];
       for (const name of DEFAULT_OUTCOMES) {
         const { color = "", color2 = "" } = DEFAULT_OUTCOME_COLORS[name] || {};
+        const notes = DEFAULT_OUTCOME_NOTES[name] || "";
+        const mirrored = !!DEFAULT_OUTCOME_MIRRORED[name];
         model.outcomes.push({
           id: model.nextId++,
           name,
           color,
           color2,
-          notes: "",
+          notes,
+          mirrored,
+          dualof: null,
         });
+        seededRows.push(model.outcomes[model.outcomes.length - 1]);
+      }
+      for (const row of seededRows) {
+        const dualName = DEFAULT_OUTCOME_DUAL_OF[row.name];
+        if (!dualName) continue;
+        const target = seededRows.find((candidate) => candidate.name === dualName);
+        if (target) row.dualof = target.id;
       }
     }
     ensureMinRows(model.outcomes, Math.max(DEFAULT_OUTCOMES.length + 10, 20));

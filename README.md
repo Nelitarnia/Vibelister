@@ -79,14 +79,18 @@ Phase 0 signifies simultaneous testing - what happens if you press inputs simult
 
 Outcomes view contains formal results of your observation. The default Outcomes are as follows:
 
-- "Uncertain" is used when the result is indeterminant or random.
-- "No Effect" means that nothing observably changed as a result of the Input.
-- "Impossible" is for interactions which are not possible to test.
-- "Prereq" means that the input is already in use as a part of the Action's setup.
-- "Mutual" means that the input causes something to overlap, combine or co-exist with the current Action.
-- "Cancels" means that the Action is interrupted by the input.
-- "Buffers" means that the next Action triggered by the Input is buffered to occur afterwards.
-- "Follows" means that the next Action triggered by the Input is queued afterwards in a way which is distinct from ordinary buffering.
+- "Uncertain" is used when the result appears random or inconsistent.
+- "Impossible" is for cases where the interaction cannot be tested or the input cannot be performed.
+- "Reserved" denotes that the input is already reserved by the current state.
+- "No Effect" means that nothing observably changed as a result of the input.
+- "Buffers" indicates that the input is stored to trigger later if conditions allow.
+- "Follows" means that a follow-up action is scheduled to occur automatically.
+- "Overrides" indicates that the current state ends and a new one begins immediately.
+- "Changes" captures transformations of the current state without a sharp break.
+
+When a project is first created, the Mirrored column is pre-enabled for "Uncertain", "Impossible", "No effect", "Overrides" and
+"Changes". Dual Of defaults are also pre-filled so "Uncertain", "Impossible" and "Changes" reference themselves, while "No
+effect" and "Overrides" point to each other.
 
 You can also create some own Outcomes, if needed.
 
