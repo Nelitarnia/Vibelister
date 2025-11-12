@@ -861,10 +861,14 @@ export function clearInteractionsSelection(
   const clearedMsg = cleared
     ? `Cleared ${cleared} entr${cleared === 1 ? "y" : "ies"} in Interactions.`
     : "Nothing to clear.";
-  const hint =
+  const rawHint =
     extras && typeof extras.statusHint === "string"
       ? extras.statusHint.trim()
       : "";
+  let hint = rawHint;
+  if (!hint && extras && extras.reason === "cut" && mode === "clearAllEditable") {
+    hint = "Interactions are generated; rows can't be deleted.";
+  }
   const message = hint ? `${hint} ${clearedMsg}` : clearedMsg;
   return { cleared, message };
 }

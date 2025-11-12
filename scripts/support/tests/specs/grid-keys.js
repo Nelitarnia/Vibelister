@@ -1,4 +1,5 @@
 import { computeDestinationIndices, initGridKeys } from "../../../ui/grid-keys.js";
+import { MIME_RANGE } from "../../../app/clipboard-codec.js";
 import { createInteractionsOutline } from "../../../ui/interactions-outline.js";
 import {
   selection as globalSelection,
@@ -311,6 +312,162 @@ export function getGridKeysTests() {
             bubbleEvent.prevented,
             true,
             "shortcut should consume the event",
+          );
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
+      name: "Cut handler copies selection and clears cells",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: { tagName: "DIV", isContentEditable: false },
+        };
+
+        const navigatorStub = { platform: "Win" };
+
+        const selection = { rows: new Set([0, 1]), cols: new Set([0, 1]), colsAll: false };
+        const sel = { r: 0, c: 0 };
+
+        const gridData = [
+          ["Name A", "42"],
+          ["Name B", "17"],
+        ];
+
+        const clipboardStore = {};
+        const clipboardTypes = new Set();
+        const event = {
+          clipboardData: {
+            types: clipboardTypes,
+            setData(type, value) {
+              clipboardStore[type] = value;
+              clipboardTypes.add(type);
+            },
+            getData(type) {
+              return clipboardStore[type];
+            },
+          },
+          preventDefault() {
+            this.prevented = true;
+          },
+          stopPropagation() {},
+          stopImmediatePropagation() {},
+          prevented: false,
+        };
+
+        const clearCalls = [];
+        const clearCells = (options) => {
+          clearCalls.push(options);
+          return { cleared: 4, message: null };
+        };
+
+        const statusMessages = [];
+        const status = {
+          set(message) {
+            statusMessages.push(message);
+          },
+        };
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection,
+          sel,
+          editor: { style: { display: "none" } },
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          moveSelectionForTab: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [{ key: "name" }, { key: "value" }] }),
+          getRowCount: () => gridData.length,
+          dataArray: () => gridData,
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells,
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: (r, c) => gridData[r][c],
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => {},
+          status,
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => ({ isOpen: () => false }),
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const cutListeners = listeners.get("cut") || [];
+          const captureListener = cutListeners.find((entry) => entry.capture);
+          assert.ok(captureListener, "cut listener should register in capture phase");
+
+          captureListener.cb(event);
+
+          assert.strictEqual(event.prevented, true, "cut handler should prevent default");
+          assert.deepStrictEqual(clearCalls, [{ reason: "cut", skipStatus: true }]);
+
+          assert.strictEqual(
+            clipboardStore["text/plain"],
+            "Name A\t42\nName B\t17",
+            "cut should copy plain text grid data",
+          );
+
+          const rangePayload = JSON.parse(clipboardStore[MIME_RANGE]);
+          assert.strictEqual(rangePayload.cells.length, 2, "cut should encode two rows");
+          assert.strictEqual(rangePayload.cells[0].length, 2, "cut should encode two columns");
+
+          assert.deepStrictEqual(
+            statusMessages,
+            ["Cut 2×2 cells (types: Name, Value)."],
+            "status should report cut summary",
           );
         } finally {
           dispose?.();
