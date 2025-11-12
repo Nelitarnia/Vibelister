@@ -281,15 +281,17 @@ export function createGridCommands(deps = {}) {
   }
 
   function clearSelectedCells(options = {}) {
-    const { mode: requestedMode, reason } = options || {};
+    const { mode: requestedMode, reason, skipStatus = false } = options || {};
     if (currentView() === "interactions") {
       const isAllCols = SelectionNS?.isAllCols?.() || false;
       const mode = requestedMode || (isAllCols ? "clearAllEditable" : "clearActiveCell");
-      const extras =
-        reason === "deleteAttempt" || reason === "menu"
-          ? { statusHint: "Interactions are generated; rows can't be deleted." }
-          : undefined;
-      runModelMutation?.(
+      const extras = {};
+      if (reason === "deleteAttempt" || reason === "menu") {
+        extras.statusHint = "Interactions are generated; rows can't be deleted.";
+      }
+      if (reason) extras.reason = reason;
+      if (skipStatus) extras.skipStatus = true;
+      const result = runModelMutation?.(
         "clearInteractionsSelection",
         () =>
           clearInteractionsSelection?.(
@@ -304,7 +306,7 @@ export function createGridCommands(deps = {}) {
           ),
         {
           render: (res) => (res?.cleared ?? 0) > 0,
-          status: (res) => res?.message,
+          status: skipStatus ? undefined : (res) => res?.message,
           undo: makeUndoConfig?.({
             label: "clear interactions",
             shouldRecord: (res) => (res?.cleared ?? 0) > 0,
@@ -329,14 +331,14 @@ export function createGridCommands(deps = {}) {
         },
       );
       if (mode === "clearAllEditable") SelectionNS?.setColsAll?.(false);
-      return;
+      return result;
     }
 
     const arr = dataArray?.();
     if (!arr || !arr.length) {
       if (statusBar?.set) statusBar.set("Nothing to clear.");
       else if (statusBar) statusBar.textContent = "Nothing to clear.";
-      return;
+      return { cleared: 0, message: "Nothing to clear." };
     }
 
     const rows =
@@ -398,14 +400,16 @@ export function createGridCommands(deps = {}) {
         rebuildInteractions: (res) => (res?.cleared ?? 0) > 0,
         pruneNotes: (res) => (res?.cleared ?? 0) > 0,
         render: (res) => (res?.cleared ?? 0) > 0,
-        status: (res) => {
-          const cleared = res?.cleared ?? 0;
-          if (cleared > 0) {
-            const noun = cleared === 1 ? "cell" : "cells";
-            return `Cleared ${cleared} ${noun}.`;
-          }
-          return "Nothing to clear.";
-        },
+        status: skipStatus
+          ? undefined
+          : (res) => {
+              const clearedCells = res?.cleared ?? 0;
+              if (clearedCells > 0) {
+                const noun = clearedCells === 1 ? "cell" : "cells";
+                return `Cleared ${clearedCells} ${noun}.`;
+              }
+              return "Nothing to clear.";
+            },
         undo: makeUndoConfig?.({
           label: "clear cells",
           shouldRecord: (res) => (res?.cleared ?? 0) > 0,
@@ -434,6 +438,19 @@ export function createGridCommands(deps = {}) {
         emitCommentChange(change, target);
       }
     }
+
+    const cleared = result?.cleared ?? 0;
+    const noun = cleared === 1 ? "cell" : "cells";
+    const message =
+      result?.message != null
+        ? result.message
+        : cleared > 0
+        ? `Cleared ${cleared} ${noun}.`
+        : "Nothing to clear.";
+
+    const summary = { cleared, message };
+    if (result?.removedComments?.length) summary.removedComments = result.removedComments;
+    return summary;
   }
 
   function deleteSelectedRows(options = {}) {

@@ -150,14 +150,14 @@ export function initGridKeys(deps) {
     return "";
   }
 
-  function buildCopyStatus(rows, cols, cells) {
+  function buildCopyStatus(rows, cols, cells, verb = "Copied") {
     const rowCount = rows.length;
     const colCount = cols.length;
     const total = rowCount * colCount;
     if (!total) return "";
     if (total === 1) {
       const label = describeCellForStatus(cells[0]?.[0]);
-      return label ? `Copied ${label} cell.` : "Copied cell.";
+      return label ? `${verb} ${label} cell.` : `${verb} cell.`;
     }
     const typeSet = new Set();
     for (const row of cells) {
@@ -172,7 +172,7 @@ export function initGridKeys(deps) {
       const shown = list.slice(0, 3);
       suffix = ` (types: ${shown.join(", ")}${list.length > 3 ? ", …" : ""})`;
     }
-    return `Copied ${rowCount}×${colCount} cells${suffix}.`;
+    return `${verb} ${rowCount}×${colCount} cells${suffix}.`;
   }
 
   function isColorKind(col) {
@@ -827,6 +827,76 @@ export function initGridKeys(deps) {
     setStatusMessage(buildCopyStatus(rows, cols, cells));
   }
 
+  function onCut(e) {
+    if (doc?.querySelector?.('[aria-modal="true"]')) return;
+    const ae = doc?.activeElement || null;
+    if (isTypingInEditable(ae)) return;
+    if (gridIsEditing()) return;
+
+    const rows = getSelectedRowsList();
+    const cols = getSelectedColsList();
+    const { cells, hasStructured, hasComments } = gatherSelectionData(rows, cols);
+    const text = buildPlainTextFromCells(cells);
+    e.preventDefault();
+    try {
+      e.clipboardData.setData("text/plain", text);
+    } catch {}
+
+    const rangePayload = makeRangePayloadFromCells(cols, cells);
+    const wroteRange = writeRangeToEvent(e, rangePayload);
+    if (rows.length === 1 && cols.length === 1) {
+      const single = cells[0] && cells[0][0] ? cells[0][0] : null;
+      if (single?.structured) {
+        writeStructuredToEvent(e, single.structured);
+      } else if (single?.comment) {
+        writeStructuredToEvent(e, single.comment);
+      }
+    }
+
+    console.debug(
+      "[cut] rows=",
+      rows,
+      "cols=",
+      cols,
+      "structured=",
+      hasStructured,
+      "comments=",
+      hasComments,
+      "rangeWritten=",
+      wroteRange,
+      "types after=",
+      Array.from(e.clipboardData.types || []),
+    );
+
+    const summary =
+      typeof clearCells === "function"
+        ? clearCells({ reason: "cut", skipStatus: true })
+        : null;
+
+    function applyCutStatus(result) {
+      if (result && typeof result.then === "function") {
+        result.then(applyCutStatus);
+        return;
+      }
+      const clearedCount = result?.cleared ?? 0;
+      if (clearedCount > 0) {
+        let message = buildCopyStatus(rows, cols, cells, "Cut");
+        const extra = result?.message && String(result.message).trim();
+        if (extra && extra !== message) {
+          const startsWithCleared = extra.startsWith("Cleared ");
+          message = startsWithCleared ? message : `${message} ${extra}`.trim();
+        }
+        setStatusMessage(message);
+      } else if (result?.message) {
+        setStatusMessage(result.message);
+      } else {
+        setStatusMessage("Nothing to cut.");
+      }
+    }
+
+    applyCutStatus(summary);
+  }
+
   function onPaste(e) {
     if (doc?.querySelector?.('[aria-modal="true"]')) return;
     const ae = doc?.activeElement || null;
@@ -1086,6 +1156,7 @@ export function initGridKeys(deps) {
   }
 
   win?.addEventListener?.("copy", onCopy, true);
+  win?.addEventListener?.("cut", onCut, true);
   win?.addEventListener?.("paste", onPaste, true);
 
   // Return disposer for future use (optional)
@@ -1093,6 +1164,7 @@ export function initGridKeys(deps) {
     win?.removeEventListener?.("keydown", onGridKeyDown, true);
     win?.removeEventListener?.("keydown", onShortcutKeyDown);
     win?.removeEventListener?.("copy", onCopy, true);
+    win?.removeEventListener?.("cut", onCut, true);
     win?.removeEventListener?.("paste", onPaste, true);
   };
 }
