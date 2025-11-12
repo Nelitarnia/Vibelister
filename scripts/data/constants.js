@@ -77,24 +77,51 @@ export const Ids = Object.freeze({
 
 export const DEFAULT_OUTCOMES = [
   "Uncertain",
-  "No effect",
   "Impossible",
-  "Prereq",
-  "Mutual",
-  "Cancels",
+  "Reserved",
+  "No effect",
   "Buffers",
   "Follows",
+  "Overrides",
+  "Changes",
 ];
 
 export const DEFAULT_OUTCOME_COLORS = Object.freeze({
-  Uncertain: Object.freeze({ color: "#EAEBF0", color2: "#4B4B4B" }),
-  "No effect": Object.freeze({ color: "#4F4F4F", color2: "#FFFFFF" }),
-  Impossible: Object.freeze({ color: "#32333A", color2: "#C5C5CB" }),
-  Prereq: Object.freeze({ color: "#4F5E56", color2: "#ADCDB9" }),
-  Mutual: Object.freeze({ color: "#6967CD", color2: "#F4F4F4" }),
-  Cancels: Object.freeze({ color: "#991114", color2: "#FFFFFF" }),
-  Buffers: Object.freeze({ color: "#EA8015", color2: "#000000" }),
-  Follows: Object.freeze({ color: "#C88F57", color2: "#000000" }),
+  Uncertain: Object.freeze({ color: "#98ADB8", color2: "#000000" }),
+  Impossible: Object.freeze({ color: "#455A64", color2: "#ECEFF1" }),
+  Reserved: Object.freeze({ color: "#607D8B", color2: "#FFFFFF" }),
+  "No effect": Object.freeze({ color: "#3386D0", color2: "#FFFFFF" }),
+  Buffers: Object.freeze({ color: "#26C6DA", color2: "#000000" }),
+  Follows: Object.freeze({ color: "#43A047", color2: "#FFFFFF" }),
+  Overrides: Object.freeze({ color: "#D8623A", color2: "#FFFFFF" }),
+  Changes: Object.freeze({ color: "#E68815", color2: "#000000" }),
+});
+
+export const DEFAULT_OUTCOME_NOTES = Object.freeze({
+  Uncertain: "No result — outcome appears random or inconsistent.",
+  Impossible: "No result — cannot be tested or input cannot be performed.",
+  Reserved: "No result — input is already reserved by the current state.",
+  "No effect": "Old state continues — nothing observable changes.",
+  Buffers: "Old state continues — input is stored to trigger later if conditions allow.",
+  Follows: "Old state continues — a follow-up action is scheduled to occur automatically.",
+  Overrides: "Current state ends and a new one begins immediately.",
+  Changes: "Current state transforms without a sharp break.",
+});
+
+export const DEFAULT_OUTCOME_MIRRORED = Object.freeze({
+  Uncertain: true,
+  Impossible: true,
+  "No effect": true,
+  Overrides: true,
+  Changes: true,
+});
+
+export const DEFAULT_OUTCOME_DUAL_OF = Object.freeze({
+  Uncertain: "Uncertain",
+  Impossible: "Impossible",
+  "No effect": "Overrides",
+  Overrides: "No effect",
+  Changes: "Changes",
 });
 
 export const SCHEMA_VERSION = 1;
