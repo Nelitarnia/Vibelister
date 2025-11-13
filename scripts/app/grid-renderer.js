@@ -456,6 +456,12 @@ function createGridRenderer({
       d.dataset.colIndex = c;
       d.dataset.viewKey = activeView;
       const col = cols[c];
+      const alignValue =
+        col && typeof col.align === "string" && col.align.trim()
+          ? col.align.trim().toLowerCase()
+          : "";
+      if (alignValue) d.dataset.align = alignValue;
+      else if (d.dataset.align) delete d.dataset.align;
       const t = col.title;
       let tooltip = t;
       if (activeView === "interactions") {
@@ -545,6 +551,12 @@ function createGridRenderer({
             : String(normalized.plainText ?? "");
         let displaySegments = normalized.segments;
         const col = cols[c];
+        const alignValue =
+          col && typeof col.align === "string" && col.align.trim()
+            ? col.align.trim().toLowerCase()
+            : "";
+        if (alignValue) d.dataset.align = alignValue;
+        else if (d.dataset.align) delete d.dataset.align;
         const commentEntries =
           commentStoreAvailable && col
             ? listCommentsFor(activeView, viewDefinition, row, r, col)
