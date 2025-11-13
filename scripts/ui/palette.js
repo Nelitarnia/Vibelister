@@ -555,29 +555,59 @@ export function initPalette(ctx) {
         style.display = restoreDisplay;
         style.visibility = restoreVisibility;
       }
-      const sheetRect = sheet?.getBoundingClientRect?.();
-      if (sheetRect && paletteHeight) {
+      if (paletteHeight) {
         const headerRaw = Number.isFinite(HEADER_HEIGHT)
           ? Number(HEADER_HEIGHT)
           : Number.parseFloat(HEADER_HEIGHT);
         const headerOffset = Number.isFinite(headerRaw) ? headerRaw : 0;
-        const sheetTop = Number(sheetRect.top);
-        const sheetBottom = Number(sheetRect.bottom);
-        const sheetTopFinite = Number.isFinite(sheetTop);
-        const sheetBottomFinite = Number.isFinite(sheetBottom);
-        let minTop = sheetTopFinite ? sheetTop : Number.NEGATIVE_INFINITY;
+        const offsetParent =
+          pal.el.offsetParent || pal.el.parentElement || editor?.parentElement;
+        const offsetRect = offsetParent?.getBoundingClientRect?.();
+        const offsetTop = Number(offsetRect?.top);
+        const hasOffsetRect = Number.isFinite(offsetTop);
+        const toLocal = (value) => {
+          if (!Number.isFinite(value)) return value;
+          if (hasOffsetRect) return value - offsetTop;
+          return Number.NaN;
+        };
+        const sheetRect = sheet?.getBoundingClientRect?.();
+        let sheetTopLocal = toLocal(Number(sheetRect?.top));
+        let sheetBottomLocal = toLocal(Number(sheetRect?.bottom));
+        if (!Number.isFinite(sheetTopLocal)) {
+          const fallbackTop = Number(sheet?.offsetTop);
+          if (Number.isFinite(fallbackTop)) sheetTopLocal = fallbackTop;
+        }
+        if (!Number.isFinite(sheetBottomLocal)) {
+          const fallbackTop = Number(sheet?.offsetTop);
+          const fallbackHeight = Number(sheet?.offsetHeight);
+          if (Number.isFinite(fallbackTop) && Number.isFinite(fallbackHeight)) {
+            sheetBottomLocal = fallbackTop + fallbackHeight;
+          } else if (
+            Number.isFinite(sheetTopLocal) &&
+            Number.isFinite(fallbackHeight)
+          ) {
+            sheetBottomLocal = sheetTopLocal + fallbackHeight;
+          }
+        }
+        let minTop = Number.isFinite(sheetTopLocal)
+          ? sheetTopLocal
+          : Number.NEGATIVE_INFINITY;
         if (!rect) {
           const headerGuard =
-            (sheetTopFinite ? sheetTop : 0) + Math.max(0, headerOffset || 0);
+            (Number.isFinite(sheetTopLocal) ? sheetTopLocal : 0) +
+            Math.max(0, headerOffset || 0);
           if (Number.isFinite(headerGuard)) {
-            minTop = Math.max(minTop, headerGuard);
+            minTop = Number.isFinite(minTop)
+              ? Math.max(minTop, headerGuard)
+              : headerGuard;
           }
         }
         if (Number.isFinite(minTop) && finalTop < minTop) {
           finalTop = minTop;
         }
-        if (sheetBottomFinite) {
-          const maxTop = sheetBottom - paletteHeight;
+        const paletteHeightLocal = Number(paletteHeight) || 0;
+        if (Number.isFinite(sheetBottomLocal) && paletteHeightLocal >= 0) {
+          const maxTop = sheetBottomLocal - paletteHeightLocal;
           if (Number.isFinite(maxTop)) {
             const upperBound = Number.isFinite(minTop)
               ? Math.max(minTop, maxTop)
