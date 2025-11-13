@@ -564,22 +564,26 @@ export function initPalette(ctx) {
         const sheetTop = Number(sheetRect.top);
         const sheetBottom = Number(sheetRect.bottom);
         const sheetTopFinite = Number.isFinite(sheetTop);
-        const headerLowerBound =
-          (sheetTopFinite ? sheetTop : 0) + Math.max(0, headerOffset || 0);
-        const baseMin = rect ? Math.min(finalTop, headerLowerBound) : headerLowerBound;
-        const minTop = sheetTopFinite ? Math.max(sheetTop, baseMin) : baseMin;
-        if (Number.isFinite(sheetBottom)) {
+        const sheetBottomFinite = Number.isFinite(sheetBottom);
+        let minTop = sheetTopFinite ? sheetTop : Number.NEGATIVE_INFINITY;
+        if (!rect) {
+          const headerGuard =
+            (sheetTopFinite ? sheetTop : 0) + Math.max(0, headerOffset || 0);
+          if (Number.isFinite(headerGuard)) {
+            minTop = Math.max(minTop, headerGuard);
+          }
+        }
+        if (Number.isFinite(minTop) && finalTop < minTop) {
+          finalTop = minTop;
+        }
+        if (sheetBottomFinite) {
           const maxTop = sheetBottom - paletteHeight;
           if (Number.isFinite(maxTop)) {
-            finalTop = Math.min(
-              Math.max(finalTop, minTop),
-              Math.max(minTop, maxTop),
-            );
-          } else {
-            finalTop = Math.max(finalTop, minTop);
+            const upperBound = Number.isFinite(minTop)
+              ? Math.max(minTop, maxTop)
+              : maxTop;
+            finalTop = Math.min(finalTop, upperBound);
           }
-        } else if (Number.isFinite(minTop)) {
-          finalTop = Math.max(finalTop, minTop);
         }
       }
     }
