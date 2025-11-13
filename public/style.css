@@ -999,6 +999,14 @@ body {
   white-space: nowrap;
 }
 
+.cell[data-align="center"] .cell__content {
+  text-align: center;
+}
+
+.cell[data-align="right"] .cell__content {
+  text-align: right;
+}
+
 .cell__comment-badge {
   flex: 0 0 auto;
   width: var(--comment-badge-size);

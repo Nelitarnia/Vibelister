@@ -24,7 +24,14 @@ export const VIEWS = {
         kind: "phases",
       },
       { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
-      { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+      {
+        key: "color2",
+        title: "Color 2",
+        width: 65,
+        defaultWidth: 65,
+        kind: "color",
+        align: "center",
+      },
       {
         key: "notes",
         title: "Other Notes",
@@ -46,7 +53,14 @@ export const VIEWS = {
         kind: "text",
       },
       { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
-      { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+      {
+        key: "color2",
+        title: "Color 2",
+        width: 65,
+        defaultWidth: 65,
+        kind: "color",
+        align: "center",
+      },
       {
         key: "notes",
         title: "Other Notes",
@@ -68,7 +82,14 @@ export const VIEWS = {
         kind: "text",
       },
       { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
-      { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+      {
+        key: "color2",
+        title: "Color 2",
+        width: 65,
+        defaultWidth: 65,
+        kind: "color",
+        align: "center",
+      },
       { key: "notes", title: "Notes", width: 480, defaultWidth: 480, kind: "text" },
     ],
   },
@@ -84,7 +105,14 @@ export const VIEWS = {
         kind: "text",
       },
       { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
-      { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+      {
+        key: "color2",
+        title: "Color 2",
+        width: 65,
+        defaultWidth: 65,
+        kind: "color",
+        align: "center",
+      },
       {
         key: "mirrored",
         title: "Mirrored?",
@@ -169,7 +197,14 @@ export function rebuildActionColumnsFromModifiers(model) {
       kind: "phases",
     },
     { key: "color", title: "Color 1", width: 65, defaultWidth: 65, kind: "color" },
-    { key: "color2", title: "Color 2", width: 65, defaultWidth: 65, kind: "color" },
+    {
+      key: "color2",
+      title: "Color 2",
+      width: 65,
+      defaultWidth: 65,
+      kind: "color",
+      align: "center",
+    },
   ];
   const mods = (model.modifiers || [])
     .filter((m) => (m.name || "").trim())
@@ -181,6 +216,7 @@ export function rebuildActionColumnsFromModifiers(model) {
       isMod: true,
       modId: m.id,
       kind: "modState",
+      align: "center",
     }));
   const right = [
     {
