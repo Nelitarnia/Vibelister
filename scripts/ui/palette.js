@@ -557,13 +557,29 @@ export function initPalette(ctx) {
       }
       const sheetRect = sheet?.getBoundingClientRect?.();
       if (sheetRect && paletteHeight) {
-        const headerOffset = Number.isFinite(HEADER_HEIGHT)
-          ? HEADER_HEIGHT
-          : Number.parseFloat(HEADER_HEIGHT) || 0;
-        const minTop = sheetRect.top + Math.max(0, headerOffset || 0);
-        const maxTop = sheetRect.bottom - paletteHeight;
-        if (Number.isFinite(minTop) && Number.isFinite(maxTop)) {
-          finalTop = Math.min(Math.max(finalTop, minTop), Math.max(minTop, maxTop));
+        const headerRaw = Number.isFinite(HEADER_HEIGHT)
+          ? Number(HEADER_HEIGHT)
+          : Number.parseFloat(HEADER_HEIGHT);
+        const headerOffset = Number.isFinite(headerRaw) ? headerRaw : 0;
+        const sheetTop = Number(sheetRect.top);
+        const sheetBottom = Number(sheetRect.bottom);
+        const sheetTopFinite = Number.isFinite(sheetTop);
+        const headerLowerBound =
+          (sheetTopFinite ? sheetTop : 0) + Math.max(0, headerOffset || 0);
+        const baseMin = rect ? Math.min(finalTop, headerLowerBound) : headerLowerBound;
+        const minTop = sheetTopFinite ? Math.max(sheetTop, baseMin) : baseMin;
+        if (Number.isFinite(sheetBottom)) {
+          const maxTop = sheetBottom - paletteHeight;
+          if (Number.isFinite(maxTop)) {
+            finalTop = Math.min(
+              Math.max(finalTop, minTop),
+              Math.max(minTop, maxTop),
+            );
+          } else {
+            finalTop = Math.max(finalTop, minTop);
+          }
+        } else if (Number.isFinite(minTop)) {
+          finalTop = Math.max(finalTop, minTop);
         }
       }
     }
