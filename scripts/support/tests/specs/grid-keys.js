@@ -1,4 +1,5 @@
 import { computeDestinationIndices, initGridKeys } from "../../../ui/grid-keys.js";
+import { initPalette } from "../../../ui/palette.js";
 import { MIME_RANGE } from "../../../app/clipboard-codec.js";
 import { createInteractionsOutline } from "../../../ui/interactions-outline.js";
 import {
@@ -322,6 +323,270 @@ export function getGridKeysTests() {
             event.prevented,
             false,
             "grid handler should not consume the event before palette",
+          );
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
+      name: "type-to-edit keeps initial character when palette starts empty",
+      async run(assert) {
+        class FakeElement {
+          constructor(tag) {
+            this.tagName = String(tag || "div").toUpperCase();
+            this.children = [];
+            this.style = {};
+            this.parentElement = null;
+            this.offsetParent = null;
+            this.offsetHeight = 0;
+            this.scrollHeight = 0;
+            this.textContent = "";
+          }
+
+          appendChild(child) {
+            if (!child) return child;
+            child.parentElement = this;
+            child.offsetParent = this;
+            this.children.push(child);
+            return child;
+          }
+
+          setAttribute() {}
+
+          getBoundingClientRect() {
+            return { top: 0, bottom: 400 };
+          }
+        }
+
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          activeElement: { tagName: "DIV" },
+          querySelector: () => null,
+          getElementById: () => null,
+          createElement(tag) {
+            return new FakeElement(tag);
+          },
+          createDocumentFragment() {
+            return {
+              children: [],
+              appendChild(child) {
+                this.children.push(child);
+                return child;
+              },
+            };
+          },
+        };
+
+        const editorParent = new FakeElement("div");
+        editorParent.getBoundingClientRect = () => ({ top: 0, bottom: 400 });
+
+        const editorListeners = new Map();
+        const editor = {
+          style: { display: "none" },
+          value: "",
+          selectionStart: 0,
+          selectionEnd: 0,
+          parentElement: editorParent,
+          offsetHeight: 24,
+          focus() {
+            documentStub.activeElement = this;
+          },
+          setSelectionRange(start, end) {
+            this.selectionStart = start;
+            this.selectionEnd = end;
+          },
+          select() {
+            this.selectionStart = 0;
+            this.selectionEnd = this.value.length;
+          },
+          addEventListener(type, cb) {
+            const arr = editorListeners.get(type) || [];
+            arr.push(cb);
+            editorListeners.set(type, arr);
+          },
+          removeEventListener(type, cb) {
+            const arr = editorListeners.get(type) || [];
+            const idx = arr.indexOf(cb);
+            if (idx >= 0) arr.splice(idx, 1);
+            editorListeners.set(type, arr);
+          },
+        };
+
+        const sheet = new FakeElement("div");
+        sheet.addEventListener = () => {};
+        sheet.removeEventListener = () => {};
+        sheet.getBoundingClientRect = () => ({ top: 0, bottom: 400 });
+
+        const sel = { r: 0, c: 0 };
+
+        const palette = initPalette({
+          editor,
+          sheet,
+          getActiveView: () => "outcomes",
+          viewDef: () => ({ columns: [{ key: "dualof" }] }),
+          sel,
+          model: { outcomes: [] },
+          setCell: () => {},
+          render: () => {},
+          getCellRect: () => ({ left: 0, top: 0, width: 120, height: 24 }),
+          HEADER_HEIGHT: 24,
+          endEdit: () => {},
+          moveSelectionForTab: () => {},
+          moveSelectionForEnter: () => {},
+          document: documentStub,
+        });
+
+        const selection = {
+          rows: new Set(),
+          cols: new Set(),
+          colsAll: false,
+          horizontalMode: false,
+        };
+
+        const navigatorStub = { platform: "Test" };
+
+        let editing = false;
+        const beginEdit = () => {
+          editing = true;
+          palette.openForCurrentCell({
+            r: sel.r,
+            c: sel.c,
+            initialText: "",
+            focusEditor: true,
+          });
+        };
+        const endEdit = () => {
+          editing = false;
+        };
+
+        const dispose = initGridKeys({
+          isEditing: () => editing,
+          getActiveView: () => "outcomes",
+          selection,
+          sel,
+          editor,
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit,
+          endEdit,
+          moveSel: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [{ key: "dualof", kind: "ref" }] }),
+          getRowCount: () => 1,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => ({ changed: false }),
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => palette,
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        const typeChar = (ch) => {
+          const start = typeof editor.selectionStart === "number"
+            ? editor.selectionStart
+            : editor.value.length;
+          const end = typeof editor.selectionEnd === "number"
+            ? editor.selectionEnd
+            : start;
+          const before = editor.value.slice(0, start);
+          const after = editor.value.slice(end);
+          editor.value = `${before}${ch}${after}`;
+          const next = before.length + ch.length;
+          editor.selectionStart = next;
+          editor.selectionEnd = next;
+        };
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const captureListener = keyListeners.find((entry) => entry.capture);
+          assert.ok(captureListener, "grid keydown listener should be registered");
+
+          const keyEvent = {
+            key: "a",
+            ctrlKey: false,
+            metaKey: false,
+            altKey: false,
+            shiftKey: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+            stopPropagation() {},
+            stopImmediatePropagation() {},
+            prevented: false,
+          };
+
+          captureListener.cb(keyEvent);
+
+          assert.ok(editing, "type-to-edit should begin editing mode");
+          assert.ok(palette.isOpen(), "palette should open for palette column");
+
+          typeChar("a");
+
+          await new Promise((resolve) => setTimeout(resolve, 0));
+
+          typeChar("b");
+
+          assert.strictEqual(
+            editor.value,
+            "ab",
+            "subsequent typing should append to palette query",
+          );
+          assert.strictEqual(
+            editor.selectionStart,
+            editor.value.length,
+            "caret should remain at the end after typing",
+          );
+          assert.strictEqual(
+            editor.selectionEnd,
+            editor.value.length,
+            "selection should collapse at caret after palette open",
           );
         } finally {
           dispose?.();
