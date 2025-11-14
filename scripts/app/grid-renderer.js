@@ -467,19 +467,37 @@ function createGridRenderer({
 
   function applyCellColors(el, info) {
     if (!info) {
-      el.style.background = "";
-      el.style.color = "";
+      if (el.style.background) el.style.background = "";
+      if (el.style.color) el.style.color = "";
+      el._colorState = { background: "", foreground: "" };
       return;
     }
-    if (Object.prototype.hasOwnProperty.call(info, "background")) {
-      el.style.background = info.background || "";
-    } else {
-      el.style.background = "";
+    let state = el._colorState;
+    if (!state) {
+      state = {
+        background: el.style.background || "",
+        foreground: el.style.color || "",
+      };
+      el._colorState = state;
     }
-    if (Object.prototype.hasOwnProperty.call(info, "foreground")) {
-      el.style.color = info.foreground || "";
-    } else {
-      el.style.color = "";
+    const hasBackground = Object.prototype.hasOwnProperty.call(
+      info,
+      "background",
+    );
+    const hasForeground = Object.prototype.hasOwnProperty.call(
+      info,
+      "foreground",
+    );
+    const nextBackground = hasBackground ? info.background || "" : "";
+    const nextForeground = hasForeground ? info.foreground || "" : "";
+    if (state.background !== nextBackground) {
+      if (el.style.background !== nextBackground)
+        el.style.background = nextBackground;
+      state.background = nextBackground;
+    }
+    if (state.foreground !== nextForeground) {
+      if (el.style.color !== nextForeground) el.style.color = nextForeground;
+      state.foreground = nextForeground;
     }
   }
 
