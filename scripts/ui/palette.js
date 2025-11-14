@@ -56,20 +56,49 @@ export function initPalette(ctx) {
       .filter(Number.isFinite);
 
   // Normalize “Action (A+B)” or “Action — A+B” to “Action +A +B”
-  const normalizeCellTextToQuery = (s) => {
+  const normalizeCellTextToQuery = (s, model = null) => {
     const txt = String(s || "").trim();
     if (!txt) return "";
-    let action = txt,
-      modsPart = "";
-    const mParen = txt.match(/^([^()—]+)\s*\(([^)]+)\)\s*$/);
-    if (mParen) {
-      action = mParen[1].trim();
-      modsPart = mParen[2].trim();
-    } else {
-      const mDash = txt.match(/^([^()—]+)\s*—\s*(.+)$/);
-      if (mDash) {
-        action = mDash[1].trim();
-        modsPart = mDash[2].trim();
+
+    const actionNames = new Set();
+    if (model && Array.isArray(model.actions)) {
+      for (const row of model.actions) {
+        const nm = String(row?.name || "").trim();
+        if (nm) actionNames.add(nm);
+      }
+    }
+    if (actionNames.has(txt)) return txt;
+
+    let action = txt;
+    let modsPart = "";
+
+    const dashIdx = txt.lastIndexOf("—");
+    if (dashIdx > -1 && dashIdx < txt.length - 1) {
+      action = txt.slice(0, dashIdx).trim();
+      modsPart = txt.slice(dashIdx + 1).trim();
+    } else if (txt.endsWith(")")) {
+      const end = txt.length - 1;
+      let depth = 0;
+      let start = -1;
+      for (let i = end; i >= 0; i--) {
+        const ch = txt[i];
+        if (ch === ")") {
+          depth++;
+        } else if (ch === "(") {
+          depth--;
+          if (depth === 0) {
+            start = i;
+            break;
+          }
+        }
+      }
+      if (start >= 0 && start < end && depth === 0) {
+        const before = txt.slice(0, start).trim();
+        const candidate = txt.slice(start + 1, end).trim();
+        if (before && candidate) {
+          action = before;
+          modsPart = candidate;
+        }
       }
     }
     let query = action;
@@ -179,7 +208,7 @@ export function initPalette(ctx) {
       filterFn: () => true, // filtering handled by parse/makeItems
       domId: "universalPalette",
       supportsRecentToggle: true,
-      parseInitial: normalizeCellTextToQuery,
+      parseInitial: (s) => normalizeCellTextToQuery(s, model),
       parseQuery: (raw) => {
         const s = String(raw || "").trim();
         if (!s) return { a: "", mods: [] };
