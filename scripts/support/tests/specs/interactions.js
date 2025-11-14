@@ -148,6 +148,92 @@ function makePaletteEnvironment() {
   return { host, documentStub, editor, sheet };
 }
 
+function stubGlobalValue(name, replacement) {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
+  const previous = globalThis[name];
+
+  if (!descriptor || descriptor.configurable) {
+    Object.defineProperty(globalThis, name, {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: replacement,
+    });
+    return () => {
+      if (!descriptor) {
+        delete globalThis[name];
+      } else {
+        Object.defineProperty(globalThis, name, descriptor);
+      }
+    };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(descriptor, "value") && descriptor.writable) {
+    globalThis[name] = replacement;
+    return () => {
+      globalThis[name] = previous;
+    };
+  }
+
+  return () => {};
+}
+
+function stubDocumentDispatch(events) {
+  const dispatchStub = (evt) => {
+    events.push(evt);
+    return true;
+  };
+
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document");
+  if (!descriptor || descriptor.configurable) {
+    const stubDocument = { dispatchEvent: dispatchStub };
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: stubDocument,
+    });
+    return () => {
+      if (!descriptor) {
+        delete globalThis.document;
+      } else {
+        Object.defineProperty(globalThis, "document", descriptor);
+      }
+    };
+  }
+
+  const existing = globalThis.document;
+  if (existing && typeof existing === "object") {
+    const originalDispatch = existing.dispatchEvent;
+    existing.dispatchEvent = dispatchStub;
+    return () => {
+      existing.dispatchEvent = originalDispatch;
+    };
+  }
+
+  return () => {};
+}
+
+function captureInteractionTagEvents() {
+  const events = [];
+  const restoreDocument = stubDocumentDispatch(events);
+  const restoreCustomEvent = stubGlobalValue(
+    "CustomEvent",
+    function CustomEventStub(type, params) {
+      this.type = type;
+      this.detail = params?.detail;
+    },
+  );
+
+  return {
+    events,
+    restore() {
+      restoreCustomEvent();
+      restoreDocument();
+    },
+  };
+}
+
 export function getInteractionsTests() {
   return [
     {
@@ -484,20 +570,7 @@ export function getInteractionsTests() {
         buildInteractionsPairs(model);
         const tagView = { columns: [{ key: "p0:tag" }] };
         const status = { set() {} };
-
-        const originalDocument = globalThis.document;
-        const originalCustomEvent = globalThis.CustomEvent;
-        const events = [];
-        globalThis.CustomEvent = function (type, params) {
-          this.type = type;
-          this.detail = params?.detail;
-        };
-        globalThis.document = {
-          dispatchEvent(evt) {
-            events.push(evt);
-            return true;
-          },
-        };
+        const { events, restore } = captureInteractionTagEvents();
 
         try {
           const setResult = setInteractionsCell(model, status, tagView, 0, 0, [
@@ -566,10 +639,7 @@ export function getInteractionsTests() {
             "selection event reason",
           );
         } finally {
-          if (originalCustomEvent === undefined) delete globalThis.CustomEvent;
-          else globalThis.CustomEvent = originalCustomEvent;
-          if (originalDocument === undefined) delete globalThis.document;
-          else globalThis.document = originalDocument;
+          restore();
         }
       },
     },
@@ -589,19 +659,7 @@ export function getInteractionsTests() {
 
         const undoConfigs = [];
         const mutationCalls = [];
-        const events = [];
-        const originalDocument = globalThis.document;
-        const originalCustomEvent = globalThis.CustomEvent;
-        globalThis.CustomEvent = function (type, params) {
-          this.type = type;
-          this.detail = params?.detail;
-        };
-        globalThis.document = {
-          dispatchEvent(evt) {
-            events.push(evt);
-            return true;
-          },
-        };
+        const { events, restore } = captureInteractionTagEvents();
 
         const makeUndoConfig = (options) => {
           undoConfigs.push(options);
@@ -703,10 +761,7 @@ export function getInteractionsTests() {
             "delete mutation label captured",
           );
         } finally {
-          if (originalCustomEvent === undefined) delete globalThis.CustomEvent;
-          else globalThis.CustomEvent = originalCustomEvent;
-          if (originalDocument === undefined) delete globalThis.document;
-          else globalThis.document = originalDocument;
+          restore();
         }
       },
     },
