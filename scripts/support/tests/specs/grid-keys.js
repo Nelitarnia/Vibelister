@@ -56,6 +56,150 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "grid paste lets textarea handle native behavior",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const editor = {
+          style: { display: "block" },
+          tagName: "TEXTAREA",
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: editor,
+        };
+
+        const navigatorStub = { platform: "Test" };
+
+        const selection = {
+          rows: new Set([1, 2]),
+          cols: new Set([0]),
+          colsAll: false,
+          horizontalMode: false,
+        };
+        const sel = { r: 3, c: 4 };
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "outcomes",
+          selection,
+          sel,
+          editor,
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          moveSelectionForTab: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [] }),
+          getRowCount: () => 0,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => ({ changed: false }),
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => ({ isOpen: () => false }),
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const pasteListeners = listeners.get("paste") || [];
+          const captureListener = pasteListeners.find((entry) => entry.capture);
+          assert.ok(captureListener, "paste handler should be registered in capture phase");
+
+          const rowsBefore = Array.from(selection.rows);
+          const colsBefore = Array.from(selection.cols);
+          const selBefore = { ...sel };
+
+          const event = {
+            clipboardData: {
+              getData: () => "",
+              types: [],
+            },
+            preventDefault() {
+              this.prevented = true;
+            },
+            prevented: false,
+          };
+
+          captureListener.cb(event);
+
+          assert.strictEqual(
+            event.prevented,
+            false,
+            "paste handler should allow native textarea paste",
+          );
+          assert.deepStrictEqual(
+            Array.from(selection.rows),
+            rowsBefore,
+            "row selection should not be mutated when editor handles paste",
+          );
+          assert.deepStrictEqual(
+            Array.from(selection.cols),
+            colsBefore,
+            "column selection should remain unchanged during native paste",
+          );
+          assert.deepStrictEqual(
+            sel,
+            selBefore,
+            "selection anchor should remain unchanged when editor is active",
+          );
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
       name: "grid keydown defers Enter when palette is open",
       run(assert) {
         const listeners = new Map();
