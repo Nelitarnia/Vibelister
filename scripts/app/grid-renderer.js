@@ -574,8 +574,29 @@ function createGridRenderer({
       if (badge) {
         badge.dataset.visible = "false";
         badge.dataset.status = "default";
+        if (badge.dataset.color) delete badge.dataset.color;
+        if (badge.style.background) badge.style.background = "";
+        if (badge.style.borderColor) badge.style.borderColor = "";
+        if (badge.style.color) badge.style.color = "";
         badge.textContent = "";
-        badge.removeAttribute("title");
+        if (badge.hasAttribute("title")) badge.removeAttribute("title");
+        let state = badge._commentState;
+        if (!state) {
+          state = {
+            count: 0,
+            status: "default",
+            colorId: "",
+            visible: false,
+            tooltip: "",
+          };
+          badge._commentState = state;
+        } else {
+          state.count = 0;
+          state.status = "default";
+          state.colorId = "";
+          state.visible = false;
+          state.tooltip = "";
+        }
       }
     }
 
