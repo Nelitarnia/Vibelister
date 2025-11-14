@@ -900,6 +900,7 @@ export function initGridKeys(deps) {
   function onPaste(e) {
     if (doc?.querySelector?.('[aria-modal="true"]')) return;
     const ae = doc?.activeElement || null;
+    if (ae === editor) return;
     if (isTypingInEditable(ae)) return;
 
     e.preventDefault();
