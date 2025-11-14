@@ -650,24 +650,47 @@ export function initPalette(ctx) {
         editor.value = queryText;
       } catch (_) {}
       pal.query = queryText;
-      const shouldSelectAll = pal.mode?.selectTextOnOpen !== false;
-      if (typeof editor.setSelectionRange === "function" || editor.select) {
+      const modePrefersSelection = pal.mode?.selectTextOnOpen !== false;
+      const shouldSelectAll = modePrefersSelection && queryText.length > 0;
+      const canAdjustSelection =
+        typeof editor.setSelectionRange === "function" ||
+        typeof editor.select === "function" ||
+        (editor && "selectionStart" in editor && "selectionEnd" in editor);
+      const moveCaretToEnd = () => {
+        if (!editor) return;
+        try {
+          const end = editor.value.length;
+          if (typeof editor.setSelectionRange === "function") {
+            editor.setSelectionRange(end, end);
+          } else {
+            editor.selectionStart = end;
+            editor.selectionEnd = end;
+          }
+        } catch (_) {}
+      };
+      if (canAdjustSelection) {
         setTimeout(() => {
           if (!pal.isOpen) return;
           try {
-            if (typeof editor.setSelectionRange === "function") {
-              if (shouldSelectAll) editor.setSelectionRange(0, editor.value.length);
-              else {
-                const end = editor.value.length;
-                editor.setSelectionRange(end, end);
+            if (shouldSelectAll) {
+              if (typeof editor.setSelectionRange === "function") {
+                editor.setSelectionRange(0, editor.value.length);
+                return;
               }
-            } else if (shouldSelectAll && editor.select) editor.select();
+              if (typeof editor.select === "function") {
+                editor.select();
+                return;
+              }
+            }
+            moveCaretToEnd();
           } catch (_) {
-            if (shouldSelectAll && editor.select) {
+            if (shouldSelectAll && typeof editor.select === "function") {
               try {
                 editor.select();
+                return;
               } catch (_) {}
             }
+            moveCaretToEnd();
           }
         }, 0);
       }
