@@ -89,7 +89,7 @@ export function initPalette(ctx) {
       name: "outcome",
       testKey: (key) =>
         key === "result" || key === "dualof" || /^p\d+:outcome$/.test(key),
-      consumeTyping: true, // mimic old Outcome behavior
+      consumeTyping: false,
       filterFn: (name, q) => name.toLowerCase().startsWith(q), // startsWith
       domId: "universalPalette", // one element for all modes
       parseInitial: (s) => String(s || ""),
