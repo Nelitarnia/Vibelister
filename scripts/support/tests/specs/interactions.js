@@ -16,6 +16,8 @@ import { INTERACTION_TAGS_EVENT } from "../../../app/tag-events.js";
 import { sanitizeStructuredPayload } from "../../../app/clipboard-codec.js";
 import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
+import { formatEndActionLabel } from "../../../data/column-kinds.js";
+import { MOD } from "../../../data/constants.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
@@ -1373,6 +1375,90 @@ export function getInteractionsTests() {
           fallSpan?.style?.color,
           "#33ff66",
           "Fall span uses modifier color",
+        );
+      },
+    },
+    {
+      name: "palette lists variants for parenthesized action names",
+      run(assert) {
+        const { model, addAction, addModifier, addInput, groupExact } =
+          makeModelFixture();
+        const guard = addModifier("Guard");
+        const boost = addModifier("Boost");
+        const cancel = addModifier("Cancel");
+        const feint = addModifier("Feint");
+        groupExact(1, [guard, boost], { name: "primary" });
+        groupExact(1, [cancel, feint], { name: "secondary" });
+        const modSet = {
+          [guard.id]: MOD.ON,
+          [boost.id]: MOD.ON,
+          [cancel.id]: MOD.ON,
+          [feint.id]: MOD.ON,
+        };
+        const action = addAction("Ledge (Latch)", modSet);
+        addInput("Any");
+        buildInteractionsPairs(model);
+
+        const guardCancelSig = [guard.id, cancel.id]
+          .slice()
+          .sort((a, b) => a - b)
+          .join("+");
+        const label = formatEndActionLabel(model, action, guardCancelSig, {
+          style: "parentheses",
+        });
+        const initialText = label.plainText;
+
+        const { documentStub, host, editor, sheet } = makePaletteEnvironment();
+        const palette = initPalette({
+          editor,
+          sheet,
+          getActiveView: () => "interactions",
+          viewDef: () => ({ columns: [{ key: "p0:end" }] }),
+          sel: { r: 0, c: 0 },
+          model,
+          setCell: () => {},
+          render: () => {},
+          getCellRect: () => ({ left: 0, top: 0, width: 200, height: 24 }),
+          HEADER_HEIGHT: 0,
+          endEdit: () => {},
+          moveSelectionForTab: () => {},
+          moveSelectionForEnter: () => {},
+          document: documentStub,
+        });
+
+        const opened = palette.openForCurrentCell({
+          r: 0,
+          c: 0,
+          initialText,
+          focusEditor: false,
+        });
+
+        assert.ok(opened, "palette opened for end column with variant text");
+        assert.strictEqual(
+          editor.value,
+          "Ledge (Latch) +Guard +Cancel",
+          "query normalizes modifiers into +tokens",
+        );
+
+        const paletteRoot = host.children.find(
+          (child) => child && child.id === "universalPalette",
+        );
+        assert.ok(paletteRoot, "palette root appended to host");
+        const listEl = paletteRoot?.children?.[0];
+        assert.ok(listEl, "palette rendered item list");
+        const items = Array.isArray(listEl?.children) ? listEl.children : [];
+        const firstItem = items.find((child) => child && child.className === "pal-item");
+        assert.ok(firstItem, "palette rendered at least one variant item");
+        const spanTexts = Array.isArray(firstItem?.children)
+          ? firstItem.children.map((child) => child?.textContent || "")
+          : [];
+        assert.ok(
+          spanTexts.some((text) => text.includes("Guard")),
+          "rendered item includes Guard modifier",
+        );
+        assert.ok(
+          spanTexts.some((text) => text.includes("Cancel")),
+          "rendered item includes Cancel modifier",
         );
       },
     },
