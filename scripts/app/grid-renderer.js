@@ -105,6 +105,39 @@ function createGridRenderer({
     return { content, badge };
   }
 
+  function resetCommentBadge(badge) {
+    if (!badge) return;
+    const previousTransition = badge.style.transition;
+    badge.style.transition = "none";
+    void badge.offsetWidth;
+    if (badge.dataset.visible !== "false") badge.dataset.visible = "false";
+    if (badge.dataset.status !== "default") badge.dataset.status = "default";
+    if (badge.dataset.color) delete badge.dataset.color;
+    if (badge.textContent !== "") badge.textContent = "";
+    if (badge.hasAttribute("title")) badge.removeAttribute("title");
+    if (badge.style.background) badge.style.background = "";
+    if (badge.style.borderColor) badge.style.borderColor = "";
+    if (badge.style.color) badge.style.color = "";
+    let state = badge._commentState;
+    if (!state) {
+      state = {
+        visible: false,
+        count: 0,
+        status: "default",
+        colorId: "",
+        tooltip: "",
+      };
+      badge._commentState = state;
+    } else {
+      state.visible = false;
+      state.count = 0;
+      state.status = "default";
+      state.colorId = "";
+      state.tooltip = "";
+    }
+    badge.style.transition = previousTransition;
+  }
+
   function setCellContent(el, text, segments) {
     const { content } = ensureCellStructure(el);
     if (!content) return;
@@ -610,33 +643,7 @@ function createGridRenderer({
       if (d.style.display !== "none") d.style.display = "none";
       d.dataset.comment = "false";
       const badge = d._commentBadge;
-      if (badge) {
-        badge.dataset.visible = "false";
-        badge.dataset.status = "default";
-        if (badge.dataset.color) delete badge.dataset.color;
-        if (badge.style.background) badge.style.background = "";
-        if (badge.style.borderColor) badge.style.borderColor = "";
-        if (badge.style.color) badge.style.color = "";
-        badge.textContent = "";
-        if (badge.hasAttribute("title")) badge.removeAttribute("title");
-        let state = badge._commentState;
-        if (!state) {
-          state = {
-            count: 0,
-            status: "default",
-            colorId: "",
-            visible: false,
-            tooltip: "",
-          };
-          badge._commentState = state;
-        } else {
-          state.count = 0;
-          state.status = "default";
-          state.colorId = "";
-          state.visible = false;
-          state.tooltip = "";
-        }
-      }
+      if (badge) resetCommentBadge(badge);
     }
 
     const rows = activeView === "interactions" ? null : dataArray();
