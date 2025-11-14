@@ -105,11 +105,8 @@ function createGridRenderer({
     return { content, badge };
   }
 
-  function resetCommentBadge(badge) {
+  function clearCommentBadgeState(badge) {
     if (!badge) return;
-    const previousTransition = badge.style.transition;
-    badge.style.transition = "none";
-    void badge.offsetWidth;
     if (badge.dataset.visible !== "false") badge.dataset.visible = "false";
     if (badge.dataset.status !== "default") badge.dataset.status = "default";
     if (badge.dataset.color) delete badge.dataset.color;
@@ -135,7 +132,15 @@ function createGridRenderer({
       state.colorId = "";
       state.tooltip = "";
     }
-    badge.style.transition = previousTransition;
+  }
+
+  function resetCommentBadge(badge) {
+    if (!badge) return;
+    const previousTransition = badge.style.transition;
+    badge.style.transition = "none";
+    clearCommentBadgeState(badge);
+    void badge.offsetWidth;
+    badge.style.transition = previousTransition || "";
   }
 
   function setCellContent(el, text, segments) {
@@ -656,6 +661,13 @@ function createGridRenderer({
         const left = offs[c],
           w = widths[c];
         const d = cellPool[k++];
+        const nextRenderKey = `${r}:${c}`;
+        const prevRenderKey = d._renderKey;
+        if (prevRenderKey !== nextRenderKey) {
+          if (d.dataset.comment !== "false") d.dataset.comment = "false";
+          const badge = d._commentBadge;
+          if (badge) resetCommentBadge(badge);
+        }
         if (d.style.display !== "") d.style.display = "";
         d.style.left = left + "px";
         d.style.top = top + "px";
@@ -715,6 +727,7 @@ function createGridRenderer({
         if (r === sel.r && c === sel.c) d.classList.add("selected");
         else d.classList.remove("selected");
         d.style.opacity = "";
+        d._renderKey = nextRenderKey;
         if (activeView === "interactions") {
           const colKey = cols[c] && cols[c].key;
           if (colKey) {
