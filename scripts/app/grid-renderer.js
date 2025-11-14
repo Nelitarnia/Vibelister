@@ -108,13 +108,33 @@ function createGridRenderer({
   function setCellContent(el, text, segments) {
     const { content } = ensureCellStructure(el);
     if (!content) return;
-    if (segments && segments.length) {
+    const hasSegments = Array.isArray(segments) && segments.length > 0;
+    const normalizedText =
+      typeof text === "string" ? text : text == null ? "" : String(text);
+    const signature = hasSegments
+      ? segments
+          .map((seg) => {
+            const segText =
+              seg && seg.text != null ? String(seg.text) : "";
+            const segColor =
+              seg && typeof seg.foreground === "string" ? seg.foreground : "";
+            return `${segText}\u0001${segColor}`;
+          })
+          .join("\u0002")
+      : normalizedText;
+
+    const prevState = content._contentState;
+    if (prevState && prevState.rich === hasSegments && prevState.signature === signature)
+      return;
+
+    if (hasSegments) {
       while (content.firstChild) content.removeChild(content.firstChild);
       const frag = document.createDocumentFragment();
       for (const seg of segments) {
         const span = document.createElement("span");
-        span.textContent = seg.text;
-        span.style.color = seg.foreground || "";
+        span.textContent = seg && seg.text != null ? String(seg.text) : "";
+        span.style.color =
+          seg && typeof seg.foreground === "string" ? seg.foreground : "";
         frag.appendChild(span);
       }
       content.textContent = "";
@@ -125,9 +145,10 @@ function createGridRenderer({
         while (content.firstChild) content.removeChild(content.firstChild);
         content._richText = false;
       }
-      content.textContent =
-        typeof text === "string" ? text : text == null ? "" : String(text);
+      content.textContent = normalizedText;
     }
+
+    content._contentState = { rich: hasSegments, signature };
   }
 
   function deriveCommentStatus(value) {
