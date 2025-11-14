@@ -152,51 +152,104 @@ function createGridRenderer({
 
   function applyCommentBadgeColor(badge, colorId) {
     if (!badge) return;
+    let state = badge._commentState;
+    if (!state) {
+      state = {
+        count: null,
+        status: null,
+        colorId: null,
+        visible: null,
+        tooltip: null,
+      };
+      badge._commentState = state;
+    }
+    if (state.colorId === colorId) return;
     const preset = commentColorPresetById(colorId);
     if (preset) {
-      badge.dataset.color = preset.id;
-      badge.style.background = preset.badgeBackground || "";
-      badge.style.borderColor = preset.badgeBorder || "";
-      badge.style.color = preset.badgeText || "";
+      if (badge.dataset.color !== preset.id) badge.dataset.color = preset.id;
+      const background = preset.badgeBackground || "";
+      if (badge.style.background !== background)
+        badge.style.background = background;
+      const border = preset.badgeBorder || "";
+      if (badge.style.borderColor !== border) badge.style.borderColor = border;
+      const textColor = preset.badgeText || "";
+      if (badge.style.color !== textColor) badge.style.color = textColor;
     } else {
       if (badge.dataset.color) delete badge.dataset.color;
-      badge.style.background = "";
-      badge.style.borderColor = "";
-      badge.style.color = "";
+      if (badge.style.background) badge.style.background = "";
+      if (badge.style.borderColor) badge.style.borderColor = "";
+      if (badge.style.color) badge.style.color = "";
     }
+    state.colorId = colorId;
   }
 
   function updateCommentBadge(cell, entries) {
     const { badge } = ensureCellStructure(cell);
     if (!badge) return;
-    const hasComments = Array.isArray(entries) && entries.length > 0;
-    badge.dataset.visible = hasComments ? "true" : "false";
-    badge.dataset.status = "default";
-    badge.textContent = "";
-    badge.removeAttribute("title");
-    cell.dataset.comment = hasComments ? "true" : "false";
-    if (!hasComments) {
-      applyCommentBadgeColor(badge, "");
-      return;
+    let state = badge._commentState;
+    if (!state) {
+      state = {
+        count: null,
+        status: null,
+        colorId: null,
+        visible: null,
+        tooltip: null,
+      };
+      badge._commentState = state;
     }
-    const count = entries.length;
-    badge.textContent = count > 1 ? String(count) : "•";
-    const primary = entries[0] || null;
-    badge.dataset.status = deriveCommentStatus(primary?.value) || "default";
-    applyCommentBadgeColor(badge, deriveCommentColorId(primary?.value));
+    const list = Array.isArray(entries) ? entries : [];
+    const hasComments = list.length > 0;
+    const nextVisible = hasComments;
+    if (state.visible !== nextVisible) {
+      badge.dataset.visible = nextVisible ? "true" : "false";
+      state.visible = nextVisible;
+    }
+    const cellComment = nextVisible ? "true" : "false";
+    if (cell.dataset.comment !== cellComment) cell.dataset.comment = cellComment;
+    const nextCount = hasComments ? list.length : 0;
+    if (state.count !== nextCount) {
+      if (hasComments) {
+        badge.textContent = nextCount > 1 ? String(nextCount) : "•";
+      } else if (badge.textContent !== "") {
+        badge.textContent = "";
+      } else {
+        badge.textContent = "";
+      }
+      state.count = nextCount;
+    }
+    const primary = hasComments ? list[0] || null : null;
+    const nextStatus = hasComments
+      ? deriveCommentStatus(primary?.value) || "default"
+      : "default";
+    if (state.status !== nextStatus) {
+      badge.dataset.status = nextStatus;
+      state.status = nextStatus;
+    }
+    const nextColorId = hasComments
+      ? deriveCommentColorId(primary?.value)
+      : "";
+    applyCommentBadgeColor(badge, nextColorId);
     const value = primary?.value;
-    if (value && typeof value === "object") {
-      const text =
-        typeof value.text === "string"
-          ? value.text
-          : typeof value.note === "string"
-            ? value.note
-            : null;
-      if (text) badge.title = text;
-    } else if (value != null) {
-      badge.title = String(value);
-    } else {
-      badge.title = "Comment attached";
+    let tooltip = "";
+    if (hasComments) {
+      if (value && typeof value === "object") {
+        const text =
+          typeof value.text === "string"
+            ? value.text
+            : typeof value.note === "string"
+              ? value.note
+              : null;
+        if (text) tooltip = text;
+      } else if (value != null) {
+        tooltip = String(value);
+      } else {
+        tooltip = "Comment attached";
+      }
+    }
+    if (state.tooltip !== tooltip) {
+      if (tooltip) badge.title = tooltip;
+      else if (badge.hasAttribute("title")) badge.removeAttribute("title");
+      state.tooltip = tooltip;
     }
   }
 
