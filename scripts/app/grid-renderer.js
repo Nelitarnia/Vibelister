@@ -80,10 +80,11 @@ function createGridRenderer({
     return { plainText: String(value), segments: null };
   }
 
-  function ensureCellStructure(el) {
+  function ensureCellStructure(el, options = null) {
     if (!el) return { content: null, badge: null };
     let content = el._contentEl;
     let badge = el._commentBadge;
+    const needBadge = Boolean(options && options.withBadge);
     if (!content || !content.isConnected) {
       content = document.createElement("div");
       content.className = "cell__content";
@@ -91,7 +92,11 @@ function createGridRenderer({
       else el.insertBefore(content, el.firstChild);
       el._contentEl = content;
     }
-    if (!badge || !badge.isConnected) {
+    if (!badge || !badge.isConnected || badge.parentNode !== el) {
+      badge = null;
+      el._commentBadge = null;
+    }
+    if (needBadge && !badge) {
       badge = document.createElement("span");
       badge.className = "cell__comment-badge";
       badge.setAttribute("aria-hidden", "true");
@@ -99,7 +104,8 @@ function createGridRenderer({
       badge.dataset.status = "default";
       el.appendChild(badge);
       el._commentBadge = badge;
-    } else if (content && badge.previousSibling !== content && content.parentNode === el) {
+    }
+    if (content && badge && badge.previousSibling !== content && content.parentNode === el) {
       el.insertBefore(content, badge);
     }
     return { content, badge };
@@ -242,8 +248,25 @@ function createGridRenderer({
     state.colorId = colorId;
   }
 
+  function detachCommentBadge(cell) {
+    if (!cell) return;
+    const badge = cell._commentBadge;
+    if (!badge) return;
+    resetCommentBadge(badge);
+    if (badge.parentNode === cell) cell.removeChild(badge);
+    cell._commentBadge = null;
+  }
+
   function updateCommentBadge(cell, entries) {
-    const { badge } = ensureCellStructure(cell);
+    if (!cell) return;
+    const list = Array.isArray(entries) ? entries : [];
+    const hasComments = list.length > 0;
+    if (!hasComments) {
+      if (cell.dataset.comment !== "false") cell.dataset.comment = "false";
+      detachCommentBadge(cell);
+      return;
+    }
+    const { badge } = ensureCellStructure(cell, { withBadge: true });
     if (!badge) return;
     let state = badge._commentState;
     if (!state) {
@@ -256,8 +279,6 @@ function createGridRenderer({
       };
       badge._commentState = state;
     }
-    const list = Array.isArray(entries) ? entries : [];
-    const hasComments = list.length > 0;
     const nextVisible = hasComments;
     if (state.visible !== nextVisible) {
       badge.dataset.visible = nextVisible ? "true" : "false";
