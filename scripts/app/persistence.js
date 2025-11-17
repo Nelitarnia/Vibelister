@@ -128,6 +128,33 @@ export function createPersistenceController({
     ensureMinRows(model.outcomes, Math.max(DEFAULT_OUTCOMES.length + 10, 20));
   }
 
+  function rowHasModStateData(row) {
+    if (!row || typeof row.modSet !== "object" || !row.modSet) return false;
+    for (const key in row.modSet) {
+      if (Object.prototype.hasOwnProperty.call(row.modSet, key)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hasAuthoredContent(row) {
+    if (!row) return false;
+    if (typeof row.name === "string" && row.name.trim()) return true;
+    if (typeof row.color === "string" && row.color.trim()) return true;
+    if (typeof row.color2 === "string" && row.color2.trim()) return true;
+    if (typeof row.notes === "string" && row.notes.trim()) return true;
+    if (rowHasModStateData(row)) return true;
+    return false;
+  }
+
+  function trimTrailingEmptyRows(rows) {
+    if (!Array.isArray(rows) || !rows.length) return;
+    while (rows.length && !hasAuthoredContent(rows[rows.length - 1])) {
+      rows.pop();
+    }
+  }
+
   function countNamedRows(rows) {
     return (rows || []).filter((row) => row && (row.name || "").trim().length).length;
   }
@@ -305,6 +332,10 @@ export function createPersistenceController({
     try {
       const m = await getFsModule();
       const snapshot = snapshotModel(model, { includeDerived: false });
+      trimTrailingEmptyRows(snapshot.model.actions);
+      trimTrailingEmptyRows(snapshot.model.inputs);
+      trimTrailingEmptyRows(snapshot.model.modifiers);
+      trimTrailingEmptyRows(snapshot.model.outcomes);
       const { name } = await m.saveJson(snapshot.model, {
         as,
         suggestedName: getSuggestedName(),

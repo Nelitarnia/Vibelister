@@ -439,5 +439,121 @@ export function getPersistenceTests() {
         );
       },
     },
+    {
+      name: "saveToDisk trims placeholder rows and open repads",
+      async run(assert) {
+        const fixture = makeModelFixture();
+        const { model, addAction, addInput, addModifier, addOutcome } = fixture;
+        addAction("Hero");
+        addInput("Widget");
+        addModifier("Boost");
+        addOutcome("Victory");
+
+        let savedData = null;
+        const fakeModule = {
+          async openJson() {
+            if (!savedData) {
+              throw new Error("No saved data available");
+            }
+            return {
+              name: "trimmed.json",
+              data: JSON.parse(JSON.stringify(savedData)),
+            };
+          },
+          async saveJson(data) {
+            savedData = JSON.parse(JSON.stringify(data));
+            return { name: "trimmed.json" };
+          },
+        };
+
+        const controller = createPersistenceController({
+          model,
+          statusBar: null,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule: async () => fakeModule,
+        });
+
+        controller.ensureMinRows(model.actions, 5);
+        controller.ensureMinRows(model.inputs, 4);
+        controller.ensureMinRows(model.modifiers, 4);
+        controller.ensureMinRows(model.outcomes, 4);
+
+        await controller.saveToDisk();
+
+        assert.ok(savedData, "saveJson should capture trimmed snapshot");
+        assert.strictEqual(
+          savedData.actions.length,
+          1,
+          "only authored actions should persist",
+        );
+        assert.strictEqual(
+          savedData.inputs.length,
+          1,
+          "only authored inputs should persist",
+        );
+        assert.strictEqual(
+          savedData.modifiers.length,
+          1,
+          "only authored modifiers should persist",
+        );
+        assert.strictEqual(
+          savedData.outcomes.length,
+          1,
+          "only authored outcomes should persist",
+        );
+
+        await controller.openFromDisk();
+
+        assert.ok(
+          model.actions.length > savedData.actions.length,
+          "openFromDisk should repad actions for editing",
+        );
+        assert.ok(
+          model.inputs.length > savedData.inputs.length,
+          "openFromDisk should repad inputs for editing",
+        );
+        assert.ok(
+          model.modifiers.length > savedData.modifiers.length,
+          "openFromDisk should repad modifiers for editing",
+        );
+        assert.ok(
+          model.outcomes.length > savedData.outcomes.length,
+          "openFromDisk should repad outcomes for editing",
+        );
+
+        assert.ok(
+          model.actions
+            .slice(savedData.actions.length)
+            .some((row) => !row.name),
+          "reseeded action rows should remain blank placeholders",
+        );
+        assert.ok(
+          model.inputs
+            .slice(savedData.inputs.length)
+            .some((row) => !row.name),
+          "reseeded input rows should remain blank placeholders",
+        );
+        assert.ok(
+          model.modifiers
+            .slice(savedData.modifiers.length)
+            .some((row) => !row.name),
+          "reseeded modifier rows should remain blank placeholders",
+        );
+        assert.ok(
+          model.outcomes
+            .slice(savedData.outcomes.length)
+            .some((row) => !row.name),
+          "reseeded outcome rows should remain blank placeholders",
+        );
+      },
+    },
   ];
 }
