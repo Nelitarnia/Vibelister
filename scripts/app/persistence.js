@@ -19,6 +19,8 @@ import {
   createEmptyCommentMap,
   normalizeCommentsMap,
 } from "../data/comments.js";
+import { snapshotModel } from "../data/mutation-runner.js";
+import { buildInteractionsPairs } from "../data/variants/variants.js";
 
 export function createPersistenceController({
   model,
@@ -267,6 +269,7 @@ export function createPersistenceController({
       sel.c = 0;
     }
     ensureSeedRows();
+    buildInteractionsPairs(model);
     setActiveView("actions");
     updateProjectNameWidget();
     statusBar?.set("New project created (Actions view).");
@@ -282,6 +285,7 @@ export function createPersistenceController({
       Object.assign(model, data);
       clearHistory();
       ensureSeedRows();
+      buildInteractionsPairs(model);
       resetAllViewState();
       setActiveView("actions");
       setProjectNameFromFile(name);
@@ -300,7 +304,8 @@ export function createPersistenceController({
     closeMenus?.();
     try {
       const m = await getFsModule();
-      const { name } = await m.saveJson(model, {
+      const snapshot = snapshotModel(model, { includeDerived: false });
+      const { name } = await m.saveJson(snapshot.model, {
         as,
         suggestedName: getSuggestedName(),
       });

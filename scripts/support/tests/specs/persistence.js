@@ -192,7 +192,10 @@ export function getPersistenceTests() {
 
         assert.strictEqual(loadCount, 1, "fs module should be loaded once");
         assert.ok(saveArgs, "saveJson should be called");
-        assert.strictEqual(saveArgs.data, model, "saveJson should receive the model");
+        assert.ok(
+          saveArgs.data !== model,
+          "saveJson should receive a snapshot, not the live model",
+        );
         assert.deepStrictEqual(
           saveArgs.options,
           { as: true, suggestedName: "project.json" },
@@ -363,6 +366,77 @@ export function getPersistenceTests() {
         controller.newProject();
 
         assert.deepStrictEqual(model.comments, createEmptyCommentMap());
+      },
+    },
+    {
+      name: "saveToDisk omits derived interactions data",
+      async run(assert) {
+        const { model } = makeModelFixture();
+        model.notes = { global: "Keep me" };
+        model.interactionsPairs.push({ actionId: 1, inputId: 2, variants: [] });
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [{ actionId: 1, inputId: 2, variants: ["x"] }],
+          totalRows: 1,
+          actionsOrder: [1],
+          inputsOrder: [2],
+          variantCatalog: { v1: { key: "value" } },
+        };
+
+        let saveArgs = null;
+        const loadFsModule = async () => ({
+          openJson: async () => ({ data: {}, name: "" }),
+          async saveJson(data, options) {
+            saveArgs = { data, options };
+            return { name: "saved.json" };
+          },
+        });
+
+        const controller = createPersistenceController({
+          model,
+          statusBar: null,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule,
+        });
+
+        await controller.saveToDisk();
+
+        assert.ok(saveArgs, "saveJson should capture derived data snapshot");
+        assert.deepStrictEqual(
+          saveArgs.data.interactionsPairs,
+          [],
+          "persisted JSON should exclude interactionsPairs",
+        );
+        assert.deepStrictEqual(
+          saveArgs.data.interactionsIndex,
+          {
+            mode: "AI",
+            groups: [],
+            totalRows: 0,
+            actionsOrder: [],
+            inputsOrder: [],
+            variantCatalog: {},
+          },
+          "interactionsIndex should reset to an empty shell",
+        );
+        assert.deepStrictEqual(
+          saveArgs.data.notes,
+          { global: "Keep me" },
+          "user notes should remain in the persisted JSON",
+        );
+        assert.strictEqual(
+          model.interactionsIndex.variantCatalog.v1.key,
+          "value",
+          "live model should retain variantCatalog data",
+        );
       },
     },
   ];
