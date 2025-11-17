@@ -321,14 +321,37 @@ function collectOrphanEndVariants(ctx) {
 }
 
 function collectOrphanComments(ctx) {
-  const { model, validBases } = ctx;
+  const {
+    model,
+    validBases,
+    includeBypassed,
+    bypassLookup,
+    actionIdSet,
+    inputIdSet,
+  } = ctx;
   const targets = [];
   const store = model?.comments?.interactions;
   if (!store || typeof store !== "object") return { targets };
+  const skipBypass = !includeBypassed;
   for (const rowId of Object.keys(store)) {
-    if (!validBases.has(String(rowId))) {
-      targets.push(String(rowId));
+    const key = String(rowId);
+    const baseKey = baseKeyOf(key);
+    if (baseKey && validBases.has(baseKey)) {
+      continue;
     }
+    if (skipBypass) {
+      const parsed = parseNoteKey(baseKey);
+      if (
+        noteReferencesBypassedVariant(parsed, {
+          bypassLookup,
+          actionIdSet,
+          inputIdSet,
+        })
+      ) {
+        continue;
+      }
+    }
+    targets.push(key);
   }
   return { targets };
 }

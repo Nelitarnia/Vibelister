@@ -123,5 +123,43 @@ export function getCleanupTests() {
         assert.ok(!model.notes[baseKey], "note deleted after bypass cleanup");
       },
     },
+    {
+      name: "retains bypass-only interaction comments unless opted in",
+      run(assert) {
+        const { model, addAction, addInput, addModifier } = makeModelFixture();
+        const mod = addModifier("Bypass");
+        const action = addAction("Attack", { [mod.id]: MOD_STATE_ID.BYPASS });
+        const input = addInput("Button");
+        const rowId = `ai|${action.id}|${input.id}|${mod.id}`;
+        model.comments.interactions[rowId] = {
+          default: { value: "keep" },
+        };
+        const controller = createCleanupController({
+          model,
+          runModelMutation: (_label, fn) => fn(),
+          makeUndoConfig: () => ({}),
+        });
+        const defaultRun = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.orphanComments],
+          apply: true,
+        });
+        assert.strictEqual(
+          defaultRun.totalRemoved,
+          0,
+          "bypass comment row should be preserved by default",
+        );
+        assert.ok(
+          model.comments.interactions[rowId],
+          "comment remains when bypass cleanup is off",
+        );
+        const forcedRun = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.orphanComments],
+          apply: true,
+          includeBypassed: true,
+        });
+        assert.strictEqual(forcedRun.totalRemoved, 1, "comment removed when bypass included");
+        assert.ok(!model.comments.interactions[rowId], "comment deleted after opt-in run");
+      },
+    },
   ];
 }
