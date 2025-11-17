@@ -67,6 +67,7 @@ export const Ids = Object.freeze({
   toolsGenerate: "tools-generate",
   toolsTests: "tools-tests",
   toolsRules: "tools-rules",
+  toolsCleanup: "tools-cleanup",
   viewActions: "view-actions",
   viewInputs: "view-inputs",
   viewModifiers: "view-modifiers",

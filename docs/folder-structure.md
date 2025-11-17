@@ -15,6 +15,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── app/
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
+│   │   ├── cleanup-controller.js
 │   │   ├── column-widths.js
 │   │   ├── comment-events.js
 │   │   ├── comments.js
@@ -52,6 +53,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   └── tests/
 │   │       ├── specs/
 │   │       │   ├── assertions.js
+│   │       │   ├── cleanup.js
 │   │       │   ├── clipboard.js
 │   │       │   ├── column-resize.js
 │   │       │   ├── column-kinds.js
@@ -82,6 +84,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │       ├── menus.js
 │       ├── palette.js
 │       ├── project-info.js
+│       ├── cleanup-dialog.js
 │       ├── rules.js
 │       ├── settings.js
 │       └── status.js
@@ -125,6 +128,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
 - `comments.js` exposes undo-friendly helpers for reading and mutating the normalized comment store so the rest of the app can work with stable row IDs and column keys.
 - `comment-events.js` centralizes the DOM event dispatch for comment mutations so grid commands and other controllers can signal UI refreshes without duplicating `CustomEvent` wiring.
+- `cleanup-controller.js` rebuilds variant catalogs, analyzes orphaned notes/comments, and coordinates the cleanup dialog so destructive operations participate in the shared undo history.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `interaction-tags.js` provides undo-friendly helpers for renaming and deleting interaction tags across the notes map so UI controllers can reuse consistent mutation wiring.
 - `tag-events.js` centralizes the DOM event dispatch for interaction tag mutations so sidebar controllers can refresh in response to grid or bulk edits without duplicating `CustomEvent` wiring.
@@ -160,12 +164,14 @@ This document outlines a maintainable directory layout tailored to the current c
 - `tags.js` drives the interaction tag sidebar UI, coordinating host toggles, list rendering, and bulk rename/delete actions through the shared tag manager.
 - `settings.js` renders the modal for customizing palette colors and keeps the dialog in sync with the sanitized `user-settings` payloads.
 - `project-info.js` renders the project notes dialog, providing a textarea host and dispatching change events so controllers can persist updates without duplicating DOM wiring.
+- `cleanup-dialog.js` displays the cleanup overlay, tracks per-action selections, and surfaces analyze/apply results provided by the controller.
 
 #### `scripts/support/`
 
 - Offer a home for cross-cutting helpers that are not part of the runtime app bundle, such as lightweight test harnesses.
 - The `tests/` subtree now keeps reusable spec modules (`specs/`) separate from browser runners (`tests.js`, `tests-ui.js`), ensuring Node and in-app harnesses share the same assertions and fixtures.
 - `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
+- `specs/cleanup.js` seeds fixture models with stale notes/comments and verifies the cleanup controller only prunes unreachable entries.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.
 
 ### `tests/`

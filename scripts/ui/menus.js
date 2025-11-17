@@ -13,6 +13,7 @@ export function initMenus(deps) {
     model, // for Rules dialog
     openSettings,
     openProjectInfo,
+    openCleanup,
     addRowsAbove,
     addRowsBelow,
     clearCells,
@@ -198,6 +199,12 @@ export function initMenus(deps) {
   el(Ids.toolsGenerate)?.addEventListener("click", () => {
     closeAllMenus();
     doGenerate();
+  });
+  el(Ids.toolsCleanup)?.addEventListener("click", async () => {
+    closeAllMenus();
+    if (typeof openCleanup === "function") {
+      await openCleanup();
+    }
   });
   el(Ids.toolsTests)?.addEventListener("click", () => {
     closeAllMenus();

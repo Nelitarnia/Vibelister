@@ -97,6 +97,7 @@ import { createDiagnosticsController } from "./diagnostics.js";
 import { createInteractionTagManager } from "./interaction-tags.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { createProjectInfoController } from "./project-info-controller.js";
+import { createCleanupController } from "./cleanup-controller.js";
 
 function initA11y() {
   statusBar?.ensureLiveRegion();
@@ -330,6 +331,13 @@ const {
 });
 
 const { openProjectInfoDialog: openProjectInfo } = createProjectInfoController({
+  model,
+  runModelMutation,
+  makeUndoConfig,
+  statusBar,
+});
+
+const { openCleanupDialog } = createCleanupController({
   model,
   runModelMutation,
   makeUndoConfig,
@@ -1082,6 +1090,7 @@ menusAPI = initMenus({
   model,
   openSettings: openSettingsDialog,
   openProjectInfo,
+  openCleanup: openCleanupDialog,
   addRowsAbove,
   addRowsBelow,
   clearCells: () => clearSelectedCells({}),

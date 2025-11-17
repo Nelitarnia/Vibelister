@@ -3,6 +3,7 @@ import { getModelVariantTests } from "./specs/model-variants.js";
 import { getInteractionsTests } from "./specs/interactions.js";
 import { getPersistenceTests } from "./specs/persistence.js";
 import { getSelectionTests } from "./specs/selection.js";
+import { getCleanupTests } from "./specs/cleanup.js";
 
 export function runSelfTests() {
   const log = (...args) => console.log("[tests]", ...args);
@@ -13,6 +14,7 @@ export function runSelfTests() {
     { name: "Interactions", tests: getInteractionsTests() },
     { name: "Persistence", tests: getPersistenceTests() },
     { name: "Selection", tests: getSelectionTests() },
+    { name: "Cleanup", tests: getCleanupTests() },
   ];
 
   for (const suite of suites) {

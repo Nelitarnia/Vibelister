@@ -17,6 +17,7 @@ import { getGridKeysTests } from "../scripts/support/tests/specs/grid-keys.js";
 import { getColumnKindTests } from "../scripts/support/tests/specs/column-kinds.js";
 import { getCommentTests } from "../scripts/support/tests/specs/comments.js";
 import { getClipboardTests } from "../scripts/support/tests/specs/clipboard.js";
+import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -82,4 +83,8 @@ for (const spec of getUndoTests()) {
 
 for (const spec of getClipboardTests()) {
   test(`Clipboard › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getCleanupTests()) {
+  test(`Cleanup › ${spec.name}`, () => spec.run(sharedAssert));
 }
