@@ -2,6 +2,7 @@
 // Provides analysis + mutation helpers for removing unreachable notes/comments.
 
 import { buildInteractionsPairs, canonicalSig } from "../data/variants/variants.js";
+import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
   getInteractionsPair,
   getInteractionsRowCount,
@@ -104,9 +105,10 @@ function parseNoteKey(baseKey) {
   const prefix = parts[0].toLowerCase();
   if (prefix === "ai" && parts.length >= 4) {
     const actionId = Number(parts[1]);
+    const inputId = Number(parts[2]);
     const variantSig = canonicalSig(parts[3] || "");
     if (!Number.isFinite(actionId)) return null;
-    return { kind: "AI", actionId, variantSig, baseKey };
+    return { kind: "AI", actionId, inputId, variantSig, baseKey };
   }
   if (prefix === "aa" && parts.length >= 5) {
     const lhsId = Number(parts[1]);
@@ -123,33 +125,162 @@ function parseNoteKey(baseKey) {
   }
   if (Number.isFinite(Number(prefix)) && parts.length === 3) {
     const actionId = Number(parts[0]);
+    const inputId = Number(parts[1]);
     if (!Number.isFinite(actionId)) return null;
-    return { kind: "LEGACY_AI", actionId, variantSig: canonicalSig(parts[2] || ""), baseKey };
+    return {
+      kind: "LEGACY_AI",
+      actionId,
+      inputId,
+      variantSig: canonicalSig(parts[2] || ""),
+      baseKey,
+    };
   }
   return null;
 }
 
+function parseSigParts(sig) {
+  if (!sig) return [];
+  return canonicalSig(sig)
+    .split("+")
+    .filter(Boolean)
+    .map(Number)
+    .filter(Number.isFinite);
+}
+
+function buildBypassLookup(model) {
+  const lookup = new Map();
+  const actions = Array.isArray(model?.actions) ? model.actions : [];
+  for (const action of actions) {
+    if (!action || !Number.isFinite(action.id)) continue;
+    const set = action.modSet;
+    if (!set || typeof set !== "object") continue;
+    const bypassIds = [];
+    for (const [key, value] of Object.entries(set)) {
+      if (Number(value) === MOD_STATE_ID.BYPASS) {
+        const modId = Number(key);
+        if (Number.isFinite(modId)) bypassIds.push(modId);
+      }
+    }
+    if (bypassIds.length) {
+      lookup.set(String(action.id), new Set(bypassIds));
+    }
+  }
+  return lookup;
+}
+
+function buildIdSet(rows) {
+  const set = new Set();
+  if (!Array.isArray(rows)) return set;
+  for (const row of rows) {
+    const id = Number(row?.id);
+    if (Number.isFinite(id)) {
+      set.add(String(id));
+    }
+  }
+  return set;
+}
+
+function isBypassedVariantSig(lookup, actionId, sig) {
+  if (!Number.isFinite(actionId)) return false;
+  const set = lookup.get(String(actionId));
+  if (!set || !set.size) return false;
+  const parts = parseSigParts(sig);
+  if (!parts.length) return false;
+  for (const part of parts) {
+    if (!set.has(part)) return false;
+  }
+  return true;
+}
+
+function noteReferencesBypassedVariant(parsed, ctx) {
+  if (!parsed) return false;
+  const { bypassLookup, actionIdSet, inputIdSet } = ctx;
+  if (!actionIdSet?.has(String(parsed.actionId))) return false;
+  if (parsed.kind === "AI") {
+    if (!Number.isFinite(parsed.inputId) || !inputIdSet?.has(String(parsed.inputId))) {
+      return false;
+    }
+    return isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
+  }
+  if (parsed.kind === "LEGACY_AI") {
+    if (Number.isFinite(parsed.inputId) && !inputIdSet?.has(String(parsed.inputId))) {
+      return false;
+    }
+    return isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
+  }
+  if (parsed.kind === "AA") {
+    const lhs = isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
+    const rhsExists = Number.isFinite(parsed.rhsActionId)
+      ? actionIdSet?.has(String(parsed.rhsActionId))
+      : false;
+    const rhs = rhsExists
+      ? isBypassedVariantSig(bypassLookup, parsed.rhsActionId, parsed.rhsVariantSig)
+      : false;
+    return lhs || rhs;
+  }
+  return false;
+}
+
+function noteHasBypassedMismatch(parsed, validity, bypassLookup) {
+  if (!parsed) return false;
+  if (parsed.kind === "AI" || parsed.kind === "LEGACY_AI") {
+    return (
+      !validity.left && isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig)
+    );
+  }
+  if (parsed.kind === "AA") {
+    const leftBypassed =
+      !validity.left && isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
+    const rightBypassed =
+      !validity.right &&
+      isBypassedVariantSig(bypassLookup, parsed.rhsActionId, parsed.rhsVariantSig);
+    return leftBypassed || rightBypassed;
+  }
+  return false;
+}
+
 function collectOrphanNotes(ctx) {
-  const { noteEntries, validBases, variantCatalog, invalidNoteKeys } = ctx;
+  const {
+    noteEntries,
+    validBases,
+    variantCatalog,
+    invalidNoteKeys,
+    includeBypassed,
+    bypassLookup,
+    actionIdSet,
+    inputIdSet,
+  } = ctx;
+  const skipBypass = !includeBypassed;
   const targets = [];
   for (const [key] of noteEntries) {
     const baseKey = baseKeyOf(key);
+    const parsed = parseNoteKey(baseKey);
     if (!baseKey || !validBases.has(baseKey)) {
+      if (
+        skipBypass &&
+        noteReferencesBypassedVariant(parsed, { bypassLookup, actionIdSet, inputIdSet })
+      ) {
+        continue;
+      }
       targets.push(key);
       invalidNoteKeys?.add(key);
       continue;
     }
-    const parsed = parseNoteKey(baseKey);
     if (!parsed) continue;
     let isValid = true;
+    let validity = { left: true, right: true };
     if (parsed.kind === "AI" || parsed.kind === "LEGACY_AI") {
-      isValid = hasVariant(variantCatalog, parsed.actionId, parsed.variantSig);
+      validity.left = hasVariant(variantCatalog, parsed.actionId, parsed.variantSig);
+      isValid = validity.left;
     } else if (parsed.kind === "AA") {
-      isValid =
-        hasVariant(variantCatalog, parsed.actionId, parsed.variantSig) &&
-        hasVariant(variantCatalog, parsed.rhsActionId, parsed.rhsVariantSig);
+      validity.left = hasVariant(variantCatalog, parsed.actionId, parsed.variantSig);
+      validity.right = hasVariant(variantCatalog, parsed.rhsActionId, parsed.rhsVariantSig);
+      isValid = validity.left && validity.right;
     }
     if (!isValid) {
+      if (skipBypass && noteHasBypassedMismatch(parsed, validity, bypassLookup)) {
+        continue;
+      }
       targets.push(key);
       invalidNoteKeys?.add(key);
     }
@@ -158,15 +289,31 @@ function collectOrphanNotes(ctx) {
 }
 
 function collectOrphanEndVariants(ctx) {
-  const { noteEntries, variantCatalog, invalidNoteKeys } = ctx;
+  const {
+    noteEntries,
+    variantCatalog,
+    invalidNoteKeys,
+    includeBypassed,
+    bypassLookup,
+    actionIdSet,
+  } = ctx;
   const targets = [];
+  const skipBypass = !includeBypassed;
   for (const [key, note] of noteEntries) {
     if (invalidNoteKeys?.has(key)) continue;
     if (!note || typeof note !== "object") continue;
     const actionId = Number(note.endActionId);
     if (!Number.isFinite(actionId)) continue;
+    if (!actionIdSet?.has(String(actionId))) {
+      targets.push(key);
+      invalidNoteKeys?.add(key);
+      continue;
+    }
     const sig = canonicalSig(note.endVariantSig || "");
     if (hasVariant(variantCatalog, actionId, sig)) continue;
+    if (skipBypass && isBypassedVariantSig(bypassLookup, actionId, sig)) {
+      continue;
+    }
     targets.push(key);
     invalidNoteKeys?.add(key);
   }
@@ -284,19 +431,26 @@ function formatRunResult(analysis, applyResult, { apply } = {}) {
   };
 }
 
-function collectTargets(model, selectedActions) {
+function collectTargets(model, selectedActions, options = {}) {
   if (!selectedActions.length) return { actions: [], totalCandidates: 0 };
   buildInteractionsPairs(model);
   const variantCatalog = buildVariantCatalogMap(model);
   const validBases = collectValidBaseKeys(model);
   const notes = model?.notes && typeof model.notes === "object" ? model.notes : {};
   const noteEntries = Object.entries(notes);
+  const bypassLookup = buildBypassLookup(model);
+  const actionIdSet = buildIdSet(model?.actions);
+  const inputIdSet = buildIdSet(model?.inputs);
   const ctx = {
     model,
     variantCatalog,
     validBases,
     noteEntries,
     invalidNoteKeys: new Set(),
+    includeBypassed: !!options.includeBypassed,
+    bypassLookup,
+    actionIdSet,
+    inputIdSet,
   };
   const actions = [];
   let totalCandidates = 0;
@@ -326,7 +480,7 @@ export function createCleanupController(options = {}) {
     }));
   }
 
-  function runCleanup({ actionIds = [], apply = false } = {}) {
+  function runCleanup({ actionIds = [], apply = false, includeBypassed = false } = {}) {
     const ids = Array.isArray(actionIds)
       ? new Set(actionIds.filter((id) => typeof id === "string"))
       : new Set();
@@ -334,7 +488,7 @@ export function createCleanupController(options = {}) {
     if (!selectedActions.length) {
       return formatRunResult({ actions: [], totalCandidates: 0 }, null, { apply });
     }
-    const analysis = collectTargets(model, selectedActions);
+    const analysis = collectTargets(model, selectedActions, { includeBypassed });
     if (!apply) {
       return formatRunResult(analysis, null, { apply: false });
     }

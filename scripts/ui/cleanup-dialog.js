@@ -124,6 +124,17 @@ export async function openCleanupDialog(options = {}) {
       actionState.set(action.id, { checkbox, status });
     });
 
+    const bypassRow = document.createElement("label");
+    bypassRow.style.cssText =
+      "display:flex;align-items:center;gap:10px;font-size:13px;color:#d3dcff;";
+    const bypassCheckbox = document.createElement("input");
+    bypassCheckbox.type = "checkbox";
+    bypassCheckbox.id = "cleanup-include-bypassed";
+    const bypassText = document.createElement("span");
+    bypassText.textContent = "Also clean up bypassed actions";
+    bypassText.style.cssText = "user-select:none;";
+    bypassRow.append(bypassCheckbox, bypassText);
+
     const summary = document.createElement("div");
     summary.style.cssText = "font-size:13px;color:#c5d1ff;min-height:18px;";
 
@@ -147,12 +158,17 @@ export async function openCleanupDialog(options = {}) {
 
     footer.append(cancelButton, analyzeButton, applyButton);
 
-    box.append(title, description, list, summary, footer);
+    box.append(title, description, list, bypassRow, summary, footer);
     document.body.appendChild(overlay);
 
     const cleanupTrap = trapFocus(overlay, box, close);
     let running = false;
     let lastResult = null;
+    let includeBypassed = false;
+
+    bypassCheckbox.addEventListener("change", () => {
+      includeBypassed = !!bypassCheckbox.checked;
+    });
 
     function getSelectedIds() {
       const ids = [];
@@ -195,7 +211,9 @@ export async function openCleanupDialog(options = {}) {
       summary.textContent = apply ? "Applying cleanup…" : "Analyzing cleanup…";
       try {
         const handler = typeof onRun === "function" ? onRun : null;
-        const result = handler ? await handler({ actionIds: ids, apply }) : null;
+        const result = handler
+          ? await handler({ actionIds: ids, apply, includeBypassed })
+          : null;
         lastResult = result;
         if (result && typeof result === "object") {
           summary.textContent = result.message || "Cleanup complete.";
