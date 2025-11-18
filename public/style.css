@@ -1097,6 +1097,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0 0 0 6px;
+  padding-inline-end: 4px;
   font:
     12px/1 system-ui,
     sans-serif;
@@ -1109,7 +1110,9 @@ body {
 .hdr__label {
   flex: 1 1 auto;
   text-align: center;
-  padding: 0 8px 0 4px;
+  padding: 0;
+  padding-inline-start: 4px;
+  padding-inline-end: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1117,12 +1120,13 @@ body {
 }
 
 .hdr__resize-handle {
-  flex: 0 0 12px;
-  align-self: stretch;
-  margin-left: auto;
-  margin-right: -4px;
+  position: absolute;
+  inset-inline-end: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
   cursor: col-resize;
-  position: relative;
+  pointer-events: auto;
   touch-action: none;
   transition: background 120ms ease;
 }
