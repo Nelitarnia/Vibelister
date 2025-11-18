@@ -81,16 +81,12 @@ Outcomes view contains formal results of your observation. The default Outcomes 
 
 - "Uncertain" is used when the result appears random or inconsistent.
 - "Impossible" is for cases where the interaction cannot be tested or the input cannot be performed.
-- "Reserved" denotes that the input is already reserved by the current state.
+- "Reserved" denotes that the input is already reserved by the current state. For example, trying to test the Input for running when you're already holding down L-stick to run.
 - "No Effect" means that nothing observably changed as a result of the input.
 - "Buffers" indicates that the input is stored to trigger later if conditions allow.
 - "Follows" means that a follow-up action is scheduled to occur automatically.
 - "Overrides" indicates that the current state ends and a new one begins immediately.
-- "Changes" captures transformations of the current state without a sharp break.
-
-When a project is first created, the Mirrored column is pre-enabled for "Uncertain", "Impossible", "No effect", "Overrides" and
-"Changes". Dual Of defaults are also pre-filled so "Uncertain", "Impossible" and "Changes" reference themselves, while "No
-effect" and "Overrides" point to each other.
+- "Changes" can be used for less discrete transformations of the current state. Basically, any change between "Overrides" and "No Effect" can use this Outcome.
 
 You can also create some own Outcomes, if needed.
 
@@ -98,7 +94,9 @@ You can also create some own Outcomes, if needed.
 
 These two columns are used in a specialized feature regarding Phase 0.
 
-While testing Actions vs Actions, you can choose to mirror the Phase 0 notes to both actions at once. You first have to set up the mirroring in the Outcomes-view by enabling the row from the "Mirrored" column, then choosing which Outcome you want to get added to the second Action. For instance, "Impossible", "Uncertain" and "Mutual" will be the same no matter which of the two animations you test. One could argue "No Effect" and "Cancels" also mirror each other. It's just something to save time if you choose to use this state.
+While testing Actions vs Actions, you can choose to mirror the Phase 0 notes to both actions at once. You first have to set up the mirroring in the Outcomes-view by enabling the row from the "Mirrored" column, then choosing which Outcome you want to get added to the second Action. For instance, "Impossible", "Uncertain" and "Mutual" will be the same no matter which of the two animations you test. One could argue "No Effect" and "Cancels" also mirror each other. It's just something to save time if you choose to use this mode.
+
+The recommended default settings for this feature are included when starting a new project: the Mirrored column is pre-enabled for "Uncertain", "Impossible", "No effect", "Overrides" and "Changes". Dual Of defaults are also pre-filled so "Uncertain", "Impossible" and "Changes" reference themselves, while "No effect" and "Overrides" point to each other.
 
 ## Other features
 
@@ -114,20 +112,17 @@ It's possible to save / load project files in .json-format. Note: on Firefox and
 
 You can write general project notes in File -> Project Info.
 
+You can clean up your project file using a dialog in Tools -> Clean Up...
+
 ---
 
 # To do
-
-## Known bugs
-
-- Drop-down palettes at the bottom of the screen in Interactions-view go partially out of screen.
 
 ## Ideas for later
 
 - Freezing certain columns so that they always stay visible (like in Libreoffice Calc, etc.)
 - Ability to create rectangular selections by dragging.
 - Creating Action/Input groups to filter visibility in large sheets like Interactions.
-- Being able to clean up your project file after larger refactoring.
 - Option to show the canonical IDs of data elements for debugging purposes.
 - Giving custom Phase rules to modified Actions.
 - Ability to jump between elements with a stable ID as if they were links for faster navigation.
