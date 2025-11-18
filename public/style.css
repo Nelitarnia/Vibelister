@@ -1136,9 +1136,8 @@ body {
   position: absolute;
   top: 6px;
   bottom: 6px;
-  left: 50%;
+  inset-inline-end: 0;
   width: 1px;
-  transform: translateX(-50%);
   background: rgba(170, 179, 197, 0.45);
   transition: background 120ms ease, opacity 120ms ease;
   opacity: 0.6;
