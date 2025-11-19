@@ -770,7 +770,7 @@ body {
 
 .comment-customize__fields {
   display: grid;
-  grid-template-columns: 1fr minmax(120px, 160px);
+  grid-template-columns: minmax(180px, 1fr) minmax(68px, 92px);
   gap: 8px;
   align-items: center;
 }

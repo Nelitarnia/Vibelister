@@ -470,7 +470,11 @@ export function initCommentsUI(options = {}) {
     if (!el || !entry) return;
     el.style.background = entry.swatch || entry.badgeBackground || "";
     el.style.borderColor = entry.badgeBorder || entry.swatch || "";
-    el.title = `${entry.label || entry.id} color`;
+    const label =
+      entry && typeof entry.label === "string" && entry.label.trim()
+        ? entry.label.trim()
+        : entry.id;
+    el.title = `${label || entry.id} color`;
   }
 
   function setPaletteDraft(nextPalette) {
@@ -510,12 +514,10 @@ export function initCommentsUI(options = {}) {
       const labelInput = document.createElement("input");
       labelInput.className = "comment-customize__input";
       labelInput.type = "text";
-      labelInput.value = entry.label || entry.id;
+      labelInput.value = entry.label ?? entry.id;
       labelInput.placeholder = entry.id;
       labelInput.addEventListener("input", () => {
-        const nextLabel = labelInput.value.trim();
-        entry.label = nextLabel || entry.id;
-        labelInput.value = entry.label;
+        entry.label = labelInput.value;
         updatePaletteButtons();
         updatePaletteSwatch(swatch, entry);
       });
@@ -587,7 +589,7 @@ export function initCommentsUI(options = {}) {
   function applyPaletteDraft() {
     const nextPalette = paletteDraft.map((entry) => ({
       id: entry.id,
-      label: entry.label || entry.id,
+      label: typeof entry.label === "string" ? entry.label.trim() : "",
       swatch: normalizeHexColor(entry.swatch),
       badgeBackground: entry.badgeBackground,
       badgeBorder: entry.badgeBorder,
