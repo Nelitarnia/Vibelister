@@ -5,7 +5,10 @@ import {
   makeCommentRowKey,
   normalizeCommentsMap,
 } from "../../../data/comments.js";
-import { COMMENT_COLOR_PRESETS } from "../../../data/comment-colors.js";
+import {
+  COMMENT_COLOR_PRESETS,
+  normalizeCommentColorPalette,
+} from "../../../data/comment-colors.js";
 import {
   deleteComment,
   listCommentsForCell,
@@ -15,6 +18,7 @@ import {
   setCommentInactive,
 } from "../../../app/comments.js";
 import { createGridCommands } from "../../../app/grid-commands.js";
+import { createGridRenderer } from "../../../app/grid-renderer.js";
 
 const SAMPLE_COLOR = COMMENT_COLOR_PRESETS[0]?.id || "crimson";
 const SECONDARY_COLOR = COMMENT_COLOR_PRESETS[1]?.id || SAMPLE_COLOR;
@@ -362,6 +366,212 @@ export function getCommentTests() {
           model.comments.interactions["ai|2|10|sig"],
           "non-matching row retained",
         );
+      },
+    },
+    {
+      name: "grid renderer uses active comment palette for badges",
+      run(assert) {
+        class GridStubElement {
+          constructor(tag, isFragment = false) {
+            this.tag = tag;
+            this.isFragment = isFragment;
+            this.children = [];
+            this.parentNode = null;
+            this.parentElement = null;
+            this.dataset = {};
+            this.style = {};
+            this.className = "";
+            this._textContent = "";
+            this._isConnected = true;
+            this._classSet = new Set();
+            this.attributes = {};
+            this._offsetWidth = 0;
+          }
+
+          appendChild(child) {
+            if (!child) return child;
+            if (child.isFragment) {
+              child.children.forEach((node) => this.appendChild(node));
+              return child;
+            }
+            this.children.push(child);
+            child.parentNode = this;
+            child.parentElement = this;
+            child._isConnected = true;
+            return child;
+          }
+
+          insertBefore(child, reference) {
+            if (!child) return child;
+            const idx = reference ? this.children.indexOf(reference) : -1;
+            if (idx >= 0) this.children.splice(idx, 0, child);
+            else this.children.push(child);
+            child.parentNode = this;
+            child.parentElement = this;
+            child._isConnected = true;
+            return child;
+          }
+
+          removeChild(child) {
+            const idx = this.children.indexOf(child);
+            if (idx >= 0) this.children.splice(idx, 1);
+            child.parentNode = null;
+            child.parentElement = null;
+            child._isConnected = false;
+            return child;
+          }
+
+          set textContent(value) {
+            this.children = [];
+            this._textContent = value == null ? "" : String(value);
+          }
+
+          get textContent() {
+            return this._textContent;
+          }
+
+          setAttribute(name, value) {
+            this.attributes[name] = String(value);
+          }
+
+          removeAttribute(name) {
+            delete this.attributes[name];
+          }
+
+          get firstChild() {
+            return this.children[0] || null;
+          }
+
+          get previousSibling() {
+            if (!this.parentNode) return null;
+            const idx = this.parentNode.children.indexOf(this);
+            return idx > 0 ? this.parentNode.children[idx - 1] : null;
+          }
+
+          get classList() {
+            return {
+              add: (...tokens) => tokens.forEach((t) => this._classSet.add(t)),
+              remove: (...tokens) => tokens.forEach((t) => this._classSet.delete(t)),
+              contains: (token) => this._classSet.has(token),
+            };
+          }
+
+          get offsetWidth() {
+            return this._offsetWidth;
+          }
+
+          set offsetWidth(value) {
+            this._offsetWidth = Number.isFinite(value) ? value : 0;
+          }
+
+          get isConnected() {
+            return this._isConnected;
+          }
+        }
+
+        const previousDocument = globalThis.document;
+        const previousWindow = globalThis.window;
+        const documentStub = {
+          createElement: (tag) => new GridStubElement(tag),
+          createDocumentFragment: () => new GridStubElement("#fragment", true),
+        };
+
+        globalThis.document = documentStub;
+        globalThis.window = { __cellPool: [] };
+
+        try {
+          const sheet = new GridStubElement("div");
+          sheet.clientWidth = 240;
+          sheet.clientHeight = 160;
+          sheet.scrollLeft = 0;
+          sheet.scrollTop = 0;
+          sheet.scrollWidth = 240;
+          sheet.scrollHeight = 160;
+
+          const cellsLayer = new GridStubElement("div");
+          const spacer = new GridStubElement("div");
+          const colHdrs = new GridStubElement("div");
+          const rowHdrs = new GridStubElement("div");
+
+          const ROW_HEIGHT = 26;
+          const selection = { rows: new Set(), cols: new Set(), colsAll: false };
+          const SelectionNS = { isAllCols: () => false };
+          const sel = { r: 0, c: 0 };
+
+          const palette = normalizeCommentColorPalette([
+            {
+              id: "sunset",
+              badgeBackground: "rgb(10, 20, 30)",
+              badgeBorder: "rgb(40, 50, 60)",
+              badgeText: "rgb(70, 80, 90)",
+            },
+          ]);
+
+          const model = {
+            meta: { commentColors: palette },
+            comments: createEmptyCommentMap(["actions"]),
+            actions: [{ id: 1, name: "Row" }],
+            inputs: [],
+            modifiers: [],
+            outcomes: [],
+          };
+
+          model.comments.actions["1"] = { name: { text: "hi", color: "sunset" } };
+
+          const viewDef = () => ({
+            key: "actions",
+            columns: [{ key: "name", title: "Name", width: 120 }],
+          });
+
+          const renderer = createGridRenderer({
+            sheet,
+            cellsLayer,
+            spacer,
+            colHdrs,
+            rowHdrs,
+            selection,
+            SelectionNS,
+            sel,
+            getActiveView: () => "actions",
+            viewDef,
+            dataArray: () => model.actions,
+            getRowCount: () => model.actions.length,
+            getCell: (r, c) => {
+              const col = viewDef().columns[c];
+              const row = model.actions[r];
+              return row && col ? row[col.key] : undefined;
+            },
+            isRowSelected: () => false,
+            model,
+            rebuildInteractionPhaseColumns: () => {},
+            noteKeyForPair: () => null,
+            parsePhaseKey: () => null,
+            ROW_HEIGHT,
+            updateSelectionSnapshot: () => {},
+            isModColumn: () => false,
+            modIdFromKey: () => null,
+            getInteractionsPair: () => null,
+            getCommentColors: () => model.meta.commentColors,
+          });
+
+          renderer.layout();
+          renderer.render();
+
+          const cell = cellsLayer.children[0];
+          const badge = cell?._commentBadge;
+
+          assert.ok(badge, "badge should be created for commented cell");
+          assert.strictEqual(badge.dataset.color, "sunset");
+          assert.strictEqual(badge.style.background, "rgb(10, 20, 30)");
+          assert.strictEqual(badge.style.borderColor, "rgb(40, 50, 60)");
+          assert.strictEqual(badge.style.color, "rgb(70, 80, 90)");
+        } finally {
+          if (previousDocument === undefined) delete globalThis.document;
+          else globalThis.document = previousDocument;
+
+          if (previousWindow === undefined) delete globalThis.window;
+          else globalThis.window = previousWindow;
+        }
       },
     },
   ];

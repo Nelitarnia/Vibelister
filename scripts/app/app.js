@@ -241,6 +241,7 @@ const {
   isModColumn,
   modIdFromKey,
   getInteractionsPair,
+  getCommentColors: () => model.meta.commentColors,
 });
 
 onSelectionChanged(() => render());
