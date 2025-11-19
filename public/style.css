@@ -519,6 +519,43 @@ body {
   margin: 10px 0 16px;
 }
 
+.comment-sidebar__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.comment-sidebar__tab {
+  flex: 1 1 0;
+  appearance: none;
+  border: 1px solid #2a3244;
+  background: #10192c;
+  color: #e4ecff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.comment-sidebar__tab:hover,
+.comment-sidebar__tab:focus-visible {
+  background: #18243b;
+  border-color: #3e4d6e;
+  color: #ffffff;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.comment-sidebar__tab[aria-selected="true"] {
+  background: #1d2941;
+  border-color: #42568a;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(129, 161, 255, 0.4);
+}
+
 .comment-sidebar__nav-button {
   appearance: none;
   border: 1px solid #2a3244;
@@ -564,6 +601,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.comment-sidebar__page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.comment-sidebar__page[hidden] {
+  display: none !important;
 }
 
 .comment-sidebar__label {
@@ -682,6 +729,173 @@ body {
   gap: 10px;
   overflow-y: auto;
   padding-right: 2px;
+}
+
+.comment-customize {
+  gap: 12px;
+}
+
+.comment-customize__intro {
+  font-size: 12px;
+  color: #cfd6ea;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.comment-customize__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comment-customize__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #2a3244;
+  background: #101726;
+}
+
+.comment-customize__swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid #2f3a53;
+  background: #2a3244;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.comment-customize__fields {
+  display: grid;
+  grid-template-columns: 1fr minmax(120px, 160px);
+  gap: 8px;
+  align-items: center;
+}
+
+.comment-customize__label,
+.comment-customize__color-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comment-customize__field-title {
+  font-size: 11px;
+  color: #8e96b3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.comment-customize__input,
+.comment-customize__color-input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #2a3244;
+  background: #0f1424;
+  color: #e6ecff;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.comment-customize__color-input {
+  height: 36px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.comment-customize__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comment-customize__move {
+  appearance: none;
+  border: 1px solid #2a3244;
+  background: #0f1424;
+  color: #e4ecff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.comment-customize__move:hover,
+.comment-customize__move:focus-visible {
+  background: #18243b;
+  border-color: #3e4d6e;
+  color: #ffffff;
+  outline: none;
+}
+
+.comment-customize__move:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.comment-customize__footer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.comment-customize__hint {
+  font-size: 11px;
+  color: #9fa8c4;
+}
+
+.comment-customize__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.comment-customize__reset,
+.comment-customize__apply {
+  appearance: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.comment-customize__reset {
+  background: #1b2130;
+  border-color: #32384a;
+  color: #dde4ff;
+}
+
+.comment-customize__reset:hover,
+.comment-customize__reset:focus-visible {
+  background: #222a3d;
+  border-color: #3b4764;
+  color: #fff;
+  outline: none;
+}
+
+.comment-customize__apply {
+  background: var(--vl-color-accent);
+  border-color: var(--vl-color-accent);
+  color: #fff;
+}
+
+.comment-customize__apply:hover,
+.comment-customize__apply:focus-visible {
+  background: #324171;
+  border-color: #324171;
+  outline: none;
+}
+
+.comment-customize__apply:disabled,
+.comment-customize__reset:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .tag-sidebar__placeholder {
