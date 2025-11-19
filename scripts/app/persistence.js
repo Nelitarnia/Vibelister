@@ -19,6 +19,7 @@ import {
   createEmptyCommentMap,
   normalizeCommentsMap,
 } from "../data/comments.js";
+import { normalizeCommentColorPalette } from "../data/comment-colors.js";
 import { snapshotModel } from "../data/mutation-runner.js";
 import { buildInteractionsPairs } from "../data/variants/variants.js";
 
@@ -211,6 +212,7 @@ export function createPersistenceController({
       if (colors) normalized.colorIds = colors;
       o.meta.commentFilter = normalized;
     }
+    o.meta.commentColors = normalizeCommentColorPalette(o.meta.commentColors);
     if (!Array.isArray(o.actions)) o.actions = [];
     if (!Array.isArray(o.inputs)) o.inputs = [];
     if (!Array.isArray(o.modifiers)) o.modifiers = [];
@@ -276,6 +278,7 @@ export function createPersistenceController({
         interactionsMode: "AI",
         columnWidths: {},
         commentFilter: {},
+        commentColors: normalizeCommentColorPalette(),
       },
       actions: [],
       inputs: [],

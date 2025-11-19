@@ -75,6 +75,7 @@
 * * interactionsMode: 'AI' or 'AA'
 * * columnWidths: per-view column overrides (Record<viewKey, number>)
 * * commentFilter: persisted sidebar filter state
+* * commentColors: palette of comment color presets (id + optional label/swatch styling)
     */
     /**
      * @typedef {{
@@ -89,6 +90,14 @@
      *     columnKeys?: string[],
      *     colorIds?: string[],
      *   },
+     *   commentColors?: Array<{
+     *     id: string,
+     *     label?: string,
+     *     swatch?: string,
+     *     badgeBackground?: string,
+     *     badgeBorder?: string,
+     *     badgeText?: string,
+     *   }>,
      * }} Meta
      */
 

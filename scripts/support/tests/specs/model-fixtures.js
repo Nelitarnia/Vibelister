@@ -1,8 +1,15 @@
 import { createEmptyCommentMap } from "../../../data/comments.js";
+import { normalizeCommentColorPalette } from "../../../data/comment-colors.js";
 
 export function makeModelFixture() {
   const model = {
-    meta: { schema: 0, projectName: "", projectInfo: "", interactionsMode: "AI" },
+    meta: {
+      schema: 0,
+      projectName: "",
+      projectInfo: "",
+      interactionsMode: "AI",
+      commentColors: normalizeCommentColorPalette(),
+    },
     actions: [],
     inputs: [],
     modifiers: [],

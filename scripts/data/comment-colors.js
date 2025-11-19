@@ -88,3 +88,34 @@ export function commentColorPresetById(raw) {
   const id = normalizeCommentColorId(raw);
   return id ? COMMENT_COLOR_MAP.get(id) || null : null;
 }
+
+export function normalizeCommentColorPalette(rawPalette) {
+  const palette = [];
+  if (Array.isArray(rawPalette)) {
+    for (const entry of rawPalette) {
+      if (!entry || typeof entry !== "object") continue;
+      const idCandidate = String(entry.id ?? "").trim();
+      if (!idCandidate) continue;
+      if (palette.some((preset) => preset.id === idCandidate)) continue;
+      const normalized = { id: idCandidate };
+      for (const key of [
+        "label",
+        "swatch",
+        "badgeBackground",
+        "badgeBorder",
+        "badgeText",
+      ]) {
+        const value = entry[key];
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+          if (trimmed) normalized[key] = trimmed;
+        }
+      }
+      palette.push(normalized);
+    }
+  }
+
+  if (palette.length) return palette;
+
+  return COMMENT_COLOR_PRESETS.map((preset) => ({ ...preset }));
+}

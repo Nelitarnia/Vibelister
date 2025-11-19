@@ -75,6 +75,7 @@ import {
 } from "../data/constants.js";
 import { makeRow, insertBlankRows } from "../data/rows.js";
 import { createEmptyCommentMap } from "../data/comments.js";
+import { normalizeCommentColorPalette } from "../data/comment-colors.js";
 import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
 import { createHistoryController } from "./history.js";
 import {
@@ -112,6 +113,7 @@ const model = {
     interactionsMode: "AI",
     columnWidths: {},
     commentFilter: { viewKey: "actions" },
+    commentColors: normalizeCommentColorPalette(),
   },
   actions: [],
   inputs: [],
@@ -381,6 +383,7 @@ const commentsUI = initCommentsUI({
   VIEWS,
   noteKeyForPair,
   getInteractionsPair,
+  commentColors: model.meta.commentColors,
 });
 
 const tagManager = createInteractionTagManager({
