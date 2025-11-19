@@ -8,7 +8,10 @@ import {
   getEntityColorsFromRow,
   computeColorPreviewForColorColumn,
 } from "../data/color-utils.js";
-import { commentColorPresetById } from "../data/comment-colors.js";
+import {
+  normalizeCommentColorId,
+  normalizeCommentColorPalette,
+} from "../data/comment-colors.js";
 import { listCommentsForCell } from "./comments.js";
 
 function createGridRenderer({
@@ -35,10 +38,60 @@ function createGridRenderer({
   isModColumn,
   modIdFromKey,
   getInteractionsPair,
+  getCommentColors,
+  commentColors,
 }) {
   let colGeomCache = { key: null, widths: null, offs: null, stamp: 0 };
   const colHeaderPool = Array.from(colHdrs.children || []);
   const rowHeaderPool = Array.from(rowHdrs.children || []);
+  const commentPaletteCache = { source: null, map: new Map() };
+
+  function getCommentPalette() {
+    const paletteSource =
+      typeof getCommentColors === "function"
+        ? getCommentColors()
+        : commentColors;
+    if (commentPaletteCache.source === paletteSource && commentPaletteCache.map)
+      return commentPaletteCache.map;
+
+    const palette = normalizeCommentColorPalette(paletteSource);
+    const map = new Map();
+    for (const entry of palette) {
+      if (!entry || typeof entry !== "object") continue;
+      const rawId = typeof entry.id === "string" ? entry.id.trim() : "";
+      if (!rawId) continue;
+      const normalizedId = normalizeCommentColorId(rawId);
+      const id = normalizedId || rawId;
+      if (map.has(id)) continue;
+      map.set(id, {
+        id,
+        badgeBackground:
+          typeof entry.badgeBackground === "string"
+            ? entry.badgeBackground.trim()
+            : "",
+        badgeBorder:
+          typeof entry.badgeBorder === "string"
+            ? entry.badgeBorder.trim()
+            : "",
+        badgeText:
+          typeof entry.badgeText === "string" ? entry.badgeText.trim() : "",
+      });
+    }
+
+    commentPaletteCache.source = paletteSource;
+    commentPaletteCache.map = map;
+    return map;
+  }
+
+  function resolveCommentBadgePreset(colorId) {
+    if (!colorId) return null;
+    const palette = getCommentPalette();
+    const normalized = normalizeCommentColorId(colorId);
+    if (normalized && palette.has(normalized)) return palette.get(normalized);
+    const trimmed = typeof colorId === "string" ? colorId.trim() : String(colorId);
+    if (trimmed && palette.has(trimmed)) return palette.get(trimmed);
+    return null;
+  }
 
   function normalizeCellValue(value) {
     if (value == null) return { plainText: "", segments: null };
@@ -229,7 +282,7 @@ function createGridRenderer({
       badge._commentState = state;
     }
     if (state.colorId === colorId) return;
-    const preset = commentColorPresetById(colorId);
+    const preset = resolveCommentBadgePreset(colorId);
     if (preset) {
       if (badge.dataset.color !== preset.id) badge.dataset.color = preset.id;
       const background = preset.badgeBackground || "";
