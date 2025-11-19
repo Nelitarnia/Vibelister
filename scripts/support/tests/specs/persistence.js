@@ -1,6 +1,7 @@
 import { createPersistenceController } from "../../../app/persistence.js";
 import { MOD } from "../../../data/constants.js";
 import { createEmptyCommentMap } from "../../../data/comments.js";
+import { normalizeCommentColorPalette } from "../../../data/comment-colors.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 export function getPersistenceTests() {
@@ -337,6 +338,85 @@ export function getPersistenceTests() {
         const expected = createEmptyCommentMap();
         expected.actions["5"] = { text: "legacy" };
         assert.deepStrictEqual(legacy.comments, expected);
+      },
+    },
+    {
+      name: "comment palette round-trips via open/save",
+      async run(assert) {
+        const { model } = makeModelFixture();
+        const rawPalette = [
+          { id: "plum", label: " Plum ", badgeBackground: "  #ABC " },
+          { id: "sunset", swatch: "#ff9900", badgeText: " black " },
+          { id: "plum", label: "Duplicate" },
+        ];
+        const normalizedPalette = normalizeCommentColorPalette(rawPalette);
+        let savedSnapshot = null;
+        const loadFsModule = async () => ({
+          openJson: async () => ({
+            name: "palette.json",
+            data: {
+              meta: {
+                schema: 0,
+                projectName: "",
+                projectInfo: "",
+                interactionsMode: "AI",
+                commentColors: rawPalette,
+              },
+              actions: [],
+              inputs: [],
+              modifiers: [],
+              outcomes: [],
+              modifierGroups: [],
+              modifierConstraints: [],
+              notes: {},
+              interactionsPairs: [],
+              interactionsIndex: {
+                mode: "AI",
+                groups: [],
+                totalRows: 0,
+                actionsOrder: [],
+                inputsOrder: [],
+                variantCatalog: {},
+              },
+              nextId: 1,
+            },
+          }),
+          async saveJson(data) {
+            savedSnapshot = data;
+            return { name: "palette.json" };
+          },
+        });
+
+        const controller = createPersistenceController({
+          model,
+          statusBar: null,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule,
+        });
+
+        await controller.openFromDisk();
+
+        assert.deepStrictEqual(
+          model.meta.commentColors,
+          normalizedPalette,
+          "palette should normalize on load",
+        );
+
+        await controller.saveToDisk();
+
+        assert.deepStrictEqual(
+          savedSnapshot?.meta?.commentColors,
+          normalizedPalette,
+          "palette should persist through save",
+        );
       },
     },
     {
