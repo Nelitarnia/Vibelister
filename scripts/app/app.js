@@ -756,6 +756,7 @@ const {
   onModelReset: () => {
     interactionsOutline?.refresh?.();
     tagUI?.refresh?.();
+    commentsUI?.applyModelMetadata?.(model.meta);
     emitInteractionTagChangeEvent(null, { reason: "reset", force: true });
   },
 });

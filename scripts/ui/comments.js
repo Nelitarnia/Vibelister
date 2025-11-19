@@ -483,6 +483,28 @@ export function initCommentsUI(options = {}) {
     updatePaletteButtons();
   }
 
+  function applyModelMetadata(meta = {}) {
+    const paletteSource =
+      meta && Array.isArray(meta.commentColors) && meta.commentColors.length
+        ? meta.commentColors
+        : COMMENT_COLOR_PRESETS;
+    setColorPalette(paletteSource, { skipFilterCleanup: false, skipRebuild: true });
+    setPaletteDraft(paletteSource);
+
+    let nextFilter = normalizeFilter(
+      meta && typeof meta.commentFilter === "object"
+        ? meta.commentFilter
+        : { viewKey: typeof getActiveView === "function" ? getActiveView() : null },
+    );
+    if (!nextFilter.viewKey && typeof getActiveView === "function") {
+      nextFilter = { ...nextFilter, viewKey: getActiveView() };
+    }
+    filterState = nextFilter;
+    persistFilterState(filterState);
+    rebuildFilteredEntries();
+    syncFromSelection();
+  }
+
   function renderPaletteList() {
     if (!paletteListEl) return;
     while (paletteListEl.firstChild) paletteListEl.removeChild(paletteListEl.firstChild);
@@ -1400,6 +1422,7 @@ export function initCommentsUI(options = {}) {
 
   return {
     refresh: syncFromSelection,
+    applyModelMetadata,
     setOpen,
     open: () => setOpen(true),
     close: () => setOpen(false),
