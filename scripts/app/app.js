@@ -1045,30 +1045,6 @@ menusAPI = initMenus({
   getUndoState,
 });
 
-// View order helpers
-function getViewOrder() {
-  const map = {
-      [Ids.tabActions]: "actions",
-      [Ids.tabInputs]: "inputs",
-      [Ids.tabModifiers]: "modifiers",
-      [Ids.tabOutcomes]: "outcomes",
-      [Ids.tabInteractions]: "interactions",
-    },
-    btns = document.querySelectorAll(".tabs .tab"),
-    order = [];
-  btns.forEach((b) => {
-    const k = map[b.id];
-    if (k && VIEWS[k]) order.push(k);
-  });
-  return order.length ? order : Object.keys(VIEWS);
-}
-function cycleView(d) {
-  const ord = getViewOrder(),
-    i = Math.max(0, ord.indexOf(activeView)),
-    next = (i + d + ord.length) % ord.length;
-  setActiveView(ord[next]);
-}
-
 // Row reorder (drag row headers)
 function isReorderableView() {
   return (
