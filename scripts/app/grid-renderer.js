@@ -45,6 +45,11 @@ function createGridRenderer({
   const colHeaderPool = Array.from(colHdrs.children || []);
   const rowHeaderPool = Array.from(rowHdrs.children || []);
   const commentPaletteCache = { source: null, map: new Map() };
+  let paletteRevision = 0;
+
+  function getCommentPaletteRevision() {
+    return paletteRevision;
+  }
 
   function getCommentPalette() {
     const paletteSource =
@@ -80,6 +85,7 @@ function createGridRenderer({
 
     commentPaletteCache.source = paletteSource;
     commentPaletteCache.map = map;
+    paletteRevision += 1;
     return map;
   }
 
@@ -182,6 +188,7 @@ function createGridRenderer({
         status: "default",
         colorId: "",
         tooltip: "",
+        paletteRevision: null,
       };
       badge._commentState = state;
     } else {
@@ -190,6 +197,7 @@ function createGridRenderer({
       state.status = "default";
       state.colorId = "";
       state.tooltip = "";
+      state.paletteRevision = null;
     }
   }
 
@@ -278,10 +286,12 @@ function createGridRenderer({
         colorId: null,
         visible: null,
         tooltip: null,
+        paletteRevision: null,
       };
       badge._commentState = state;
     }
-    if (state.colorId === colorId) return;
+    const revision = getCommentPaletteRevision();
+    if (state.colorId === colorId && state.paletteRevision === revision) return;
     const preset = resolveCommentBadgePreset(colorId);
     if (preset) {
       if (badge.dataset.color !== preset.id) badge.dataset.color = preset.id;
@@ -299,6 +309,7 @@ function createGridRenderer({
       if (badge.style.color) badge.style.color = "";
     }
     state.colorId = colorId;
+    state.paletteRevision = revision;
   }
 
   function detachCommentBadge(cell) {

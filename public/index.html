@@ -343,53 +343,112 @@
             data-pane="comments"
             hidden
           >
-            <div class="comment-sidebar__selection" id="comment-selection">
-              Select a cell to manage comments.
-            </div>
-            <div class="comment-sidebar__nav" id="comment-nav">
+            <div class="comment-sidebar__tabs" id="comment-tabs" role="tablist">
               <button
                 type="button"
-                class="comment-sidebar__nav-button"
-                id="comment-prev"
-                aria-label="Go to previous comment"
+                class="comment-sidebar__tab"
+                id="comment-tab-comments"
+                data-tab="comments"
+                aria-selected="true"
               >
-                <span class="comment-sidebar__nav-icon" aria-hidden="true">←</span>
+                Comments
               </button>
               <button
                 type="button"
-                class="comment-sidebar__nav-button"
-                id="comment-next"
-                aria-label="Go to next comment"
+                class="comment-sidebar__tab"
+                id="comment-tab-customize"
+                data-tab="customize"
+                aria-selected="false"
               >
-                <span class="comment-sidebar__nav-icon" aria-hidden="true">→</span>
+                Customize
               </button>
             </div>
-            <form class="comment-sidebar__editor" id="comment-editor" hidden>
-              <label class="comment-sidebar__label" for="comment-text">Comment</label>
-              <textarea
-                class="comment-sidebar__textarea"
-                id="comment-text"
-                rows="4"
-                placeholder="Write a note for collaborators"
-              ></textarea>
-              <label class="comment-sidebar__label" for="comment-color">Color</label>
-              <select class="comment-sidebar__select" id="comment-color"></select>
-              <div class="comment-sidebar__editor-actions">
-                <button type="submit" class="comment-sidebar__save" id="comment-save">
-                  Save
+            <div
+              class="comment-sidebar__page"
+              id="comment-page-comments"
+              data-tab-panel="comments"
+            >
+              <div class="comment-sidebar__selection" id="comment-selection">
+                Select a cell to manage comments.
+              </div>
+              <div class="comment-sidebar__nav" id="comment-nav">
+                <button
+                  type="button"
+                  class="comment-sidebar__nav-button"
+                  id="comment-prev"
+                  aria-label="Go to previous comment"
+                >
+                  <span class="comment-sidebar__nav-icon" aria-hidden="true">←</span>
                 </button>
-                <button type="button" class="comment-sidebar__delete" id="comment-delete">
-                  Delete
-                </button>
-                <button type="button" class="comment-sidebar__cancel" id="comment-cancel">
-                  Cancel
+                <button
+                  type="button"
+                  class="comment-sidebar__nav-button"
+                  id="comment-next"
+                  aria-label="Go to next comment"
+                >
+                  <span class="comment-sidebar__nav-icon" aria-hidden="true">→</span>
                 </button>
               </div>
-            </form>
-            <div class="comment-sidebar__empty" id="comment-empty">
-              No cell selected.
+              <form class="comment-sidebar__editor" id="comment-editor" hidden>
+                <label class="comment-sidebar__label" for="comment-text">Comment</label>
+                <textarea
+                  class="comment-sidebar__textarea"
+                  id="comment-text"
+                  rows="4"
+                  placeholder="Write a note for collaborators"
+                ></textarea>
+                <label class="comment-sidebar__label" for="comment-color">Color</label>
+                <select class="comment-sidebar__select" id="comment-color"></select>
+                <div class="comment-sidebar__editor-actions">
+                  <button type="submit" class="comment-sidebar__save" id="comment-save">
+                    Save
+                  </button>
+                  <button type="button" class="comment-sidebar__delete" id="comment-delete">
+                    Delete
+                  </button>
+                  <button type="button" class="comment-sidebar__cancel" id="comment-cancel">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+              <div class="comment-sidebar__empty" id="comment-empty">
+                No cell selected.
+              </div>
+              <ul class="comment-sidebar__list" id="comment-list"></ul>
             </div>
-            <ul class="comment-sidebar__list" id="comment-list"></ul>
+            <div
+              class="comment-sidebar__page comment-customize"
+              id="comment-page-customize"
+              data-tab-panel="customize"
+              hidden
+            >
+              <p class="comment-customize__intro">
+                Adjust the default names and colors for comment groups. Changes are saved
+                with this project and update existing comment swatches.
+              </p>
+              <div class="comment-customize__list" id="comment-palette"></div>
+              <div class="comment-customize__footer">
+                <div class="comment-customize__hint">
+                  The first color in the list becomes the default for new comments.
+                </div>
+                <div class="comment-customize__actions">
+                  <button
+                    type="button"
+                    class="comment-customize__reset"
+                    id="comment-palette-reset"
+                  >
+                    Reset to defaults
+                  </button>
+                  <button
+                    type="button"
+                    class="comment-customize__apply"
+                    id="comment-palette-apply"
+                  >
+                    Save palette
+                  </button>
+                </div>
+              </div>
+            </div>
           </section>
           <section
             class="side-panel__pane tag-sidebar"

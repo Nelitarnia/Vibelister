@@ -2,8 +2,10 @@ import { listCommentsForView } from "../app/comments.js";
 import {
   COMMENT_COLOR_PRESETS,
   DEFAULT_COMMENT_COLOR_ID,
+  normalizeCommentColorPalette,
   normalizeCommentColorId,
 } from "../data/comment-colors.js";
+import { autoTextColor, parseHexColor } from "../data/color-utils.js";
 
 const DEFAULT_EMPTY_SELECTION_MESSAGE = "Select a cell to manage comments.";
 
@@ -39,6 +41,37 @@ function getEntryColorId(entry) {
   return raw ? raw.trim() : "";
 }
 
+function rgbToHex(r, g, b) {
+  const clamp = (n) => Math.max(0, Math.min(255, Math.round(Number(n))))
+    .toString(16)
+    .padStart(2, "0");
+  return `#${clamp(r)}${clamp(g)}${clamp(b)}`.toUpperCase();
+}
+
+function normalizeHexColor(value, fallback = "#3B82F6") {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    const parsed = parseHexColor(trimmed.startsWith("#") ? trimmed : `#${trimmed}`);
+    if (parsed && parsed.length === 3) return rgbToHex(parsed[0], parsed[1], parsed[2]);
+    const rgbaMatch = trimmed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (rgbaMatch) return rgbToHex(rgbaMatch[1], rgbaMatch[2], rgbaMatch[3]);
+  }
+  return fallback;
+}
+
+function deriveBadgeColorsFromHex(hex) {
+  const parsed = parseHexColor(hex);
+  if (!parsed) return { swatch: hex, badgeBackground: "", badgeBorder: "", badgeText: "" };
+  const [r, g, b] = parsed;
+  const rgba = (alpha) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  return {
+    swatch: hex,
+    badgeBackground: rgba(0.2),
+    badgeBorder: rgba(0.55),
+    badgeText: autoTextColor(hex, "#ffffff"),
+  };
+}
+
 function buildPayload(existingEntry, text, color) {
   const base =
     existingEntry && existingEntry.value && typeof existingEntry.value === "object"
@@ -70,6 +103,14 @@ export function initCommentsUI(options = {}) {
     prevButton,
     nextButton,
     selectionLabel,
+    tabsContainer,
+    commentsTabButton,
+    customizeTabButton,
+    commentsPage,
+    customizePage,
+    paletteList,
+    paletteApplyButton,
+    paletteResetButton,
     SelectionCtl,
     selection,
     sel,
@@ -106,54 +147,123 @@ export function initCommentsUI(options = {}) {
   const colorSelectEl = colorSelect || null;
   const prevButtonEl = prevButton || null;
   const nextButtonEl = nextButton || null;
+  const tabsContainerEl = tabsContainer || null;
+  const commentsTabButtonEl = commentsTabButton || null;
+  const customizeTabButtonEl = customizeTabButton || null;
+  const commentsPageEl = commentsPage || null;
+  const customizePageEl = customizePage || null;
+  const paletteListEl = paletteList || null;
+  const paletteApplyButtonEl = paletteApplyButton || null;
+  const paletteResetButtonEl = paletteResetButton || null;
   const setActiveViewFn =
     typeof setActiveView === "function" ? (...args) => setActiveView(...args) : null;
-  const colorPresetSource =
+  let colorPresetSource = normalizeCommentColorPalette(
     Array.isArray(commentColors) && commentColors.length
       ? commentColors
-      : COMMENT_COLOR_PRESETS;
-  const colorMap = new Map();
-  for (const preset of colorPresetSource) {
-    if (!preset || typeof preset !== "object") continue;
-    const idCandidate =
-      typeof preset.id === "string" && preset.id.trim()
-        ? preset.id.trim()
-        : "";
-    const normalizedId = normalizeCommentColorId(idCandidate);
-    const id = normalizedId || idCandidate;
-    if (!id || colorMap.has(id)) continue;
-    const label =
-      typeof preset.label === "string" && preset.label.trim()
-        ? preset.label.trim()
-        : id;
-    const swatch =
-      typeof preset.swatch === "string" && preset.swatch.trim()
-        ? preset.swatch.trim()
-        : typeof preset.badgeBackground === "string"
-          ? preset.badgeBackground
-          : "";
-    colorMap.set(id, {
-      id,
-      label,
-      swatch,
-      badgeBackground:
-        typeof preset.badgeBackground === "string" ? preset.badgeBackground : "",
-      badgeBorder:
-        typeof preset.badgeBorder === "string" ? preset.badgeBorder : "",
-      badgeText: typeof preset.badgeText === "string" ? preset.badgeText : "",
-    });
-  }
-  const firstPreset = colorMap.values().next().value || null;
-  const fallbackColorId =
-    (firstPreset && firstPreset.id) ||
-    normalizeCommentColorId(DEFAULT_COMMENT_COLOR_ID) ||
-    DEFAULT_COMMENT_COLOR_ID ||
-    "";
+      : COMMENT_COLOR_PRESETS,
+  );
+  let colorMap = new Map();
+  let fallbackColorId = normalizeCommentColorId(DEFAULT_COMMENT_COLOR_ID) || "";
   let lastSelectedColor = fallbackColorId;
   let colorCounts = new Map();
   let colorSelectHandler = null;
   let prevClickHandler = null;
   let nextClickHandler = null;
+  let filterState = null;
+
+  function buildColorMap(palette) {
+    const map = new Map();
+    const source = normalizeCommentColorPalette(palette);
+    for (const preset of source) {
+      if (!preset || typeof preset !== "object") continue;
+      const idCandidate =
+        typeof preset.id === "string" && preset.id.trim() ? preset.id.trim() : "";
+      const normalizedId = normalizeCommentColorId(idCandidate);
+      const id = normalizedId || idCandidate;
+      if (!id || map.has(id)) continue;
+      const label =
+        typeof preset.label === "string" && preset.label.trim() ? preset.label.trim() : id;
+      const swatch = normalizeHexColor(
+        typeof preset.swatch === "string" && preset.swatch.trim()
+          ? preset.swatch.trim()
+          : typeof preset.badgeBackground === "string"
+            ? preset.badgeBackground
+            : "",
+        "#3B82F6",
+      );
+      const badgeBackground =
+        typeof preset.badgeBackground === "string" && preset.badgeBackground.trim()
+          ? preset.badgeBackground.trim()
+          : deriveBadgeColorsFromHex(swatch).badgeBackground;
+      const badgeBorder =
+        typeof preset.badgeBorder === "string" && preset.badgeBorder.trim()
+          ? preset.badgeBorder.trim()
+          : deriveBadgeColorsFromHex(swatch).badgeBorder;
+      const badgeText =
+        typeof preset.badgeText === "string" && preset.badgeText.trim()
+          ? preset.badgeText.trim()
+          : deriveBadgeColorsFromHex(swatch).badgeText;
+      map.set(id, {
+        id,
+        label,
+        swatch,
+        badgeBackground,
+        badgeBorder,
+        badgeText,
+      });
+    }
+    return map;
+  }
+
+  function setColorPalette(nextPalette, options = {}) {
+    colorPresetSource = normalizeCommentColorPalette(
+      Array.isArray(nextPalette) && nextPalette.length ? nextPalette : COMMENT_COLOR_PRESETS,
+    );
+    colorMap = buildColorMap(colorPresetSource);
+    const firstPreset = colorMap.values().next().value || null;
+    fallbackColorId =
+      (firstPreset && firstPreset.id) ||
+      normalizeCommentColorId(DEFAULT_COMMENT_COLOR_ID) ||
+      DEFAULT_COMMENT_COLOR_ID ||
+      "";
+    lastSelectedColor = normalizeColorId(lastSelectedColor) || fallbackColorId;
+    ensureColorOptions();
+    updateColorOptionCounts();
+    if (!options.skipFilterCleanup && filterState) {
+      const cleanedColors = filterState.colorIds
+        ?.map((id) => normalizeColorId(id))
+        .filter(Boolean);
+      const nextColorIds = cleanedColors && cleanedColors.length ? cleanedColors : null;
+      setFilter({ colorIds: nextColorIds }, { skipRebuild: true });
+    }
+    updateColorSelectAppearance(lastSelectedColor);
+    if (!options.skipRebuild) rebuildFilteredEntries();
+  }
+
+  function buildPaletteDraft(source) {
+    const palette = normalizeCommentColorPalette(source);
+    return palette.map((preset) => {
+      const hex = normalizeHexColor(
+        typeof preset.swatch === "string" && preset.swatch.trim()
+          ? preset.swatch.trim()
+          : typeof preset.badgeBackground === "string"
+            ? preset.badgeBackground
+            : "",
+      );
+      const derived = deriveBadgeColorsFromHex(hex);
+      return {
+        id: preset.id,
+        label:
+          typeof preset.label === "string" && preset.label.trim()
+            ? preset.label.trim()
+            : preset.id,
+        swatch: hex,
+        badgeBackground: preset.badgeBackground || derived.badgeBackground,
+        badgeBorder: preset.badgeBorder || derived.badgeBorder,
+        badgeText: preset.badgeText || derived.badgeText,
+      };
+    });
+  }
 
   function normalizeColorId(value) {
     if (value == null) return "";
@@ -298,7 +408,7 @@ export function initCommentsUI(options = {}) {
     return preset ? preset.label : null;
   }
 
-  let filterState = normalizeFilter(
+  filterState = normalizeFilter(
     model?.meta?.commentFilter || {
       viewKey: typeof getActiveView === "function" ? getActiveView() : null,
     },
@@ -308,6 +418,224 @@ export function initCommentsUI(options = {}) {
   }
   let filteredEntries = [];
   let filteredIndex = -1;
+
+  setColorPalette(colorPresetSource, { skipFilterCleanup: true, skipRebuild: true });
+
+  let activeTab = "comments";
+  let paletteDraft = buildPaletteDraft(colorPresetSource);
+
+  function setActiveTab(tabId) {
+    const target = tabId === "customize" ? "customize" : "comments";
+    activeTab = target;
+    if (commentsTabButtonEl)
+      commentsTabButtonEl.setAttribute("aria-selected", target === "comments" ? "true" : "false");
+    if (customizeTabButtonEl)
+      customizeTabButtonEl.setAttribute("aria-selected", target === "customize" ? "true" : "false");
+    if (commentsPageEl) commentsPageEl.hidden = target !== "comments";
+    if (customizePageEl) customizePageEl.hidden = target !== "customize";
+  }
+
+  function palettesEqual(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const left = a[i];
+      const right = b[i];
+      if (!left || !right) return false;
+      if (left.id !== right.id) return false;
+      if ((left.label || left.id) !== (right.label || right.id)) return false;
+      if (normalizeHexColor(left.swatch) !== normalizeHexColor(right.swatch)) return false;
+      if ((left.badgeBackground || "") !== (right.badgeBackground || "")) return false;
+      if ((left.badgeBorder || "") !== (right.badgeBorder || "")) return false;
+      if ((left.badgeText || "") !== (right.badgeText || "")) return false;
+    }
+    return true;
+  }
+
+  function paletteDraftChanged(reference = colorPresetSource) {
+    const baseline = buildPaletteDraft(reference);
+    return !palettesEqual(paletteDraft, baseline);
+  }
+
+  function paletteDraftMatchesDefaults() {
+    return palettesEqual(paletteDraft, buildPaletteDraft(COMMENT_COLOR_PRESETS));
+  }
+
+  function updatePaletteButtons() {
+    const changed = paletteDraftChanged();
+    if (paletteApplyButtonEl) paletteApplyButtonEl.disabled = !changed;
+    if (paletteResetButtonEl) paletteResetButtonEl.disabled = paletteDraftMatchesDefaults();
+  }
+
+  function updatePaletteSwatch(el, entry) {
+    if (!el || !entry) return;
+    el.style.background = entry.swatch || entry.badgeBackground || "";
+    el.style.borderColor = entry.badgeBorder || entry.swatch || "";
+    const label =
+      entry && typeof entry.label === "string" && entry.label.trim()
+        ? entry.label.trim()
+        : entry.id;
+    el.title = `${label || entry.id} color`;
+  }
+
+  function setPaletteDraft(nextPalette) {
+    paletteDraft = buildPaletteDraft(nextPalette);
+    renderPaletteList();
+    updatePaletteButtons();
+  }
+
+  function applyModelMetadata(meta = {}) {
+    const paletteSource =
+      meta && Array.isArray(meta.commentColors) && meta.commentColors.length
+        ? meta.commentColors
+        : COMMENT_COLOR_PRESETS;
+    setColorPalette(paletteSource, { skipFilterCleanup: false, skipRebuild: true });
+    setPaletteDraft(paletteSource);
+
+    let nextFilter = normalizeFilter(
+      meta && typeof meta.commentFilter === "object"
+        ? meta.commentFilter
+        : { viewKey: typeof getActiveView === "function" ? getActiveView() : null },
+    );
+    if (!nextFilter.viewKey && typeof getActiveView === "function") {
+      nextFilter = { ...nextFilter, viewKey: getActiveView() };
+    }
+    filterState = nextFilter;
+    persistFilterState(filterState);
+    rebuildFilteredEntries();
+    syncFromSelection();
+  }
+
+  function renderPaletteList() {
+    if (!paletteListEl) return;
+    while (paletteListEl.firstChild) paletteListEl.removeChild(paletteListEl.firstChild);
+    if (!Array.isArray(paletteDraft) || !paletteDraft.length) {
+      const empty = document.createElement("div");
+      empty.className = "comment-sidebar__empty";
+      empty.textContent = "No palette entries defined.";
+      paletteListEl.appendChild(empty);
+      return;
+    }
+    paletteDraft.forEach((entry, index) => {
+      const row = document.createElement("div");
+      row.className = "comment-customize__item";
+      row.dataset.id = entry.id;
+
+      const swatch = document.createElement("div");
+      swatch.className = "comment-customize__swatch";
+      updatePaletteSwatch(swatch, entry);
+      row.appendChild(swatch);
+
+      const fields = document.createElement("div");
+      fields.className = "comment-customize__fields";
+
+      const labelField = document.createElement("label");
+      labelField.className = "comment-customize__label";
+      const labelTitle = document.createElement("span");
+      labelTitle.className = "comment-customize__field-title";
+      labelTitle.textContent = "Label";
+      const labelInput = document.createElement("input");
+      labelInput.className = "comment-customize__input";
+      labelInput.type = "text";
+      labelInput.value = entry.label ?? entry.id;
+      labelInput.placeholder = entry.id;
+      labelInput.addEventListener("input", () => {
+        entry.label = labelInput.value;
+        updatePaletteButtons();
+        updatePaletteSwatch(swatch, entry);
+      });
+      labelField.appendChild(labelTitle);
+      labelField.appendChild(labelInput);
+
+      const colorField = document.createElement("label");
+      colorField.className = "comment-customize__color-field";
+      const colorTitle = document.createElement("span");
+      colorTitle.className = "comment-customize__field-title";
+      colorTitle.textContent = "Color";
+      const colorInput = document.createElement("input");
+      colorInput.className = "comment-customize__color-input";
+      colorInput.type = "color";
+      colorInput.value = normalizeHexColor(entry.swatch);
+      colorInput.addEventListener("input", () => {
+        const hex = normalizeHexColor(colorInput.value, entry.swatch);
+        const derived = deriveBadgeColorsFromHex(hex);
+        entry.swatch = hex;
+        entry.badgeBackground = derived.badgeBackground;
+        entry.badgeBorder = derived.badgeBorder;
+        entry.badgeText = derived.badgeText;
+        updatePaletteSwatch(swatch, entry);
+        updatePaletteButtons();
+        colorInput.value = hex;
+      });
+      colorField.appendChild(colorTitle);
+      colorField.appendChild(colorInput);
+
+      fields.appendChild(labelField);
+      fields.appendChild(colorField);
+      row.appendChild(fields);
+
+      const controls = document.createElement("div");
+      controls.className = "comment-customize__controls";
+      const moveUp = document.createElement("button");
+      moveUp.type = "button";
+      moveUp.className = "comment-customize__move";
+      moveUp.textContent = "↑";
+      moveUp.disabled = index === 0;
+      moveUp.addEventListener("click", () => movePaletteEntry(entry.id, -1));
+      const moveDown = document.createElement("button");
+      moveDown.type = "button";
+      moveDown.className = "comment-customize__move";
+      moveDown.textContent = "↓";
+      moveDown.disabled = index === paletteDraft.length - 1;
+      moveDown.addEventListener("click", () => movePaletteEntry(entry.id, 1));
+      controls.appendChild(moveUp);
+      controls.appendChild(moveDown);
+      row.appendChild(controls);
+
+      paletteListEl.appendChild(row);
+    });
+  }
+
+  function movePaletteEntry(id, delta = 0) {
+    if (!delta || !Array.isArray(paletteDraft) || paletteDraft.length < 2) return;
+    const index = paletteDraft.findIndex((entry) => entry && entry.id === id);
+    if (index < 0) return;
+    const next = paletteDraft.slice();
+    const [entry] = next.splice(index, 1);
+    const target = Math.max(0, Math.min(next.length, index + delta));
+    next.splice(target, 0, entry);
+    paletteDraft = next;
+    renderPaletteList();
+    updatePaletteButtons();
+  }
+
+  function applyPaletteDraft() {
+    const activeColorId = getSelectedColorId();
+    const nextPalette = paletteDraft.map((entry) => ({
+      id: entry.id,
+      label: typeof entry.label === "string" ? entry.label.trim() : "",
+      swatch: normalizeHexColor(entry.swatch),
+      badgeBackground: entry.badgeBackground,
+      badgeBorder: entry.badgeBorder,
+      badgeText: entry.badgeText,
+    }));
+    if (!model || typeof model !== "object") return;
+    if (!model.meta || typeof model.meta !== "object") model.meta = {};
+    model.meta.commentColors = normalizeCommentColorPalette(nextPalette);
+    setColorPalette(model.meta.commentColors);
+    setPaletteDraft(model.meta.commentColors);
+    setColorSelectValue(activeColorId, { updateFilter: false, updateLastSelected: false });
+    renderList();
+    statusBar?.set?.("Comment colors updated.");
+    render?.();
+  }
+
+  function resetPaletteDraft() {
+    setPaletteDraft(COMMENT_COLOR_PRESETS);
+  }
+
+  setActiveTab(activeTab);
+  renderPaletteList();
+  updatePaletteButtons();
 
   if (colorSelectEl) {
     ensureColorOptions();
@@ -969,6 +1297,7 @@ export function initCommentsUI(options = {}) {
 
   function startEditing(entry = null) {
     if (!hasValidSelection()) return;
+    setActiveTab("comments");
     ensureOpen();
     editingEntry = entry || (comments.length ? comments[0] : null);
     if (editorForm) {
@@ -1050,6 +1379,10 @@ export function initCommentsUI(options = {}) {
   const addHandler = () => startEditing();
   const closeHandler = () => closeSidebar();
   const cancelHandler = () => stopEditing();
+  const commentsTabHandler = () => setActiveTab("comments");
+  const customizeTabHandler = () => setActiveTab("customize");
+  const paletteApplyHandler = () => applyPaletteDraft();
+  const paletteResetHandler = () => resetPaletteDraft();
 
   if (!detachHostToggle) {
     toggleButton.addEventListener("click", toggleHandler);
@@ -1072,6 +1405,10 @@ export function initCommentsUI(options = {}) {
     };
     nextButtonEl.addEventListener("click", nextClickHandler);
   }
+  commentsTabButtonEl?.addEventListener("click", commentsTabHandler);
+  customizeTabButtonEl?.addEventListener("click", customizeTabHandler);
+  paletteApplyButtonEl?.addEventListener("click", paletteApplyHandler);
+  paletteResetButtonEl?.addEventListener("click", paletteResetHandler);
 
   if (typeof onSelectionChanged === "function") {
     selectionUnsub = onSelectionChanged(() => {
@@ -1088,6 +1425,7 @@ export function initCommentsUI(options = {}) {
 
   return {
     refresh: syncFromSelection,
+    applyModelMetadata,
     setOpen,
     open: () => setOpen(true),
     close: () => setOpen(false),
@@ -1125,6 +1463,10 @@ export function initCommentsUI(options = {}) {
         colorSelectEl.removeEventListener("change", colorSelectHandler);
         colorSelectHandler = null;
       }
+      commentsTabButtonEl?.removeEventListener("click", commentsTabHandler);
+      customizeTabButtonEl?.removeEventListener("click", customizeTabHandler);
+      paletteApplyButtonEl?.removeEventListener("click", paletteApplyHandler);
+      paletteResetButtonEl?.removeEventListener("click", paletteResetHandler);
       if (selectionUnsub) selectionUnsub();
       if (commentsHandler) {
         document.removeEventListener("vibelister:comments-updated", commentsHandler);

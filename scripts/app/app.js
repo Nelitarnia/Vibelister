@@ -169,6 +169,14 @@ const commentCancelButton = document.getElementById(Ids.commentCancel);
 const commentSelectionLabel = document.getElementById(Ids.commentSelection);
 const commentPrevButton = document.getElementById(Ids.commentPrev);
 const commentNextButton = document.getElementById(Ids.commentNext);
+const commentTabs = document.getElementById(Ids.commentTabs);
+const commentTabComments = document.getElementById(Ids.commentTabComments);
+const commentTabCustomize = document.getElementById(Ids.commentTabCustomize);
+const commentPageComments = document.getElementById(Ids.commentPageComments);
+const commentPageCustomize = document.getElementById(Ids.commentPageCustomize);
+const commentPaletteList = document.getElementById(Ids.commentPalette);
+const commentPaletteApply = document.getElementById(Ids.commentPaletteApply);
+const commentPaletteReset = document.getElementById(Ids.commentPaletteReset);
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 
 const sidePanelHost = createSidePanelHost({
@@ -366,6 +374,14 @@ const commentsUI = initCommentsUI({
   prevButton: commentPrevButton,
   nextButton: commentNextButton,
   selectionLabel: commentSelectionLabel,
+  tabsContainer: commentTabs,
+  commentsTabButton: commentTabComments,
+  customizeTabButton: commentTabCustomize,
+  commentsPage: commentPageComments,
+  customizePage: commentPageCustomize,
+  paletteList: commentPaletteList,
+  paletteApplyButton: commentPaletteApply,
+  paletteResetButton: commentPaletteReset,
   SelectionCtl,
   selection,
   sel,
@@ -740,6 +756,7 @@ const {
   onModelReset: () => {
     interactionsOutline?.refresh?.();
     tagUI?.refresh?.();
+    commentsUI?.applyModelMetadata?.(model.meta);
     emitInteractionTagChangeEvent(null, { reason: "reset", force: true });
   },
 });
