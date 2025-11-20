@@ -5,7 +5,13 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const publicDir = path.join(__dirname, '..', 'public');
+const repoRoot = path.join(__dirname, '..');
+const publicDir = path.join(repoRoot, 'public');
+const scriptsDir = path.join(repoRoot, 'scripts');
+const allowedRoots = [
+  { urlPrefix: '/scripts/', directory: scriptsDir },
+  { urlPrefix: '/', directory: publicDir }
+];
 const port = Number.parseInt(process.env.PORT, 10) || 8080;
 
 const mimeTypes = {
@@ -21,18 +27,38 @@ const mimeTypes = {
   '.webmanifest': 'application/manifest+json'
 };
 
-function isPathInsidePublic(candidatePath) {
-  const relative = path.relative(publicDir, candidatePath);
+function isPathInside(candidatePath, rootDirectory) {
+  const relative = path.relative(rootDirectory, candidatePath);
   return !relative.startsWith('..') && !path.isAbsolute(relative);
 }
 
 const server = createServer(async (req, res) => {
   const requestUrl = new URL(req.url || '/', `http://localhost:${port}`);
   const requestedPath = decodeURIComponent(requestUrl.pathname);
-  const normalizedPath = path.normalize(requestedPath).replace(/^[/\\]+/, '');
-  const filePath = path.join(publicDir, normalizedPath);
+  const normalizedPath = path.posix.normalize(requestedPath.replace(/[\\]+/g, '/'));
 
-  if (!isPathInsidePublic(filePath)) {
+  const matchingRoot = allowedRoots.find((root) => {
+    if (normalizedPath === root.urlPrefix) {
+      return true;
+    }
+
+    if (root.urlPrefix.endsWith('/') && normalizedPath === root.urlPrefix.slice(0, -1)) {
+      return true;
+    }
+
+    return normalizedPath.startsWith(root.urlPrefix);
+  });
+
+  if (!matchingRoot) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden');
+    return;
+  }
+
+  const relativeRequest = normalizedPath.slice(matchingRoot.urlPrefix.length).replace(/^[/\\]+/, '');
+  const filePath = path.join(matchingRoot.directory, relativeRequest);
+
+  if (!isPathInside(filePath, matchingRoot.directory)) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('Forbidden');
     return;
@@ -60,5 +86,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`Serving public/ at http://localhost:${port}`);
+  console.log(`Serving public/ and scripts/ at http://localhost:${port}`);
 });
