@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "format": "npx prettier --write .",
+    "format:check": "npx prettier --check .",
     "start": "node scripts/dev-server.js",
     "test": "node --test",
     "test:watch": "node --test --watch"
