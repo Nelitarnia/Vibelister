@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node scripts/dev-server.js",
     "test": "node --test",
     "test:watch": "node --test --watch"
   }

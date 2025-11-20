@@ -14,9 +14,13 @@ Keeping track of how these states change is sometimes a major part of video game
 
 # How to run
 
-Download the files and use "run.bat". In most modern browsers, executing code directly from local files is blocked for security reasons, so the .bat file opens a temporary local server which runs the program.
+Vibelister is a static site that lives in `public/`. You can start a local dev server on any platform with npm:
 
-Installing Python is a necessary prerequisite for this step. You can get it from [here](https://www.python.org/downloads/), and during installation remember to enable “Add Python to PATH.”
+1. Install [Node.js](https://nodejs.org/) (npm is bundled with it).
+2. From the repository root, run `npm install` to ensure dependencies are available.
+3. Launch the site with `npm start`, then open [http://localhost:8080](http://localhost:8080) (or set a custom port with `PORT` if needed).
+
+If you prefer a Windows-only option, `run.bat` still spins up a temporary Python server, but `npm start` is the recommended, cross-platform workflow.
 
 ---
 

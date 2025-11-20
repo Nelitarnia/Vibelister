@@ -12,6 +12,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── index.html
 │   └── style.css
 ├── scripts/
+│   ├── dev-server.js
 │   ├── app/
 │   │   ├── app.js
 │   │   ├── clipboard-codec.js
@@ -116,6 +117,8 @@ This document outlines a maintainable directory layout tailored to the current c
 
 - Collect all JavaScript source files under a single root so tooling can target the directory easily (linting, bundling, tests).
 - Subdivide by responsibility, keeping related modules close together.
+
+- `dev-server.js` spins up the lightweight Node-based static server used by `npm start` to serve the `public/` directory during development.
 
 #### `scripts/app/`
 
