@@ -121,8 +121,10 @@ This document outlines a maintainable directory layout tailored to the current c
 
 - House entry points and cross-cutting application logic.
 - `app.js` stays the primary bootstrap file, while `interactions.js`, `outcomes.js`, `selection.js`, `types.js`, and `views.js` remain close by.
+- `dom-elements.js` centralizes DOM lookups so bootstrap wiring can share a consistent set of handles.
 - `clipboard-codec.js` lives here because it bridges app state with external data.
 - `history.js` wraps undo/redo wiring so the entry point just injects dependencies and consumes the resulting API.
+- `model-init.js` builds the initial app model, view state, and history surface so the entry point only wires dependencies.
 - `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
@@ -132,6 +134,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `interaction-tags.js` provides undo-friendly helpers for renaming and deleting interaction tags across the notes map so UI controllers can reuse consistent mutation wiring.
 - `tag-events.js` centralizes the DOM event dispatch for interaction tag mutations so sidebar controllers can refresh in response to grid or bulk edits without duplicating `CustomEvent` wiring.
+- `sidebar-wiring.js` coordinates the shared sidebar host, panel registration, and tab toggles so view controllers can reuse the same plumbing.
 - `column-widths.js` captures default widths for each view, clones override metadata, and exposes helpers so state controllers can merge persisted sizing without bloating callers.
 - `diagnostics.js` lazily loads the in-app self-tests so diagnostics can run without keeping the heavy harness in the main bundle.
 - `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.
@@ -139,6 +142,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
 - `user-settings.js` defines the persisted defaults, schema metadata, and sanitizers for color preferences so both the controller and UI can trust incoming payloads.
 - `view-state.js` owns per-view selection snapshots and cached column layouts so `app.js` only orchestrates switching and rendering logic.
+- `view-controller.js` centralizes view switching, tab events, and layout updates so the bootstrap file can delegate cross-panel coordination.
 
 #### `scripts/data/`
 

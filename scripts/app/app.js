@@ -10,9 +10,6 @@ import { initPalette } from "../ui/palette.js";
 import { initColorPicker } from "../ui/color-picker.js";
 import { initColumnResize } from "../ui/column-resize.js";
 import { initStatusBar } from "../ui/status.js";
-import { initCommentsUI } from "../ui/comments.js";
-import { createSidePanelHost } from "../ui/side-panel.js";
-import { initTagSidebar } from "../ui/tags.js";
 import {
   isCanonicalStructuredPayload,
   makeGetStructuredCell,
@@ -69,13 +66,10 @@ import {
   MOD,
   MIN_ROWS,
   Ids,
-  SCHEMA_VERSION,
   ROW_HEIGHT,
   HEADER_HEIGHT,
 } from "../data/constants.js";
 import { makeRow, insertBlankRows } from "../data/rows.js";
-import { createEmptyCommentMap } from "../data/comments.js";
-import { normalizeCommentColorPalette } from "../data/comment-colors.js";
 import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
 import { createHistoryController } from "./history.js";
 import {
@@ -95,96 +89,95 @@ import { createSettingsController } from "./settings-controller.js";
 import { createGridCommands } from "./grid-commands.js";
 import { createGridRenderer } from "./grid-renderer.js";
 import { createDiagnosticsController } from "./diagnostics.js";
-import { createInteractionTagManager } from "./interaction-tags.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { createProjectInfoController } from "./project-info-controller.js";
 import { createCleanupController } from "./cleanup-controller.js";
+import {
+  getCoreDomElements,
+  getMenuDomElements,
+  getProjectNameElement,
+  getSidebarDomElements,
+  getTabDomElements,
+} from "./dom-elements.js";
+import { createInitialModel } from "./model-init.js";
+import { initSidebarControllers } from "./sidebar-wiring.js";
+import { createViewController } from "./view-controller.js";
 
 function initA11y() {
   statusBar?.ensureLiveRegion();
 }
 
 // Core model + views
-const model = {
-  meta: {
-    schema: SCHEMA_VERSION,
-    projectName: "",
-    projectInfo: "",
-    interactionsMode: "AI",
-    columnWidths: {},
-    commentFilter: { viewKey: "actions" },
-    commentColors: normalizeCommentColorPalette(),
-  },
-  actions: [],
-  inputs: [],
-  modifiers: [],
-  outcomes: [],
-  modifierGroups: [],
-  modifierConstraints: [],
-  notes: {},
-  comments: createEmptyCommentMap(),
-  interactionsPairs: [],
-  interactionsIndex: { mode: "AI", groups: [] },
-  nextId: 1,
-};
+const model = createInitialModel();
 
 let activeView = "actions";
 let paletteAPI = null;
 let menusAPI = null;
+let sidePanelHost = null;
+let commentsUI = null;
+let tagManager = null;
+let tagUI = null;
+let setActiveView = null;
+let cycleView = null;
+let getActiveView = null;
+let toggleInteractionsMode = null;
 
-// Grid & helpers
-const sheet = document.getElementById("sheet"),
-  cellsLayer = document.getElementById("cells"),
-  spacer = document.getElementById("spacer"),
-  colHdrs = document.getElementById("colHdrs"),
-  rowHdrs = document.getElementById("rowHdrs"),
-  editor = document.getElementById("editor"),
-  statusEl = document.getElementById("status"),
-  dragLine = document.getElementById("dragLine");
-const projectNameEl = document.getElementById(Ids.projectName);
-const undoMenuItem = document.getElementById(Ids.editUndo);
-const redoMenuItem = document.getElementById(Ids.editRedo);
-const commentToggleButton = document.getElementById(Ids.commentToggle);
-const tagToggleButton = document.getElementById(Ids.tagToggle);
-const commentAddButton = document.getElementById(Ids.commentAdd);
-const sidePanel = document.getElementById(Ids.sidePanel);
-const sidePanelTitle = document.getElementById(Ids.sidePanelTitle);
-const sidePanelCloseButton = document.getElementById(Ids.sidePanelClose);
-const commentPane = document.getElementById(Ids.commentSidebar);
-const tagPane = document.getElementById(Ids.tagSidebar);
-const tagForm = document.getElementById(Ids.tagForm);
-const tagInput = document.getElementById(Ids.tagInput);
-const tagRenameButton = document.getElementById(Ids.tagRename);
-const tagDeleteButton = document.getElementById(Ids.tagDelete);
-const tagList = document.getElementById(Ids.tagList);
-const tagEmpty = document.getElementById(Ids.tagEmpty);
-const commentList = document.getElementById(Ids.commentList);
-const commentEmpty = document.getElementById(Ids.commentEmpty);
-const commentEditor = document.getElementById(Ids.commentEditor);
-const commentTextarea = document.getElementById(Ids.commentText);
-const commentColorSelect = document.getElementById(Ids.commentColor);
-const commentSaveButton = document.getElementById(Ids.commentSave);
-const commentDeleteButton = document.getElementById(Ids.commentDelete);
-const commentCancelButton = document.getElementById(Ids.commentCancel);
-const commentSelectionLabel = document.getElementById(Ids.commentSelection);
-const commentPrevButton = document.getElementById(Ids.commentPrev);
-const commentNextButton = document.getElementById(Ids.commentNext);
-const commentTabs = document.getElementById(Ids.commentTabs);
-const commentTabComments = document.getElementById(Ids.commentTabComments);
-const commentTabCustomize = document.getElementById(Ids.commentTabCustomize);
-const commentPageComments = document.getElementById(Ids.commentPageComments);
-const commentPageCustomize = document.getElementById(Ids.commentPageCustomize);
-const commentPaletteList = document.getElementById(Ids.commentPalette);
-const commentPaletteApply = document.getElementById(Ids.commentPaletteApply);
-const commentPaletteReset = document.getElementById(Ids.commentPaletteReset);
+function callSetActiveView(key) {
+  return setActiveView ? setActiveView(key) : undefined;
+}
+
+// DOM
+const coreDom = getCoreDomElements();
+const menuDom = getMenuDomElements(Ids);
+const sidebarDom = getSidebarDomElements(Ids);
+const tabDom = getTabDomElements(Ids);
+const projectNameEl = getProjectNameElement(Ids);
+const {
+  sheet,
+  cellsLayer,
+  spacer,
+  colHdrs,
+  rowHdrs,
+  editor,
+  statusEl,
+  dragLine,
+} = coreDom;
+const { undoMenuItem, redoMenuItem, commentToggleButton, tagToggleButton, commentAddButton } =
+  menuDom;
+const {
+  sidePanel,
+  sidePanelTitle,
+  sidePanelCloseButton,
+  commentPane,
+  tagPane,
+  tagForm,
+  tagInput,
+  tagRenameButton,
+  tagDeleteButton,
+  tagList,
+  tagEmpty,
+  commentList,
+  commentEmpty,
+  commentEditor,
+  commentTextarea,
+  commentColorSelect,
+  commentSaveButton,
+  commentDeleteButton,
+  commentCancelButton,
+  commentSelectionLabel,
+  commentPrevButton,
+  commentNextButton,
+  commentTabs,
+  commentTabComments,
+  commentTabCustomize,
+  commentPageComments,
+  commentPageCustomize,
+  commentPaletteList,
+  commentPaletteApply,
+  commentPaletteReset,
+} = sidebarDom;
+const { tabActions, tabInputs, tabModifiers, tabOutcomes, tabInteractions } = tabDom;
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
-
-const sidePanelHost = createSidePanelHost({
-  container: sidePanel,
-  titleElement: sidePanelTitle,
-  closeButton: sidePanelCloseButton,
-  defaultTitle: "Comments",
-});
 
 const { openSettingsDialog } = createSettingsController({ statusBar });
 
@@ -281,7 +274,7 @@ const {
   model,
   viewDef,
   getActiveView: () => activeView,
-  setActiveView,
+  setActiveView: callSetActiveView,
   selectionCursor: sel,
   SelectionCtl,
   ensureVisible,
@@ -355,77 +348,7 @@ const { openCleanupDialog } = createCleanupController({
   statusBar,
 });
 
-const commentsUI = initCommentsUI({
-  toggleButton: commentToggleButton,
-  addButton: commentAddButton,
-  sidebar: commentPane,
-  panelHost: sidePanelHost,
-  panelId: "comments",
-  panelTitle: "Comments",
-  closeButton: sidePanelCloseButton,
-  listElement: commentList,
-  emptyElement: commentEmpty,
-  editorForm: commentEditor,
-  textarea: commentTextarea,
-  colorSelect: commentColorSelect,
-  saveButton: commentSaveButton,
-  deleteButton: commentDeleteButton,
-  cancelButton: commentCancelButton,
-  prevButton: commentPrevButton,
-  nextButton: commentNextButton,
-  selectionLabel: commentSelectionLabel,
-  tabsContainer: commentTabs,
-  commentsTabButton: commentTabComments,
-  customizeTabButton: commentTabCustomize,
-  commentsPage: commentPageComments,
-  customizePage: commentPageCustomize,
-  paletteList: commentPaletteList,
-  paletteApplyButton: commentPaletteApply,
-  paletteResetButton: commentPaletteReset,
-  SelectionCtl,
-  selection,
-  sel,
-  onSelectionChanged,
-  getCellComments,
-  setCellComment,
-  deleteCellComment,
-  getActiveView: () => activeView,
-  setActiveView,
-  viewDef,
-  dataArray,
-  render,
-  statusBar,
-  model,
-  ensureVisible,
-  VIEWS,
-  noteKeyForPair,
-  getInteractionsPair,
-  commentColors: model.meta.commentColors,
-});
-
-const tagManager = createInteractionTagManager({
-  model,
-  runModelMutation,
-  makeUndoConfig,
-  statusBar,
-});
-
-const tagUI = initTagSidebar({
-  panelHost: sidePanelHost,
-  panelId: "tags",
-  panelTitle: "Tags",
-  sidebar: tagPane,
-  toggleButton: tagToggleButton,
-  form: tagForm,
-  input: tagInput,
-  renameButton: tagRenameButton,
-  deleteButton: tagDeleteButton,
-  listElement: tagList,
-  emptyElement: tagEmpty,
-  tagManager,
-  model,
-  statusBar,
-});
+// Sidebars wired after view controller is created
 
 initColumnResize({
   container: colHdrs,
@@ -748,7 +671,7 @@ const {
   clearHistory,
   resetAllViewState,
   sel,
-  setActiveView,
+  setActiveView: callSetActiveView,
   updateProjectNameWidget,
   setProjectNameFromFile,
   getSuggestedName,
@@ -767,7 +690,7 @@ const { runSelfTests } = createDiagnosticsController({
   ensureSeedRows,
   rebuildActionColumnsFromModifiers,
   VIEWS,
-  setActiveView,
+  setActiveView: callSetActiveView,
   setCell,
 });
 
@@ -963,91 +886,92 @@ sheet.addEventListener("scroll", () => {
 });
 
 // Tabs & views
-const tabActions = document.getElementById(Ids.tabActions),
-  tabInputs = document.getElementById(Ids.tabInputs),
-  tabModifiers = document.getElementById(Ids.tabModifiers),
-  tabOutcomes = document.getElementById(Ids.tabOutcomes),
-  tabInteractions = document.getElementById(Ids.tabInteractions);
-function setActiveView(key) {
-  endEditIfOpen(true);
-  // Save state of current view before switching
-  saveCurrentViewState({ sel, sheet });
-  clearSelection();
-  if (!(key in VIEWS)) return;
-  activeView = key;
-  interactionsOutline?.setActive?.(key === "interactions");
-  invalidateViewDef();
-  if (key === "actions") {
-    rebuildActionColumnsFromModifiers(model);
-    invalidateViewDef();
-  }
-  if (key === "interactions") {
-    rebuildInteractionsInPlace();
-    rebuildInteractionPhaseColumns();
-  }
-  if (tabActions) {
-    tabActions.classList.toggle("active", key === "actions");
-    tabActions.setAttribute("aria-selected", String(key === "actions"));
-  }
-  if (tabInputs) {
-    tabInputs.classList.toggle("active", key === "inputs");
-    tabInputs.setAttribute("aria-selected", String(key === "inputs"));
-  }
-  if (tabModifiers) {
-    tabModifiers.classList.toggle("active", key === "modifiers");
-    tabModifiers.setAttribute("aria-selected", String(key === "modifiers"));
-  }
-  if (tabOutcomes) {
-    tabOutcomes.classList.toggle("active", key === "outcomes");
-    tabOutcomes.setAttribute("aria-selected", String(key === "outcomes"));
-  }
-  if (tabInteractions) {
-    tabInteractions.classList.toggle("active", key === "interactions");
-    tabInteractions.setAttribute(
-      "aria-selected",
-      String(key === "interactions"),
-    );
-  }
-  // Restore saved state (row/col/scroll) for the new view
-  const st = restoreViewState(key);
-  sel.r = clamp(st.row ?? sel.r, 0, Math.max(0, getRowCount() - 1));
-  sel.c = clamp(st.col ?? sel.c, 0, Math.max(0, viewDef().columns.length - 1));
-  selection.rows.clear();
-  selection.rows.add(sel.r);
-  selection.anchor = sel.r;
+({ setActiveView, cycleView, getActiveView, toggleInteractionsMode } =
+  createViewController({
+    tabs: { tabActions, tabInputs, tabModifiers, tabOutcomes, tabInteractions },
+    sheet,
+    sel,
+    selection,
+    saveCurrentViewState,
+    restoreViewState,
+    clearSelection,
+    endEditIfOpen,
+    VIEWS,
+    interactionsOutline,
+    invalidateViewDef,
+    rebuildActionColumnsFromModifiers,
+    rebuildInteractionsInPlace,
+    rebuildInteractionPhaseColumns,
+    layout,
+    render,
+    statusBar,
+    menusAPIRef: () => menusAPI,
+    getRowCount,
+    viewDef,
+    clamp,
+    model,
+    getActiveViewState: () => activeView,
+    setActiveViewState: (key) => (activeView = key),
+    getCommentsUI: () => commentsUI,
+  }));
 
-  layout();
-  // Restore scrollTop after layout so spacer height is valid
-  if (typeof st.scrollTop === "number") sheet.scrollTop = st.scrollTop;
-  render();
-  commentsUI?.refresh?.();
-  const modeLabel =
-    key === "interactions" ? ` [${model.meta?.interactionsMode || "AI"}]` : "";
-  statusBar?.set(`View: ${viewDef().title}${modeLabel}`);
-  menusAPI?.updateViewMenuRadios?.(key);
-}
-if (tabActions) tabActions.onclick = () => setActiveView("actions");
-if (tabInputs) tabInputs.onclick = () => setActiveView("inputs");
-if (tabModifiers) tabModifiers.onclick = () => setActiveView("modifiers");
-if (tabOutcomes) tabOutcomes.onclick = () => setActiveView("outcomes");
-if (tabInteractions)
-  tabInteractions.onclick = () => setActiveView("interactions");
-
-// Simple global toggle for Interactions mode (AI ↔ AA)
-function toggleInteractionsMode() {
-  const cur = (model.meta && model.meta.interactionsMode) || "AI";
-  model.meta.interactionsMode = cur === "AI" ? "AA" : "AI";
-  invalidateViewDef();
-  if (activeView === "interactions") {
-    rebuildInteractionsInPlace();
-    rebuildInteractionPhaseColumns();
-    layout();
-    render();
-    statusBar?.set(`Interactions mode: ${model.meta.interactionsMode}`);
-  } else {
-    statusBar?.set(`Interactions mode set to ${model.meta.interactionsMode}`);
-  }
-}
+({ sidePanelHost, commentsUI, tagManager, tagUI } = initSidebarControllers({
+  dom: {
+    sidePanel,
+    sidePanelTitle,
+    sidePanelCloseButton,
+    commentPane,
+    tagPane,
+    tagForm,
+    tagInput,
+    tagRenameButton,
+    tagDeleteButton,
+    tagList,
+    tagEmpty,
+    commentList,
+    commentEmpty,
+    commentEditor,
+    commentTextarea,
+    commentColorSelect,
+    commentSaveButton,
+    commentDeleteButton,
+    commentCancelButton,
+    commentSelectionLabel,
+    commentPrevButton,
+    commentNextButton,
+    commentTabs,
+    commentTabComments,
+    commentTabCustomize,
+    commentPageComments,
+    commentPageCustomize,
+    commentPaletteList,
+    commentPaletteApply,
+    commentPaletteReset,
+    commentToggleButton,
+    commentAddButton,
+    tagToggleButton,
+  },
+  SelectionCtl,
+  selection,
+  sel,
+  onSelectionChanged,
+  getCellComments,
+  setCellComment,
+  deleteCellComment,
+  getActiveView,
+  setActiveView,
+  viewDef,
+  dataArray,
+  render,
+  statusBar,
+  model,
+  ensureVisible,
+  VIEWS,
+  noteKeyForPair,
+  getInteractionsPair,
+  runModelMutation,
+  makeUndoConfig,
+}));
 
 // Keyboard: Ctrl+Shift+A toggles Interactions mode
 document.addEventListener("keydown", (e) => {
@@ -1191,13 +1115,16 @@ const VariantsNS = {
   modOrderMap,
 };
 
-// Boot
-if (!sheet.hasAttribute("tabindex")) sheet.setAttribute("tabindex", "0");
-initA11y();
-ensureSeedRows();
-layout();
-render();
-new ResizeObserver(() => render()).observe(sheet);
-setActiveView("actions");
-updateProjectNameWidget();
-if (location.hash.includes("test")) runSelfTests();
+export function initApp() {
+  if (!sheet.hasAttribute("tabindex")) sheet.setAttribute("tabindex", "0");
+  initA11y();
+  ensureSeedRows();
+  layout();
+  render();
+  new ResizeObserver(() => render()).observe(sheet);
+  setActiveView("actions");
+  updateProjectNameWidget();
+  if (location.hash.includes("test")) runSelfTests();
+}
+
+initApp();
