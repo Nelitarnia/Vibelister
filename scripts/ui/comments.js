@@ -609,6 +609,7 @@ export function initCommentsUI(options = {}) {
   }
 
   function applyPaletteDraft() {
+    const activeColorId = getSelectedColorId();
     const nextPalette = paletteDraft.map((entry) => ({
       id: entry.id,
       label: typeof entry.label === "string" ? entry.label.trim() : "",
@@ -622,6 +623,8 @@ export function initCommentsUI(options = {}) {
     model.meta.commentColors = normalizeCommentColorPalette(nextPalette);
     setColorPalette(model.meta.commentColors);
     setPaletteDraft(model.meta.commentColors);
+    setColorSelectValue(activeColorId, { updateFilter: false, updateLastSelected: false });
+    renderList();
     statusBar?.set?.("Comment colors updated.");
     render?.();
   }
