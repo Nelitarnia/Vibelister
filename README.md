@@ -24,6 +24,14 @@ If you prefer a Windows-only option, `run.bat` still spins up a temporary Python
 
 ---
 
+# Formatting
+
+- On macOS or Linux, run `npm run format` to apply Prettier across the repository.
+- To confirm files are already formatted, run `npm run format:check` (optional).
+- Windows users can continue to run `format.bat` for the same effect.
+
+---
+
 # Repository organization roadmap
 
 - A proposed folder structure lives in [`docs/folder-structure.md`](docs/folder-structure.md).
