@@ -1,0 +1,109 @@
+import { createSidePanelHost } from "../ui/side-panel.js";
+import { initCommentsUI } from "../ui/comments.js";
+import { initTagSidebar } from "../ui/tags.js";
+import { createInteractionTagManager } from "./interaction-tags.js";
+
+export function initSidebarControllers({
+  dom,
+  SelectionCtl,
+  selection,
+  sel,
+  onSelectionChanged,
+  getCellComments,
+  setCellComment,
+  deleteCellComment,
+  getActiveView,
+  setActiveView,
+  viewDef,
+  dataArray,
+  render,
+  statusBar,
+  model,
+  ensureVisible,
+  VIEWS,
+  noteKeyForPair,
+  getInteractionsPair,
+  runModelMutation,
+  makeUndoConfig,
+}) {
+  const sidePanelHost = createSidePanelHost({
+    container: dom.sidePanel,
+    titleElement: dom.sidePanelTitle,
+    closeButton: dom.sidePanelCloseButton,
+    defaultTitle: "Comments",
+  });
+
+  const commentsUI = initCommentsUI({
+    toggleButton: dom.commentToggleButton,
+    addButton: dom.commentAddButton,
+    sidebar: dom.commentPane,
+    panelHost: sidePanelHost,
+    panelId: "comments",
+    panelTitle: "Comments",
+    closeButton: dom.sidePanelCloseButton,
+    listElement: dom.commentList,
+    emptyElement: dom.commentEmpty,
+    editorForm: dom.commentEditor,
+    textarea: dom.commentTextarea,
+    colorSelect: dom.commentColorSelect,
+    saveButton: dom.commentSaveButton,
+    deleteButton: dom.commentDeleteButton,
+    cancelButton: dom.commentCancelButton,
+    prevButton: dom.commentPrevButton,
+    nextButton: dom.commentNextButton,
+    selectionLabel: dom.commentSelectionLabel,
+    tabsContainer: dom.commentTabs,
+    commentsTabButton: dom.commentTabComments,
+    customizeTabButton: dom.commentTabCustomize,
+    commentsPage: dom.commentPageComments,
+    customizePage: dom.commentPageCustomize,
+    paletteList: dom.commentPaletteList,
+    paletteApplyButton: dom.commentPaletteApply,
+    paletteResetButton: dom.commentPaletteReset,
+    SelectionCtl,
+    selection,
+    sel,
+    onSelectionChanged,
+    getCellComments,
+    setCellComment,
+    deleteCellComment,
+    getActiveView,
+    setActiveView,
+    viewDef,
+    dataArray,
+    render,
+    statusBar,
+    model,
+    ensureVisible,
+    VIEWS,
+    noteKeyForPair,
+    getInteractionsPair,
+    commentColors: model.meta.commentColors,
+  });
+
+  const tagManager = createInteractionTagManager({
+    model,
+    runModelMutation,
+    makeUndoConfig,
+    statusBar,
+  });
+
+  const tagUI = initTagSidebar({
+    panelHost: sidePanelHost,
+    panelId: "tags",
+    panelTitle: "Tags",
+    sidebar: dom.tagPane,
+    toggleButton: dom.tagToggleButton,
+    form: dom.tagForm,
+    input: dom.tagInput,
+    renameButton: dom.tagRenameButton,
+    deleteButton: dom.tagDeleteButton,
+    listElement: dom.tagList,
+    emptyElement: dom.tagEmpty,
+    tagManager,
+    model,
+    statusBar,
+  });
+
+  return { sidePanelHost, commentsUI, tagManager, tagUI };
+}
