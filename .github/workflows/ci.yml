@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    name: Node.js ${{ env.NODE_VERSION }}
+    runs-on: ubuntu-latest
+    env:
+      NODE_VERSION: "20.x"
+      RUN_FORMAT_CHECK: ${{ vars.RUN_FORMAT_CHECK || 'true' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache npm directory
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json', '**/package.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-${{ env.NODE_VERSION }}-
+            npm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run format check
+        if: ${{ env.RUN_FORMAT_CHECK == 'true' }}
+        run: npm run format:check
