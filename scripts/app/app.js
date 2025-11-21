@@ -93,6 +93,7 @@ import { createDiagnosticsController } from "./diagnostics.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { createProjectInfoController } from "./project-info-controller.js";
 import { createCleanupController } from "./cleanup-controller.js";
+import { createInferenceController } from "./inference-controller.js";
 import {
   getCoreDomElements,
   getMenuDomElements,
@@ -348,6 +349,19 @@ const { openCleanupDialog } = createCleanupController({
   runModelMutation,
   makeUndoConfig,
   statusBar,
+});
+
+const { openInferenceDialog } = createInferenceController({
+  model,
+  selection,
+  sel,
+  getActiveView: () => activeView,
+  viewDef,
+  statusBar,
+  runModelMutation,
+  makeUndoConfig,
+  getInteractionsPair,
+  getInteractionsRowCount,
 });
 
 // Sidebars wired after view controller is created
@@ -1038,6 +1052,7 @@ menusAPI = initMenus({
   openSettings: openSettingsDialog,
   openProjectInfo,
   openCleanup: openCleanupDialog,
+  openInference: openInferenceDialog,
   addRowsAbove,
   addRowsBelow,
   clearCells: () => clearSelectedCells({}),

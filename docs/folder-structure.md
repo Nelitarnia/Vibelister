@@ -134,6 +134,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `comments.js` exposes undo-friendly helpers for reading and mutating the normalized comment store so the rest of the app can work with stable row IDs and column keys.
 - `comment-events.js` centralizes the DOM event dispatch for comment mutations so grid commands and other controllers can signal UI refreshes without duplicating `CustomEvent` wiring.
 - `cleanup-controller.js` rebuilds variant catalogs, analyzes orphaned notes/comments, and coordinates the cleanup dialog so destructive operations participate in the shared undo history.
+- `inference-controller.js` scopes interaction cells for inference runs, applies or clears inferred metadata with undo/status wiring, and skips manual edits so bulk operations respect source flags.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `interaction-tags.js` provides undo-friendly helpers for renaming and deleting interaction tags across the notes map so UI controllers can reuse consistent mutation wiring.
 - `tag-events.js` centralizes the DOM event dispatch for interaction tag mutations so sidebar controllers can refresh in response to grid or bulk edits without duplicating `CustomEvent` wiring.
@@ -172,6 +173,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `settings.js` renders the modal for customizing palette colors and keeps the dialog in sync with the sanitized `user-settings` payloads.
 - `project-info.js` renders the project notes dialog, providing a textarea host and dispatching change events so controllers can persist updates without duplicating DOM wiring.
 - `cleanup-dialog.js` displays the cleanup overlay, tracks per-action selections, and surfaces analyze/apply results provided by the controller.
+- `inference-dialog.js` renders the inference modal with scope selectors, overwrite/empty toggles, confidence/source defaults, and run/clear actions aligned with cleanup dialog affordances.
 
 #### `scripts/support/`
 
