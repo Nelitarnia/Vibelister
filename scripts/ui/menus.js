@@ -14,6 +14,7 @@ export function initMenus(deps) {
     openSettings,
     openProjectInfo,
     openCleanup,
+    openInference,
     addRowsAbove,
     addRowsBelow,
     clearCells,
@@ -204,6 +205,12 @@ export function initMenus(deps) {
     closeAllMenus();
     if (typeof openCleanup === "function") {
       await openCleanup();
+    }
+  });
+  el(Ids.toolsInference)?.addEventListener("click", async () => {
+    closeAllMenus();
+    if (typeof openInference === "function") {
+      await openInference();
     }
   });
   el(Ids.toolsTests)?.addEventListener("click", () => {

@@ -76,7 +76,7 @@ function readInteractionMetadata(note) {
   return { confidence, source, inferred };
 }
 
-function applyInteractionMetadata(note, metadata) {
+export function applyInteractionMetadata(note, metadata) {
   if (!note || typeof note !== "object") return;
   const nextConfidence = metadata
     ? normalizeInteractionConfidence(metadata.confidence)
