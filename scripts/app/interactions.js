@@ -10,6 +10,10 @@ import {
   getInteractionsRowCount,
 } from "./interactions-data.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
+import {
+  extractNoteFieldValue,
+  recordProfileImpact,
+} from "./inference-profiles.js";
 
 export const DEFAULT_INTERACTION_CONFIDENCE = 1;
 export const DEFAULT_INTERACTION_SOURCE = "manual";
@@ -481,6 +485,20 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
   if (!pk) return false;
   const k = noteKeyForPair(pair, pk.p);
   const note = model.notes[k] || (model.notes[k] = {});
+  const previousValue = extractNoteFieldValue(note, pk.field);
+
+  const finalize = (success) => {
+    if (success) {
+      const nextValue = extractNoteFieldValue(model.notes[k], pk.field);
+      recordProfileImpact({
+        pair,
+        field: pk.field,
+        previousValue,
+        nextValue,
+      });
+    }
+    return success;
+  };
 
   if (pk.field === "outcome") {
     const metadata = extractInteractionMetadata(value);
@@ -490,7 +508,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
       applyInteractionMetadata(note, null);
       if (Object.keys(note).length === 0) delete model.notes[k];
       mirrorAaPhase0Outcome(model, pair, pk.p);
-      return true;
+      return finalize(true);
     }
     const outcomeId =
       typeof value === "number"
@@ -501,7 +519,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
       if ("result" in note) delete note.result;
       applyInteractionMetadata(note, metadata);
       mirrorAaPhase0Outcome(model, pair, pk.p);
-      return true;
+      return finalize(true);
     }
     // STRICT: reject plain text pastes for Outcome
     if (status?.set)
@@ -511,7 +529,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     else if (status)
       status.textContent =
         "Outcome expects a valid Outcome ID (use the palette or structured paste).";
-    return false;
+    return finalize(false);
   }
 
   if (pk.field === "end") {
@@ -521,7 +539,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
       if ("endVariantSig" in note) delete note.endVariantSig;
       applyInteractionMetadata(note, null);
       if (Object.keys(note).length === 0) delete model.notes[k];
-      return true;
+      return finalize(true);
     }
     const endActionId =
       typeof value === "number"
@@ -533,7 +551,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
         value && typeof value === "object" ? value.endVariantSig || "" : "",
       );
       applyInteractionMetadata(note, metadata);
-      return true;
+      return finalize(true);
     }
     // STRICT: reject plain text or malformed objects for End
     if (status?.set)
@@ -543,7 +561,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     else if (status)
       status.textContent =
         "End expects an Action ID (use the palette or structured paste).";
-    return false;
+    return finalize(false);
   }
 
   if (pk.field === "tag") {
@@ -570,7 +588,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
           count: previousCount,
         });
       }
-      return true;
+      return finalize(true);
     }
 
     const tags = normalizeTagList(value);
@@ -589,7 +607,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
           count: previousCount,
         });
       }
-      return true;
+      return finalize(true);
     }
 
     const changed = !areTagListsEqual(previous, tags);
@@ -605,10 +623,10 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
         count: tags.length,
       });
     }
-    return true;
+    return finalize(true);
   }
 
-  return false;
+  return finalize(false);
 }
 
 export function applyStructuredCellInteractions(

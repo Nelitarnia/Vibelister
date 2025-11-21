@@ -170,6 +170,13 @@ export async function openInferenceDialog(options = {}) {
       "Pick the scope and defaults for applying or clearing inferred interaction metadata.";
     description.style.cssText = "margin:0;font-size:14px;color:#9aa4c9;";
 
+    const trendsHint = document.createElement("p");
+    trendsHint.textContent =
+      "Suggestions may lean on recent modifier/input trends; no need to pick a heuristic.";
+    trendsHint.title =
+      "Lightweight modifier and input profiles from recent edits help the heuristic decide when to change Outcome/End values.";
+    trendsHint.style.cssText = "margin:0;font-size:12px;color:#7f8ab5;";
+
     const scopeSelector = buildScopeSelector(defaults.scope || "selection");
 
     const includeRow = document.createElement("div");
@@ -247,6 +254,7 @@ export async function openInferenceDialog(options = {}) {
     box.append(
       title,
       description,
+      trendsHint,
       scopeSelector,
       includeRow,
       runOptions,

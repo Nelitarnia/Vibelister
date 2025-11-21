@@ -131,12 +131,13 @@ function eligibleForSuggestion(target) {
   return target.isInferred;
 }
 
-function registerSuggestion(map, target, source, confidence, value) {
+function registerSuggestion(map, target, source, confidence, value, profilePrefs) {
+  if (profilePrefs?.shouldSkip(target, value)) return;
   if (!map.has(target.key)) map.set(target.key, {});
   map.get(target.key)[target.field] = { source, confidence, value };
 }
 
-function applyConsensus(groups, suggestions, source, confidence) {
+function applyConsensus(groups, suggestions, source, confidence, profilePrefs) {
   for (const list of groups.values()) {
     const existing = list.filter((t) => t.currentValue);
     if (!existing.length) continue;
@@ -158,6 +159,7 @@ function applyConsensus(groups, suggestions, source, confidence) {
         source,
         confidence,
         cloneValue(target.field, value),
+        profilePrefs,
       );
     }
   }
@@ -167,17 +169,112 @@ export const HEURISTIC_SOURCES = Object.freeze({
   modifierPropagation: "modifier-propagation",
   modifierProfile: "modifier-profile",
   inputDefault: "input-default",
+  profileTrend: "profile-trend",
 });
 
 const SOURCE_CONFIDENCE = Object.freeze({
   [HEURISTIC_SOURCES.modifierPropagation]: 0.82,
   [HEURISTIC_SOURCES.modifierProfile]: 0.64,
   [HEURISTIC_SOURCES.inputDefault]: 0.48,
+  [HEURISTIC_SOURCES.profileTrend]: 0.56,
 });
 
-export function proposeInteractionInferences(targets) {
+function modifierIdsFromSig(sig) {
+  if (!sig) return [];
+  return String(sig)
+    .split("+")
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id));
+}
+
+function summarizeProfileForTarget(target, profiles, cache) {
+  if (!profiles) return null;
+  const cacheKey = `${target.key}|${target.field}`;
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
+
+  const field = target.field;
+  if (field !== "outcome" && field !== "end" && field !== "tag") {
+    cache.set(cacheKey, null);
+    return null;
+  }
+
+  let change = 0;
+  let noEffect = 0;
+  const valueCounts = new Map();
+
+  const mergeBucket = (bucket) => {
+    if (!bucket) return;
+    change += Number(bucket.change || 0);
+    noEffect += Number(bucket.noop || 0) + Number(bucket.clear || 0);
+    const values = bucket.values || {};
+    for (const [key, entry] of Object.entries(values)) {
+      const count = Number(entry?.count || 0);
+      const value = entry?.value;
+      if (!valueCounts.has(key)) valueCounts.set(key, { count: 0, value });
+      const item = valueCounts.get(key);
+      item.count += count;
+      if (item.value == null && value != null) item.value = value;
+    }
+  };
+
+  const inputBucket = profiles.input?.[target.inputKey]?.[field];
+  mergeBucket(inputBucket);
+
+  const modIds = modifierIdsFromSig(target.variantSig);
+  for (const modId of modIds) {
+    mergeBucket(profiles.modifier?.[modId]?.[field]);
+  }
+
+  let topValue = null;
+  let topValueKey = "";
+  let topCount = 0;
+  for (const [key, entry] of valueCounts.entries()) {
+    if (entry.count > topCount) {
+      topCount = entry.count;
+      topValue = entry.value;
+      topValueKey = key;
+    }
+  }
+
+  const summary =
+    change === 0 && noEffect === 0 && topCount === 0
+      ? null
+      : { change, noEffect, topValue, topValueKey };
+  cache.set(cacheKey, summary);
+  return summary;
+}
+
+function buildProfilePrefs(profiles) {
+  const cache = new Map();
+  return {
+    shouldSkip(target, candidateValue) {
+      const summary = summarizeProfileForTarget(target, profiles, cache);
+      if (!summary) return false;
+      const candidateKey = valueKey(target.field, candidateValue);
+      if (
+        summary.noEffect > summary.change * 1.2 &&
+        (!candidateKey || candidateKey !== summary.topValueKey)
+      ) {
+        return true;
+      }
+      return false;
+    },
+    preferredValue(target) {
+      const summary = summarizeProfileForTarget(target, profiles, cache);
+      if (!summary) return null;
+      if (summary.change >= summary.noEffect && summary.topValue) {
+        return summary.topValue;
+      }
+      return null;
+    },
+  };
+}
+
+export function proposeInteractionInferences(targets, profiles) {
   const prepared = prepareTargets(targets || []);
   const suggestions = new Map();
+
+  const profilePrefs = profiles ? buildProfilePrefs(profiles) : null;
 
   const byActionInput = new Map();
   const byModifierProfile = new Map();
@@ -203,6 +300,7 @@ export function proposeInteractionInferences(targets) {
     suggestions,
     HEURISTIC_SOURCES.modifierPropagation,
     SOURCE_CONFIDENCE[HEURISTIC_SOURCES.modifierPropagation],
+    profilePrefs,
   );
 
   applyConsensus(
@@ -210,6 +308,7 @@ export function proposeInteractionInferences(targets) {
     suggestions,
     HEURISTIC_SOURCES.modifierProfile,
     SOURCE_CONFIDENCE[HEURISTIC_SOURCES.modifierProfile],
+    profilePrefs,
   );
 
   for (const list of byInputDefault.values()) {
@@ -225,6 +324,26 @@ export function proposeInteractionInferences(targets) {
         HEURISTIC_SOURCES.inputDefault,
         SOURCE_CONFIDENCE[HEURISTIC_SOURCES.inputDefault],
         cloneValue(target.field, candidate.currentValue),
+        profilePrefs,
+      );
+    }
+  }
+
+  if (profilePrefs) {
+    for (const target of prepared) {
+      if (!eligibleForSuggestion(target)) continue;
+      const already = suggestions.get(target.key)?.[target.field];
+      if (already) continue;
+      if (profilePrefs.shouldSkip(target)) continue;
+      const preferred = profilePrefs.preferredValue(target);
+      if (!preferred) continue;
+      registerSuggestion(
+        suggestions,
+        target,
+        HEURISTIC_SOURCES.profileTrend,
+        SOURCE_CONFIDENCE[HEURISTIC_SOURCES.profileTrend],
+        cloneValue(target.field, preferred),
+        profilePrefs,
       );
     }
   }

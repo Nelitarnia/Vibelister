@@ -1,0 +1,272 @@
+// inference-profiles.js — track lightweight modifier/input frequency maps for inference
+
+function normalizeVariantSig(pair) {
+  if (!pair) return "";
+  const sig =
+    typeof pair.variantSig === "string" || typeof pair.variantSig === "number"
+      ? String(pair.variantSig)
+      : "";
+  return sig;
+}
+
+function normalizeInputKey(pair) {
+  if (!pair) return "";
+  const kind = String(pair.kind || "AI").toUpperCase();
+  if (kind === "AA") {
+    return Number.isFinite(pair.rhsActionId) ? `rhs:${pair.rhsActionId}` : "";
+  }
+  return Number.isFinite(pair.iId) ? `in:${pair.iId}` : "";
+}
+
+function parseModifierIds(pair) {
+  const sig = normalizeVariantSig(pair);
+  if (!sig) return [];
+  return sig
+    .split("+")
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id));
+}
+
+function expandTagCandidates(value) {
+  if (Array.isArray(value)) return value.flatMap((v) => expandTagCandidates(v));
+  if (value && typeof value === "object") {
+    if ("tags" in value) return expandTagCandidates(value.tags);
+    if ("tag" in value) return expandTagCandidates(value.tag);
+  }
+  if (value == null) return [];
+  const text = typeof value === "string" ? value : String(value);
+  return text
+    .split(/[\n,]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function normalizeTagList(value) {
+  const seen = new Set();
+  const tags = [];
+  for (const tag of expandTagCandidates(value)) {
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tags.push(tag);
+  }
+  return tags;
+}
+
+export function extractNoteFieldValue(note, field) {
+  if (!note || typeof note !== "object") return null;
+  if (field === "outcome") {
+    if (Number.isFinite(note.outcomeId)) return { outcomeId: note.outcomeId };
+    if (typeof note.result === "string" && note.result.trim()) {
+      return { result: note.result.trim() };
+    }
+    return null;
+  }
+  if (field === "end") {
+    if (Number.isFinite(note.endActionId)) {
+      return {
+        endActionId: note.endActionId,
+        endVariantSig:
+          typeof note.endVariantSig === "string" ? note.endVariantSig : "",
+      };
+    }
+    if (typeof note.endFree === "string" && note.endFree.trim()) {
+      return { endFree: note.endFree.trim() };
+    }
+    return null;
+  }
+  if (field === "tag") {
+    const tags = normalizeTagList(note.tags);
+    return tags.length ? { tags } : null;
+  }
+  return null;
+}
+
+function valueKey(field, value) {
+  if (!value) return "";
+  if (field === "outcome") {
+    if (Number.isFinite(value.outcomeId)) return `o:${value.outcomeId}`;
+    if (typeof value.result === "string") return `r:${value.result}`;
+  }
+  if (field === "end") {
+    if (Number.isFinite(value.endActionId)) {
+      const sig = typeof value.endVariantSig === "string" ? value.endVariantSig : "";
+      return `e:${value.endActionId}|${sig}`;
+    }
+    if (typeof value.endFree === "string") return `f:${value.endFree}`;
+  }
+  if (field === "tag") {
+    const tags = normalizeTagList(value.tags);
+    return `t:${tags.join("|")}`;
+  }
+  return "";
+}
+
+function cloneValue(field, value) {
+  if (!value) return null;
+  if (field === "outcome") {
+    if (Number.isFinite(value.outcomeId)) return { outcomeId: value.outcomeId };
+    if (typeof value.result === "string") return { result: value.result };
+    return null;
+  }
+  if (field === "end") {
+    if (Number.isFinite(value.endActionId)) {
+      return {
+        endActionId: value.endActionId,
+        endVariantSig:
+          typeof value.endVariantSig === "string" ? value.endVariantSig : "",
+      };
+    }
+    if (typeof value.endFree === "string") return { endFree: value.endFree };
+    return null;
+  }
+  if (field === "tag") {
+    const tags = normalizeTagList(value.tags);
+    return tags.length ? { tags } : { tags: [] };
+  }
+  return null;
+}
+
+function createFieldBucket() {
+  return { change: 0, clear: 0, noop: 0, values: new Map() };
+}
+
+function createProfileRecord() {
+  return {
+    outcome: createFieldBucket(),
+    end: createFieldBucket(),
+    tag: createFieldBucket(),
+  };
+}
+
+const modifierProfiles = new Map();
+const inputProfiles = new Map();
+let decayBudget = 0;
+
+function ensureProfile(map, key) {
+  if (!map.has(key)) map.set(key, createProfileRecord());
+  return map.get(key);
+}
+
+function incrementBucket(bucket, impact, nextValue, field) {
+  if (!bucket) return;
+  if (impact === "change") bucket.change += 1;
+  else if (impact === "clear") bucket.clear += 1;
+  else bucket.noop += 1;
+  if (nextValue) {
+    const key = valueKey(field, nextValue);
+    if (!key) return;
+    if (!bucket.values.has(key)) bucket.values.set(key, { count: 0, value: cloneValue(field, nextValue) });
+    const entry = bucket.values.get(key);
+    entry.count += 1;
+  }
+}
+
+function computeImpact(field, previousValue, nextValue) {
+  const beforeKey = valueKey(field, previousValue);
+  const afterKey = valueKey(field, nextValue);
+  if (beforeKey === afterKey) return "noop";
+  if (afterKey) return "change";
+  if (beforeKey) return "clear";
+  return "noop";
+}
+
+function decayBucket(bucket, factor) {
+  if (!bucket) return;
+  bucket.change *= factor;
+  bucket.clear *= factor;
+  bucket.noop *= factor;
+  for (const [key, entry] of bucket.values.entries()) {
+    entry.count *= factor;
+    if (entry.count < 0.1) bucket.values.delete(key);
+  }
+}
+
+function decayProfiles(factor = 0.94) {
+  for (const profile of modifierProfiles.values()) {
+    decayBucket(profile.outcome, factor);
+    decayBucket(profile.end, factor);
+    decayBucket(profile.tag, factor);
+  }
+  for (const profile of inputProfiles.values()) {
+    decayBucket(profile.outcome, factor);
+    decayBucket(profile.end, factor);
+    decayBucket(profile.tag, factor);
+  }
+}
+
+export function recordProfileImpact({
+  pair,
+  field,
+  previousValue,
+  nextValue,
+  impact,
+}) {
+  if (!field || (field !== "outcome" && field !== "end" && field !== "tag")) {
+    return;
+  }
+  const impactType = impact || computeImpact(field, previousValue, nextValue);
+  const modIds = parseModifierIds(pair);
+  const inputKey = normalizeInputKey(pair);
+
+  for (const modId of modIds) {
+    const profile = ensureProfile(modifierProfiles, modId);
+    incrementBucket(profile[field], impactType, nextValue, field);
+  }
+  if (inputKey) {
+    const profile = ensureProfile(inputProfiles, inputKey);
+    incrementBucket(profile[field], impactType, nextValue, field);
+  }
+
+  decayBudget += 1;
+  if (decayBudget >= 50) {
+    decayProfiles();
+    decayBudget = 0;
+  }
+}
+
+function cloneValues(values, field) {
+  const entries = [];
+  for (const [key, entry] of values.entries()) {
+    const clonedValue = cloneValue(field, entry.value) || entry.value;
+    entries.push([key, { count: entry.count, value: clonedValue }]);
+  }
+  const obj = Object.fromEntries(entries);
+  for (const entry of Object.values(obj)) Object.freeze(entry);
+  return Object.freeze(obj);
+}
+
+function cloneBucket(bucket, field) {
+  if (!bucket) return { change: 0, clear: 0, noop: 0, values: {} };
+  const values = cloneValues(bucket.values, field);
+  return Object.freeze({
+    change: bucket.change,
+    clear: bucket.clear,
+    noop: bucket.noop,
+    values,
+  });
+}
+
+function cloneProfile(profile) {
+  return Object.freeze({
+    outcome: cloneBucket(profile.outcome, "outcome"),
+    end: cloneBucket(profile.end, "end"),
+    tag: cloneBucket(profile.tag, "tag"),
+  });
+}
+
+export function captureInferenceProfilesSnapshot() {
+  decayProfiles();
+  const modifier = {};
+  for (const [key, profile] of modifierProfiles.entries()) {
+    modifier[key] = cloneProfile(profile);
+  }
+  const input = {};
+  for (const [key, profile] of inputProfiles.entries()) {
+    input[key] = cloneProfile(profile);
+  }
+  return Object.freeze({
+    modifier: Object.freeze(modifier),
+    input: Object.freeze(input),
+  });
+}

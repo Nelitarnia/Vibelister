@@ -11,11 +11,17 @@ import {
   HEURISTIC_SOURCES,
   proposeInteractionInferences,
 } from "./inference-heuristics.js";
+import {
+  captureInferenceProfilesSnapshot,
+  extractNoteFieldValue,
+  recordProfileImpact,
+} from "./inference-profiles.js";
 
 const HEURISTIC_LABELS = Object.freeze({
   [HEURISTIC_SOURCES.modifierPropagation]: "modifier propagation",
   [HEURISTIC_SOURCES.modifierProfile]: "modifier profile",
   [HEURISTIC_SOURCES.inputDefault]: "input default",
+  [HEURISTIC_SOURCES.profileTrend]: "modifier/input trends",
 });
 import { parsePhaseKey } from "../data/utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
@@ -168,7 +174,8 @@ export function createInferenceController(options) {
       confidence: options.defaultConfidence,
       source: options.defaultSource,
     };
-    const suggestions = proposeInteractionInferences(targets);
+    const profileSnapshot = captureInferenceProfilesSnapshot();
+    const suggestions = proposeInteractionInferences(targets, profileSnapshot);
     const result = {
       applied: 0,
       skippedManual: 0,
@@ -178,19 +185,33 @@ export function createInferenceController(options) {
     };
     for (const target of targets) {
       const note = notes[target.key];
+      const previousValue = extractNoteFieldValue(note, target.field);
+      const recordOutcome = (impact) => {
+        const nextValue = extractNoteFieldValue(notes[target.key], target.field);
+        recordProfileImpact({
+          pair: target.pair,
+          field: target.field,
+          previousValue,
+          nextValue,
+          impact,
+        });
+      };
       const hasValue = hasStructuredValue(note, target.field);
       const info = describeInteractionInference(note);
       const currentSource = normalizeInteractionSource(info?.source);
       if (currentSource === DEFAULT_INTERACTION_SOURCE && hasValue) {
         result.skippedManual++;
+        recordOutcome("noop");
         continue;
       }
       if (!options.overwriteInferred && info?.inferred) {
         result.skippedExisting++;
+        recordOutcome("noop");
         continue;
       }
       if (options.onlyFillEmpty && hasValue) {
         result.skippedExisting++;
+        recordOutcome("noop");
         continue;
       }
       const suggestion = suggestions.get(target.key)?.[target.field];
@@ -198,10 +219,12 @@ export function createInferenceController(options) {
         suggestion && (!hasValue || currentSource !== DEFAULT_INTERACTION_SOURCE);
       if (!hasValue && !canUseSuggestion) {
         result.empty++;
+        recordOutcome("noop");
         continue;
       }
       if (options.onlyFillEmpty && hasValue && !suggestion) {
         result.skippedExisting++;
+        recordOutcome("noop");
         continue;
       }
       const dest = note || (notes[target.key] = {});
@@ -240,6 +263,7 @@ export function createInferenceController(options) {
         applyInteractionMetadata(dest, metadata);
       }
       result.applied++;
+      recordOutcome();
     }
     return result;
   }
