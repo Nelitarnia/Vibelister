@@ -11,6 +11,9 @@ import {
 } from "./interactions-data.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
+export const DEFAULT_INTERACTION_CONFIDENCE = 1;
+export const DEFAULT_INTERACTION_SOURCE = "manual";
+
 export { getInteractionsRowCount, getPairFromIndex as getInteractionsPair };
 
 function expandTagCandidates(value) {
@@ -40,6 +43,75 @@ function normalizeTagList(value) {
     }
   }
   return tags;
+}
+
+export function normalizeInteractionConfidence(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return DEFAULT_INTERACTION_CONFIDENCE;
+  if (num < 0) return 0;
+  if (num > 1) return 1;
+  return num;
+}
+
+export function normalizeInteractionSource(value) {
+  if (typeof value !== "string") return DEFAULT_INTERACTION_SOURCE;
+  const trimmed = value.trim();
+  return trimmed || DEFAULT_INTERACTION_SOURCE;
+}
+
+function readInteractionMetadata(note) {
+  const hasConfidence =
+    note && typeof note === "object" && "confidence" in note;
+  const hasSource = note && typeof note === "object" && "source" in note;
+  const confidence = normalizeInteractionConfidence(
+    note && typeof note === "object" ? note.confidence : undefined,
+  );
+  const source = normalizeInteractionSource(
+    note && typeof note === "object" ? note.source : undefined,
+  );
+  const inferred =
+    (hasConfidence || hasSource) &&
+    (confidence !== DEFAULT_INTERACTION_CONFIDENCE ||
+      source !== DEFAULT_INTERACTION_SOURCE);
+  return { confidence, source, inferred };
+}
+
+function applyInteractionMetadata(note, metadata) {
+  if (!note || typeof note !== "object") return;
+  const nextConfidence = metadata
+    ? normalizeInteractionConfidence(metadata.confidence)
+    : DEFAULT_INTERACTION_CONFIDENCE;
+  const nextSource = metadata
+    ? normalizeInteractionSource(metadata.source)
+    : DEFAULT_INTERACTION_SOURCE;
+  if (nextConfidence !== DEFAULT_INTERACTION_CONFIDENCE) {
+    note.confidence = nextConfidence;
+  } else if ("confidence" in note) {
+    delete note.confidence;
+  }
+  if (nextSource !== DEFAULT_INTERACTION_SOURCE) {
+    note.source = nextSource;
+  } else if ("source" in note) {
+    delete note.source;
+  }
+}
+
+function extractInteractionMetadata(value) {
+  if (!value || typeof value !== "object") return null;
+  const hasConfidence = Object.prototype.hasOwnProperty.call(
+    value,
+    "confidence",
+  );
+  const hasSource = Object.prototype.hasOwnProperty.call(value, "source");
+  if (!hasConfidence && !hasSource) return null;
+  return {
+    confidence: hasConfidence
+      ? normalizeInteractionConfidence(value.confidence)
+      : DEFAULT_INTERACTION_CONFIDENCE,
+    source: hasSource
+      ? normalizeInteractionSource(value.source)
+      : DEFAULT_INTERACTION_SOURCE,
+  };
 }
 
 function formatTagList(value) {
@@ -84,6 +156,10 @@ export function collectInteractionTags(model) {
     return lowerA < lowerB ? -1 : 1;
   });
   return tags;
+}
+
+export function describeInteractionInference(note) {
+  return readInteractionMetadata(note);
 }
 
 // Key builder
@@ -232,28 +308,52 @@ export function getStructuredCellInteractions(model, viewDef, r, c) {
   if (pk.field === "outcome") {
     if (note && note.outcomeId != null) {
       const oid = Number(note.outcomeId);
-      if (Number.isFinite(oid))
-        return { type: "outcome", data: { outcomeId: oid } };
+      if (Number.isFinite(oid)) {
+        const meta = readInteractionMetadata(note);
+        const data = { outcomeId: oid };
+        if (meta.inferred) {
+          if (meta.confidence !== DEFAULT_INTERACTION_CONFIDENCE)
+            data.confidence = meta.confidence;
+          if (meta.source !== DEFAULT_INTERACTION_SOURCE)
+            data.source = meta.source;
+        }
+        return { type: "outcome", data };
+      }
     }
     return null; // legacy free-text is readable in UI but never exported to clipboard
   }
 
   if (pk.field === "end") {
     if (typeof note.endActionId === "number") {
-      return {
-        type: "end",
-        data: {
-          endActionId: note.endActionId,
-          endVariantSig: String(note.endVariantSig || ""),
-        },
+      const meta = readInteractionMetadata(note);
+      const data = {
+        endActionId: note.endActionId,
+        endVariantSig: String(note.endVariantSig || ""),
       };
+      if (meta.inferred) {
+        if (meta.confidence !== DEFAULT_INTERACTION_CONFIDENCE)
+          data.confidence = meta.confidence;
+        if (meta.source !== DEFAULT_INTERACTION_SOURCE)
+          data.source = meta.source;
+      }
+      return { type: "end", data };
     }
     return null; // legacy free-text is readable in UI but never exported to clipboard
   }
   if (pk.field === "tag") {
     if (note.tags != null) {
       const tags = normalizeTagList(note.tags);
-      if (tags.length) return { type: "tag", data: { tags } };
+      if (tags.length) {
+        const meta = readInteractionMetadata(note);
+        const data = { tags };
+        if (meta.inferred) {
+          if (meta.confidence !== DEFAULT_INTERACTION_CONFIDENCE)
+            data.confidence = meta.confidence;
+          if (meta.source !== DEFAULT_INTERACTION_SOURCE)
+            data.source = meta.source;
+        }
+        return { type: "tag", data };
+      }
     }
     return null;
   }
@@ -276,6 +376,7 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
 
   const sourceKey = noteKeyForPair(pair, phase);
   const sourceNote = notes[sourceKey];
+  const sourceMeta = readInteractionMetadata(sourceNote);
   const mirrorPair = {
     kind: "AA",
     aId: pair.rhsActionId,
@@ -310,6 +411,14 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
       delete mnote.result;
       changed = true;
     }
+    if ("confidence" in mnote) {
+      delete mnote.confidence;
+      changed = true;
+    }
+    if ("source" in mnote) {
+      delete mnote.source;
+      changed = true;
+    }
     if (!Object.keys(mnote).length) delete notes[mirrorKey];
     return changed;
   };
@@ -327,6 +436,7 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
       delete mnote.result;
       changed = true;
     }
+    applyInteractionMetadata(mnote, sourceMeta.inferred ? sourceMeta : null);
     return changed;
   }
 
@@ -341,6 +451,7 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
       delete mnote.outcomeId;
       changed = true;
     }
+    applyInteractionMetadata(mnote, sourceMeta.inferred ? sourceMeta : null);
     return changed;
   }
 
@@ -372,16 +483,23 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
   const note = model.notes[k] || (model.notes[k] = {});
 
   if (pk.field === "outcome") {
+    const metadata = extractInteractionMetadata(value);
     if (value == null || value === "") {
       if ("outcomeId" in note) delete note.outcomeId;
       if ("result" in note) delete note.result;
+      applyInteractionMetadata(note, null);
       if (Object.keys(note).length === 0) delete model.notes[k];
       mirrorAaPhase0Outcome(model, pair, pk.p);
       return true;
     }
-    if (typeof value === "number") {
-      note.outcomeId = value;
+    const outcomeId =
+      typeof value === "number"
+        ? value
+        : Number(value && typeof value === "object" ? value.outcomeId : NaN);
+    if (Number.isFinite(outcomeId)) {
+      note.outcomeId = outcomeId;
       if ("result" in note) delete note.result;
+      applyInteractionMetadata(note, metadata);
       mirrorAaPhase0Outcome(model, pair, pk.p);
       return true;
     }
@@ -397,18 +515,25 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
   }
 
   if (pk.field === "end") {
+    const metadata = extractInteractionMetadata(value);
     if (value == null || value === "") {
       if ("endActionId" in note) delete note.endActionId;
       if ("endVariantSig" in note) delete note.endVariantSig;
+      applyInteractionMetadata(note, null);
       if (Object.keys(note).length === 0) delete model.notes[k];
       return true;
     }
-    if (typeof value === "object" && value) {
-      if (typeof value.endActionId === "number") {
-        note.endActionId = value.endActionId;
-        note.endVariantSig = String(value.endVariantSig || "");
-        return true;
-      }
+    const endActionId =
+      typeof value === "number"
+        ? value
+        : Number(value && typeof value === "object" ? value.endActionId : NaN);
+    if (Number.isFinite(endActionId)) {
+      note.endActionId = endActionId;
+      note.endVariantSig = String(
+        value && typeof value === "object" ? value.endVariantSig || "" : "",
+      );
+      applyInteractionMetadata(note, metadata);
+      return true;
     }
     // STRICT: reject plain text or malformed objects for End
     if (status?.set)
@@ -424,6 +549,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
   if (pk.field === "tag") {
     const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
     const previousCount = previous.length;
+    const metadata = extractInteractionMetadata(value);
 
     if (
       value == null ||
@@ -432,6 +558,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     ) {
       const hadTags = previousCount > 0;
       if ("tags" in note) delete note.tags;
+      applyInteractionMetadata(note, null);
       if (Object.keys(note).length === 0) delete model.notes[k];
       if (hadTags) {
         emitInteractionTagChangeEvent(null, {
@@ -450,6 +577,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     if (!tags.length) {
       const hadTags = previousCount > 0;
       if ("tags" in note) delete note.tags;
+      applyInteractionMetadata(note, null);
       if (Object.keys(note).length === 0) delete model.notes[k];
       if (hadTags) {
         emitInteractionTagChangeEvent(null, {
@@ -466,6 +594,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
 
     const changed = !areTagListsEqual(previous, tags);
     note.tags = tags;
+    applyInteractionMetadata(note, metadata);
     if (changed || (!previousCount && tags.length)) {
       emitInteractionTagChangeEvent({ type: "set" }, {
         reason: "setCell",
@@ -570,6 +699,8 @@ export function applyStructuredCellInteractions(
     data = { tags: [] };
   }
 
+  const metadata = extractInteractionMetadata(data);
+
   // 3) Bail if the wrapper still doesn't match the destination
   if (
     (field === "outcome" && type !== "outcome") ||
@@ -589,19 +720,41 @@ export function applyStructuredCellInteractions(
   if (field === "outcome" && type === "outcome") {
     const id = Number(data && (data.outcomeId ?? data));
     if (!Number.isFinite(id)) return false;
-    wrote = !!setInteractionsCell(model, null, viewDef, r, c, id);
+    const payload = { outcomeId: id };
+    if (
+      metadata &&
+      (metadata.confidence !== DEFAULT_INTERACTION_CONFIDENCE ||
+        metadata.source !== DEFAULT_INTERACTION_SOURCE)
+    ) {
+      payload.confidence = metadata.confidence;
+      payload.source = metadata.source;
+    }
+    wrote = !!setInteractionsCell(model, null, viewDef, r, c, payload);
   } else if (field === "end" && type === "end") {
     const eid = Number(data && data.endActionId);
     if (!Number.isFinite(eid)) return false;
     const evs =
       "endVariantSig" in (data || {}) ? String(data.endVariantSig || "") : "";
-    wrote = !!setInteractionsCell(model, null, viewDef, r, c, {
-      endActionId: eid,
-      endVariantSig: evs,
-    });
+    const payload = { endActionId: eid, endVariantSig: evs };
+    if (
+      metadata &&
+      (metadata.confidence !== DEFAULT_INTERACTION_CONFIDENCE ||
+        metadata.source !== DEFAULT_INTERACTION_SOURCE)
+    ) {
+      payload.confidence = metadata.confidence;
+      payload.source = metadata.source;
+    }
+    wrote = !!setInteractionsCell(model, null, viewDef, r, c, payload);
   } else if (field === "tag" && type === "tag") {
     const tags = normalizeTagList(data && "tags" in data ? data.tags : data);
-    wrote = !!setInteractionsCell(model, null, viewDef, r, c, tags);
+    const payload = metadata
+      ? {
+          tags,
+          confidence: metadata.confidence,
+          source: metadata.source,
+        }
+      : tags;
+    wrote = !!setInteractionsCell(model, null, viewDef, r, c, payload);
   } else {
     return wrote;
   }
@@ -651,6 +804,14 @@ export function clearInteractionsCell(model, viewDef, r, c) {
       delete note.result;
       changed = true;
     }
+    if ("confidence" in note) {
+      delete note.confidence;
+      changed = true;
+    }
+    if ("source" in note) {
+      delete note.source;
+      changed = true;
+    }
   } else if (pk.field === "end") {
     if ("endActionId" in note) {
       delete note.endActionId;
@@ -662,6 +823,14 @@ export function clearInteractionsCell(model, viewDef, r, c) {
     }
     if ("endFree" in note) {
       delete note.endFree;
+      changed = true;
+    }
+    if ("confidence" in note) {
+      delete note.confidence;
+      changed = true;
+    }
+    if ("source" in note) {
+      delete note.source;
       changed = true;
     }
   } else if (pk.field === "tag") {
@@ -679,6 +848,14 @@ export function clearInteractionsCell(model, viewDef, r, c) {
           count: previous.length,
         });
       }
+    }
+    if ("confidence" in note) {
+      delete note.confidence;
+      changed = true;
+    }
+    if ("source" in note) {
+      delete note.source;
+      changed = true;
     }
   }
 
@@ -716,6 +893,14 @@ export function clearInteractionsSelection(
         delete note.result;
         cleared++;
       }
+      if ("confidence" in note) {
+        delete note.confidence;
+        cleared++;
+      }
+      if ("source" in note) {
+        delete note.source;
+        cleared++;
+      }
       return true;
     }
     if (pk && pk.field === "end") {
@@ -729,6 +914,14 @@ export function clearInteractionsSelection(
       }
       if ("endFree" in note) {
         delete note.endFree;
+        cleared++;
+      }
+      if ("confidence" in note) {
+        delete note.confidence;
+        cleared++;
+      }
+      if ("source" in note) {
+        delete note.source;
         cleared++;
       }
       return true;
@@ -745,6 +938,14 @@ export function clearInteractionsSelection(
           });
         }
         delete note.tags;
+        cleared++;
+      }
+      if ("confidence" in note) {
+        delete note.confidence;
+        cleared++;
+      }
+      if ("source" in note) {
+        delete note.source;
         cleared++;
       }
       return true;

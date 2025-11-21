@@ -22,6 +22,12 @@ import {
 import { normalizeCommentColorPalette } from "../data/comment-colors.js";
 import { snapshotModel } from "../data/mutation-runner.js";
 import { buildInteractionsPairs } from "../data/variants/variants.js";
+import {
+  DEFAULT_INTERACTION_CONFIDENCE,
+  DEFAULT_INTERACTION_SOURCE,
+  normalizeInteractionConfidence,
+  normalizeInteractionSource,
+} from "./interactions.js";
 
 export function createPersistenceController({
   model,
@@ -79,6 +85,20 @@ export function createPersistenceController({
     if (value == null) return "";
     const text = String(value);
     return text.replace(/\r\n?/g, "\n");
+  }
+
+  function normalizeInteractionMetadata(note) {
+    if (!note || typeof note !== "object") return;
+    if ("confidence" in note) {
+      const conf = normalizeInteractionConfidence(note.confidence);
+      if (conf !== DEFAULT_INTERACTION_CONFIDENCE) note.confidence = conf;
+      else delete note.confidence;
+    }
+    if ("source" in note) {
+      const src = normalizeInteractionSource(note.source);
+      if (src !== DEFAULT_INTERACTION_SOURCE) note.source = src;
+      else delete note.source;
+    }
   }
 
   function getFsModule() {
@@ -220,6 +240,9 @@ export function createPersistenceController({
     if (!Array.isArray(o.modifierGroups)) o.modifierGroups = [];
     if (!Array.isArray(o.modifierConstraints)) o.modifierConstraints = [];
     if (!o.notes || typeof o.notes !== "object") o.notes = {};
+    for (const note of Object.values(o.notes)) {
+      normalizeInteractionMetadata(note);
+    }
     o.comments = normalizeCommentsMap(o.comments);
     if (!Array.isArray(o.interactionsPairs)) o.interactionsPairs = [];
     if (!o.interactionsIndex || typeof o.interactionsIndex !== "object") {

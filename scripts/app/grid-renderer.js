@@ -40,6 +40,7 @@ function createGridRenderer({
   getInteractionsPair,
   getCommentColors,
   commentColors,
+  describeInteractionInference,
 }) {
   let colGeomCache = { key: null, widths: null, offs: null, stamp: 0 };
   const colHeaderPool = Array.from(colHdrs.children || []);
@@ -624,6 +625,30 @@ function createGridRenderer({
     }
   }
 
+  function tintForConfidence(confidence) {
+    const c = Number.isFinite(confidence) ? confidence : 0;
+    const clamped = Math.min(1, Math.max(0, c));
+    const alpha = 0.25 + 0.45 * clamped;
+    return `rgba(129, 161, 255, ${alpha.toFixed(3)})`;
+  }
+
+  function applyInferenceDecoration(el, info) {
+    const inferred = info?.inferred;
+    if (inferred) {
+      if (el.dataset.inferred !== "true") el.dataset.inferred = "true";
+      const tint = tintForConfidence(info?.confidence);
+      if (el.style && typeof el.style.setProperty === "function")
+        el.style.setProperty("--vl-inferred-shadow", `inset 0 0 0 2px ${tint}`);
+      else if (el.style)
+        el.style["--vl-inferred-shadow"] = `inset 0 0 0 2px ${tint}`;
+    } else {
+      if (el.dataset.inferred) delete el.dataset.inferred;
+      if (el.style && typeof el.style.removeProperty === "function")
+        el.style.removeProperty("--vl-inferred-shadow");
+      else if (el.style) el.style["--vl-inferred-shadow"] = "";
+    }
+  }
+
   function layout() {
     const cols = viewDef().columns;
     const { widths } = getColGeomFor(cols);
@@ -791,6 +816,7 @@ function createGridRenderer({
         applyCellColors(d, colorInfo);
         d.title = colorInfo && colorInfo.title ? colorInfo.title : "";
         updateCommentBadge(d, commentEntries);
+        let inferenceInfo = null;
         if (r % 2 === 1) d.classList.add("alt");
         else d.classList.remove("alt");
         const isMultiSelection =
@@ -827,6 +853,10 @@ function createGridRenderer({
               ) {
                 const pair = getInteractionsPair(model, r);
                 if (pair) {
+                  const noteKey = noteKeyForPair(pair, pNum);
+                  inferenceInfo = describeInteractionInference(
+                    model?.notes?.[noteKey],
+                  );
                   const a = model.actions.find((x) => x.id === pair.aId);
                   const ids = a && a.phases && a.phases.ids ? a.phases.ids : [];
                   if (ids.length && ids.indexOf(pNum) === -1) {
@@ -837,6 +867,7 @@ function createGridRenderer({
             }
           }
         }
+        applyInferenceDecoration(d, inferenceInfo);
       }
     }
   }

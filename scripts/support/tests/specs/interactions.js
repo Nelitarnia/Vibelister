@@ -10,6 +10,7 @@ import {
   getInteractionsPair,
   getInteractionsRowCount,
   collectInteractionTags,
+  describeInteractionInference,
 } from "../../../app/interactions.js";
 import { createInteractionTagManager } from "../../../app/interaction-tags.js";
 import { INTERACTION_TAGS_EVENT } from "../../../app/tag-events.js";
@@ -462,6 +463,76 @@ export function getInteractionsTests() {
           "Attack",
           "pasted end visible",
         );
+      },
+    },
+    {
+      name: "structured metadata defaults and inference preservation",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        addAction("Block");
+        addInput("Jab");
+        const outcome = addOutcome("Hit");
+        buildInteractionsPairs(model);
+        const viewDef = makeInteractionsView();
+
+        setInteractionsCell(model, { set() {} }, viewDef, 0, 2, outcome.id);
+        const pair0 = getPair(model, 0);
+        const noteKey0 = noteKeyForPair(pair0, 1);
+        assert.ok(!("confidence" in model.notes[noteKey0]));
+        assert.ok(!("source" in model.notes[noteKey0]));
+
+        const payloadDefault = getStructuredCellInteractions(
+          model,
+          viewDef,
+          0,
+          2,
+        );
+        assert.deepStrictEqual(
+          payloadDefault,
+          { type: "outcome", data: { outcomeId: outcome.id } },
+          "default metadata omitted",
+        );
+
+        setInteractionsCell(model, { set() {} }, viewDef, 0, 2, {
+          outcomeId: outcome.id,
+          confidence: 0.6,
+          source: "model",
+        });
+        const metaPayload = getStructuredCellInteractions(model, viewDef, 0, 2);
+        assert.deepStrictEqual(
+          metaPayload,
+          {
+            type: "outcome",
+            data: { outcomeId: outcome.id, confidence: 0.6, source: "model" },
+          },
+          "non-default metadata exported",
+        );
+
+        const sanitized = sanitizeStructuredPayload(metaPayload);
+        assert.deepStrictEqual(
+          sanitized,
+          {
+            type: "outcome",
+            data: { outcomeId: outcome.id, confidence: 0.6, source: "model" },
+          },
+          "metadata survives sanitize",
+        );
+
+        addInput("Kick");
+        buildInteractionsPairs(model);
+        const applied = applyStructuredCellInteractions(
+          (r, c, v) => setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
+          viewDef,
+          1,
+          2,
+          sanitized,
+          model,
+        );
+        assert.ok(applied, "metadata payload applied");
+        const pair1 = getPair(model, 1);
+        const noteKey1 = noteKeyForPair(pair1, 1);
+        assert.strictEqual(model.notes[noteKey1].confidence, 0.6);
+        assert.strictEqual(model.notes[noteKey1].source, "model");
       },
     },
     {
@@ -1556,6 +1627,24 @@ export function getInteractionsTests() {
           /Add tag/.test(suggestionDesc),
           "suggestion indicates it will add the tag",
         );
+      },
+    },
+    {
+      name: "inference helper flags non-manual notes",
+      run(assert) {
+        const defaults = describeInteractionInference({});
+        assert.strictEqual(defaults.inferred, false, "empty note not inferred");
+
+        const inferred = describeInteractionInference({
+          source: "model",
+          confidence: 0.4,
+        });
+        assert.strictEqual(inferred.inferred, true, "non-manual source inferred");
+        assert.strictEqual(inferred.source, "model");
+        assert.strictEqual(inferred.confidence, 0.4);
+
+        const confOnly = describeInteractionInference({ confidence: 0.25 });
+        assert.strictEqual(confOnly.inferred, true, "low confidence still inferred");
       },
     },
   ];
