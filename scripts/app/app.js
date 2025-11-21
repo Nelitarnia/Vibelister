@@ -57,6 +57,7 @@ import {
   isInteractionPhaseColumnActiveForRow,
   getInteractionsPair,
   getInteractionsRowCount,
+  describeInteractionInference,
 } from "./interactions.js";
 import { setCommentInactive } from "./comments.js";
 import { emitCommentChangeEvent } from "./comment-events.js";
@@ -242,6 +243,7 @@ const {
   isModColumn,
   modIdFromKey,
   getInteractionsPair,
+  describeInteractionInference,
   getCommentColors: () => model.meta.commentColors,
 });
 

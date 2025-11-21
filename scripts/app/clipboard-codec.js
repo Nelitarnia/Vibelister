@@ -2,7 +2,13 @@
 // Keeps schema minimal, verifies canonical shape, and provides read/write helpers.
 
 import { cloneCommentValue } from "./comments.js";
-import { normalizeInteractionTags } from "./interactions.js";
+import {
+  DEFAULT_INTERACTION_CONFIDENCE,
+  DEFAULT_INTERACTION_SOURCE,
+  normalizeInteractionConfidence,
+  normalizeInteractionSource,
+  normalizeInteractionTags,
+} from "./interactions.js";
 
 // --- MIME ---------------------------------------------------------------
 export const MIME_CELL = "application/x-gridcell+json";
@@ -31,9 +37,9 @@ export function sanitizeStructuredPayload(payload) {
   const ALLOW = {
     action: ["id", "variantSig"],
     input: ["id"],
-    outcome: ["outcomeId"],
-    end: ["endActionId", "endVariantSig"],
-    tag: ["tags"],
+    outcome: ["outcomeId", "confidence", "source"],
+    end: ["endActionId", "endVariantSig", "confidence", "source"],
+    tag: ["tags", "confidence", "source"],
     modifierState: ["value"],
     comment: ["viewKey", "rowId", "columnKey", "cellKey", "value"],
   };
@@ -69,6 +75,17 @@ export function sanitizeStructuredPayload(payload) {
   if (type === "tag") {
     const normalized = normalizeInteractionTags(out.data.tags);
     out.data.tags = normalized;
+  }
+
+  if (type === "outcome" || type === "end" || type === "tag") {
+    if ("confidence" in d) {
+      const conf = normalizeInteractionConfidence(d.confidence);
+      if (conf !== DEFAULT_INTERACTION_CONFIDENCE) out.data.confidence = conf;
+    }
+    if ("source" in d) {
+      const src = normalizeInteractionSource(d.source);
+      if (src !== DEFAULT_INTERACTION_SOURCE) out.data.source = src;
+    }
   }
 
   // Minimal validity checks after normalization

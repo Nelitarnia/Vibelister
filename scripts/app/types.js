@@ -57,10 +57,12 @@
 * Older projects may omit the `ai|` prefix or store reduced AA forms; the
 * pruning/migration utilities preserve back-compat.
   */
-  /** @typedef {Object} NoteRecord
+/** @typedef {Object} NoteRecord
 * @property {number=} outcomeId        // formal outcome (stable id)
 * @property {number=} endActionId      // formal end target action id
 * @property {string=} endVariantSig    // variant signature for end action
+* @property {number=} confidence       // optional confidence for structured cells
+* @property {string=} source           // optional source marker (e.g., 'manual' | 'model')
 * @property {string=} result           // legacy free-text outcome (read-only)
 * @property {string=} endFree          // legacy free-text end (read-only)
 * @property {string=} notes            // free-form user notes
@@ -133,10 +135,11 @@
   */
 /** @typedef {{ type: 'action',  data: { id: number, variantSig?: string } }} StructuredActionRef */
 /** @typedef {{ type: 'input',   data: { id: number } }} StructuredInputRef */
-/** @typedef {{ type: 'outcome', data: { outcomeId: number } }} StructuredOutcomeRef */
-/** @typedef {{ type: 'end',     data: { endActionId: number, endVariantSig?: string } }} StructuredEndRef */
+/** @typedef {{ type: 'outcome', data: { outcomeId: number, confidence?: number, source?: string } }} StructuredOutcomeRef */
+/** @typedef {{ type: 'end',     data: { endActionId: number, endVariantSig?: string, confidence?: number, source?: string } }} StructuredEndRef */
+/** @typedef {{ type: 'tag',     data: { tags: string[], confidence?: number, source?: string } }} StructuredTagRef */
 /** @typedef {{ type: 'comment', data: { value: unknown, viewKey?: string, rowId?: string, columnKey?: string, cellKey?: string } }} StructuredCommentRef */
-/** @typedef {(StructuredActionRef|StructuredInputRef|StructuredOutcomeRef|StructuredEndRef|StructuredCommentRef)} StructuredPayload */
+/** @typedef {(StructuredActionRef|StructuredInputRef|StructuredOutcomeRef|StructuredEndRef|StructuredTagRef|StructuredCommentRef)} StructuredPayload */
 
 /**
 
