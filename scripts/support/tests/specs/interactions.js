@@ -16,6 +16,11 @@ import { createInteractionBulkActions } from "../../../app/interaction-bulk-acti
 import { createInteractionTagManager } from "../../../app/interaction-tags.js";
 import { INTERACTION_TAGS_EVENT } from "../../../app/tag-events.js";
 import { sanitizeStructuredPayload } from "../../../app/clipboard-codec.js";
+import { createInferenceController } from "../../../app/inference-controller.js";
+import {
+  HEURISTIC_SOURCES,
+  proposeInteractionInferences,
+} from "../../../app/inference-heuristics.js";
 import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
 import { formatEndActionLabel } from "../../../data/column-kinds.js";
@@ -1646,6 +1651,147 @@ export function getInteractionsTests() {
 
         const confOnly = describeInteractionInference({ confidence: 0.25 });
         assert.strictEqual(confOnly.inferred, true, "low confidence still inferred");
+      },
+    },
+    {
+      name: "inference heuristics propagate modifier agreements",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome } =
+          makeModelFixture();
+        const action = addAction("Slash");
+        const modifier = addModifier("Heavy");
+        const outcome = addOutcome("Hit");
+        const inputA = addInput("Light");
+        const inputB = addInput("Fierce");
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 4,
+              variants: [
+                { variantSig: "", rowIndex: 0, rowCount: 2 },
+                { variantSig: `${modifier.id}`, rowIndex: 2, rowCount: 2 },
+              ],
+            },
+          ],
+          totalRows: 4,
+          actionsOrder: [action.id],
+          inputsOrder: [inputA.id, inputB.id],
+          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
+        };
+
+        const basePair = getPair(model, 0);
+        const baseKey = noteKeyForPair(basePair, 1);
+        model.notes[baseKey] = { outcomeId: outcome.id };
+
+        const targets = [];
+        for (let r = 0; r < 4; r++) {
+          const pair = getPair(model, r);
+          const key = noteKeyForPair(pair, 1);
+          targets.push({
+            key,
+            field: "outcome",
+            phase: 1,
+            note: model.notes[key],
+            pair,
+            row: r,
+          });
+        }
+
+        const suggestions = proposeInteractionInferences(targets);
+        const modPair = getPair(model, 2);
+        const modSuggestion = suggestions.get(noteKeyForPair(modPair, 1))?.outcome;
+        assert.ok(modSuggestion, "modifier row received suggestion");
+        assert.strictEqual(
+          modSuggestion.source,
+          HEURISTIC_SOURCES.modifierPropagation,
+          "propagation uses modifier source",
+        );
+        assert.strictEqual(
+          modSuggestion.value.outcomeId,
+          outcome.id,
+          "propagation carries base outcome",
+        );
+      },
+    },
+    {
+      name: "applyInference fills empty cells with heuristic metadata",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome } =
+          makeModelFixture();
+        const action = addAction("Strike");
+        const modifier = addModifier("Swift");
+        const outcome = addOutcome("Hit");
+        const input = addInput("Jab");
+        const viewDef = {
+          columns: [{ key: "action" }, { key: "input" }, { key: "p1:outcome" }],
+        };
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 2,
+              variants: [
+                { variantSig: "", rowIndex: 0, rowCount: 1 },
+                { variantSig: `${modifier.id}`, rowIndex: 1, rowCount: 1 },
+              ],
+            },
+          ],
+          totalRows: 2,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
+        };
+
+        const basePair = getPair(model, 0);
+        const baseKey = noteKeyForPair(basePair, 1);
+        model.notes[baseKey] = { outcomeId: outcome.id, source: "manual" };
+
+        const selection = { rows: new Set(), colsAll: true };
+        const controller = createInferenceController({
+          model,
+          selection,
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (opts.status) res.status = opts.status(res);
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+
+        const res = controller.runInference({ scope: "project" });
+        const inferredPair = getPair(model, 1);
+        const inferredKey = noteKeyForPair(inferredPair, 1);
+        const inferredNote = model.notes[inferredKey];
+
+        assert.strictEqual(res.sources[HEURISTIC_SOURCES.modifierPropagation], 1);
+        assert.strictEqual(inferredNote.outcomeId, outcome.id);
+        assert.strictEqual(
+          inferredNote.source,
+          HEURISTIC_SOURCES.modifierPropagation,
+          "heuristic source stored on inferred note",
+        );
+        assert.strictEqual(
+          inferredNote.confidence,
+          0.82,
+          "heuristic confidence stored",
+        );
+        assert.ok(
+          /modifier propagation: 1/.test(res.status || ""),
+          "status text lists heuristic count",
+        );
       },
     },
     {

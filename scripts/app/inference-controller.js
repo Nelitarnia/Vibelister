@@ -7,6 +7,16 @@ import {
   normalizeInteractionSource,
   noteKeyForPair,
 } from "./interactions.js";
+import {
+  HEURISTIC_SOURCES,
+  proposeInteractionInferences,
+} from "./inference-heuristics.js";
+
+const HEURISTIC_LABELS = Object.freeze({
+  [HEURISTIC_SOURCES.modifierPropagation]: "modifier propagation",
+  [HEURISTIC_SOURCES.modifierProfile]: "modifier profile",
+  [HEURISTIC_SOURCES.inputDefault]: "input default",
+});
 import { parsePhaseKey } from "../data/utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
@@ -77,7 +87,13 @@ export function createInferenceController(options) {
     if (skippedExisting) skips.push(`${skippedExisting} existing`);
     if (empty) skips.push(`${empty} empty`);
     const suffix = skips.length ? ` (skipped ${skips.join(", ")})` : "";
-    return `${actionLabel || "Inference"}: ${actions.join(", ")}${suffix}.`;
+    const sourceEntries = Object.entries(result.sources || {})
+      .filter(([, count]) => count)
+      .map(([key, count]) => `${HEURISTIC_LABELS[key] || key}: ${count}`);
+    const sourceText = sourceEntries.length
+      ? ` Heuristics — ${sourceEntries.join(", ")}.`
+      : "";
+    return `${actionLabel || "Inference"}: ${actions.join(", ")}${suffix}.${sourceText}`;
   }
 
   function getRelevantColumns(def, options, useSelection) {
@@ -152,11 +168,13 @@ export function createInferenceController(options) {
       confidence: options.defaultConfidence,
       source: options.defaultSource,
     };
+    const suggestions = proposeInteractionInferences(targets);
     const result = {
       applied: 0,
       skippedManual: 0,
       skippedExisting: 0,
       empty: 0,
+      sources: {},
     };
     for (const target of targets) {
       const note = notes[target.key];
@@ -175,12 +193,52 @@ export function createInferenceController(options) {
         result.skippedExisting++;
         continue;
       }
-      if (!hasValue) {
+      const suggestion = suggestions.get(target.key)?.[target.field];
+      const canUseSuggestion =
+        suggestion && (!hasValue || currentSource !== DEFAULT_INTERACTION_SOURCE);
+      if (!hasValue && !canUseSuggestion) {
         result.empty++;
         continue;
       }
+      if (options.onlyFillEmpty && hasValue && !suggestion) {
+        result.skippedExisting++;
+        continue;
+      }
       const dest = note || (notes[target.key] = {});
-      applyInteractionMetadata(dest, metadata);
+      if (canUseSuggestion) {
+        if (target.field === "outcome") {
+          if ("outcomeId" in suggestion.value) {
+            dest.outcomeId = suggestion.value.outcomeId;
+            delete dest.result;
+          } else if ("result" in suggestion.value) {
+            dest.result = suggestion.value.result;
+            delete dest.outcomeId;
+          }
+        } else if (target.field === "end") {
+          if ("endActionId" in suggestion.value) {
+            dest.endActionId = suggestion.value.endActionId;
+            dest.endVariantSig = suggestion.value.endVariantSig || "";
+            delete dest.endFree;
+          } else if ("endFree" in suggestion.value) {
+            dest.endFree = suggestion.value.endFree;
+            delete dest.endActionId;
+            delete dest.endVariantSig;
+          }
+        } else if (target.field === "tag") {
+          const tags = Array.isArray(suggestion.value.tags)
+            ? suggestion.value.tags.slice()
+            : [];
+          dest.tags = tags;
+        }
+        applyInteractionMetadata(dest, {
+          confidence: suggestion.confidence,
+          source: suggestion.source,
+        });
+        result.sources[suggestion.source] =
+          (result.sources[suggestion.source] || 0) + 1;
+      } else {
+        applyInteractionMetadata(dest, metadata);
+      }
       result.applied++;
     }
     return result;
