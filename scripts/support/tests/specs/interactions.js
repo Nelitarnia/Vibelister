@@ -12,6 +12,7 @@ import {
   collectInteractionTags,
   describeInteractionInference,
 } from "../../../app/interactions.js";
+import { createInteractionBulkActions } from "../../../app/interaction-bulk-actions.js";
 import { createInteractionTagManager } from "../../../app/interaction-tags.js";
 import { INTERACTION_TAGS_EVENT } from "../../../app/tag-events.js";
 import { sanitizeStructuredPayload } from "../../../app/clipboard-codec.js";
@@ -1645,6 +1646,105 @@ export function getInteractionsTests() {
 
         const confOnly = describeInteractionInference({ confidence: 0.25 });
         assert.strictEqual(confOnly.inferred, true, "low confidence still inferred");
+      },
+    },
+    {
+      name: "bulk actions promote or clear inferred values without touching manual cells",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Strike");
+        const followUp = addAction("Follow");
+        const inputPrimary = addInput("High");
+        const inputSecondary = addInput("Low");
+        const inferredOutcome = addOutcome("Hit");
+        const manualOutcome = addOutcome("Block");
+        buildInteractionsPairs(model);
+        const viewDef = makeInteractionsView();
+
+        const inferredRow = findPairIndex(
+          model,
+          (pair) => pair.aId === action.id && pair.iId === inputPrimary.id,
+        );
+        const manualRow = findPairIndex(
+          model,
+          (pair) => pair.aId === followUp.id && pair.iId === inputSecondary.id,
+        );
+        assert.ok(inferredRow >= 0 && manualRow >= 0, "target rows exist");
+
+        setInteractionsCell(model, { set() {} }, viewDef, inferredRow, 2, {
+          outcomeId: inferredOutcome.id,
+          confidence: 0.6,
+          source: "model",
+        });
+        setInteractionsCell(model, { set() {} }, viewDef, manualRow, 2, {
+          outcomeId: manualOutcome.id,
+        });
+
+        const selection = {
+          rows: new Set([inferredRow, manualRow]),
+          cols: new Set([2]),
+          colsAll: false,
+        };
+        const sel = { r: inferredRow, c: 2 };
+
+        const runModelMutation = (label, mutate, options = {}) => {
+          const res = mutate();
+          if (options.status) res.status = options.status(res);
+          return res;
+        };
+
+        const actions = createInteractionBulkActions({
+          model,
+          selection,
+          sel,
+          getActiveView: () => "interactions",
+          viewDef,
+          runModelMutation,
+          getInteractionsPair: (m, r) => getPair(m, r),
+        });
+
+        const acceptResult = actions.acceptInferred();
+        const inferredKey = noteKeyForPair(getPair(model, inferredRow), 1);
+        const manualKey = noteKeyForPair(getPair(model, manualRow), 1);
+
+        assert.strictEqual(acceptResult.promoted, 1, "inferred cell promoted");
+        assert.ok(
+          /Promoted/.test(acceptResult.status || ""),
+          "status conveys promotion",
+        );
+        assert.strictEqual(
+          "source" in model.notes[inferredKey],
+          false,
+          "manual source cleared after promotion",
+        );
+        assert.strictEqual(
+          "confidence" in model.notes[inferredKey],
+          false,
+          "default confidence omitted after promotion",
+        );
+
+        setInteractionsCell(model, { set() {} }, viewDef, inferredRow, 2, {
+          outcomeId: inferredOutcome.id,
+          confidence: 0.5,
+          source: "model",
+        });
+
+        const clearResult = actions.clearInferenceMetadata();
+        assert.strictEqual(clearResult.cleared, 1, "inferred value cleared");
+        assert.strictEqual(
+          model.notes[inferredKey],
+          undefined,
+          "inferred note removed after clearing",
+        );
+        assert.strictEqual(
+          model.notes[manualKey].outcomeId,
+          manualOutcome.id,
+          "manual note left intact",
+        );
+        assert.ok(
+          /Cleared/.test(clearResult.status || ""),
+          "status conveys clearing",
+        );
       },
     },
   ];

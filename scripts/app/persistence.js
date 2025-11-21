@@ -87,17 +87,29 @@ export function createPersistenceController({
     return text.replace(/\r\n?/g, "\n");
   }
 
-  function normalizeInteractionMetadata(note) {
+  function stripDefaultInteractionMetadata(note) {
     if (!note || typeof note !== "object") return;
-    if ("confidence" in note) {
+    const hasConfidence = Object.prototype.hasOwnProperty.call(
+      note,
+      "confidence",
+    );
+    const hasSource = Object.prototype.hasOwnProperty.call(note, "source");
+    if (hasConfidence) {
       const conf = normalizeInteractionConfidence(note.confidence);
       if (conf !== DEFAULT_INTERACTION_CONFIDENCE) note.confidence = conf;
       else delete note.confidence;
     }
-    if ("source" in note) {
+    if (hasSource) {
       const src = normalizeInteractionSource(note.source);
       if (src !== DEFAULT_INTERACTION_SOURCE) note.source = src;
       else delete note.source;
+    }
+  }
+
+  function stripDefaultInteractionMetadataFromNotes(notes) {
+    if (!notes || typeof notes !== "object") return;
+    for (const note of Object.values(notes)) {
+      stripDefaultInteractionMetadata(note);
     }
   }
 
@@ -240,9 +252,7 @@ export function createPersistenceController({
     if (!Array.isArray(o.modifierGroups)) o.modifierGroups = [];
     if (!Array.isArray(o.modifierConstraints)) o.modifierConstraints = [];
     if (!o.notes || typeof o.notes !== "object") o.notes = {};
-    for (const note of Object.values(o.notes)) {
-      normalizeInteractionMetadata(note);
-    }
+    stripDefaultInteractionMetadataFromNotes(o.notes);
     o.comments = normalizeCommentsMap(o.comments);
     if (!Array.isArray(o.interactionsPairs)) o.interactionsPairs = [];
     if (!o.interactionsIndex || typeof o.interactionsIndex !== "object") {
@@ -358,6 +368,7 @@ export function createPersistenceController({
     try {
       const m = await getFsModule();
       const snapshot = snapshotModel(model, { includeDerived: false });
+      stripDefaultInteractionMetadataFromNotes(snapshot.model.notes);
       trimTrailingEmptyRows(snapshot.model.actions);
       trimTrailingEmptyRows(snapshot.model.inputs);
       trimTrailingEmptyRows(snapshot.model.modifiers);

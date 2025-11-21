@@ -520,6 +520,54 @@ export function getPersistenceTests() {
       },
     },
     {
+      name: "saveToDisk strips default interaction metadata",
+      async run(assert) {
+        const { model } = makeModelFixture();
+        model.notes = {
+          keep: { outcomeId: 7, source: "model", confidence: 0.4 },
+          defaults: { outcomeId: 8, source: "manual", confidence: 1 },
+        };
+
+        let savedSnapshot = null;
+        const loadFsModule = async () => ({
+          openJson: async () => ({ data: {}, name: "" }),
+          async saveJson(data) {
+            savedSnapshot = data;
+            return { name: "saved.json" };
+          },
+        });
+
+        const controller = createPersistenceController({
+          model,
+          statusBar: null,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule,
+        });
+
+        await controller.saveToDisk();
+
+        assert.ok(savedSnapshot, "save should serialize a snapshot");
+        assert.deepStrictEqual(
+          savedSnapshot.notes.keep,
+          { outcomeId: 7, source: "model", confidence: 0.4 },
+          "non-default metadata preserved",
+        );
+        assert.deepStrictEqual(
+          savedSnapshot.notes.defaults,
+          { outcomeId: 8 },
+          "default metadata removed from persisted notes",
+        );
+      },
+    },
+    {
       name: "saveToDisk trims placeholder rows and open repads",
       async run(assert) {
         const fixture = makeModelFixture();
