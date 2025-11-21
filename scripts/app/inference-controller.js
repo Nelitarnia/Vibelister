@@ -34,6 +34,7 @@ const DEFAULT_OPTIONS = Object.freeze({
   onlyFillEmpty: false,
   defaultConfidence: DEFAULT_INTERACTION_CONFIDENCE,
   defaultSource: "model",
+  fillIntentionalBlanks: false,
 });
 
 function hasStructuredValue(note, field) {
@@ -47,6 +48,17 @@ function hasStructuredValue(note, field) {
   return false;
 }
 
+function hasManualOutcomeWithDefaults(note) {
+  if (!hasStructuredValue(note, "outcome")) return false;
+  const info = describeInteractionInference(note);
+  const source = normalizeInteractionSource(info?.source);
+  const confidence = normalizeInteractionConfidence(info?.confidence);
+  return (
+    source === DEFAULT_INTERACTION_SOURCE &&
+    confidence === DEFAULT_INTERACTION_CONFIDENCE
+  );
+}
+
 function normalizeOptions(payload = {}) {
   return {
     scope: payload.scope || DEFAULT_OPTIONS.scope,
@@ -54,6 +66,7 @@ function normalizeOptions(payload = {}) {
     includeTag: payload.includeTag !== false,
     overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
+    fillIntentionalBlanks: !!payload.fillIntentionalBlanks,
     defaultConfidence: normalizeInteractionConfidence(
       payload.defaultConfidence,
     ),
@@ -82,6 +95,7 @@ export function createInferenceController(options) {
     const applied = Number(result.applied || 0);
     const cleared = Number(result.cleared || 0);
     const skippedManual = Number(result.skippedManual || 0);
+    const skippedManualOutcome = Number(result.skippedManualOutcome || 0);
     const skippedExisting = Number(result.skippedExisting || 0);
     const empty = Number(result.empty || 0);
     const actions = [];
@@ -90,6 +104,8 @@ export function createInferenceController(options) {
     if (actions.length === 0) actions.push("No changes");
     const skips = [];
     if (skippedManual) skips.push(`${skippedManual} manual`);
+    if (skippedManualOutcome)
+      skips.push(`${skippedManualOutcome} manual outcomes`);
     if (skippedExisting) skips.push(`${skippedExisting} existing`);
     if (empty) skips.push(`${empty} empty`);
     const suffix = skips.length ? ` (skipped ${skips.join(", ")})` : "";
@@ -175,10 +191,28 @@ export function createInferenceController(options) {
       source: options.defaultSource,
     };
     const profileSnapshot = captureInferenceProfilesSnapshot();
-    const suggestions = proposeInteractionInferences(targets, profileSnapshot);
+    const manualOutcomeKeys = new Set(
+      targets
+        .filter(({ key }) => hasManualOutcomeWithDefaults(notes[key]))
+        .map((target) => target.key),
+    );
+    const suggestionTargets = options.fillIntentionalBlanks
+      ? targets
+      : targets.filter(
+          (target) =>
+            !(
+              manualOutcomeKeys.has(target.key) &&
+              (target.field === "end" || target.field === "tag")
+            ),
+        );
+    const suggestions = proposeInteractionInferences(
+      suggestionTargets,
+      profileSnapshot,
+    );
     const result = {
       applied: 0,
       skippedManual: 0,
+      skippedManualOutcome: 0,
       skippedExisting: 0,
       empty: 0,
       sources: {},
@@ -186,32 +220,27 @@ export function createInferenceController(options) {
     for (const target of targets) {
       const note = notes[target.key];
       const previousValue = extractNoteFieldValue(note, target.field);
-      const recordOutcome = (impact) => {
-        const nextValue = extractNoteFieldValue(notes[target.key], target.field);
-        recordProfileImpact({
-          pair: target.pair,
-          field: target.field,
-          previousValue,
-          nextValue,
-          impact,
-        });
-      };
+      const skipManualOutcome =
+        !options.fillIntentionalBlanks &&
+        manualOutcomeKeys.has(target.key) &&
+        (target.field === "end" || target.field === "tag");
+      if (skipManualOutcome) {
+        result.skippedManualOutcome++;
+        continue;
+      }
       const hasValue = hasStructuredValue(note, target.field);
       const info = describeInteractionInference(note);
       const currentSource = normalizeInteractionSource(info?.source);
       if (currentSource === DEFAULT_INTERACTION_SOURCE && hasValue) {
         result.skippedManual++;
-        recordOutcome("noop");
         continue;
       }
       if (!options.overwriteInferred && info?.inferred) {
         result.skippedExisting++;
-        recordOutcome("noop");
         continue;
       }
       if (options.onlyFillEmpty && hasValue) {
         result.skippedExisting++;
-        recordOutcome("noop");
         continue;
       }
       const suggestion = suggestions.get(target.key)?.[target.field];
@@ -219,12 +248,10 @@ export function createInferenceController(options) {
         suggestion && (!hasValue || currentSource !== DEFAULT_INTERACTION_SOURCE);
       if (!hasValue && !canUseSuggestion) {
         result.empty++;
-        recordOutcome("noop");
         continue;
       }
       if (options.onlyFillEmpty && hasValue && !suggestion) {
         result.skippedExisting++;
-        recordOutcome("noop");
         continue;
       }
       const dest = note || (notes[target.key] = {});
@@ -263,7 +290,13 @@ export function createInferenceController(options) {
         applyInteractionMetadata(dest, metadata);
       }
       result.applied++;
-      recordOutcome();
+      const nextValue = extractNoteFieldValue(dest, target.field);
+      recordProfileImpact({
+        pair: target.pair,
+        field: target.field,
+        previousValue,
+        nextValue,
+      });
     }
     return result;
   }
@@ -378,6 +411,7 @@ export function createInferenceController(options) {
           includeTag: DEFAULT_OPTIONS.includeTag,
           overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
           onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
+          fillIntentionalBlanks: DEFAULT_OPTIONS.fillIntentionalBlanks,
           scope: DEFAULT_OPTIONS.scope,
         },
         onRun: (payload) => runInference(payload),

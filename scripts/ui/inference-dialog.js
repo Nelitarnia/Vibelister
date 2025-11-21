@@ -193,22 +193,31 @@ export async function openInferenceDialog(options = {}) {
     );
     includeRow.append(includeEndLabel, includeTagLabel);
 
-    const runOptions = document.createElement("div");
-    runOptions.style.cssText =
-      "display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start;";
-    const { label: overwriteLabel, input: overwriteInput } = buildCheckbox(
-      "Overwrite existing inferred values",
-      defaults.overwriteInferred !== false,
-      "When enabled, reruns can replace previously inferred metadata (manual values are never overwritten).",
-    );
-    const { label: onlyEmptyLabel, input: onlyEmptyInput } = buildCheckbox(
-      "Only fill empty cells",
-      !!defaults.onlyFillEmpty,
-      "Skip cells that already contain structured values so inference only touches blanks.",
-    );
-    overwriteLabel.style.marginTop = "8px";
-    onlyEmptyLabel.style.marginTop = "8px";
-    runOptions.append(overwriteLabel, onlyEmptyLabel);
+  const runOptions = document.createElement("div");
+  runOptions.style.cssText =
+    "display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start;";
+  const { label: overwriteLabel, input: overwriteInput } = buildCheckbox(
+    "Overwrite existing inferred values",
+    defaults.overwriteInferred !== false,
+    "When enabled, reruns can replace previously inferred metadata (manual values are never overwritten).",
+  );
+  const { label: onlyEmptyLabel, input: onlyEmptyInput } = buildCheckbox(
+    "Only fill empty cells",
+    !!defaults.onlyFillEmpty,
+    "Skip cells that already contain structured values so inference only touches blanks.",
+  );
+  const {
+    label: fillIntentionalLabel,
+    input: fillIntentionalInput,
+  } = buildCheckbox(
+    "Fill intentionally blank End/Tag",
+    !!defaults.fillIntentionalBlanks,
+    "Allow inference to fill End/Tag when Outcome is already manual with default confidence/source.",
+  );
+  overwriteLabel.style.marginTop = "8px";
+  onlyEmptyLabel.style.marginTop = "8px";
+  fillIntentionalLabel.style.marginTop = "8px";
+  runOptions.append(overwriteLabel, onlyEmptyLabel, fillIntentionalLabel);
 
     const inputsRow = document.createElement("div");
     inputsRow.style.cssText =
@@ -285,6 +294,7 @@ export async function openInferenceDialog(options = {}) {
         includeTag: includeTagInput.checked,
         overwriteInferred: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
+        fillIntentionalBlanks: fillIntentionalInput.checked,
         defaultConfidence: Number(confidenceInput.value || 0),
         defaultSource: sourceInput.value || "model",
       };

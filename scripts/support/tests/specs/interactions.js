@@ -1795,6 +1795,63 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "inference skips end/tag when manual outcome uses defaults",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        addAction("Strike");
+        addInput("Jab");
+        const outcome = addOutcome("Hit");
+        buildInteractionsPairs(model);
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+            { key: "p0:end" },
+            { key: "p0:tag" },
+          ],
+        };
+
+        const pair = getPair(model, 0);
+        const noteKey = noteKeyForPair(pair, 0);
+        model.notes[noteKey] = { outcomeId: outcome.id };
+
+        const selection = { rows: new Set(), colsAll: true };
+        const controller = createInferenceController({
+          model,
+          selection,
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (opts.status) res.status = opts.status(res);
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+
+        const res = controller.runInference({ scope: "project" });
+
+        assert.strictEqual(res.applied, 0, "no inference applied to manual phase");
+        assert.strictEqual(res.skippedManual, 1, "manual outcome skipped");
+        assert.strictEqual(
+          res.skippedManualOutcome,
+          2,
+          "end and tag skipped when manual outcome present",
+        );
+        assert.strictEqual(res.empty, 0, "skipped cells not treated as empty");
+        assert.deepStrictEqual(
+          model.notes[noteKey],
+          { outcomeId: outcome.id },
+          "notes unchanged when skipping manual outcome phase",
+        );
+      },
+    },
+    {
       name: "bulk actions promote or clear inferred values without touching manual cells",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
