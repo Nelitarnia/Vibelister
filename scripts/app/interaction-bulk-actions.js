@@ -10,6 +10,7 @@ import {
 } from "./interactions.js";
 import { parsePhaseKey } from "../data/utils.js";
 import { findOutcomeIdByName } from "./outcomes.js";
+import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
 function hasStructuredValue(note, field) {
   if (!note || typeof note !== "object") return false;
@@ -65,6 +66,7 @@ function collectSelectionTargets({
         row: r,
         col: c,
         column,
+        pair,
       });
     }
   }
@@ -178,7 +180,11 @@ export function createInteractionBulkActions(options = {}) {
       "Accept inferred",
       () => {
         const notes = model?.notes || (model.notes = {});
-        const result = { accepted: 0, skippedManual: 0, skippedEmpty: 0 };
+        const result = {
+          promoted: 0,
+          skippedManual: 0,
+          skippedEmpty: 0,
+        };
         for (const target of targets) {
           const note = notes[target.key];
           const hasValue = hasStructuredValue(note, target.field);
@@ -195,7 +201,7 @@ export function createInteractionBulkActions(options = {}) {
             confidence: DEFAULT_INTERACTION_CONFIDENCE,
             source: DEFAULT_INTERACTION_SOURCE,
           });
-          result.accepted++;
+          result.promoted++;
         }
         return result;
       },
@@ -203,17 +209,21 @@ export function createInteractionBulkActions(options = {}) {
         render: true,
         undo: makeUndoConfig?.({
           label: "accept inference",
-          shouldRecord: (res) => (res?.accepted ?? 0) > 0,
+          shouldRecord: (res) => (res?.promoted ?? 0) > 0,
         }),
         status: (res) => {
-          const accepted = res?.accepted ?? 0;
+          const promoted = res?.promoted ?? 0;
           const manual = res?.skippedManual ?? 0;
           const empty = res?.skippedEmpty ?? 0;
           const skippedParts = [];
           if (manual) skippedParts.push(`${manual} manual`);
           if (empty) skippedParts.push(`${empty} empty`);
-          const skipped = skippedParts.length ? ` (skipped ${skippedParts.join(", ")})` : "";
-          return `Accepted ${accepted || "no"} inferred entr${accepted === 1 ? "y" : "ies"}.${skipped}`;
+          const skipped = skippedParts.length
+            ? ` (left ${skippedParts.join(", ")} unchanged)`
+            : "";
+          return `Promoted ${promoted || "no"} inferred entr${
+            promoted === 1 ? "y" : "ies"
+          } to manual defaults.${skipped}`;
         },
       },
     );
@@ -236,21 +246,55 @@ export function createInteractionBulkActions(options = {}) {
       "Clear inference metadata",
       () => {
         const notes = model?.notes || (model.notes = {});
-        const result = { cleared: 0, removed: 0, skippedManual: 0 };
+        const result = {
+          cleared: 0,
+          removed: 0,
+          skippedManual: 0,
+          skippedEmpty: 0,
+        };
         for (const target of targets) {
           const note = notes[target.key];
-          if (!note || typeof note !== "object") continue;
+          if (!note || typeof note !== "object") {
+            result.skippedEmpty++;
+            continue;
+          }
+          const hadValue = hasStructuredValue(note, target.field);
           const info = describeInteractionInference(note);
           if (!info?.inferred) {
             result.skippedManual++;
             continue;
           }
-          applyInteractionMetadata(note, null);
-          if (!Object.keys(note).length) {
-            delete notes[target.key];
-            result.removed++;
+          if (target.field === "outcome") {
+            delete note.outcomeId;
+            delete note.result;
+          } else if (target.field === "end") {
+            delete note.endActionId;
+            delete note.endVariantSig;
+            delete note.endFree;
+          } else if (target.field === "tag") {
+            const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
+            delete note.tags;
+            if (previous.length) {
+              emitInteractionTagChangeEvent(null, {
+                reason: "clearInference",
+                noteKey: target.key,
+                pair: target.pair,
+                phase: target.phase,
+                tags: previous,
+                count: previous.length,
+              });
+            }
           }
-          result.cleared++;
+          applyInteractionMetadata(note, null);
+          if (!hasStructuredValue(note, target.field)) {
+            result.cleared++;
+            if (!Object.keys(note).length) {
+              delete notes[target.key];
+              result.removed++;
+            }
+          } else if (!hadValue) {
+            result.skippedEmpty++;
+          }
         }
         return result;
       },
@@ -263,10 +307,16 @@ export function createInteractionBulkActions(options = {}) {
         status: (res) => {
           const cleared = res?.cleared ?? 0;
           const removed = res?.removed ?? 0;
-          const skipped = res?.skippedManual ?? 0;
+          const manual = res?.skippedManual ?? 0;
+          const empty = res?.skippedEmpty ?? 0;
+          const skippedParts = [];
+          if (manual) skippedParts.push(`${manual} manual`);
+          if (empty) skippedParts.push(`${empty} empty`);
           const removedNote = removed ? ` Removed ${removed} empty entr${removed === 1 ? "y" : "ies"}.` : "";
-          const skippedText = skipped ? ` (skipped ${skipped} manual)` : "";
-          return `Cleared metadata on ${cleared || "no"} inferred entr${cleared === 1 ? "y" : "ies"}.${removedNote}${skippedText}`;
+          const skippedText = skippedParts.length
+            ? ` (left ${skippedParts.join(", ")} unchanged)`
+            : "";
+          return `Cleared ${cleared || "no"} inferred entr${cleared === 1 ? "y" : "ies"}.${removedNote}${skippedText}`;
         },
       },
     );
