@@ -24,6 +24,15 @@ If you prefer a Windows-only option, `run.bat` still spins up a temporary Python
 
 ---
 
+# Testing
+
+- Prerequisite: a modern Node.js runtime (v20+ recommended) so the built-in test runner and watch mode are available.
+- Run the CLI suite with `npm test`, which executes the shared specs under Node’s native test runner (no browser required).
+- For continuous feedback during development, `npm run test:watch` reruns the same Node-based suite on file changes.
+- The current tests focus on the CLI harness; in-app behavior is exercised indirectly through the shared logic they cover.
+
+---
+
 # Formatting
 
 - On macOS or Linux, run `npm run format` to apply Prettier across the repository.
