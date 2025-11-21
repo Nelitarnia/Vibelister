@@ -30,6 +30,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── interactions-data.js
 │   │   ├── inference-controller.js
 │   │   ├── inference-heuristics.js
+│   │   ├── inference-profiles.js
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
 │   │   ├── project-info-controller.js
@@ -140,6 +141,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `cleanup-controller.js` rebuilds variant catalogs, analyzes orphaned notes/comments, and coordinates the cleanup dialog so destructive operations participate in the shared undo history.
 - `inference-controller.js` scopes interaction cells for inference runs, applies or clears inferred metadata with undo/status wiring, and skips manual edits so bulk operations respect source flags.
 - `inference-heuristics.js` layers modifier propagation, modifier profiles, and input defaults to propose inferred outcome/end/tag values with source-specific confidence metadata.
+- `inference-profiles.js` maintains per-modifier and per-input trend profiles, decaying counts, snapshotting them for heuristic runs, and exposing a read-only view that leans suggestions toward recently observed "no change" patterns.
 - `interaction-bulk-actions.js` coordinates toolbar and sidebar bulk actions for interaction cells, applying Uncertain toggles, accepting inferred metadata, and clearing inference flags with undo/status updates.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `interaction-tags.js` provides undo-friendly helpers for renaming and deleting interaction tags across the notes map so UI controllers can reuse consistent mutation wiring.
