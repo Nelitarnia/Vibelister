@@ -41,6 +41,14 @@ If you prefer a Windows-only option, `run.bat` still spins up a temporary Python
 
 ---
 
+# Continuous integration
+
+- GitHub Actions runs `.github/workflows/ci.yml` on pushes and pull requests using Node.js 20.x.
+- The workflow installs dependencies, executes `npm test`, and runs `npm run format:check` by default.
+- To skip the formatter gate, set a repository variable `RUN_FORMAT_CHECK=false`; the workflow also caches `~/.npm` to speed up installs.
+
+---
+
 # Repository organization roadmap
 
 - A proposed folder structure lives in [`docs/folder-structure.md`](docs/folder-structure.md).
