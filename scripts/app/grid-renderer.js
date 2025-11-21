@@ -632,15 +632,26 @@ function createGridRenderer({
     return `rgba(129, 161, 255, ${alpha.toFixed(3)})`;
   }
 
+  function fillForConfidence(confidence) {
+    const c = Number.isFinite(confidence) ? confidence : 0;
+    const clamped = Math.min(1, Math.max(0, c));
+    const alpha = 0.08 + 0.14 * clamped;
+    return `rgba(129, 161, 255, ${alpha.toFixed(3)})`;
+  }
+
   function applyInferenceDecoration(el, info) {
     const inferred = info?.inferred;
     if (inferred) {
       if (el.dataset.inferred !== "true") el.dataset.inferred = "true";
       const tint = tintForConfidence(info?.confidence);
+      const fill = fillForConfidence(info?.confidence);
       if (el.style && typeof el.style.setProperty === "function")
-        el.style.setProperty("--vl-inferred-shadow", `inset 0 0 0 2px ${tint}`);
+        el.style.setProperty(
+          "--vl-inferred-shadow",
+          `0 0 0 1px rgba(129, 161, 255, 0.35), inset 0 0 0 2px ${tint}, inset 0 0 0 999px ${fill}`,
+        );
       else if (el.style)
-        el.style["--vl-inferred-shadow"] = `inset 0 0 0 2px ${tint}`;
+        el.style["--vl-inferred-shadow"] = `0 0 0 1px rgba(129, 161, 255, 0.35), inset 0 0 0 2px ${tint}, inset 0 0 0 999px ${fill}`;
     } else {
       if (el.dataset.inferred) delete el.dataset.inferred;
       if (el.style && typeof el.style.removeProperty === "function")

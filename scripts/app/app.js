@@ -94,6 +94,7 @@ import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { createProjectInfoController } from "./project-info-controller.js";
 import { createCleanupController } from "./cleanup-controller.js";
 import { createInferenceController } from "./inference-controller.js";
+import { createInteractionBulkActions } from "./interaction-bulk-actions.js";
 import {
   getCoreDomElements,
   getMenuDomElements,
@@ -177,6 +178,11 @@ const {
   commentPaletteList,
   commentPaletteApply,
   commentPaletteReset,
+  interactionToolsPane,
+  interactionToolsToggle,
+  interactionAcceptButton,
+  interactionClearButton,
+  interactionUncertainButton,
 } = sidebarDom;
 const { tabActions, tabInputs, tabModifiers, tabOutcomes, tabInteractions } = tabDom;
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
@@ -362,6 +368,18 @@ const { openInferenceDialog } = createInferenceController({
   makeUndoConfig,
   getInteractionsPair,
   getInteractionsRowCount,
+});
+
+const interactionActions = createInteractionBulkActions({
+  model,
+  selection,
+  sel,
+  getActiveView: () => activeView,
+  viewDef,
+  statusBar,
+  runModelMutation,
+  makeUndoConfig,
+  getInteractionsPair,
 });
 
 // Sidebars wired after view controller is created
@@ -768,6 +786,7 @@ const disposeKeys = initGridKeys({
     interactionsOutline?.jumpToVariant?.(delta),
   toggleCommentsSidebar: () => commentsUI?.toggle?.(),
   toggleTagsSidebar: () => tagUI?.toggle?.(),
+  toggleUncertainSelection: () => interactionActions?.toggleUncertain?.(),
 });
 
 // Initialize palette (handles both Outcome and End cells)
@@ -966,6 +985,11 @@ sheet.addEventListener("scroll", () => {
     commentToggleButton,
     commentAddButton,
     tagToggleButton,
+    interactionToolsPane,
+    interactionToolsToggle,
+    interactionAcceptButton,
+    interactionClearButton,
+    interactionUncertainButton,
   },
   SelectionCtl,
   selection,
@@ -987,6 +1011,7 @@ sheet.addEventListener("scroll", () => {
   getInteractionsPair,
   runModelMutation,
   makeUndoConfig,
+  interactionActions,
 }));
 
 // Keyboard: Ctrl+Shift+A toggles Interactions mode

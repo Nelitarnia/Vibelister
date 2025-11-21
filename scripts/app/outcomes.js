@@ -36,3 +36,15 @@ export function normalizeOutcomeMetadata(model) {
     if (!("dualof" in o)) o.dualof = null;
   }
 }
+
+export function findOutcomeIdByName(model, name) {
+  if (!model || !Array.isArray(model.outcomes)) return null;
+  const target = String(name || "").toLowerCase();
+  if (!target) return null;
+  const entry = model.outcomes.find((row) => {
+    if (!row || typeof row !== "object") return false;
+    const rowName = String(row.name || "").toLowerCase();
+    return rowName === target;
+  });
+  return typeof entry?.id === "number" ? entry.id : null;
+}

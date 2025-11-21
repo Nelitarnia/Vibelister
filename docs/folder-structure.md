@@ -25,6 +25,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── grid-commands.js
 │   │   ├── grid-renderer.js
 │   │   ├── history.js
+│   │   ├── interaction-bulk-actions.js
 │   │   ├── interactions.js
 │   │   ├── interactions-data.js
 │   │   ├── outcomes.js
@@ -82,6 +83,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │       ├── grid-keys.js
 │       ├── grid-mouse.js
 │       ├── interactions-outline.js
+│       ├── interaction-tools.js
 │       ├── menus.js
 │       ├── palette.js
 │       ├── project-info.js
@@ -135,6 +137,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `comment-events.js` centralizes the DOM event dispatch for comment mutations so grid commands and other controllers can signal UI refreshes without duplicating `CustomEvent` wiring.
 - `cleanup-controller.js` rebuilds variant catalogs, analyzes orphaned notes/comments, and coordinates the cleanup dialog so destructive operations participate in the shared undo history.
 - `inference-controller.js` scopes interaction cells for inference runs, applies or clears inferred metadata with undo/status wiring, and skips manual edits so bulk operations respect source flags.
+- `interaction-bulk-actions.js` coordinates toolbar and sidebar bulk actions for interaction cells, applying Uncertain toggles, accepting inferred metadata, and clearing inference flags with undo/status updates.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `interaction-tags.js` provides undo-friendly helpers for renaming and deleting interaction tags across the notes map so UI controllers can reuse consistent mutation wiring.
 - `tag-events.js` centralizes the DOM event dispatch for interaction tag mutations so sidebar controllers can refresh in response to grid or bulk edits without duplicating `CustomEvent` wiring.
@@ -170,6 +173,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `column-resize.js` binds resize handles in the grid header to pointer gestures, persisting per-column width overrides and coordinating layout rerenders.
 - `side-panel.js` manages the shared right-hand sidebar host so comments and tags can register panes and share toggles without conflicting state.
 - `tags.js` drives the interaction tag sidebar UI, coordinating host toggles, list rendering, and bulk rename/delete actions through the shared tag manager.
+- `interaction-tools.js` wires the Interactions bulk-actions pane and toolbar toggle, gating activation to the Interactions view and dispatching bulk mutations with status feedback.
 - `settings.js` renders the modal for customizing palette colors and keeps the dialog in sync with the sanitized `user-settings` payloads.
 - `project-info.js` renders the project notes dialog, providing a textarea host and dispatching change events so controllers can persist updates without duplicating DOM wiring.
 - `cleanup-dialog.js` displays the cleanup overlay, tracks per-action selections, and surfaces analyze/apply results provided by the controller.

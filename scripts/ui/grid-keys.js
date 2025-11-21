@@ -112,6 +112,7 @@ export function initGridKeys(deps) {
     jumpToInteractionsVariant,
     toggleCommentsSidebar,
     toggleTagsSidebar,
+    toggleUncertainSelection,
     window: winOverride,
     document: docOverride,
     navigator: navOverride,
@@ -520,6 +521,16 @@ export function initGridKeys(deps) {
     ) {
       e.preventDefault();
       toggleCommentsSidebar();
+      return;
+    }
+    if (
+      mod &&
+      e.shiftKey &&
+      keyLower === "u" &&
+      typeof toggleUncertainSelection === "function"
+    ) {
+      e.preventDefault();
+      toggleUncertainSelection();
       return;
     }
     if (
