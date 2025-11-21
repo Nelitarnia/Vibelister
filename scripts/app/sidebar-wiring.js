@@ -2,6 +2,7 @@ import { createSidePanelHost } from "../ui/side-panel.js";
 import { initCommentsUI } from "../ui/comments.js";
 import { initTagSidebar } from "../ui/tags.js";
 import { createInteractionTagManager } from "./interaction-tags.js";
+import { initInteractionTools } from "../ui/interaction-tools.js";
 
 export function initSidebarControllers({
   dom,
@@ -25,6 +26,7 @@ export function initSidebarControllers({
   getInteractionsPair,
   runModelMutation,
   makeUndoConfig,
+  interactionActions,
 }) {
   const sidePanelHost = createSidePanelHost({
     container: dom.sidePanel,
@@ -105,5 +107,19 @@ export function initSidebarControllers({
     statusBar,
   });
 
-  return { sidePanelHost, commentsUI, tagManager, tagUI };
+  const interactionTools = initInteractionTools({
+    panelHost: sidePanelHost,
+    panelId: "interaction-tools",
+    pane: dom.interactionToolsPane,
+    toggleButton: dom.interactionToolsToggle,
+    acceptButton: dom.interactionAcceptButton,
+    clearButton: dom.interactionClearButton,
+    uncertainButton: dom.interactionUncertainButton,
+    getActiveView,
+    onSelectionChanged,
+    statusBar,
+    actions: interactionActions,
+  });
+
+  return { sidePanelHost, commentsUI, tagManager, tagUI, interactionTools };
 }

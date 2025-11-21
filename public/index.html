@@ -215,6 +215,16 @@
         >
           Tags ▾
         </button>
+        <button
+          type="button"
+          class="toolbar-button"
+          id="interaction-tools-toggle"
+          aria-expanded="false"
+          aria-controls="side-panel"
+          title="Interactions bulk tools — includes Ctrl+Shift+U to toggle Uncertain"
+        >
+          Interactions ▾
+        </button>
       </div>
       <span class="status" id="status">Ready</span>
     </div>
@@ -490,6 +500,32 @@
               </div>
               <ul class="tag-sidebar__list" id="tag-list"></ul>
             </div>
+          </section>
+          <section
+            class="side-panel__pane interaction-tools"
+            id="interaction-tools-pane"
+            data-pane="interaction-tools"
+            hidden
+          >
+            <div class="interaction-tools__intro">
+              Bulk actions target the current Interactions selection. Use Ctrl+Shift+U to
+              toggle Uncertain without opening the panel.
+            </div>
+            <div class="interaction-tools__actions">
+              <button type="button" class="interaction-tools__button" id="interaction-accept">
+                Accept inferred → manual
+              </button>
+              <button type="button" class="interaction-tools__button" id="interaction-clear">
+                Clear inferred metadata
+              </button>
+              <button type="button" class="interaction-tools__button" id="interaction-uncertain">
+                Set selection to Uncertain
+              </button>
+            </div>
+            <p class="interaction-tools__hint">
+              Works on Outcome, End, and Tag columns in the Interactions view. Actions respect
+              row and column selections and update inferred styling immediately.
+            </p>
           </section>
         </div>
       </aside>
