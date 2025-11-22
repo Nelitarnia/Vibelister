@@ -9,6 +9,7 @@ import {
 } from "./interactions.js";
 import {
   HEURISTIC_SOURCES,
+  DEFAULT_HEURISTIC_THRESHOLDS,
   proposeInteractionInferences,
 } from "./inference-heuristics.js";
 import {
@@ -79,6 +80,10 @@ function normalizeOptions(payload = {}) {
     defaultSource: hasDefaultSource
       ? normalizeInteractionSource(payload.defaultSource)
       : null,
+    thresholdOverrides:
+      payload && typeof payload.thresholdOverrides === "object"
+        ? payload.thresholdOverrides
+        : null,
   };
 }
 
@@ -94,7 +99,12 @@ export function createInferenceController(options) {
     makeUndoConfig,
     getInteractionsPair,
     getInteractionsRowCount,
+    heuristicThresholds,
   } = options;
+
+  const baseThresholds =
+    heuristicThresholds || DEFAULT_HEURISTIC_THRESHOLDS || {};
+  let lastThresholdOverrides = { ...baseThresholds };
 
   function formatStatus(result, actionLabel) {
     if (!result) return "";
@@ -215,9 +225,16 @@ export function createInferenceController(options) {
               (target.field === "end" || target.field === "tag")
             ),
         );
+    const thresholdOverrides = { ...baseThresholds };
+    const overrides = options.thresholdOverrides || {};
+    for (const [key, value] of Object.entries(overrides)) {
+      if (Number.isFinite(value)) thresholdOverrides[key] = value;
+    }
+    lastThresholdOverrides = thresholdOverrides;
     const suggestions = proposeInteractionInferences(
       suggestionTargets,
       profileSnapshot,
+      thresholdOverrides,
     );
     const result = {
       applied: 0,
@@ -426,6 +443,7 @@ export function createInferenceController(options) {
           onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
           fillIntentionalBlanks: DEFAULT_OPTIONS.fillIntentionalBlanks,
           scope: DEFAULT_OPTIONS.scope,
+          thresholdOverrides: lastThresholdOverrides,
         },
         onRun: (payload) => runInference(payload),
         onClear: (payload) => runClear(payload),

@@ -137,10 +137,21 @@ function registerSuggestion(map, target, source, confidence, value, profilePrefs
   map.get(target.key)[target.field] = { source, confidence, value };
 }
 
-function applyConsensus(groups, suggestions, source, confidence, profilePrefs) {
+function applyConsensus(
+  groups,
+  suggestions,
+  source,
+  confidence,
+  profilePrefs,
+  thresholds,
+) {
   for (const list of groups.values()) {
+    const total = list.length;
+    if (total < thresholds.consensusMinGroupSize) continue;
+
     const existing = list.filter((t) => t.currentValue);
     if (!existing.length) continue;
+    if (existing.length / total < thresholds.consensusMinExistingRatio) continue;
     const uniqueValues = new Map();
     for (const t of existing) {
       const key = valueKey(t.field, t.currentValue);
@@ -178,6 +189,39 @@ const SOURCE_CONFIDENCE = Object.freeze({
   [HEURISTIC_SOURCES.inputDefault]: 0.48,
   [HEURISTIC_SOURCES.profileTrend]: 0.56,
 });
+
+export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
+  consensusMinGroupSize: 2,
+  consensusMinExistingRatio: 0.5,
+  inputDefaultMinGroupSize: 2,
+  inputDefaultMinExistingRatio: 0.5,
+  profileTrendMinObservations: 3,
+  profileTrendMinPreferenceRatio: 0.55,
+});
+
+function normalizeThresholds(override = {}) {
+  const defaults = DEFAULT_HEURISTIC_THRESHOLDS;
+  return {
+    consensusMinGroupSize: Number.isFinite(override.consensusMinGroupSize)
+      ? override.consensusMinGroupSize
+      : defaults.consensusMinGroupSize,
+    consensusMinExistingRatio: Number.isFinite(override.consensusMinExistingRatio)
+      ? override.consensusMinExistingRatio
+      : defaults.consensusMinExistingRatio,
+    inputDefaultMinGroupSize: Number.isFinite(override.inputDefaultMinGroupSize)
+      ? override.inputDefaultMinGroupSize
+      : defaults.inputDefaultMinGroupSize,
+    inputDefaultMinExistingRatio: Number.isFinite(override.inputDefaultMinExistingRatio)
+      ? override.inputDefaultMinExistingRatio
+      : defaults.inputDefaultMinExistingRatio,
+    profileTrendMinObservations: Number.isFinite(override.profileTrendMinObservations)
+      ? override.profileTrendMinObservations
+      : defaults.profileTrendMinObservations,
+    profileTrendMinPreferenceRatio: Number.isFinite(override.profileTrendMinPreferenceRatio)
+      ? override.profileTrendMinPreferenceRatio
+      : defaults.profileTrendMinPreferenceRatio,
+  };
+}
 
 function modifierIdsFromSig(sig) {
   if (!sig) return [];
@@ -239,12 +283,21 @@ function summarizeProfileForTarget(target, profiles, cache) {
   const summary =
     change === 0 && noEffect === 0 && topCount === 0
       ? null
-      : { change, noEffect, topValue, topValueKey };
+      : { change, noEffect, topValue, topValueKey, topCount };
   cache.set(cacheKey, summary);
   return summary;
 }
 
-function buildProfilePrefs(profiles) {
+function hasProfileTrendSignal(summary, thresholds) {
+  if (!summary) return false;
+  const total = summary.change + summary.noEffect;
+  if (total < thresholds.profileTrendMinObservations) return false;
+  if (summary.topCount <= 0) return false;
+  const preferenceRatio = summary.topCount / total;
+  return preferenceRatio >= thresholds.profileTrendMinPreferenceRatio;
+}
+
+function buildProfilePrefs(profiles, thresholds) {
   const cache = new Map();
   return {
     shouldSkip(target, candidateValue) {
@@ -259,9 +312,13 @@ function buildProfilePrefs(profiles) {
       }
       return false;
     },
+    hasSignal(target) {
+      const summary = summarizeProfileForTarget(target, profiles, cache);
+      return hasProfileTrendSignal(summary, thresholds);
+    },
     preferredValue(target) {
       const summary = summarizeProfileForTarget(target, profiles, cache);
-      if (!summary) return null;
+      if (!hasProfileTrendSignal(summary, thresholds)) return null;
       if (summary.change >= summary.noEffect && summary.topValue) {
         return summary.topValue;
       }
@@ -270,11 +327,12 @@ function buildProfilePrefs(profiles) {
   };
 }
 
-export function proposeInteractionInferences(targets, profiles) {
+export function proposeInteractionInferences(targets, profiles, thresholdOverrides) {
+  const thresholds = normalizeThresholds(thresholdOverrides);
   const prepared = prepareTargets(targets || []);
   const suggestions = new Map();
 
-  const profilePrefs = profiles ? buildProfilePrefs(profiles) : null;
+  const profilePrefs = profiles ? buildProfilePrefs(profiles, thresholds) : null;
 
   const byActionInput = new Map();
   const byModifierProfile = new Map();
@@ -301,6 +359,7 @@ export function proposeInteractionInferences(targets, profiles) {
     HEURISTIC_SOURCES.modifierPropagation,
     SOURCE_CONFIDENCE[HEURISTIC_SOURCES.modifierPropagation],
     profilePrefs,
+    thresholds,
   );
 
   applyConsensus(
@@ -309,11 +368,16 @@ export function proposeInteractionInferences(targets, profiles) {
     HEURISTIC_SOURCES.modifierProfile,
     SOURCE_CONFIDENCE[HEURISTIC_SOURCES.modifierProfile],
     profilePrefs,
+    thresholds,
   );
 
   for (const list of byInputDefault.values()) {
-    const candidate = list.find((t) => t.currentValue);
-    if (!candidate) continue;
+    const total = list.length;
+    if (total < thresholds.inputDefaultMinGroupSize) continue;
+    const existing = list.filter((t) => t.currentValue);
+    if (!existing.length) continue;
+    if (existing.length / total < thresholds.inputDefaultMinExistingRatio) continue;
+    const candidate = existing[0];
     for (const target of list) {
       if (!eligibleForSuggestion(target)) continue;
       const already = suggestions.get(target.key)?.[target.field];
@@ -334,6 +398,7 @@ export function proposeInteractionInferences(targets, profiles) {
       if (!eligibleForSuggestion(target)) continue;
       const already = suggestions.get(target.key)?.[target.field];
       if (already) continue;
+      if (!profilePrefs.hasSignal(target)) continue;
       if (profilePrefs.shouldSkip(target)) continue;
       const preferred = profilePrefs.preferredValue(target);
       if (!preferred) continue;
