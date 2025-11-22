@@ -102,57 +102,6 @@ function buildCheckbox(labelText, defaultValue, title) {
   return { label, input };
 }
 
-function buildNumberInput(labelText, defaultValue, title) {
-  const wrapper = document.createElement("label");
-  wrapper.style.cssText =
-    "display:flex;flex-direction:column;gap:6px;color:#d3dcff;font-size:13px;";
-  wrapper.title = title || "";
-  const text = document.createElement("span");
-  text.textContent = labelText;
-  const input = document.createElement("input");
-  input.type = "number";
-  input.min = "0";
-  input.max = "1";
-  input.step = "0.05";
-  input.value = defaultValue;
-  input.style.cssText =
-    "background:#0c1020;border:1px solid #2f3956;border-radius:8px;color:#e6ecff;padding:8px;";
-  wrapper.append(text, input);
-  return { wrapper, input };
-}
-
-function buildTextInput(labelText, defaultValue, title) {
-  const wrapper = document.createElement("label");
-  wrapper.style.cssText =
-    "display:flex;flex-direction:column;gap:6px;color:#d3dcff;font-size:13px;";
-  wrapper.title = title || "";
-  const text = document.createElement("span");
-  text.textContent = labelText;
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = defaultValue;
-  input.style.cssText =
-    "background:#0c1020;border:1px solid #2f3956;border-radius:8px;color:#e6ecff;padding:8px;";
-  wrapper.append(text, input);
-  return { wrapper, input };
-}
-
-function describeConfidenceHelp() {
-  const p = document.createElement("p");
-  p.textContent =
-    "Confidence and source are stored with inferred End/Outcome/Tag cells. Manual edits keep source \"manual\" so bulk accept/clear flows can target non-manual values.";
-  p.style.cssText = "margin:0;color:#9aa4c9;font-size:13px;";
-  return p;
-}
-
-function describeSourceHelp() {
-  const p = document.createElement("p");
-  p.textContent =
-    "Use a descriptive source (for example, \"model\" or \"import\") so inferred styling highlights non-manual rows and clearing will skip your own edits.";
-  p.style.cssText = "margin:0;color:#9aa4c9;font-size:13px;";
-  return p;
-}
-
 export async function openInferenceDialog(options = {}) {
   const { defaults = {}, onRun, onClear } = options;
   return new Promise((resolve) => {
@@ -167,14 +116,14 @@ export async function openInferenceDialog(options = {}) {
 
     const description = document.createElement("p");
     description.textContent =
-      "Pick the scope and defaults for applying or clearing inferred interaction metadata.";
+      "Pick the scope and toggles for applying or clearing inferred interaction metadata.";
     description.style.cssText = "margin:0;font-size:14px;color:#9aa4c9;";
 
     const trendsHint = document.createElement("p");
     trendsHint.textContent =
-      "Suggestions may lean on recent modifier/input trends; no need to pick a heuristic.";
+      "Suggestions may lean on recent modifier/input trends; heuristics pick confidence and source automatically.";
     trendsHint.title =
-      "Lightweight modifier and input profiles from recent edits help the heuristic decide when to change Outcome/End values.";
+      "Heuristics set their own confidence/source when proposing values. Manual defaults live in settings and manual edits keep source \"manual\".";
     trendsHint.style.cssText = "margin:0;font-size:12px;color:#7f8ab5;";
 
     const scopeSelector = buildScopeSelector(defaults.scope || "selection");
@@ -219,25 +168,6 @@ export async function openInferenceDialog(options = {}) {
   fillIntentionalLabel.style.marginTop = "8px";
   runOptions.append(overwriteLabel, onlyEmptyLabel, fillIntentionalLabel);
 
-    const inputsRow = document.createElement("div");
-    inputsRow.style.cssText =
-      "display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;";
-    const { wrapper: confidenceWrapper, input: confidenceInput } = buildNumberInput(
-      "Default confidence",
-      defaults.defaultConfidence ?? 0.4,
-      "Saved with inferred cells to show how strong the suggestion is.",
-    );
-    const { wrapper: sourceWrapper, input: sourceInput } = buildTextInput(
-      "Default source",
-      defaults.defaultSource || "model",
-      "Stored source marks cells as inferred so bulk-clear flows can target source ≠ manual.",
-    );
-    inputsRow.append(confidenceWrapper, sourceWrapper);
-
-    const helpStack = document.createElement("div");
-    helpStack.style.cssText = "display:flex;flex-direction:column;gap:8px;";
-    helpStack.append(describeConfidenceHelp(), describeSourceHelp());
-
     const summary = document.createElement("div");
     summary.style.cssText = "font-size:13px;color:#c5d1ff;min-height:18px;";
 
@@ -267,8 +197,6 @@ export async function openInferenceDialog(options = {}) {
       scopeSelector,
       includeRow,
       runOptions,
-      inputsRow,
-      helpStack,
       summary,
       footer,
     );
@@ -295,8 +223,6 @@ export async function openInferenceDialog(options = {}) {
         overwriteInferred: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
         fillIntentionalBlanks: fillIntentionalInput.checked,
-        defaultConfidence: Number(confidenceInput.value || 0),
-        defaultSource: sourceInput.value || "model",
       };
     }
 

@@ -32,8 +32,6 @@ const DEFAULT_OPTIONS = Object.freeze({
   includeTag: true,
   overwriteInferred: true,
   onlyFillEmpty: false,
-  defaultConfidence: DEFAULT_INTERACTION_CONFIDENCE,
-  defaultSource: "model",
   fillIntentionalBlanks: false,
 });
 
@@ -60,6 +58,14 @@ function hasManualOutcomeWithDefaults(note) {
 }
 
 function normalizeOptions(payload = {}) {
+  const hasDefaultConfidence = Object.prototype.hasOwnProperty.call(
+    payload,
+    "defaultConfidence",
+  );
+  const hasDefaultSource = Object.prototype.hasOwnProperty.call(
+    payload,
+    "defaultSource",
+  );
   return {
     scope: payload.scope || DEFAULT_OPTIONS.scope,
     includeEnd: payload.includeEnd !== false,
@@ -67,12 +73,12 @@ function normalizeOptions(payload = {}) {
     overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
     fillIntentionalBlanks: !!payload.fillIntentionalBlanks,
-    defaultConfidence: normalizeInteractionConfidence(
-      payload.defaultConfidence,
-    ),
-    defaultSource: normalizeInteractionSource(
-      payload.defaultSource || DEFAULT_OPTIONS.defaultSource,
-    ),
+    defaultConfidence: hasDefaultConfidence
+      ? normalizeInteractionConfidence(payload.defaultConfidence)
+      : null,
+    defaultSource: hasDefaultSource
+      ? normalizeInteractionSource(payload.defaultSource)
+      : null,
   };
 }
 
@@ -186,10 +192,14 @@ export function createInferenceController(options) {
       return { applied: 0 };
     }
     const notes = model?.notes || (model.notes = {});
-    const metadata = {
-      confidence: options.defaultConfidence,
-      source: options.defaultSource,
-    };
+    const hasExplicitDefaults =
+      options.defaultConfidence != null || options.defaultSource != null;
+    const metadata = hasExplicitDefaults
+      ? {
+          confidence: options.defaultConfidence,
+          source: options.defaultSource,
+        }
+      : null;
     const profileSnapshot = captureInferenceProfilesSnapshot();
     const manualOutcomeKeys = new Set(
       targets
@@ -255,6 +265,7 @@ export function createInferenceController(options) {
         continue;
       }
       const dest = note || (notes[target.key] = {});
+      let appliedChange = false;
       if (canUseSuggestion) {
         if (target.field === "outcome") {
           if ("outcomeId" in suggestion.value) {
@@ -286,17 +297,21 @@ export function createInferenceController(options) {
         });
         result.sources[suggestion.source] =
           (result.sources[suggestion.source] || 0) + 1;
-      } else {
+        appliedChange = true;
+      } else if (metadata) {
         applyInteractionMetadata(dest, metadata);
+        appliedChange = true;
       }
-      result.applied++;
-      const nextValue = extractNoteFieldValue(dest, target.field);
-      recordProfileImpact({
-        pair: target.pair,
-        field: target.field,
-        previousValue,
-        nextValue,
-      });
+      if (appliedChange) {
+        result.applied++;
+        const nextValue = extractNoteFieldValue(dest, target.field);
+        recordProfileImpact({
+          pair: target.pair,
+          field: target.field,
+          previousValue,
+          nextValue,
+        });
+      }
     }
     return result;
   }
@@ -405,8 +420,6 @@ export function createInferenceController(options) {
       const mod = await import("../ui/inference-dialog.js");
       return await mod.openInferenceDialog({
         defaults: {
-          defaultConfidence: DEFAULT_OPTIONS.defaultConfidence,
-          defaultSource: DEFAULT_OPTIONS.defaultSource,
           includeEnd: DEFAULT_OPTIONS.includeEnd,
           includeTag: DEFAULT_OPTIONS.includeTag,
           overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
