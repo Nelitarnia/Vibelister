@@ -1785,12 +1785,80 @@ export function getInteractionsTests() {
         );
         assert.strictEqual(
           inferredNote.confidence,
-          0.82,
-          "heuristic confidence stored",
+          0.41,
+          "heuristic confidence scales with agreement",
         );
         assert.ok(
           /modifier propagation: 1/.test(res.status || ""),
           "status text lists heuristic count",
+        );
+      },
+    },
+    {
+      name: "inference ignores phases not defined on the action",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Guard");
+        action.phases = { ids: [0], labels: {} };
+        const input = addInput("Brace");
+        const outcome = addOutcome("Hold");
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+            { key: "p1:outcome" },
+          ],
+        };
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        const allowedKey = noteKeyForPair(pair, 0);
+        const blockedKey = noteKeyForPair(pair, 1);
+        model.notes[allowedKey] = { outcomeId: outcome.id, source: "auto" };
+        model.notes[blockedKey] = { outcomeId: outcome.id, source: "auto" };
+
+        const selection = { rows: new Set([0]), colsAll: true };
+        const controller = createInferenceController({
+          model,
+          selection,
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (opts.status) res.status = opts.status(res);
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+
+        const res = controller.runClear({ scope: "project" });
+
+        assert.strictEqual(res.cleared, 1);
+        assert.ok(!model.notes[allowedKey], "clears phases defined for action");
+        assert.deepStrictEqual(
+          model.notes[blockedKey],
+          { outcomeId: outcome.id, source: "auto" },
+          "preserves notes for phases outside action range",
         );
       },
     },

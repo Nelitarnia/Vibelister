@@ -152,6 +152,29 @@ export function createInferenceController(options) {
     return matches.filter(({ idx }) => idx === sel.c);
   }
 
+  const actionPhaseCache = new Map();
+
+  function getAllowedPhasesForAction(actionId) {
+    if (!Number.isFinite(actionId)) return null;
+    if (actionPhaseCache.has(actionId)) return actionPhaseCache.get(actionId);
+    const action = Array.isArray(model?.actions)
+      ? model.actions.find((x) => x && x.id === actionId)
+      : null;
+    const ids = action?.phases?.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      actionPhaseCache.set(actionId, null);
+      return null;
+    }
+    const allowed = new Set();
+    for (const p of ids) {
+      const num = Number(p);
+      if (Number.isFinite(num)) allowed.add(num);
+    }
+    const result = allowed.size ? allowed : null;
+    actionPhaseCache.set(actionId, result);
+    return result;
+  }
+
   function getRows(scope) {
     const totalRows = getInteractionsRowCount?.(model) || 0;
     if (scope === "project") {
@@ -185,8 +208,10 @@ export function createInferenceController(options) {
     for (const r of rows) {
       const pair = getInteractionsPair?.(model, r);
       if (!pair) continue;
+      const allowedPhases = getAllowedPhasesForAction(pair.aId);
       for (const { pk } of columns) {
         if (!pk) continue;
+        if (allowedPhases && !allowedPhases.has(pk.p)) continue;
         const key = noteKeyForPair(pair, pk.p);
         const note = model?.notes?.[key];
         targets.push({ key, field: pk.field, phase: pk.p, note, pair, row: r });
