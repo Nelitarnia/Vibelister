@@ -259,9 +259,25 @@ function modifierIdsFromSig(sig) {
     .filter((id) => Number.isFinite(id));
 }
 
+function normalizePhaseKey(phase) {
+  return phase == null ? null : String(phase);
+}
+
+function selectProfileBucket(container, phase, allowPhaseFallback) {
+  if (!container) return null;
+  const phaseKey = normalizePhaseKey(phase);
+  if (phaseKey != null) {
+    const phaseBucket = container.phases?.[phaseKey];
+    if (phaseBucket) return phaseBucket;
+    if (!allowPhaseFallback) return null;
+  }
+  return container.all || null;
+}
+
 function summarizeProfileForTarget(target, profiles, cache) {
   if (!profiles) return null;
-  const cacheKey = `${target.key}|${target.field}`;
+  const allowPhaseFallback = normalizePhaseKey(target.phase) == null;
+  const cacheKey = `${target.key}|${target.field}|${target.phase ?? ""}|${allowPhaseFallback}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
 
   const field = target.field;
@@ -289,12 +305,21 @@ function summarizeProfileForTarget(target, profiles, cache) {
     }
   };
 
-  const inputBucket = profiles.input?.[target.inputKey]?.[field];
+  const inputBucket = selectProfileBucket(
+    profiles.input?.[target.inputKey]?.[field],
+    target.phase,
+    allowPhaseFallback,
+  );
   mergeBucket(inputBucket);
 
   const modIds = modifierIdsFromSig(target.variantSig);
   for (const modId of modIds) {
-    mergeBucket(profiles.modifier?.[modId]?.[field]);
+    const bucket = selectProfileBucket(
+      profiles.modifier?.[modId]?.[field],
+      target.phase,
+      allowPhaseFallback,
+    );
+    mergeBucket(bucket);
   }
 
   let topValue = null;

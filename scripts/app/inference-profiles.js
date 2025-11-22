@@ -127,8 +127,12 @@ function cloneValue(field, value) {
   return null;
 }
 
-function createFieldBucket() {
+function createCountsBucket() {
   return { change: 0, clear: 0, noop: 0, values: new Map() };
+}
+
+function createFieldBucket() {
+  return { all: createCountsBucket(), phases: new Map() };
 }
 
 function createProfileRecord() {
@@ -148,7 +152,11 @@ function ensureProfile(map, key) {
   return map.get(key);
 }
 
-function incrementBucket(bucket, impact, nextValue, field) {
+function normalizePhaseKey(phase) {
+  return phase == null ? null : String(phase);
+}
+
+function incrementCountsBucket(bucket, impact, nextValue, field) {
   if (!bucket) return;
   if (impact === "change") bucket.change += 1;
   else if (impact === "clear") bucket.clear += 1;
@@ -160,6 +168,15 @@ function incrementBucket(bucket, impact, nextValue, field) {
     const entry = bucket.values.get(key);
     entry.count += 1;
   }
+}
+
+function incrementBucket(bucket, impact, nextValue, field, phase) {
+  if (!bucket) return;
+  incrementCountsBucket(bucket.all, impact, nextValue, field);
+  const phaseKey = normalizePhaseKey(phase);
+  if (phaseKey == null) return;
+  if (!bucket.phases.has(phaseKey)) bucket.phases.set(phaseKey, createCountsBucket());
+  incrementCountsBucket(bucket.phases.get(phaseKey), impact, nextValue, field);
 }
 
 function computeImpact(field, previousValue, nextValue) {
@@ -182,16 +199,24 @@ function decayBucket(bucket, factor) {
   }
 }
 
+function decayFieldBucket(fieldBucket, factor) {
+  if (!fieldBucket) return;
+  decayBucket(fieldBucket.all, factor);
+  for (const bucket of fieldBucket.phases.values()) {
+    decayBucket(bucket, factor);
+  }
+}
+
 function decayProfiles(factor = 0.94) {
   for (const profile of modifierProfiles.values()) {
-    decayBucket(profile.outcome, factor);
-    decayBucket(profile.end, factor);
-    decayBucket(profile.tag, factor);
+    decayFieldBucket(profile.outcome, factor);
+    decayFieldBucket(profile.end, factor);
+    decayFieldBucket(profile.tag, factor);
   }
   for (const profile of inputProfiles.values()) {
-    decayBucket(profile.outcome, factor);
-    decayBucket(profile.end, factor);
-    decayBucket(profile.tag, factor);
+    decayFieldBucket(profile.outcome, factor);
+    decayFieldBucket(profile.end, factor);
+    decayFieldBucket(profile.tag, factor);
   }
 }
 
@@ -201,6 +226,7 @@ export function recordProfileImpact({
   previousValue,
   nextValue,
   impact,
+  phase,
 }) {
   if (!field || (field !== "outcome" && field !== "end" && field !== "tag")) {
     return;
@@ -211,11 +237,11 @@ export function recordProfileImpact({
 
   for (const modId of modIds) {
     const profile = ensureProfile(modifierProfiles, modId);
-    incrementBucket(profile[field], impactType, nextValue, field);
+    incrementBucket(profile[field], impactType, nextValue, field, phase);
   }
   if (inputKey) {
     const profile = ensureProfile(inputProfiles, inputKey);
-    incrementBucket(profile[field], impactType, nextValue, field);
+    incrementBucket(profile[field], impactType, nextValue, field, phase);
   }
 
   decayBudget += 1;
@@ -247,11 +273,25 @@ function cloneBucket(bucket, field) {
   });
 }
 
+function cloneFieldBucket(fieldBucket, field) {
+  if (!fieldBucket) {
+    return Object.freeze({ all: cloneBucket(null, field), phases: Object.freeze({}) });
+  }
+  const phases = {};
+  for (const [key, bucket] of fieldBucket.phases.entries()) {
+    phases[key] = cloneBucket(bucket, field);
+  }
+  return Object.freeze({
+    all: cloneBucket(fieldBucket.all, field),
+    phases: Object.freeze(phases),
+  });
+}
+
 function cloneProfile(profile) {
   return Object.freeze({
-    outcome: cloneBucket(profile.outcome, "outcome"),
-    end: cloneBucket(profile.end, "end"),
-    tag: cloneBucket(profile.tag, "tag"),
+    outcome: cloneFieldBucket(profile.outcome, "outcome"),
+    end: cloneFieldBucket(profile.end, "end"),
+    tag: cloneFieldBucket(profile.tag, "tag"),
   });
 }
 
