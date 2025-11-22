@@ -1248,6 +1248,8 @@ body {
   position: absolute;
   --vl-inferred-border-color: transparent;
   --vl-inferred-border-width: 0px;
+  --vl-range-fill: rgba(129, 161, 255, 0.08);
+  --vl-range-fill-alt: rgba(129, 161, 255, 0.12);
   border: 1px solid #1f2432;
   border-top: none;
   border-left: none;
@@ -1355,12 +1357,15 @@ body {
 .cell.range-selected {
   box-shadow:
     inset 0 0 0 2px rgba(129, 161, 255, 0.35),
-    inset 0 0 0 var(--vl-inferred-border-width) var(--vl-inferred-border-color);
+    inset 0 0 0 var(--vl-inferred-border-width) var(--vl-inferred-border-color),
+    inset 0 0 0 1000px var(--vl-range-fill);
 }
+
 .cell.alt.range-selected {
   box-shadow:
     inset 0 0 0 2px rgba(129, 161, 255, 0.35),
-    inset 0 0 0 var(--vl-inferred-border-width) var(--vl-inferred-border-color);
+    inset 0 0 0 var(--vl-inferred-border-width) var(--vl-inferred-border-color),
+    inset 0 0 0 1000px var(--vl-range-fill-alt);
 }
 
 .hdr {
