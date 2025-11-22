@@ -7,6 +7,10 @@ export function initInteractionTools(options = {}) {
     acceptButton,
     clearButton,
     uncertainButton,
+    uncertaintyValue,
+    sourceValue,
+    uncertaintyDefaultInput,
+    uncertaintyDefaultValue,
     getActiveView,
     onSelectionChanged,
     statusBar,
@@ -19,11 +23,59 @@ export function initInteractionTools(options = {}) {
     id: panelId,
     element: pane,
     title: "Interactions", // overwritten below
-    onShow: () => updateToggleState(true),
-    onHide: () => updateToggleState(false),
+    onShow: () => refresh(true),
+    onHide: () => refresh(false),
   });
   handle?.setTitle?.("Interactions — Bulk actions");
   const detachToggle = panelHost.attachToggle(toggleButton, panelId);
+
+  function formatPercent(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return "—";
+    return `${Math.round(num * 100)}%`;
+  }
+
+  function setText(el, text) {
+    if (el) el.textContent = text;
+  }
+
+  function updateDefaultUncertaintyLabel(value) {
+    const display = formatPercent(value);
+    setText(uncertaintyDefaultValue, display);
+  }
+
+  function syncDefaultUncertainty() {
+    if (!uncertaintyDefaultInput) return;
+    const current =
+      typeof actions.getDefaultUncertainty === "function"
+        ? actions.getDefaultUncertainty()
+        : Number(uncertaintyDefaultInput.value);
+    const normalized = Number.isFinite(current) ? current : 0.5;
+    uncertaintyDefaultInput.value = normalized;
+    updateDefaultUncertaintyLabel(normalized);
+  }
+
+  function updateSelectionInference() {
+    if (typeof actions.summarizeSelectionInference !== "function") return;
+    const summary = actions.summarizeSelectionInference();
+    if (!summary?.allowed) {
+      setText(uncertaintyValue, "—");
+      setText(sourceValue, "—");
+      return;
+    }
+    if (!summary.count) {
+      setText(uncertaintyValue, "—");
+      setText(sourceValue, "—");
+      return;
+    }
+    if (summary.confidenceMixed) setText(uncertaintyValue, "multiple");
+    else if (summary.confidence != null)
+      setText(uncertaintyValue, formatPercent(1 - summary.confidence));
+    else setText(uncertaintyValue, "—");
+    if (summary.sourceMixed) setText(sourceValue, "multiple");
+    else if (summary.source) setText(sourceValue, summary.source);
+    else setText(sourceValue, "manual");
+  }
 
   function updateToggleState(open = handle?.isOpen?.()) {
     const expanded = !!open;
@@ -36,12 +88,17 @@ export function initInteractionTools(options = {}) {
     if (!isInteractions && expanded) handle?.close?.();
   }
 
+  function refresh(open = handle?.isOpen?.()) {
+    updateToggleState(open);
+    updateSelectionInference();
+  }
+
   function run(action) {
     if (typeof action !== "function") return;
     const result = action();
     const statusText = result?.status;
     if (statusText && statusBar?.set) statusBar.set(statusText);
-    updateToggleState();
+    refresh();
   }
 
   acceptButton?.addEventListener("click", () => run(actions.acceptInferred));
@@ -50,11 +107,20 @@ export function initInteractionTools(options = {}) {
   );
   uncertainButton?.addEventListener("click", () => run(actions.toggleUncertain));
 
+  uncertaintyDefaultInput?.addEventListener("input", (e) => {
+    const next =
+      typeof actions.setDefaultUncertainty === "function"
+        ? actions.setDefaultUncertainty(e.target.value)
+        : Number(e.target.value);
+    updateDefaultUncertaintyLabel(next);
+  });
+
   if (typeof onSelectionChanged === "function") {
-    onSelectionChanged(() => updateToggleState(handle?.isOpen?.()));
+    onSelectionChanged(() => refresh(handle?.isOpen?.()));
   }
 
-  updateToggleState();
+  syncDefaultUncertainty();
+  refresh();
 
   return {
     toggle: () => handle?.toggle?.(),

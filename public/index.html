@@ -507,9 +507,45 @@
             data-pane="interaction-tools"
             hidden
           >
+            <div class="interaction-tools__state">
+              <div class="interaction-tools__field">
+                <div class="interaction-tools__label">Uncertainty</div>
+                <div class="interaction-tools__value" id="interaction-uncertainty-value">
+                  —
+                </div>
+              </div>
+              <div class="interaction-tools__field">
+                <div class="interaction-tools__label">Source</div>
+                <div class="interaction-tools__value" id="interaction-source-value">—</div>
+              </div>
+            </div>
+            <div class="interaction-tools__default">
+              <label class="interaction-tools__label" for="interaction-uncertainty-default">
+                Default uncertainty
+              </label>
+              <div class="interaction-tools__slider-row">
+                <input
+                  type="range"
+                  id="interaction-uncertainty-default"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value="0.5"
+                />
+                <div
+                  class="interaction-tools__value interaction-tools__value--strong"
+                  id="interaction-uncertainty-default-value"
+                >
+                  50%
+                </div>
+              </div>
+              <p class="interaction-tools__hint">
+                Applied when marking cells as inferred manually (panel button or Ctrl+Shift+U).
+              </p>
+            </div>
             <div class="interaction-tools__intro">
-              Bulk actions target the current Interactions selection. Use Ctrl+Shift+U to
-              toggle Uncertain without opening the panel.
+              Bulk actions target the current Interactions selection. Review inferred metadata
+              above or adjust the default uncertainty used when marking cells as inferred.
             </div>
             <div class="interaction-tools__actions">
               <button type="button" class="interaction-tools__button" id="interaction-accept">
@@ -523,8 +559,9 @@
               </button>
             </div>
             <p class="interaction-tools__hint">
-              Works on Outcome, End, and Tag columns in the Interactions view. Actions respect
-              row and column selections and update inferred styling immediately.
+              Works on Outcome, End, and Tag columns in the Interactions view. Manual
+              uncertainty applies inference metadata without changing cell contents. Actions
+              respect row and column selections and update inferred styling immediately.
             </p>
           </section>
         </div>

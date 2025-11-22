@@ -183,6 +183,10 @@ const {
   interactionAcceptButton,
   interactionClearButton,
   interactionUncertainButton,
+  interactionUncertaintyValue,
+  interactionSourceValue,
+  interactionUncertaintyDefault,
+  interactionUncertaintyDefaultValue,
 } = sidebarDom;
 const { tabActions, tabInputs, tabModifiers, tabOutcomes, tabInteractions } = tabDom;
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
@@ -990,6 +994,10 @@ sheet.addEventListener("scroll", () => {
     interactionAcceptButton,
     interactionClearButton,
     interactionUncertainButton,
+    interactionUncertaintyValue,
+    interactionSourceValue,
+    interactionUncertaintyDefault,
+    interactionUncertaintyDefaultValue,
   },
   SelectionCtl,
   selection,
