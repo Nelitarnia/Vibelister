@@ -28,6 +28,12 @@ function normalizeActionId(pair) {
   return Number.isFinite(id) ? id : null;
 }
 
+function normalizeActionGroup(group) {
+  if (group == null) return "";
+  const text = String(group).trim();
+  return text ? text.toLowerCase() : "";
+}
+
 function extractFieldValue(target) {
   const { note, field } = target;
   if (!note || typeof note !== "object") return null;
@@ -108,6 +114,7 @@ function prepareTargets(targets) {
     const actionId = normalizeActionId(target.pair);
     const variantSig = normalizeVariantSig(target.pair);
     const inputKey = normalizeInputKey(target.pair);
+    const actionGroupKey = normalizeActionGroup(target.actionGroup);
     const currentValue = extractFieldValue(target);
     const info = describeInteractionInference(target.note);
     const source = normalizeInteractionSource(info?.source);
@@ -116,6 +123,7 @@ function prepareTargets(targets) {
       actionId,
       variantSig,
       inputKey,
+      actionGroupKey,
       currentValue,
       hasValue: !!currentValue,
       isManual: source === DEFAULT_INTERACTION_SOURCE && !!currentValue,
@@ -138,13 +146,23 @@ function registerSuggestion(map, target, source, confidence, value, profilePrefs
 }
 
 function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
+  const minGroupSize = Number.isFinite(thresholds?.minGroupSize)
+    ? thresholds.minGroupSize
+    : thresholds?.consensusMinGroupSize;
+  const minExistingRatio = Number.isFinite(thresholds?.minExistingRatio)
+    ? thresholds.minExistingRatio
+    : thresholds?.consensusMinExistingRatio;
   for (const list of groups.values()) {
     const total = list.length;
-    if (total < thresholds.consensusMinGroupSize) continue;
+    if (!Number.isFinite(minGroupSize) || total < minGroupSize) continue;
 
     const existing = list.filter((t) => t.currentValue);
     if (!existing.length) continue;
-    if (existing.length / total < thresholds.consensusMinExistingRatio) continue;
+    if (
+      !Number.isFinite(minExistingRatio) ||
+      existing.length / total < minExistingRatio
+    )
+      continue;
     const uniqueValues = new Map();
     for (const t of existing) {
       const key = valueKey(t.field, t.currentValue);
@@ -172,6 +190,7 @@ function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
 }
 
 export const HEURISTIC_SOURCES = Object.freeze({
+  actionGroup: "action-group",
   modifierPropagation: "modifier-propagation",
   modifierProfile: "modifier-profile",
   inputDefault: "input-default",
@@ -179,6 +198,7 @@ export const HEURISTIC_SOURCES = Object.freeze({
 });
 
 const BASE_CONFIDENCE = Object.freeze({
+  [HEURISTIC_SOURCES.actionGroup]: 0.6,
   [HEURISTIC_SOURCES.modifierPropagation]: 0.82,
   [HEURISTIC_SOURCES.modifierProfile]: 0.64,
   [HEURISTIC_SOURCES.inputDefault]: 0.48,
@@ -221,6 +241,10 @@ function computeSuggestionConfidence(source, context = {}) {
 export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
   consensusMinGroupSize: 2,
   consensusMinExistingRatio: 0.5,
+  actionGroupMinGroupSize: 2,
+  actionGroupMinExistingRatio: 0.6,
+  actionGroupPhaseMinGroupSize: 3,
+  actionGroupPhaseMinExistingRatio: 0.72,
   inputDefaultMinGroupSize: 2,
   inputDefaultMinExistingRatio: 0.5,
   profileTrendMinObservations: 3,
@@ -236,6 +260,22 @@ function normalizeThresholds(override = {}) {
     consensusMinExistingRatio: Number.isFinite(override.consensusMinExistingRatio)
       ? override.consensusMinExistingRatio
       : defaults.consensusMinExistingRatio,
+    actionGroupMinGroupSize: Number.isFinite(override.actionGroupMinGroupSize)
+      ? override.actionGroupMinGroupSize
+      : defaults.actionGroupMinGroupSize,
+    actionGroupMinExistingRatio: Number.isFinite(override.actionGroupMinExistingRatio)
+      ? override.actionGroupMinExistingRatio
+      : defaults.actionGroupMinExistingRatio,
+    actionGroupPhaseMinGroupSize: Number.isFinite(
+      override.actionGroupPhaseMinGroupSize,
+    )
+      ? override.actionGroupPhaseMinGroupSize
+      : defaults.actionGroupPhaseMinGroupSize,
+    actionGroupPhaseMinExistingRatio: Number.isFinite(
+      override.actionGroupPhaseMinExistingRatio,
+    )
+      ? override.actionGroupPhaseMinExistingRatio
+      : defaults.actionGroupPhaseMinExistingRatio,
     inputDefaultMinGroupSize: Number.isFinite(override.inputDefaultMinGroupSize)
       ? override.inputDefaultMinGroupSize
       : defaults.inputDefaultMinGroupSize,
@@ -391,15 +431,29 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
   const profilePrefs = profiles ? buildProfilePrefs(profiles, thresholds) : null;
 
   const byActionInput = new Map();
+  const byActionGroupInput = new Map();
+  const byActionGroupPhase = new Map();
   const byModifierProfile = new Map();
   const byInputDefault = new Map();
 
   for (const target of prepared) {
-    const { actionId, inputKey, field, phase, variantSig } = target;
+    const { actionId, inputKey, field, phase, variantSig, actionGroupKey } = target;
     const actionKey = actionId == null ? "" : String(actionId);
     const groupKey = `${actionKey}|${inputKey}|${phase}|${field}`;
     if (!byActionInput.has(groupKey)) byActionInput.set(groupKey, []);
     byActionInput.get(groupKey).push(target);
+
+    if (actionGroupKey) {
+      const inputGroupKey = `${actionGroupKey}|${inputKey}|${phase}|${field}`;
+      if (!byActionGroupInput.has(inputGroupKey))
+        byActionGroupInput.set(inputGroupKey, []);
+      byActionGroupInput.get(inputGroupKey).push(target);
+
+      const phaseGroupKey = `${actionGroupKey}|${phase}|${field}`;
+      if (!byActionGroupPhase.has(phaseGroupKey))
+        byActionGroupPhase.set(phaseGroupKey, []);
+      byActionGroupPhase.get(phaseGroupKey).push(target);
+    }
 
     const profileKey = `${actionKey}|${variantSig}|${phase}|${field}`;
     if (!byModifierProfile.has(profileKey)) byModifierProfile.set(profileKey, []);
@@ -414,7 +468,32 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
     suggestions,
     HEURISTIC_SOURCES.modifierPropagation,
     profilePrefs,
-    thresholds,
+    {
+      minGroupSize: thresholds.consensusMinGroupSize,
+      minExistingRatio: thresholds.consensusMinExistingRatio,
+    },
+  );
+
+  applyConsensus(
+    byActionGroupInput,
+    suggestions,
+    HEURISTIC_SOURCES.actionGroup,
+    profilePrefs,
+    {
+      minGroupSize: thresholds.actionGroupMinGroupSize,
+      minExistingRatio: thresholds.actionGroupMinExistingRatio,
+    },
+  );
+
+  applyConsensus(
+    byActionGroupPhase,
+    suggestions,
+    HEURISTIC_SOURCES.actionGroup,
+    profilePrefs,
+    {
+      minGroupSize: thresholds.actionGroupPhaseMinGroupSize,
+      minExistingRatio: thresholds.actionGroupPhaseMinExistingRatio,
+    },
   );
 
   applyConsensus(
@@ -422,7 +501,10 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
     suggestions,
     HEURISTIC_SOURCES.modifierProfile,
     profilePrefs,
-    thresholds,
+    {
+      minGroupSize: thresholds.consensusMinGroupSize,
+      minExistingRatio: thresholds.consensusMinExistingRatio,
+    },
   );
 
   for (const list of byInputDefault.values()) {

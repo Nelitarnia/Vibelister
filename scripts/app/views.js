@@ -23,6 +23,13 @@ export const VIEWS = {
         defaultWidth: 150,
         kind: "phases",
       },
+      {
+        key: "actionGroup",
+        title: "Action Group",
+        width: 180,
+        defaultWidth: 180,
+        kind: "text",
+      },
       { key: "color", title: "Color 1", width: 75, defaultWidth: 75, kind: "color" },
       {
         key: "color2",
@@ -195,6 +202,13 @@ export function rebuildActionColumnsFromModifiers(model) {
       width: 150,
       defaultWidth: 150,
       kind: "phases",
+    },
+    {
+      key: "actionGroup",
+      title: "Action Group",
+      width: 180,
+      defaultWidth: 180,
+      kind: "text",
     },
     { key: "color", title: "Color 1", width: 75, defaultWidth: 75, kind: "color" },
     {
