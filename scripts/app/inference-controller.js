@@ -226,6 +226,29 @@ export function createInferenceController(options) {
       statusBar?.set?.("Inference only applies to the Interactions view.");
       return { applied: 0 };
     }
+    const suggestionScope =
+      options.scope === "project"
+        ? "project"
+        : options.scope === "action"
+          ? "project"
+          : "action";
+    const { targets: broaderTargets, allowed: suggestionAllowed } =
+      suggestionScope === options.scope
+        ? { targets, allowed }
+        : collectTargets(suggestionScope, options);
+    const suggestionTargets = (() => {
+      if (!suggestionAllowed) return targets;
+      if (suggestionScope === options.scope) return targets;
+      const merged = [...targets];
+      const seen = new Set(targets.map((item) => item.key));
+      for (const target of broaderTargets) {
+        if (!seen.has(target.key)) {
+          merged.push(target);
+          seen.add(target.key);
+        }
+      }
+      return merged;
+    })();
     const notes = model?.notes || (model.notes = {});
     const hasExplicitDefaults =
       options.defaultConfidence != null || options.defaultSource != null;
@@ -237,13 +260,13 @@ export function createInferenceController(options) {
       : null;
     const profileSnapshot = captureInferenceProfilesSnapshot();
     const manualOutcomeKeys = new Set(
-      targets
+      suggestionTargets
         .filter(({ key }) => hasManualOutcomeWithDefaults(notes[key]))
         .map((target) => target.key),
     );
-    const suggestionTargets = options.fillIntentionalBlanks
-      ? targets
-      : targets.filter(
+    const filteredSuggestionTargets = options.fillIntentionalBlanks
+      ? suggestionTargets
+      : suggestionTargets.filter(
           (target) =>
             !(
               manualOutcomeKeys.has(target.key) &&
@@ -257,7 +280,7 @@ export function createInferenceController(options) {
     }
     lastThresholdOverrides = thresholdOverrides;
     const suggestions = proposeInteractionInferences(
-      suggestionTargets,
+      filteredSuggestionTargets,
       profileSnapshot,
       thresholdOverrides,
     );
