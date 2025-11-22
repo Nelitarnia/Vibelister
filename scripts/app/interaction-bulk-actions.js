@@ -2,14 +2,13 @@ import {
   DEFAULT_INTERACTION_CONFIDENCE,
   DEFAULT_INTERACTION_SOURCE,
   applyInteractionMetadata,
-  clearInteractionsCell,
   describeInteractionInference,
   noteKeyForPair,
-  setInteractionsCell,
   isInteractionPhaseColumnActiveForRow,
+  normalizeInteractionConfidence,
+  normalizeInteractionSource,
 } from "./interactions.js";
 import { parsePhaseKey } from "../data/utils.js";
-import { findOutcomeIdByName } from "./outcomes.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
 function hasStructuredValue(note, field) {
@@ -21,6 +20,14 @@ function hasStructuredValue(note, field) {
     );
   if (field === "tag") return Array.isArray(note.tags) && note.tags.length > 0;
   return false;
+}
+
+function normalizeUncertainty(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0.5;
+  if (num < 0) return 0;
+  if (num > 1) return 1;
+  return num;
 }
 
 function collectSelectionTargets({
@@ -86,12 +93,18 @@ export function createInteractionBulkActions(options = {}) {
     getInteractionsPair,
   } = options;
 
+  let defaultUncertainty = 0.5;
+
+  function setDefaultUncertainty(value) {
+    defaultUncertainty = normalizeUncertainty(value);
+    return defaultUncertainty;
+  }
+
+  function getDefaultUncertainty() {
+    return defaultUncertainty;
+  }
+
   function toggleUncertain() {
-    const outcomeId = findOutcomeIdByName(model, "Uncertain");
-    if (outcomeId == null) {
-      statusBar?.set?.("Add an \"Uncertain\" outcome to use this toggle.");
-      return null;
-    }
     const { targets, allowed, viewDef: vd } = collectSelectionTargets({
       model,
       selection,
@@ -99,17 +112,19 @@ export function createInteractionBulkActions(options = {}) {
       getActiveView,
       viewDef,
       getInteractionsPair,
-      filterField: "outcome",
     });
     if (!allowed) {
-      statusBar?.set?.("Uncertain toggle only applies in the Interactions view.");
+      statusBar?.set?.("Manual inference only applies in the Interactions view.");
       return null;
     }
+    const confidence = 1 - defaultUncertainty;
+    const uncertaintyText = `${Math.round(defaultUncertainty * 100)}%`;
 
     return runModelMutation?.(
-      "Toggle Uncertain",
+      "Set inferred uncertainty",
       () => {
-        const result = { applied: 0, cleared: 0, skipped: 0 };
+        const notes = model?.notes || (model.notes = {});
+        const result = { updated: 0, skippedInactive: 0, unchanged: 0, inspected: 0 };
         for (const target of targets) {
           const active = isInteractionPhaseColumnActiveForRow(
             model,
@@ -119,48 +134,92 @@ export function createInteractionBulkActions(options = {}) {
             target.column,
           );
           if (!active) {
-            result.skipped++;
+            result.skippedInactive++;
             continue;
           }
-          const note = model?.notes?.[target.key];
-          const isAlreadyUncertain =
-            note &&
-            typeof note === "object" &&
-            note.outcomeId === outcomeId &&
-            !("result" in note);
-          const changed = isAlreadyUncertain
-            ? clearInteractionsCell(model, vd, target.row, target.col)
-            : setInteractionsCell(model, null, vd, target.row, target.col, {
-                outcomeId,
-                confidence: DEFAULT_INTERACTION_CONFIDENCE,
-                source: DEFAULT_INTERACTION_SOURCE,
-              });
-          if (changed) {
-            if (isAlreadyUncertain) result.cleared++;
-            else result.applied++;
+          const note = notes[target.key] || (notes[target.key] = {});
+          const before = describeInteractionInference(note);
+          const beforeSource = normalizeInteractionSource(before?.source);
+          applyInteractionMetadata(note, {
+            confidence,
+            source: DEFAULT_INTERACTION_SOURCE,
+          });
+          const after = describeInteractionInference(note);
+          const afterSource = normalizeInteractionSource(after?.source);
+          if (
+            before.confidence !== after.confidence ||
+            beforeSource !== afterSource ||
+            !before.inferred
+          ) {
+            result.updated++;
+          } else {
+            result.unchanged++;
           }
+          result.inspected++;
         }
         return result;
       },
       {
         render: true,
         undo: makeUndoConfig?.({
-          label: "toggle uncertain",
-          shouldRecord: (res) => (res?.applied ?? 0) + (res?.cleared ?? 0) > 0,
+          label: "set inference uncertainty",
+          shouldRecord: (res) => (res?.updated ?? 0) > 0,
         }),
         status: (res) => {
-          const applied = res?.applied ?? 0;
-          const cleared = res?.cleared ?? 0;
-          const skipped = res?.skipped ?? 0;
-          const parts = [];
-          if (applied) parts.push(`${applied} set`);
-          if (cleared) parts.push(`${cleared} cleared`);
-          if (!parts.length) parts.push("No changes");
-          const skippedText = skipped ? ` (skipped ${skipped} inactive cells)` : "";
-          return `Uncertain toggle: ${parts.join(",")}${skippedText}.`;
+          const updated = res?.updated ?? 0;
+          const unchanged = res?.unchanged ?? 0;
+          const skipped = res?.skippedInactive ?? 0;
+          const updatedText = `${updated || "no"} cell${updated === 1 ? "" : "s"}`;
+          const unchangedText = unchanged ? ` (${unchanged} unchanged)` : "";
+          const skippedText = skipped
+            ? ` Skipped ${skipped} inactive cell${skipped === 1 ? "" : "s"}.`
+            : "";
+          return `Manual inference: ${updatedText} set to ${uncertaintyText} uncertainty${unchangedText}.${skippedText}`;
         },
       },
     );
+  }
+
+  function summarizeSelectionInference() {
+    const { targets, allowed, viewDef: vd } = collectSelectionTargets({
+      model,
+      selection,
+      sel,
+      getActiveView,
+      viewDef,
+      getInteractionsPair,
+    });
+    if (!allowed) return { allowed: false };
+
+    const summary = {
+      allowed: true,
+      count: 0,
+      confidence: null,
+      source: null,
+      confidenceMixed: false,
+      sourceMixed: false,
+    };
+
+    for (const target of targets) {
+      const active = isInteractionPhaseColumnActiveForRow(
+        model,
+        vd,
+        target.row,
+        target.col,
+        target.column,
+      );
+      if (!active) continue;
+      const info = describeInteractionInference(target.note);
+      const confidence = normalizeInteractionConfidence(info?.confidence);
+      const source = normalizeInteractionSource(info?.source);
+      if (summary.confidence == null) summary.confidence = confidence;
+      else if (summary.confidence !== confidence) summary.confidenceMixed = true;
+      if (summary.source == null) summary.source = source;
+      else if (summary.source !== source) summary.sourceMixed = true;
+      summary.count++;
+    }
+
+    return summary;
   }
 
   function acceptInferred() {
@@ -322,5 +381,12 @@ export function createInteractionBulkActions(options = {}) {
     );
   }
 
-  return { toggleUncertain, acceptInferred, clearInferenceMetadata };
+  return {
+    toggleUncertain,
+    acceptInferred,
+    clearInferenceMetadata,
+    summarizeSelectionInference,
+    getDefaultUncertainty,
+    setDefaultUncertainty,
+  };
 }

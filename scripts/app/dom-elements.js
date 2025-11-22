@@ -39,6 +39,16 @@ export function getSidebarDomElements(Ids) {
     interactionAcceptButton: document.getElementById(Ids.interactionAccept),
     interactionClearButton: document.getElementById(Ids.interactionClear),
     interactionUncertainButton: document.getElementById(Ids.interactionUncertain),
+    interactionUncertaintyValue: document.getElementById(
+      Ids.interactionUncertaintyValue,
+    ),
+    interactionSourceValue: document.getElementById(Ids.interactionSourceValue),
+    interactionUncertaintyDefault: document.getElementById(
+      Ids.interactionUncertaintyDefault,
+    ),
+    interactionUncertaintyDefaultValue: document.getElementById(
+      Ids.interactionUncertaintyDefaultValue,
+    ),
     commentList: document.getElementById(Ids.commentList),
     commentEmpty: document.getElementById(Ids.commentEmpty),
     commentEditor: document.getElementById(Ids.commentEditor),
