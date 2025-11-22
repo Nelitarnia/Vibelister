@@ -94,6 +94,7 @@ export function createInferenceController(options) {
     makeUndoConfig,
     getInteractionsPair,
     getInteractionsRowCount,
+    heuristicThresholds,
   } = options;
 
   function formatStatus(result, actionLabel) {
@@ -218,6 +219,7 @@ export function createInferenceController(options) {
     const suggestions = proposeInteractionInferences(
       suggestionTargets,
       profileSnapshot,
+      heuristicThresholds,
     );
     const result = {
       applied: 0,
