@@ -137,14 +137,7 @@ function registerSuggestion(map, target, source, confidence, value, profilePrefs
   map.get(target.key)[target.field] = { source, confidence, value };
 }
 
-function applyConsensus(
-  groups,
-  suggestions,
-  source,
-  confidence,
-  profilePrefs,
-  thresholds,
-) {
+function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
   for (const list of groups.values()) {
     const total = list.length;
     if (total < thresholds.consensusMinGroupSize) continue;
@@ -160,6 +153,8 @@ function applyConsensus(
     }
     if (uniqueValues.size !== 1) continue;
     const value = Array.from(uniqueValues.values())[0];
+    const agreementRatio = total > 0 ? existing.length / total : null;
+    const confidence = computeSuggestionConfidence(source, { agreementRatio });
     for (const target of list) {
       if (!eligibleForSuggestion(target)) continue;
       const already = suggestions.get(target.key)?.[target.field];
@@ -183,12 +178,45 @@ export const HEURISTIC_SOURCES = Object.freeze({
   profileTrend: "profile-trend",
 });
 
-const SOURCE_CONFIDENCE = Object.freeze({
+const BASE_CONFIDENCE = Object.freeze({
   [HEURISTIC_SOURCES.modifierPropagation]: 0.82,
   [HEURISTIC_SOURCES.modifierProfile]: 0.64,
   [HEURISTIC_SOURCES.inputDefault]: 0.48,
   [HEURISTIC_SOURCES.profileTrend]: 0.56,
 });
+
+function clampConfidence(value) {
+  if (!Number.isFinite(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return value;
+}
+
+function computeSuggestionConfidence(source, context = {}) {
+  const base = BASE_CONFIDENCE[source] ?? 0.5;
+  if (
+    source === HEURISTIC_SOURCES.modifierPropagation ||
+    source === HEURISTIC_SOURCES.modifierProfile
+  ) {
+    const ratio = context.agreementRatio;
+    if (Number.isFinite(ratio)) return clampConfidence(base * ratio);
+  }
+  if (source === HEURISTIC_SOURCES.inputDefault) {
+    const ratio = context.existingRatio;
+    if (Number.isFinite(ratio)) return clampConfidence(base * ratio);
+  }
+  if (source === HEURISTIC_SOURCES.profileTrend) {
+    const preferenceRatio = context.preferenceRatio;
+    const supportBoost = Number.isFinite(context.supportCount)
+      ? Math.min(context.supportCount, 20) * 0.01
+      : 0;
+    if (Number.isFinite(preferenceRatio)) {
+      return clampConfidence(base * preferenceRatio + supportBoost);
+    }
+    return clampConfidence(base + supportBoost);
+  }
+  return clampConfidence(base);
+}
 
 export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
   consensusMinGroupSize: 2,
@@ -324,6 +352,9 @@ function buildProfilePrefs(profiles, thresholds) {
       }
       return null;
     },
+    getSummary(target) {
+      return summarizeProfileForTarget(target, profiles, cache);
+    },
   };
 }
 
@@ -357,7 +388,6 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
     byActionInput,
     suggestions,
     HEURISTIC_SOURCES.modifierPropagation,
-    SOURCE_CONFIDENCE[HEURISTIC_SOURCES.modifierPropagation],
     profilePrefs,
     thresholds,
   );
@@ -366,7 +396,6 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
     byModifierProfile,
     suggestions,
     HEURISTIC_SOURCES.modifierProfile,
-    SOURCE_CONFIDENCE[HEURISTIC_SOURCES.modifierProfile],
     profilePrefs,
     thresholds,
   );
@@ -378,6 +407,11 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
     if (!existing.length) continue;
     if (existing.length / total < thresholds.inputDefaultMinExistingRatio) continue;
     const candidate = existing[0];
+    const existingRatio = total > 0 ? existing.length / total : null;
+    const confidence = computeSuggestionConfidence(
+      HEURISTIC_SOURCES.inputDefault,
+      { existingRatio },
+    );
     for (const target of list) {
       if (!eligibleForSuggestion(target)) continue;
       const already = suggestions.get(target.key)?.[target.field];
@@ -386,7 +420,7 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
         suggestions,
         target,
         HEURISTIC_SOURCES.inputDefault,
-        SOURCE_CONFIDENCE[HEURISTIC_SOURCES.inputDefault],
+        confidence,
         cloneValue(target.field, candidate.currentValue),
         profilePrefs,
       );
@@ -402,11 +436,21 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
       if (profilePrefs.shouldSkip(target)) continue;
       const preferred = profilePrefs.preferredValue(target);
       if (!preferred) continue;
+      const summary = profilePrefs.getSummary(target);
+      const total = summary ? summary.change + summary.noEffect : 0;
+      const preferenceRatio = total > 0 ? summary.topCount / total : null;
+      const confidence = computeSuggestionConfidence(
+        HEURISTIC_SOURCES.profileTrend,
+        {
+          preferenceRatio,
+          supportCount: summary?.topCount,
+        },
+      );
       registerSuggestion(
         suggestions,
         target,
         HEURISTIC_SOURCES.profileTrend,
-        SOURCE_CONFIDENCE[HEURISTIC_SOURCES.profileTrend],
+        confidence,
         cloneValue(target.field, preferred),
         profilePrefs,
       );
