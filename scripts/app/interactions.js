@@ -495,6 +495,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
         field: pk.field,
         previousValue,
         nextValue,
+        phase: pk.p,
       });
     }
     return success;

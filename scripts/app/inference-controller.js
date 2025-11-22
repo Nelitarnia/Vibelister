@@ -352,6 +352,7 @@ export function createInferenceController(options) {
           field: target.field,
           previousValue,
           nextValue,
+          phase: target.phase,
         });
       }
     }
