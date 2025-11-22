@@ -47,17 +47,6 @@ function hasStructuredValue(note, field) {
   return false;
 }
 
-function hasManualOutcomeWithDefaults(note) {
-  if (!hasStructuredValue(note, "outcome")) return false;
-  const info = describeInteractionInference(note);
-  const source = normalizeInteractionSource(info?.source);
-  const confidence = normalizeInteractionConfidence(info?.confidence);
-  return (
-    source === DEFAULT_INTERACTION_SOURCE &&
-    confidence === DEFAULT_INTERACTION_CONFIDENCE
-  );
-}
-
 function normalizeOptions(payload = {}) {
   const hasDefaultConfidence = Object.prototype.hasOwnProperty.call(
     payload,
@@ -259,20 +248,6 @@ export function createInferenceController(options) {
         }
       : null;
     const profileSnapshot = captureInferenceProfilesSnapshot();
-    const manualOutcomeKeys = new Set(
-      suggestionTargets
-        .filter(({ key }) => hasManualOutcomeWithDefaults(notes[key]))
-        .map((target) => target.key),
-    );
-    const filteredSuggestionTargets = options.fillIntentionalBlanks
-      ? suggestionTargets
-      : suggestionTargets.filter(
-          (target) =>
-            !(
-              manualOutcomeKeys.has(target.key) &&
-              (target.field === "end" || target.field === "tag")
-            ),
-        );
     const thresholdOverrides = { ...baseThresholds };
     const overrides = options.thresholdOverrides || {};
     for (const [key, value] of Object.entries(overrides)) {
@@ -280,7 +255,7 @@ export function createInferenceController(options) {
     }
     lastThresholdOverrides = thresholdOverrides;
     const suggestions = proposeInteractionInferences(
-      filteredSuggestionTargets,
+      suggestionTargets,
       profileSnapshot,
       thresholdOverrides,
     );
@@ -295,18 +270,12 @@ export function createInferenceController(options) {
     for (const target of targets) {
       const note = notes[target.key];
       const previousValue = extractNoteFieldValue(note, target.field);
-      const skipManualOutcome =
-        !options.fillIntentionalBlanks &&
-        manualOutcomeKeys.has(target.key) &&
-        (target.field === "end" || target.field === "tag");
-      if (skipManualOutcome) {
-        result.skippedManualOutcome++;
-        continue;
-      }
       const hasValue = hasStructuredValue(note, target.field);
       const info = describeInteractionInference(note);
       const currentSource = normalizeInteractionSource(info?.source);
-      if (currentSource === DEFAULT_INTERACTION_SOURCE && hasValue) {
+      const isManualWithDefaults =
+        currentSource === DEFAULT_INTERACTION_SOURCE && hasValue;
+      if (isManualWithDefaults && !options.fillIntentionalBlanks) {
         result.skippedManual++;
         continue;
       }
