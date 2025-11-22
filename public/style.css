@@ -1246,6 +1246,10 @@ body {
 
 .cell {
   position: absolute;
+  --vl-inferred-border-color: transparent;
+  --vl-inferred-border-width: 0px;
+  --vl-range-fill: rgba(129, 161, 255, 0.08);
+  --vl-range-fill-alt: rgba(129, 161, 255, 0.12);
   border: 1px solid #1f2432;
   border-top: none;
   border-left: none;
@@ -1257,7 +1261,8 @@ body {
   align-items: center;
   gap: 6px;
   overflow: visible;
-  box-shadow: var(--vl-inferred-shadow, none);
+  box-shadow: inset 0 0 0 var(--vl-inferred-border-width)
+    var(--vl-inferred-border-color);
 }
 
 .cell__content {
@@ -1346,18 +1351,21 @@ body {
 .cell.selected {
   outline: 2px solid #81a1ff;
   outline-offset: -2px;
+  box-shadow: inset 0 0 0 var(--vl-inferred-border-width)
+    var(--vl-inferred-border-color);
 }
 .cell.range-selected {
   box-shadow:
     inset 0 0 0 2px rgba(129, 161, 255, 0.35),
-    inset 0 0 0 1000px rgba(129, 161, 255, 0.08),
-    var(--vl-inferred-shadow, 0 0 0 0 rgba(0, 0, 0, 0));
+    inset 0 0 0 var(--vl-inferred-border-width) var(--vl-inferred-border-color),
+    inset 0 0 0 1000px var(--vl-range-fill);
 }
+
 .cell.alt.range-selected {
   box-shadow:
     inset 0 0 0 2px rgba(129, 161, 255, 0.35),
-    inset 0 0 0 1000px rgba(129, 161, 255, 0.12),
-    var(--vl-inferred-shadow, 0 0 0 0 rgba(0, 0, 0, 0));
+    inset 0 0 0 var(--vl-inferred-border-width) var(--vl-inferred-border-color),
+    inset 0 0 0 1000px var(--vl-range-fill-alt);
 }
 
 .hdr {
