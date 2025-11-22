@@ -59,6 +59,31 @@ function trapFocus(overlay, box, onClose) {
   return () => overlay.removeEventListener("keydown", keyHandler, true);
 }
 
+function buildNumberField(labelText, defaultValue, { min, max, step, title } = {}) {
+  const wrapper = document.createElement("label");
+  wrapper.style.cssText =
+    "display:flex;flex-direction:column;gap:6px;color:#d3dcff;font-size:13px;";
+  const label = document.createElement("span");
+  label.textContent = labelText;
+  const input = document.createElement("input");
+  input.type = "number";
+  input.value = defaultValue == null ? "" : defaultValue;
+  input.style.cssText =
+    "background:#0d111c;border:1px solid #2b3350;border-radius:8px;" +
+    "color:#e6ecff;padding:8px 10px;font-size:13px;";
+  if (min != null) input.min = String(min);
+  if (max != null) input.max = String(max);
+  if (step != null) input.step = String(step);
+  if (title) input.title = title;
+  wrapper.append(label, input);
+  return { wrapper, input };
+}
+
+function parseNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
 function buildScopeSelector(defaultValue) {
   const scopes = [
     { value: "selection", label: "Current selection" },
@@ -142,31 +167,131 @@ export async function openInferenceDialog(options = {}) {
     );
     includeRow.append(includeEndLabel, includeTagLabel);
 
-  const runOptions = document.createElement("div");
-  runOptions.style.cssText =
-    "display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start;";
-  const { label: overwriteLabel, input: overwriteInput } = buildCheckbox(
-    "Overwrite existing inferred values",
-    defaults.overwriteInferred !== false,
-    "When enabled, reruns can replace previously inferred metadata (manual values are never overwritten).",
-  );
-  const { label: onlyEmptyLabel, input: onlyEmptyInput } = buildCheckbox(
-    "Only fill empty cells",
-    !!defaults.onlyFillEmpty,
-    "Skip cells that already contain structured values so inference only touches blanks.",
-  );
-  const {
-    label: fillIntentionalLabel,
-    input: fillIntentionalInput,
-  } = buildCheckbox(
-    "Fill intentionally blank End/Tag",
-    !!defaults.fillIntentionalBlanks,
-    "Allow inference to fill End/Tag when Outcome is already manual with default confidence/source.",
-  );
-  overwriteLabel.style.marginTop = "8px";
-  onlyEmptyLabel.style.marginTop = "8px";
-  fillIntentionalLabel.style.marginTop = "8px";
-  runOptions.append(overwriteLabel, onlyEmptyLabel, fillIntentionalLabel);
+    const runOptions = document.createElement("div");
+    runOptions.style.cssText =
+      "display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start;";
+    const { label: overwriteLabel, input: overwriteInput } = buildCheckbox(
+      "Overwrite existing inferred values",
+      defaults.overwriteInferred !== false,
+      "When enabled, reruns can replace previously inferred metadata (manual values are never overwritten).",
+    );
+    const { label: onlyEmptyLabel, input: onlyEmptyInput } = buildCheckbox(
+      "Only fill empty cells",
+      !!defaults.onlyFillEmpty,
+      "Skip cells that already contain structured values so inference only touches blanks.",
+    );
+    const {
+      label: fillIntentionalLabel,
+      input: fillIntentionalInput,
+    } = buildCheckbox(
+      "Fill intentionally blank End/Tag",
+      !!defaults.fillIntentionalBlanks,
+      "Allow inference to fill End/Tag when Outcome is already manual with default confidence/source.",
+    );
+    overwriteLabel.style.marginTop = "8px";
+    onlyEmptyLabel.style.marginTop = "8px";
+    fillIntentionalLabel.style.marginTop = "8px";
+    runOptions.append(overwriteLabel, onlyEmptyLabel, fillIntentionalLabel);
+
+    const basicSection = document.createElement("div");
+    basicSection.append(scopeSelector, includeRow, runOptions);
+
+    const advancedSection = document.createElement("div");
+    advancedSection.style.cssText =
+      "display:none;flex-direction:column;gap:10px;";
+
+    const thresholdsGrid = document.createElement("div");
+    thresholdsGrid.style.cssText =
+      "display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;";
+
+    const { wrapper: consensusMinGroupSizeLabel, input: consensusMinGroupSize } =
+      buildNumberField("Consensus min group size", defaults.thresholdOverrides?.consensusMinGroupSize, {
+        min: 1,
+        step: 1,
+      });
+    const {
+      wrapper: consensusMinExistingRatioLabel,
+      input: consensusMinExistingRatio,
+    } = buildNumberField(
+      "Consensus min existing ratio",
+      defaults.thresholdOverrides?.consensusMinExistingRatio,
+      { min: 0, max: 1, step: 0.01 },
+    );
+    const { wrapper: inputDefaultMinGroupSizeLabel, input: inputDefaultMinGroupSize } =
+      buildNumberField(
+        "Input default min group size",
+        defaults.thresholdOverrides?.inputDefaultMinGroupSize,
+        { min: 1, step: 1 },
+      );
+    const {
+      wrapper: inputDefaultMinExistingRatioLabel,
+      input: inputDefaultMinExistingRatio,
+    } = buildNumberField(
+      "Input default min existing ratio",
+      defaults.thresholdOverrides?.inputDefaultMinExistingRatio,
+      { min: 0, max: 1, step: 0.01 },
+    );
+    const {
+      wrapper: profileTrendMinObservationsLabel,
+      input: profileTrendMinObservations,
+    } = buildNumberField(
+      "Trend min observations",
+      defaults.thresholdOverrides?.profileTrendMinObservations,
+      { min: 0, step: 1 },
+    );
+    const {
+      wrapper: profileTrendMinPreferenceRatioLabel,
+      input: profileTrendMinPreferenceRatio,
+    } = buildNumberField(
+      "Trend min preference ratio",
+      defaults.thresholdOverrides?.profileTrendMinPreferenceRatio,
+      { min: 0, max: 1, step: 0.01 },
+    );
+
+    thresholdsGrid.append(
+      consensusMinGroupSizeLabel,
+      consensusMinExistingRatioLabel,
+      inputDefaultMinGroupSizeLabel,
+      inputDefaultMinExistingRatioLabel,
+      profileTrendMinObservationsLabel,
+      profileTrendMinPreferenceRatioLabel,
+    );
+
+    const advancedHint = document.createElement("p");
+    advancedHint.textContent =
+      "Minimum group sizes and preference ratios trim noisy suggestions. Leave blank to use defaults.";
+    advancedHint.style.cssText = "margin:4px 0 0;color:#8c98c8;font-size:12px;";
+
+    advancedSection.append(thresholdsGrid, advancedHint);
+
+    const tabs = document.createElement("div");
+    tabs.style.cssText = "display:flex;gap:6px;";
+    const basicTab = document.createElement("button");
+    basicTab.type = "button";
+    basicTab.textContent = "Basics";
+    applyButtonStyle(basicTab, { emphasis: true });
+    basicTab.style.flex = "0 0 auto";
+    const advancedTab = document.createElement("button");
+    advancedTab.type = "button";
+    advancedTab.textContent = "Advanced thresholds";
+    applyButtonStyle(advancedTab);
+    advancedTab.style.flex = "0 0 auto";
+
+    const switchTab = (target) => {
+      const isBasic = target === "basic";
+      basicSection.style.display = isBasic ? "grid" : "none";
+      basicSection.style.gridTemplateColumns =
+        "repeat(auto-fit,minmax(320px,1fr))";
+      advancedSection.style.display = isBasic ? "none" : "flex";
+      applyButtonStyle(basicTab, { emphasis: isBasic });
+      applyButtonStyle(advancedTab, { emphasis: !isBasic });
+    };
+
+    basicTab.addEventListener("click", () => switchTab("basic"));
+    advancedTab.addEventListener("click", () => switchTab("advanced"));
+
+    tabs.append(basicTab, advancedTab);
+    switchTab("basic");
 
     const summary = document.createElement("div");
     summary.style.cssText = "font-size:13px;color:#c5d1ff;min-height:18px;";
@@ -194,9 +319,9 @@ export async function openInferenceDialog(options = {}) {
       title,
       description,
       trendsHint,
-      scopeSelector,
-      includeRow,
-      runOptions,
+      tabs,
+      basicSection,
+      advancedSection,
       summary,
       footer,
     );
@@ -223,6 +348,20 @@ export async function openInferenceDialog(options = {}) {
         overwriteInferred: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
         fillIntentionalBlanks: fillIntentionalInput.checked,
+        thresholdOverrides: {
+          consensusMinGroupSize: parseNumber(consensusMinGroupSize.value),
+          consensusMinExistingRatio: parseNumber(consensusMinExistingRatio.value),
+          inputDefaultMinGroupSize: parseNumber(inputDefaultMinGroupSize.value),
+          inputDefaultMinExistingRatio: parseNumber(
+            inputDefaultMinExistingRatio.value,
+          ),
+          profileTrendMinObservations: parseNumber(
+            profileTrendMinObservations.value,
+          ),
+          profileTrendMinPreferenceRatio: parseNumber(
+            profileTrendMinPreferenceRatio.value,
+          ),
+        },
       };
     }
 
