@@ -550,6 +550,7 @@ export function createInferenceController(options) {
           scope: DEFAULT_OPTIONS.scope,
           thresholdOverrides: lastThresholdOverrides,
         },
+        defaultThresholds: baseThresholds,
         onRun: (payload) => runInference(payload),
         onClear: (payload) => runClear(payload),
       });
