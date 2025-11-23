@@ -11,6 +11,10 @@ import {
 import { parsePhaseKey } from "../data/utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
+const OUT_OF_VIEW_STATUS = "Inference tools only work in the Interactions view.";
+const NO_TARGETS_STATUS =
+  "Select Outcome, End, or Tag cells in the Interactions view to use inference tools.";
+
 function hasStructuredValue(note, field) {
   if (!note || typeof note !== "object") return false;
   if (field === "outcome") return "outcomeId" in note || "result" in note;
@@ -94,9 +98,6 @@ export function createInteractionBulkActions(options = {}) {
   } = options;
 
   let defaultUncertainty = 0.5;
-  const OUT_OF_VIEW_STATUS = "Inference tools only work in the Interactions view.";
-  const NO_TARGETS_STATUS =
-    "Select Outcome, End, or Tag cells in the Interactions view to use inference tools.";
 
   function setDefaultUncertainty(value) {
     defaultUncertainty = normalizeUncertainty(value);
