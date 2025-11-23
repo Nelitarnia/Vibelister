@@ -221,9 +221,9 @@
           id="interaction-tools-toggle"
           aria-expanded="false"
           aria-controls="side-panel"
-          title="Interactions bulk tools — includes Ctrl+Shift+U to toggle Uncertain"
+          title="Inference tools — Ctrl+Shift+U toggles this panel"
         >
-          Interactions ▾
+          Inference ▾
         </button>
       </div>
       <span class="status" id="status">Ready</span>
@@ -540,28 +540,28 @@
                 </div>
               </div>
               <p class="interaction-tools__hint">
-                Applied when marking cells as inferred manually (panel button or Ctrl+Shift+U).
+                Used when applying manual inference from this panel. Toggle it anytime with Ctrl+Shift+U.
               </p>
             </div>
             <div class="interaction-tools__intro">
-              Bulk actions target the current Interactions selection. Review inferred metadata
-              above or adjust the default uncertainty used when marking cells as inferred.
+              Bulk inference tools target the current Interactions selection. Review inferred metadata
+              above or adjust the default uncertainty used when applying manual inference.
             </div>
             <div class="interaction-tools__actions">
               <button type="button" class="interaction-tools__button" id="interaction-accept">
                 Accept inferred → manual
               </button>
               <button type="button" class="interaction-tools__button" id="interaction-clear">
-                Clear inferred metadata
+                Clear inference metadata
               </button>
               <button type="button" class="interaction-tools__button" id="interaction-uncertain">
-                Set selection to Uncertain
+                Apply default uncertainty
               </button>
             </div>
             <p class="interaction-tools__hint">
-              Works on Outcome, End, and Tag columns in the Interactions view. Manual
-              uncertainty applies inference metadata without changing cell contents. Actions
-              respect row and column selections and update inferred styling immediately.
+              Works on Outcome, End, and Tag columns in the Interactions view. You can open this panel from any view;
+              manual uncertainty applies inference metadata without changing cell contents, and actions still respect row and
+              column selections while updating inferred styling immediately.
             </p>
           </section>
         </div>

@@ -120,6 +120,8 @@ let sidePanelHost = null;
 let commentsUI = null;
 let tagManager = null;
 let tagUI = null;
+let interactionTools = null;
+let toggleInteractionToolsPane = null;
 let setActiveView = null;
 let cycleView = null;
 let getActiveView = null;
@@ -790,7 +792,7 @@ const disposeKeys = initGridKeys({
     interactionsOutline?.jumpToVariant?.(delta),
   toggleCommentsSidebar: () => commentsUI?.toggle?.(),
   toggleTagsSidebar: () => tagUI?.toggle?.(),
-  toggleUncertainSelection: () => interactionActions?.toggleUncertain?.(),
+  openInferenceSidebar: () => toggleInteractionToolsPane?.(),
 });
 
 // Initialize palette (handles both Outcome and End cells)
@@ -954,7 +956,8 @@ sheet.addEventListener("scroll", () => {
     getCommentsUI: () => commentsUI,
   }));
 
-({ sidePanelHost, commentsUI, tagManager, tagUI } = initSidebarControllers({
+({ sidePanelHost, commentsUI, tagManager, tagUI, interactionTools } =
+  initSidebarControllers({
   dom: {
     sidePanel,
     sidePanelTitle,
@@ -994,10 +997,10 @@ sheet.addEventListener("scroll", () => {
     interactionAcceptButton,
     interactionClearButton,
     interactionUncertainButton,
-    interactionUncertaintyValue,
-    interactionSourceValue,
-    interactionUncertaintyDefault,
-    interactionUncertaintyDefaultValue,
+  interactionUncertaintyValue,
+  interactionSourceValue,
+  interactionUncertaintyDefault,
+  interactionUncertaintyDefaultValue,
   },
   SelectionCtl,
   selection,
@@ -1021,6 +1024,8 @@ sheet.addEventListener("scroll", () => {
   makeUndoConfig,
   interactionActions,
 }));
+
+toggleInteractionToolsPane = () => interactionTools?.toggle?.();
 
 // Keyboard: Ctrl+Shift+A toggles Interactions mode
 document.addEventListener("keydown", (e) => {
