@@ -121,7 +121,7 @@ let commentsUI = null;
 let tagManager = null;
 let tagUI = null;
 let interactionTools = null;
-let openInteractionToolsPane = null;
+let toggleInteractionToolsPane = null;
 let setActiveView = null;
 let cycleView = null;
 let getActiveView = null;
@@ -792,7 +792,7 @@ const disposeKeys = initGridKeys({
     interactionsOutline?.jumpToVariant?.(delta),
   toggleCommentsSidebar: () => commentsUI?.toggle?.(),
   toggleTagsSidebar: () => tagUI?.toggle?.(),
-  openInferenceSidebar: () => openInteractionToolsPane?.(),
+  openInferenceSidebar: () => toggleInteractionToolsPane?.(),
 });
 
 // Initialize palette (handles both Outcome and End cells)
@@ -1025,7 +1025,7 @@ sheet.addEventListener("scroll", () => {
   interactionActions,
 }));
 
-openInteractionToolsPane = () => interactionTools?.open?.();
+toggleInteractionToolsPane = () => interactionTools?.toggle?.();
 
 // Keyboard: Ctrl+Shift+A toggles Interactions mode
 document.addEventListener("keydown", (e) => {
