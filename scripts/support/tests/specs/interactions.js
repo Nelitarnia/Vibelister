@@ -2052,6 +2052,88 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "selection scope infers end/tag when toggles enabled",
+      run(assert) {
+        const { model, addAction, addInput, addModifier } = makeModelFixture();
+        const action = addAction("Strike");
+        const followUp = addAction("Follow up");
+        const input = addInput("High");
+        const modifier = addModifier("Swift");
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+            { key: "p0:end" },
+            { key: "p0:tag" },
+          ],
+        };
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 2,
+              variants: [
+                { variantSig: "", rowIndex: 0, rowCount: 1 },
+                { variantSig: `${modifier.id}`, rowIndex: 1, rowCount: 1 },
+              ],
+            },
+          ],
+          totalRows: 2,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
+        };
+
+        const basePair = getPair(model, 0);
+        const baseKey = noteKeyForPair(basePair, 0);
+        model.notes[baseKey] = {
+          endActionId: followUp.id,
+          endVariantSig: "",
+          tags: ["Stun"],
+        };
+
+        const selection = { rows: new Set([1]), cols: new Set([2]), colsAll: false };
+        const controller = createInferenceController({
+          model,
+          selection,
+          sel: { r: 1, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (opts.status) res.status = opts.status(res);
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+
+        const res = controller.runInference({ scope: "selection" });
+
+        const targetPair = getPair(model, 1);
+        const targetKey = noteKeyForPair(targetPair, 0);
+        const targetNote = model.notes[targetKey];
+
+        assert.strictEqual(res.applied, 2, "applies end and tag suggestions");
+        assert.strictEqual(res.empty, 1, "counts missing outcome suggestions as empty");
+        assert.strictEqual(
+          res.sources[HEURISTIC_SOURCES.modifierPropagation],
+          2,
+          "tracks heuristic source for end/tag suggestions",
+        );
+        assert.strictEqual(targetNote.endActionId, followUp.id);
+        assert.strictEqual(targetNote.endVariantSig, "");
+        assert.deepStrictEqual(targetNote.tags, ["Stun"]);
+        assert.strictEqual(targetNote.source, HEURISTIC_SOURCES.modifierPropagation);
+      },
+    },
+    {
       name: "bulk actions promote or clear inferred values without touching manual cells",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
