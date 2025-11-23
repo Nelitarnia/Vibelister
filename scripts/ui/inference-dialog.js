@@ -209,6 +209,7 @@ export async function openInferenceDialog(options = {}) {
       buildNumberField("Consensus min group size", defaults.thresholdOverrides?.consensusMinGroupSize, {
         min: 1,
         step: 1,
+        title: "Minimum rows needed in scope before consensus suggestions run.",
       });
     const {
       wrapper: consensusMinExistingRatioLabel,
@@ -216,7 +217,13 @@ export async function openInferenceDialog(options = {}) {
     } = buildNumberField(
       "Consensus min existing ratio",
       defaults.thresholdOverrides?.consensusMinExistingRatio,
-      { min: 0, max: 1, step: 0.01 },
+      {
+        min: 0,
+        max: 1,
+        step: 0.01,
+        title:
+          "Fraction of rows that must already be filled to trust consensus suggestions.",
+      },
     );
     const {
       wrapper: actionGroupMinGroupSizeLabel,
@@ -224,7 +231,11 @@ export async function openInferenceDialog(options = {}) {
     } = buildNumberField(
       "Action group min group size",
       defaults.thresholdOverrides?.actionGroupMinGroupSize,
-      { min: 0, step: 1 },
+      {
+        min: 0,
+        step: 1,
+        title: "Rows per action group required before suggesting group defaults.",
+      },
     );
     const {
       wrapper: actionGroupMinExistingRatioLabel,
@@ -232,7 +243,13 @@ export async function openInferenceDialog(options = {}) {
     } = buildNumberField(
       "Action group min existing ratio",
       defaults.thresholdOverrides?.actionGroupMinExistingRatio,
-      { min: 0, max: 1, step: 0.01 },
+      {
+        min: 0,
+        max: 1,
+        step: 0.01,
+        title:
+          "Filled ratio per action group before defaults or clears propagate.",
+      },
     );
     const {
       wrapper: actionGroupPhaseMinGroupSizeLabel,
@@ -240,7 +257,7 @@ export async function openInferenceDialog(options = {}) {
     } = buildNumberField(
       "Group phase min group size",
       defaults.thresholdOverrides?.actionGroupPhaseMinGroupSize,
-      { min: 0, step: 1 },
+      { min: 0, step: 1, title: "Rows per phase needed before phase defaults apply." },
     );
     const {
       wrapper: actionGroupPhaseMinExistingRatioLabel,
@@ -248,13 +265,19 @@ export async function openInferenceDialog(options = {}) {
     } = buildNumberField(
       "Group phase min existing ratio",
       defaults.thresholdOverrides?.actionGroupPhaseMinExistingRatio,
-      { min: 0, max: 1, step: 0.01 },
+      {
+        min: 0,
+        max: 1,
+        step: 0.01,
+        title:
+          "Filled ratio per phase required before phase-level suggestions kick in.",
+      },
     );
     const { wrapper: inputDefaultMinGroupSizeLabel, input: inputDefaultMinGroupSize } =
       buildNumberField(
         "Input default min group size",
         defaults.thresholdOverrides?.inputDefaultMinGroupSize,
-        { min: 1, step: 1 },
+        { min: 1, step: 1, title: "Rows per input needed before seeding defaults." },
       );
     const {
       wrapper: inputDefaultMinExistingRatioLabel,
@@ -262,7 +285,12 @@ export async function openInferenceDialog(options = {}) {
     } = buildNumberField(
       "Input default min existing ratio",
       defaults.thresholdOverrides?.inputDefaultMinExistingRatio,
-      { min: 0, max: 1, step: 0.01 },
+      {
+        min: 0,
+        max: 1,
+        step: 0.01,
+        title: "Filled ratio per input before default suggestions trigger.",
+      },
     );
     const {
       wrapper: profileTrendMinObservationsLabel,
@@ -270,7 +298,7 @@ export async function openInferenceDialog(options = {}) {
     } = buildNumberField(
       "Trend min observations",
       defaults.thresholdOverrides?.profileTrendMinObservations,
-      { min: 0, step: 1 },
+      { min: 0, step: 1, title: "Observations needed before applying trend preferences." },
     );
     const {
       wrapper: profileTrendMinPreferenceRatioLabel,
@@ -278,7 +306,12 @@ export async function openInferenceDialog(options = {}) {
     } = buildNumberField(
       "Trend min preference ratio",
       defaults.thresholdOverrides?.profileTrendMinPreferenceRatio,
-      { min: 0, max: 1, step: 0.01 },
+      {
+        min: 0,
+        max: 1,
+        step: 0.01,
+        title: "Strength threshold before trends override base defaults.",
+      },
     );
 
     thresholdsGrid.append(

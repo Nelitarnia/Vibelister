@@ -11,7 +11,6 @@ export function initInteractionTools(options = {}) {
     sourceValue,
     uncertaintyDefaultInput,
     uncertaintyDefaultValue,
-    getActiveView,
     onSelectionChanged,
     statusBar,
     actions,
@@ -22,11 +21,11 @@ export function initInteractionTools(options = {}) {
   const handle = panelHost.registerPane({
     id: panelId,
     element: pane,
-    title: "Interactions", // overwritten below
+    title: "Inference", // overwritten below
     onShow: () => refresh(true),
     onHide: () => refresh(false),
   });
-  handle?.setTitle?.("Interactions — Bulk actions");
+  handle?.setTitle?.("Inference — Bulk actions");
   const detachToggle = panelHost.attachToggle(toggleButton, panelId);
 
   function formatPercent(value) {
@@ -81,11 +80,6 @@ export function initInteractionTools(options = {}) {
     const expanded = !!open;
     toggleButton.setAttribute("aria-expanded", expanded ? "true" : "false");
     toggleButton.setAttribute("data-active", expanded ? "true" : "false");
-    const isInteractions = typeof getActiveView === "function"
-      ? getActiveView() === "interactions"
-      : true;
-    toggleButton.disabled = !isInteractions;
-    if (!isInteractions && expanded) handle?.close?.();
   }
 
   function refresh(open = handle?.isOpen?.()) {

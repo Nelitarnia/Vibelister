@@ -112,7 +112,7 @@ export function initGridKeys(deps) {
     jumpToInteractionsVariant,
     toggleCommentsSidebar,
     toggleTagsSidebar,
-    toggleUncertainSelection,
+    openInferenceSidebar,
     window: winOverride,
     document: docOverride,
     navigator: navOverride,
@@ -527,10 +527,10 @@ export function initGridKeys(deps) {
       mod &&
       e.shiftKey &&
       keyLower === "u" &&
-      typeof toggleUncertainSelection === "function"
+      typeof openInferenceSidebar === "function"
     ) {
       e.preventDefault();
-      toggleUncertainSelection();
+      openInferenceSidebar();
       return;
     }
     if (

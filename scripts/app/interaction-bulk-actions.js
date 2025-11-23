@@ -30,18 +30,18 @@ function normalizeUncertainty(value) {
   return num;
 }
 
-function collectSelectionTargets({
-  model,
-  selection,
-  sel,
-  getActiveView,
+  function collectSelectionTargets({
+    model,
+    selection,
+    sel,
+    getActiveView,
   viewDef,
-  getInteractionsPair,
-  filterField,
-}) {
-  if (typeof getActiveView === "function" && getActiveView() !== "interactions") {
-    return { targets: [], allowed: false };
-  }
+    getInteractionsPair,
+    filterField,
+  }) {
+    if (typeof getActiveView === "function" && getActiveView() !== "interactions") {
+      return { targets: [], allowed: false, reason: OUT_OF_VIEW_STATUS };
+    }
   const vd = typeof viewDef === "function" ? viewDef() : viewDef;
   const cols = Array.isArray(vd?.columns) ? vd.columns : [];
   const colSet = selection?.colsAll
@@ -94,6 +94,9 @@ export function createInteractionBulkActions(options = {}) {
   } = options;
 
   let defaultUncertainty = 0.5;
+  const OUT_OF_VIEW_STATUS = "Inference tools only work in the Interactions view.";
+  const NO_TARGETS_STATUS =
+    "Select Outcome, End, or Tag cells in the Interactions view to use inference tools.";
 
   function setDefaultUncertainty(value) {
     defaultUncertainty = normalizeUncertainty(value);
@@ -105,7 +108,7 @@ export function createInteractionBulkActions(options = {}) {
   }
 
   function toggleUncertain() {
-    const { targets, allowed, viewDef: vd } = collectSelectionTargets({
+    const { targets, allowed, viewDef: vd, reason } = collectSelectionTargets({
       model,
       selection,
       sel,
@@ -114,8 +117,14 @@ export function createInteractionBulkActions(options = {}) {
       getInteractionsPair,
     });
     if (!allowed) {
-      statusBar?.set?.("Manual inference only applies in the Interactions view.");
-      return null;
+      const status =
+        reason || "Default uncertainty can only be applied in the Interactions view.";
+      statusBar?.set?.(status);
+      return { status };
+    }
+    if (!targets.length) {
+      statusBar?.set?.(NO_TARGETS_STATUS);
+      return { status: NO_TARGETS_STATUS };
     }
     const confidence = 1 - defaultUncertainty;
     const uncertaintyText = `${Math.round(defaultUncertainty * 100)}%`;
@@ -181,7 +190,7 @@ export function createInteractionBulkActions(options = {}) {
   }
 
   function summarizeSelectionInference() {
-    const { targets, allowed, viewDef: vd } = collectSelectionTargets({
+    const { targets, allowed, viewDef: vd, reason } = collectSelectionTargets({
       model,
       selection,
       sel,
@@ -189,7 +198,8 @@ export function createInteractionBulkActions(options = {}) {
       viewDef,
       getInteractionsPair,
     });
-    if (!allowed) return { allowed: false };
+    if (!allowed) return { allowed: false, status: reason || OUT_OF_VIEW_STATUS };
+    if (!targets.length) return { allowed: true, count: 0 };
 
     const summary = {
       allowed: true,
@@ -223,7 +233,7 @@ export function createInteractionBulkActions(options = {}) {
   }
 
   function acceptInferred() {
-    const { targets, allowed } = collectSelectionTargets({
+    const { targets, allowed, reason } = collectSelectionTargets({
       model,
       selection,
       sel,
@@ -232,8 +242,13 @@ export function createInteractionBulkActions(options = {}) {
       getInteractionsPair,
     });
     if (!allowed) {
-      statusBar?.set?.("Accepting inferred values only works in Interactions.");
-      return null;
+      const status = reason || "Accepting inferred values only works in Interactions.";
+      statusBar?.set?.(status);
+      return { status };
+    }
+    if (!targets.length) {
+      statusBar?.set?.(NO_TARGETS_STATUS);
+      return { status: NO_TARGETS_STATUS };
     }
     return runModelMutation?.(
       "Accept inferred",
@@ -289,7 +304,7 @@ export function createInteractionBulkActions(options = {}) {
   }
 
   function clearInferenceMetadata() {
-    const { targets, allowed } = collectSelectionTargets({
+    const { targets, allowed, reason } = collectSelectionTargets({
       model,
       selection,
       sel,
@@ -298,8 +313,13 @@ export function createInteractionBulkActions(options = {}) {
       getInteractionsPair,
     });
     if (!allowed) {
-      statusBar?.set?.("Clearing inferred metadata only works in Interactions.");
-      return null;
+      const status = reason || "Clearing inferred metadata only works in Interactions.";
+      statusBar?.set?.(status);
+      return { status };
+    }
+    if (!targets.length) {
+      statusBar?.set?.(NO_TARGETS_STATUS);
+      return { status: NO_TARGETS_STATUS };
     }
     return runModelMutation?.(
       "Clear inference metadata",

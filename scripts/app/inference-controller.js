@@ -95,9 +95,13 @@ export function createInferenceController(options) {
   const baseThresholds =
     heuristicThresholds || DEFAULT_HEURISTIC_THRESHOLDS || {};
   let lastThresholdOverrides = { ...baseThresholds };
+  const OUT_OF_VIEW_STATUS = "Inference only applies to the Interactions view.";
+  const NO_TARGETS_STATUS =
+    "Select Outcome, End, or Tag cells in the Interactions view to run inference.";
 
   function formatStatus(result, actionLabel) {
     if (!result) return "";
+    if (result.status && result.allowed === false) return result.status;
     const applied = Number(result.applied || 0);
     const cleared = Number(result.cleared || 0);
     const skippedManual = Number(result.skippedManual || 0);
@@ -107,7 +111,10 @@ export function createInferenceController(options) {
     const actions = [];
     if (applied) actions.push(`${applied} inferred`);
     if (cleared) actions.push(`${cleared} cleared`);
-    if (actions.length === 0) actions.push("No changes");
+    if (actions.length === 0) {
+      if (result.status) return result.status;
+      actions.push("No changes");
+    }
     const skips = [];
     if (skippedManual) skips.push(`${skippedManual} manual`);
     if (skippedManualOutcome)
@@ -224,7 +231,7 @@ export function createInferenceController(options) {
 
   function collectTargets(scope, options) {
     if (typeof getActiveView === "function" && getActiveView() !== "interactions") {
-      return { targets: [], allowed: false };
+      return { targets: [], allowed: false, reason: OUT_OF_VIEW_STATUS };
     }
     const def = typeof viewDef === "function" ? viewDef() : viewDef;
     const rows = getRows(scope);
@@ -254,10 +261,15 @@ export function createInferenceController(options) {
   }
 
   function applyInference(options) {
-    const { targets, allowed } = collectTargets(options.scope, options);
+    const { targets, allowed, reason } = collectTargets(options.scope, options);
     if (!allowed) {
-      statusBar?.set?.("Inference only applies to the Interactions view.");
-      return { applied: 0 };
+      const status = reason || OUT_OF_VIEW_STATUS;
+      statusBar?.set?.(status);
+      return { applied: 0, allowed: false, status };
+    }
+    if (!targets.length) {
+      statusBar?.set?.(NO_TARGETS_STATUS);
+      return { applied: 0, allowed: true, status: NO_TARGETS_STATUS };
     }
     const suggestionScope = (() => {
       if (options.scope === "project") return "project";
@@ -405,10 +417,15 @@ export function createInferenceController(options) {
   }
 
   function clearInference(options) {
-    const { targets, allowed } = collectTargets(options.scope, options);
+    const { targets, allowed, reason } = collectTargets(options.scope, options);
     if (!allowed) {
-      statusBar?.set?.("Clear inferred only applies to the Interactions view.");
-      return { cleared: 0 };
+      const status = reason || OUT_OF_VIEW_STATUS;
+      statusBar?.set?.(status);
+      return { cleared: 0, allowed: false, status };
+    }
+    if (!targets.length) {
+      statusBar?.set?.(NO_TARGETS_STATUS);
+      return { cleared: 0, allowed: true, status: NO_TARGETS_STATUS };
     }
     const notes = model?.notes || {};
     const result = { cleared: 0, skippedManual: 0 };
