@@ -1,4 +1,5 @@
 import { makeMutationRunner } from "../data/mutation-runner.js";
+import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
 export function describeAttachmentLocation(att, includeColumn = true) {
   if (!att || typeof att !== "object") return "";
@@ -184,11 +185,27 @@ export function createHistoryController(deps = {}) {
     runModelMutation,
     beginUndoableTransaction,
     runModelTransaction,
-    undo,
-    redo,
+    undo: undoModel,
+    redo: redoModel,
     getUndoState,
     clearHistory,
   } = mutationRunner;
+
+  const emitTagRefresh = () => {
+    emitInteractionTagChangeEvent(null, { reason: "history", force: true });
+  };
+
+  function undo() {
+    const worked = undoModel();
+    if (worked) emitTagRefresh();
+    return worked;
+  }
+
+  function redo() {
+    const worked = redoModel();
+    if (worked) emitTagRefresh();
+    return worked;
+  }
 
   try {
     updateUndoUI(getUndoState());
