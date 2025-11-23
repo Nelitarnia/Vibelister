@@ -496,6 +496,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
         previousValue,
         nextValue,
         phase: pk.p,
+        manualOnly: true,
       });
     }
     return success;
