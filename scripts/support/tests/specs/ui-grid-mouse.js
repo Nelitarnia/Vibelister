@@ -105,6 +105,11 @@ function makeDeps() {
         deps.sel.r = r;
         deps.sel.c = c;
       },
+      toggleRow(r) {
+        if (deps.selection.rows.has(r)) deps.selection.rows.delete(r);
+        else deps.selection.rows.add(r);
+        if (deps.selection.anchor == null) deps.selection.anchor = r;
+      },
     },
     isEditing: () => false,
     beginEdit: (r, c) => (deps._began = [r, c]),
@@ -172,6 +177,56 @@ export function getUiGridMouseTests() {
         );
         assert.strictEqual(deps.sel.r, 3, "active row should follow click");
         assert.strictEqual(deps.sel.c, 2, "active col should follow click");
+      },
+    },
+    {
+      name: "ctrl-click toggles row membership without clearing selection",
+      run(assert) {
+        const deps = makeDeps();
+        deps.selection.rows = new Set([1, 2]);
+        deps.selection.anchor = 1;
+        deps.selection.cols = new Set([0]);
+        deps.selection.colAnchor = 0;
+        deps.sel.r = 1;
+        deps.sel.c = 0;
+        initGridMouse(deps);
+        const newRowCell = makeCell(deps.sheet, 4, 2);
+        deps.sheet.dispatch("mousedown", {
+          button: 0,
+          detail: 1,
+          preventDefault() {},
+          target: newRowCell,
+          ctrlKey: true,
+          metaKey: false,
+        });
+        assert.deepStrictEqual(
+          Array.from(deps.selection.rows).sort((a, b) => a - b),
+          [1, 2, 4],
+          "ctrl-click should add clicked row without clearing existing rows",
+        );
+        assert.deepStrictEqual(
+          Array.from(deps.selection.cols).sort((a, b) => a - b),
+          [0],
+          "column selection should be preserved",
+        );
+        assert.deepStrictEqual([deps.sel.r, deps.sel.c], [4, 2]);
+        assert.strictEqual(deps._rendered, 1, "render should run for ctrl-click");
+
+        const existingRowCell = makeCell(deps.sheet, 2, 0);
+        deps.sheet.dispatch("mousedown", {
+          button: 0,
+          detail: 1,
+          preventDefault() {},
+          target: existingRowCell,
+          ctrlKey: true,
+          metaKey: false,
+        });
+        assert.deepStrictEqual(
+          Array.from(deps.selection.rows).sort((a, b) => a - b),
+          [1, 4],
+          "ctrl-clicking a selected row should remove it",
+        );
+        assert.strictEqual(deps._rendered, 2, "render should run after toggle");
       },
     },
     {
