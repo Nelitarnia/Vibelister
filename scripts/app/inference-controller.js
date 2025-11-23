@@ -327,6 +327,7 @@ export function createInferenceController(options) {
       empty: 0,
       sources: {},
     };
+    let tagsChanged = false;
     for (const target of targets) {
       const note = notes[target.key];
       const previousValue = extractNoteFieldValue(note, target.field);
@@ -393,6 +394,11 @@ export function createInferenceController(options) {
             ? suggestion.value.tags.slice()
             : [];
           dest.tags = tags;
+          const prevTags = Array.isArray(previousValue) ? previousValue : [];
+          const changedTags =
+            prevTags.length !== tags.length ||
+            prevTags.some((value, idx) => value !== tags[idx]);
+          if (changedTags) tagsChanged = true;
         }
         applyInteractionMetadata(dest, {
           confidence: suggestion.confidence,
@@ -418,6 +424,12 @@ export function createInferenceController(options) {
           manualOnly: true,
         });
       }
+    }
+    if (tagsChanged) {
+      emitInteractionTagChangeEvent({ type: "set" }, {
+        reason: "inference",
+        force: true,
+      });
     }
     return result;
   }
