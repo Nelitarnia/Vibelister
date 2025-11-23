@@ -4,6 +4,22 @@ import {
 } from "../app/interactions.js";
 import { INTERACTION_TAGS_EVENT } from "../app/tag-events.js";
 
+const SORT_MODES = Object.freeze({
+  ALPHA: "alpha",
+  COUNT_DESC: "count-desc",
+  COUNT_ASC: "count-asc",
+});
+
+function compareAlpha(a, b) {
+  const lowerA = a.toLowerCase();
+  const lowerB = b.toLowerCase();
+  if (lowerA === lowerB) {
+    if (a === b) return 0;
+    return a < b ? -1 : 1;
+  }
+  return lowerA < lowerB ? -1 : 1;
+}
+
 function buildTagCounts(model) {
   const counts = new Map();
   const notes = model?.notes;
@@ -33,6 +49,7 @@ export function initTagSidebar(options = {}) {
     sidebar,
     toggleButton,
     input,
+    sortSelect,
     form,
     renameButton,
     deleteButton,
@@ -48,6 +65,7 @@ export function initTagSidebar(options = {}) {
   const host = panelHost || null;
   const manager = tagManager || null;
   const inputEl = input || null;
+  const sortEl = sortSelect || null;
   const formEl = form || null;
   const renameBtn = renameButton || null;
   const deleteBtn = deleteButton || null;
@@ -65,8 +83,10 @@ export function initTagSidebar(options = {}) {
   let focusAfterRefresh = false;
   let documentHandler = null;
   let inputHandler = null;
+  let sortHandler = null;
   let renameHandler = null;
   let deleteHandler = null;
+  let sortMode = SORT_MODES.ALPHA;
 
   function isPaneOpen() {
     if (paneHandle && typeof paneHandle.isOpen === "function") {
@@ -82,6 +102,26 @@ export function initTagSidebar(options = {}) {
       sidebar.dataset.open = expanded ? "true" : "false";
       sidebar.setAttribute("aria-hidden", expanded ? "false" : "true");
     }
+  }
+
+  function getSortedTags(list) {
+    const items = Array.isArray(list) ? [...list] : [];
+    if (sortMode === SORT_MODES.COUNT_DESC) {
+      items.sort((a, b) => {
+        const diff = (counts.get(b) || 0) - (counts.get(a) || 0);
+        if (diff !== 0) return diff;
+        return compareAlpha(a, b);
+      });
+    } else if (sortMode === SORT_MODES.COUNT_ASC) {
+      items.sort((a, b) => {
+        const diff = (counts.get(a) || 0) - (counts.get(b) || 0);
+        if (diff !== 0) return diff;
+        return compareAlpha(a, b);
+      });
+    } else {
+      items.sort(compareAlpha);
+    }
+    return items;
   }
 
   function setOpen(next) {
@@ -137,6 +177,15 @@ export function initTagSidebar(options = {}) {
   }
 
   updateToggleState();
+
+  if (sortEl) {
+    const availableModes = Object.values(SORT_MODES);
+    const initialMode = availableModes.includes(sortEl.value)
+      ? sortEl.value
+      : SORT_MODES.ALPHA;
+    sortMode = initialMode;
+    sortEl.value = sortMode;
+  }
 
   function buildListItem(tag) {
     if (!listEl || typeof document === "undefined") return null;
@@ -217,8 +266,9 @@ export function initTagSidebar(options = {}) {
 
   function refresh() {
     const previousSelection = selectedTag;
-    tags = collectInteractionTags(model) || [];
+    const collectedTags = collectInteractionTags(model) || [];
     counts = buildTagCounts(model);
+    tags = getSortedTags(collectedTags);
 
     let nextSelection = previousSelection;
     if (pendingSelection !== null) {
@@ -256,7 +306,22 @@ export function initTagSidebar(options = {}) {
   }
 
   function handleInputChange() {
+    const raw = inputEl ? inputEl.value : "";
+    const typed = raw ? raw.trim() : "";
+    if (typed && tags.includes(typed) && typed !== selectedTag) {
+      setSelectedTag(typed, { updateInput: false, focusInput: false });
+      renderList();
+    }
     updateActionState();
+  }
+
+  function handleSortChange(event) {
+    const value = event?.target?.value;
+    const availableModes = Object.values(SORT_MODES);
+    const nextMode = availableModes.includes(value) ? value : SORT_MODES.ALPHA;
+    if (nextMode === sortMode) return;
+    sortMode = nextMode;
+    refresh();
   }
 
   function handleRename(event) {
@@ -316,6 +381,11 @@ export function initTagSidebar(options = {}) {
     inputEl.addEventListener("input", inputHandler);
   }
 
+  if (sortEl) {
+    sortHandler = handleSortChange;
+    sortEl.addEventListener("change", sortHandler);
+  }
+
   if (formEl) {
     renameHandler = handleRename;
     formEl.addEventListener("submit", renameHandler);
@@ -358,6 +428,10 @@ export function initTagSidebar(options = {}) {
       if (inputHandler && inputEl) {
         inputEl.removeEventListener("input", inputHandler);
         inputHandler = null;
+      }
+      if (sortHandler && sortEl) {
+        sortEl.removeEventListener("change", sortHandler);
+        sortHandler = null;
       }
       if (renameHandler) {
         if (formEl) formEl.removeEventListener("submit", renameHandler);

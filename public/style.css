@@ -999,6 +999,37 @@ body {
   box-shadow: 0 0 0 2px rgba(95, 161, 255, 0.3);
 }
 
+.tag-sidebar__sort {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tag-sidebar__sort-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8e96b3;
+}
+
+.tag-sidebar__select {
+  appearance: none;
+  border: 1px solid #2a3244;
+  background: #0d1423;
+  color: #e1e6ff;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tag-sidebar__select:focus-visible {
+  outline: none;
+  border-color: var(--vl-color-accent);
+  box-shadow: 0 0 0 2px rgba(95, 161, 255, 0.3);
+}
+
 .tag-sidebar__actions {
   display: flex;
   gap: 8px;

@@ -30,6 +30,7 @@ export function getSidebarDomElements(Ids) {
     tagPane: document.getElementById(Ids.tagSidebar),
     tagForm: document.getElementById(Ids.tagForm),
     tagInput: document.getElementById(Ids.tagInput),
+    tagSort: document.getElementById(Ids.tagSort),
     tagRenameButton: document.getElementById(Ids.tagRename),
     tagDeleteButton: document.getElementById(Ids.tagDelete),
     tagList: document.getElementById(Ids.tagList),
