@@ -410,6 +410,8 @@ export function createInferenceController(options) {
           previousValue,
           nextValue,
           phase: target.phase,
+          inferred: true,
+          manualOnly: true,
         });
       }
     }
@@ -432,6 +434,7 @@ export function createInferenceController(options) {
     for (const target of targets) {
       const note = notes[target.key];
       if (!note || typeof note !== "object") continue;
+      const previousValue = extractNoteFieldValue(note, target.field);
       const info = describeInteractionInference(note);
       const currentSource = normalizeInteractionSource(info?.source);
       if (currentSource === DEFAULT_INTERACTION_SOURCE) {
@@ -463,6 +466,16 @@ export function createInferenceController(options) {
       applyInteractionMetadata(note, null);
       if (!Object.keys(note).length) delete notes[target.key];
       result.cleared++;
+      const nextValue = extractNoteFieldValue(note, target.field);
+      recordProfileImpact({
+        pair: target.pair,
+        field: target.field,
+        previousValue,
+        nextValue,
+        phase: target.phase,
+        inferred: true,
+        delta: -1,
+      });
     }
     return result;
   }

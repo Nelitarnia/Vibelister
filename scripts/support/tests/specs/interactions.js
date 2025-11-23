@@ -21,6 +21,10 @@ import {
   HEURISTIC_SOURCES,
   proposeInteractionInferences,
 } from "../../../app/inference-heuristics.js";
+import {
+  captureInferenceProfilesSnapshot,
+  resetInferenceProfiles,
+} from "../../../app/inference-profiles.js";
 import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
 import { formatEndActionLabel } from "../../../data/column-kinds.js";
@@ -1791,6 +1795,134 @@ export function getInteractionsTests() {
         assert.ok(
           /modifier propagation: 1/.test(res.status || ""),
           "status text lists heuristic count",
+        );
+      },
+    },
+    {
+      name: "profile trends ignore reverted inference edits",
+      run(assert) {
+        resetInferenceProfiles();
+
+        const { model, addAction, addInput, addModifier, addOutcome } =
+          makeModelFixture();
+        const action = addAction("Strike");
+        const modifier = addModifier("Swift");
+        const outcome = addOutcome("Hit");
+        const input = addInput("Jab");
+        const viewDef = {
+          columns: [{ key: "action" }, { key: "input" }, { key: "p1:outcome" }],
+        };
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 2,
+              variants: [
+                { variantSig: "", rowIndex: 0, rowCount: 1 },
+                { variantSig: `${modifier.id}`, rowIndex: 1, rowCount: 1 },
+              ],
+            },
+          ],
+          totalRows: 2,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
+        };
+
+        const status = { set() {} };
+        setInteractionsCell(model, status, viewDef, 0, 2, {
+          outcomeId: outcome.id,
+          source: "manual",
+        });
+
+        const inputKey = `in:${input.id}`;
+        const manualSnapshot = captureInferenceProfilesSnapshot();
+        const manualChange = manualSnapshot.input[inputKey].outcome.all.change;
+        const decayFactor = 0.94;
+        assert.ok(
+          manualChange > 0.9 && manualChange <= 1,
+          "manual edits populate profile counts once",
+        );
+
+        const undoStack = [];
+        const runModelMutation = (label, mutate, options = {}) => {
+          const beforeNotes = structuredClone(model.notes);
+          const result = mutate();
+          const shouldRecord =
+            typeof options.shouldRecord === "function"
+              ? options.shouldRecord(result)
+              : typeof options.undo?.shouldRecord === "function"
+                ? options.undo.shouldRecord(result)
+                : true;
+          if (shouldRecord) {
+            undoStack.push(() => {
+              model.notes = structuredClone(beforeNotes);
+            });
+          }
+          if (typeof options.status === "function") {
+            result.status = options.status(result);
+          }
+          return result;
+        };
+
+        const selection = { rows: new Set(), colsAll: true };
+        const controller = createInferenceController({
+          model,
+          selection,
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: status,
+          runModelMutation,
+          makeUndoConfig: (opts = {}) => opts,
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+          heuristicThresholds: { profileTrendMinObservations: 1 },
+        });
+
+        const res = controller.runInference({ scope: "project" });
+        assert.strictEqual(res.applied, 1, "inference applies propagated value");
+
+        const snapshotAfterInference = captureInferenceProfilesSnapshot();
+        const inferenceChange = snapshotAfterInference.input[inputKey].outcome.all.change;
+        assert.ok(
+          Math.abs(inferenceChange / manualChange - decayFactor * decayFactor) < 1e-9,
+          "inferred edits do not inflate profile counts",
+        );
+
+        const undo = undoStack.pop();
+        if (undo) undo();
+
+        const snapshotAfterUndo = captureInferenceProfilesSnapshot();
+        const undoChange = snapshotAfterUndo.input[inputKey].outcome.all.change;
+        assert.ok(
+          Math.abs(undoChange / inferenceChange - decayFactor) < 1e-9,
+          "undoing inference leaves profiles with manual edits only",
+        );
+
+        const inferredPair = getPair(model, 1);
+        const inferredKey = noteKeyForPair(inferredPair, 1);
+        const targets = [
+          {
+            key: inferredKey,
+            field: "outcome",
+            phase: 1,
+            note: model.notes[inferredKey],
+            pair: inferredPair,
+            actionGroup: "",
+          },
+        ];
+        const suggestions = proposeInteractionInferences(targets, snapshotAfterUndo, {
+          profileTrendMinObservations: 2,
+          profileTrendMinPreferenceRatio: 0,
+        });
+        const suggestion = suggestions.get(inferredKey)?.outcome;
+        assert.ok(
+          suggestion == null || suggestion.source !== HEURISTIC_SOURCES.profileTrend,
+          "profile trend is gated without additional manual observations",
         );
       },
     },

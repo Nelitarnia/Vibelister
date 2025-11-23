@@ -156,27 +156,33 @@ function normalizePhaseKey(phase) {
   return phase == null ? null : String(phase);
 }
 
-function incrementCountsBucket(bucket, impact, nextValue, field) {
+function incrementCountsBucket(bucket, impact, nextValue, field, delta = 1) {
   if (!bucket) return;
-  if (impact === "change") bucket.change += 1;
-  else if (impact === "clear") bucket.clear += 1;
-  else bucket.noop += 1;
+  const deltaValue = Number.isFinite(delta) ? delta : 0;
+  if (!deltaValue) return;
+  const change = bucket.change + (impact === "change" ? deltaValue : 0);
+  const clear = bucket.clear + (impact === "clear" ? deltaValue : 0);
+  const noop = bucket.noop + (impact === "noop" ? deltaValue : 0);
+  bucket.change = change < 0 ? 0 : change;
+  bucket.clear = clear < 0 ? 0 : clear;
+  bucket.noop = noop < 0 ? 0 : noop;
   if (nextValue) {
     const key = valueKey(field, nextValue);
     if (!key) return;
     if (!bucket.values.has(key)) bucket.values.set(key, { count: 0, value: cloneValue(field, nextValue) });
     const entry = bucket.values.get(key);
-    entry.count += 1;
+    entry.count += deltaValue;
+    if (entry.count <= 0) bucket.values.delete(key);
   }
 }
 
-function incrementBucket(bucket, impact, nextValue, field, phase) {
+function incrementBucket(bucket, impact, nextValue, field, phase, delta = 1) {
   if (!bucket) return;
-  incrementCountsBucket(bucket.all, impact, nextValue, field);
+  incrementCountsBucket(bucket.all, impact, nextValue, field, delta);
   const phaseKey = normalizePhaseKey(phase);
   if (phaseKey == null) return;
   if (!bucket.phases.has(phaseKey)) bucket.phases.set(phaseKey, createCountsBucket());
-  incrementCountsBucket(bucket.phases.get(phaseKey), impact, nextValue, field);
+  incrementCountsBucket(bucket.phases.get(phaseKey), impact, nextValue, field, delta);
 }
 
 function computeImpact(field, previousValue, nextValue) {
@@ -227,21 +233,26 @@ export function recordProfileImpact({
   nextValue,
   impact,
   phase,
+  inferred = false,
+  manualOnly = false,
+  delta = 1,
 }) {
   if (!field || (field !== "outcome" && field !== "end" && field !== "tag")) {
     return;
   }
+  if (manualOnly && inferred) return;
+  if (!Number.isFinite(delta) || delta === 0) return;
   const impactType = impact || computeImpact(field, previousValue, nextValue);
   const modIds = parseModifierIds(pair);
   const inputKey = normalizeInputKey(pair);
 
   for (const modId of modIds) {
     const profile = ensureProfile(modifierProfiles, modId);
-    incrementBucket(profile[field], impactType, nextValue, field, phase);
+    incrementBucket(profile[field], impactType, nextValue, field, phase, delta);
   }
   if (inputKey) {
     const profile = ensureProfile(inputProfiles, inputKey);
-    incrementBucket(profile[field], impactType, nextValue, field, phase);
+    incrementBucket(profile[field], impactType, nextValue, field, phase, delta);
   }
 
   decayBudget += 1;
@@ -309,4 +320,10 @@ export function captureInferenceProfilesSnapshot() {
     modifier: Object.freeze(modifier),
     input: Object.freeze(input),
   });
+}
+
+export function resetInferenceProfiles() {
+  modifierProfiles.clear();
+  inputProfiles.clear();
+  decayBudget = 0;
 }
