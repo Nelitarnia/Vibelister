@@ -13,6 +13,19 @@ function createOverlay() {
   return { overlay, box };
 }
 
+const FALLBACK_THRESHOLD_DEFAULTS = Object.freeze({
+  consensusMinGroupSize: 2,
+  consensusMinExistingRatio: 0.5,
+  actionGroupMinGroupSize: 2,
+  actionGroupMinExistingRatio: 0.6,
+  actionGroupPhaseMinGroupSize: 3,
+  actionGroupPhaseMinExistingRatio: 0.72,
+  inputDefaultMinGroupSize: 2,
+  inputDefaultMinExistingRatio: 0.5,
+  profileTrendMinObservations: 3,
+  profileTrendMinPreferenceRatio: 0.55,
+});
+
 function buttonStyle({ emphasis = false } = {}) {
   return {
     background: emphasis ? "#2d3b62" : "#1e253a",
@@ -84,6 +97,69 @@ function parseNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function clampRatio(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  const clamped = Math.min(1, Math.max(0, num));
+  return Math.round(clamped * 100) / 100;
+}
+
+function adjustCount(base, delta = 0, min = 1) {
+  const next = Math.round((Number(base) || 0) + delta);
+  return Math.max(min, next);
+}
+
+function derivePresetThresholds(baseThresholds = {}, variant = "default") {
+  const base = { ...FALLBACK_THRESHOLD_DEFAULTS, ...baseThresholds };
+  if (variant === "lenient") {
+    return {
+      consensusMinGroupSize: adjustCount(base.consensusMinGroupSize, -1),
+      consensusMinExistingRatio: clampRatio(base.consensusMinExistingRatio - 0.15),
+      actionGroupMinGroupSize: adjustCount(base.actionGroupMinGroupSize, -1),
+      actionGroupMinExistingRatio: clampRatio(base.actionGroupMinExistingRatio - 0.15),
+      actionGroupPhaseMinGroupSize: adjustCount(base.actionGroupPhaseMinGroupSize, -1),
+      actionGroupPhaseMinExistingRatio: clampRatio(
+        base.actionGroupPhaseMinExistingRatio - 0.17,
+      ),
+      inputDefaultMinGroupSize: adjustCount(base.inputDefaultMinGroupSize, -1),
+      inputDefaultMinExistingRatio: clampRatio(
+        base.inputDefaultMinExistingRatio - 0.15,
+      ),
+      profileTrendMinObservations: adjustCount(
+        base.profileTrendMinObservations,
+        -1,
+      ),
+      profileTrendMinPreferenceRatio: clampRatio(
+        base.profileTrendMinPreferenceRatio - 0.1,
+      ),
+    };
+  }
+  if (variant === "strict") {
+    return {
+      consensusMinGroupSize: adjustCount(base.consensusMinGroupSize, 1),
+      consensusMinExistingRatio: clampRatio(base.consensusMinExistingRatio + 0.2),
+      actionGroupMinGroupSize: adjustCount(base.actionGroupMinGroupSize, 1),
+      actionGroupMinExistingRatio: clampRatio(base.actionGroupMinExistingRatio + 0.15),
+      actionGroupPhaseMinGroupSize: adjustCount(base.actionGroupPhaseMinGroupSize, 1),
+      actionGroupPhaseMinExistingRatio: clampRatio(
+        base.actionGroupPhaseMinExistingRatio + 0.13,
+      ),
+      inputDefaultMinGroupSize: adjustCount(base.inputDefaultMinGroupSize, 1),
+      inputDefaultMinExistingRatio: clampRatio(
+        base.inputDefaultMinExistingRatio + 0.15,
+      ),
+      profileTrendMinObservations: adjustCount(
+        base.profileTrendMinObservations,
+        2,
+      ),
+      profileTrendMinPreferenceRatio: clampRatio(
+        base.profileTrendMinPreferenceRatio + 0.1,
+      ),
+    };
+  }
+  return { ...base };
+}
+
 function buildScopeSelector(defaultValue) {
   const scopes = [
     { value: "selection", label: "Current selection" },
@@ -129,12 +205,14 @@ function buildCheckbox(labelText, defaultValue, title) {
 }
 
 export async function openInferenceDialog(options = {}) {
-  const { defaults = {}, onRun, onClear } = options;
+  const { defaults = {}, defaultThresholds, onRun, onClear } = options;
   return new Promise((resolve) => {
     const { overlay, box } = createOverlay();
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.tabIndex = -1;
+
+    let summary;
 
     const header = document.createElement("div");
     header.style.cssText = "display:flex;align-items:center;gap:10px;";
@@ -282,6 +360,10 @@ export async function openInferenceDialog(options = {}) {
     advancedSection.style.cssText =
       "display:none;flex-direction:column;gap:10px;";
 
+    const baseThresholds = derivePresetThresholds(defaultThresholds, "default");
+    const lenientThresholds = derivePresetThresholds(baseThresholds, "lenient");
+    const strictThresholds = derivePresetThresholds(baseThresholds, "strict");
+
     const thresholdsGrid = document.createElement("div");
     thresholdsGrid.style.cssText =
       "display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;";
@@ -395,6 +477,65 @@ export async function openInferenceDialog(options = {}) {
       },
     );
 
+    function setThresholdInputs(values = {}) {
+      const pairs = {
+        consensusMinGroupSize,
+        consensusMinExistingRatio,
+        actionGroupMinGroupSize,
+        actionGroupMinExistingRatio,
+        actionGroupPhaseMinGroupSize,
+        actionGroupPhaseMinExistingRatio,
+        inputDefaultMinGroupSize,
+        inputDefaultMinExistingRatio,
+        profileTrendMinObservations,
+        profileTrendMinPreferenceRatio,
+      };
+      for (const [key, input] of Object.entries(pairs)) {
+        const value = values[key];
+        input.value = value == null ? "" : value;
+      }
+    }
+
+    const presetRow = document.createElement("div");
+    presetRow.style.cssText =
+      "display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:flex-start;";
+    const presetLabel = document.createElement("span");
+    presetLabel.textContent = "Presets:";
+    presetLabel.style.cssText = "color:#cdd8ff;font-size:12px;font-weight:600;";
+    presetRow.appendChild(presetLabel);
+
+    const presetButtons = [
+      {
+        label: "Default",
+        title: "Restore the recommended defaults for all heuristics.",
+        values: baseThresholds,
+      },
+      {
+        label: "Lenient",
+        title: "Lower minimums so suggestions appear with less agreement.",
+        values: lenientThresholds,
+      },
+      {
+        label: "Hard",
+        title: "Require more agreement before suggesting values.",
+        values: strictThresholds,
+      },
+    ];
+
+    presetButtons.forEach((preset) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = preset.label;
+      button.title = preset.title;
+      applyButtonStyle(button);
+      button.style.padding = "6px 12px";
+      button.addEventListener("click", () => {
+        setThresholdInputs(preset.values);
+        if (summary) summary.textContent = `${preset.label} thresholds applied.`;
+      });
+      presetRow.appendChild(button);
+    });
+
     thresholdsGrid.append(
       consensusMinGroupSizeLabel,
       consensusMinExistingRatioLabel,
@@ -413,7 +554,7 @@ export async function openInferenceDialog(options = {}) {
       "Minimum group sizes and preference ratios trim noisy suggestions. Leave blank to use defaults.";
     advancedHint.style.cssText = "margin:4px 0 0;color:#8c98c8;font-size:12px;";
 
-    advancedSection.append(thresholdsGrid, advancedHint);
+    advancedSection.append(presetRow, thresholdsGrid, advancedHint);
 
     const tabs = document.createElement("div");
     tabs.style.cssText = "display:flex;gap:6px;";
@@ -444,7 +585,7 @@ export async function openInferenceDialog(options = {}) {
     tabs.append(basicTab, advancedTab);
     switchTab("basic");
 
-    const summary = document.createElement("div");
+    summary = document.createElement("div");
     summary.style.cssText = "font-size:13px;color:#c5d1ff;min-height:18px;";
 
     const footer = document.createElement("div");
