@@ -87,7 +87,8 @@ function parseNumber(value) {
 function buildScopeSelector(defaultValue) {
   const scopes = [
     { value: "selection", label: "Current selection" },
-    { value: "action", label: "Entire action group" },
+    { value: "action", label: "Entire action" },
+    { value: "actionGroup", label: "Entire action group" },
     { value: "project", label: "Entire project" },
   ];
   const fieldset = document.createElement("fieldset");
@@ -217,6 +218,38 @@ export async function openInferenceDialog(options = {}) {
       defaults.thresholdOverrides?.consensusMinExistingRatio,
       { min: 0, max: 1, step: 0.01 },
     );
+    const {
+      wrapper: actionGroupMinGroupSizeLabel,
+      input: actionGroupMinGroupSize,
+    } = buildNumberField(
+      "Action group min group size",
+      defaults.thresholdOverrides?.actionGroupMinGroupSize,
+      { min: 0, step: 1 },
+    );
+    const {
+      wrapper: actionGroupMinExistingRatioLabel,
+      input: actionGroupMinExistingRatio,
+    } = buildNumberField(
+      "Action group min existing ratio",
+      defaults.thresholdOverrides?.actionGroupMinExistingRatio,
+      { min: 0, max: 1, step: 0.01 },
+    );
+    const {
+      wrapper: actionGroupPhaseMinGroupSizeLabel,
+      input: actionGroupPhaseMinGroupSize,
+    } = buildNumberField(
+      "Group phase min group size",
+      defaults.thresholdOverrides?.actionGroupPhaseMinGroupSize,
+      { min: 0, step: 1 },
+    );
+    const {
+      wrapper: actionGroupPhaseMinExistingRatioLabel,
+      input: actionGroupPhaseMinExistingRatio,
+    } = buildNumberField(
+      "Group phase min existing ratio",
+      defaults.thresholdOverrides?.actionGroupPhaseMinExistingRatio,
+      { min: 0, max: 1, step: 0.01 },
+    );
     const { wrapper: inputDefaultMinGroupSizeLabel, input: inputDefaultMinGroupSize } =
       buildNumberField(
         "Input default min group size",
@@ -251,6 +284,10 @@ export async function openInferenceDialog(options = {}) {
     thresholdsGrid.append(
       consensusMinGroupSizeLabel,
       consensusMinExistingRatioLabel,
+      actionGroupMinGroupSizeLabel,
+      actionGroupMinExistingRatioLabel,
+      actionGroupPhaseMinGroupSizeLabel,
+      actionGroupPhaseMinExistingRatioLabel,
       inputDefaultMinGroupSizeLabel,
       inputDefaultMinExistingRatioLabel,
       profileTrendMinObservationsLabel,
@@ -351,6 +388,10 @@ export async function openInferenceDialog(options = {}) {
         thresholdOverrides: {
           consensusMinGroupSize: parseNumber(consensusMinGroupSize.value),
           consensusMinExistingRatio: parseNumber(consensusMinExistingRatio.value),
+          actionGroupMinGroupSize: parseNumber(actionGroupMinGroupSize.value),
+          actionGroupMinExistingRatio: parseNumber(actionGroupMinExistingRatio.value),
+          actionGroupPhaseMinGroupSize: parseNumber(actionGroupPhaseMinGroupSize.value),
+          actionGroupPhaseMinExistingRatio: parseNumber(actionGroupPhaseMinExistingRatio.value),
           inputDefaultMinGroupSize: parseNumber(inputDefaultMinGroupSize.value),
           inputDefaultMinExistingRatio: parseNumber(
             inputDefaultMinExistingRatio.value,

@@ -22,6 +22,7 @@
 /** @typedef {BaseRow & {
 
 * modSet?: Record<number, ModStateValue>,
+* actionGroup?: string,
 * phases?: { ids: number[] }
 * }} ActionRow */
 

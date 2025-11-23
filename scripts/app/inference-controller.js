@@ -19,6 +19,7 @@ import {
 } from "./inference-profiles.js";
 
 const HEURISTIC_LABELS = Object.freeze({
+  [HEURISTIC_SOURCES.actionGroup]: "action group similarity",
   [HEURISTIC_SOURCES.modifierPropagation]: "modifier propagation",
   [HEURISTIC_SOURCES.modifierProfile]: "modifier profile",
   [HEURISTIC_SOURCES.inputDefault]: "input default",
@@ -142,13 +143,19 @@ export function createInferenceController(options) {
   }
 
   const actionPhaseCache = new Map();
+  const actionGroupCache = new Map();
+
+  function getActionRecord(actionId) {
+    if (!Number.isFinite(actionId)) return null;
+    return Array.isArray(model?.actions)
+      ? model.actions.find((x) => x && x.id === actionId)
+      : null;
+  }
 
   function getAllowedPhasesForAction(actionId) {
     if (!Number.isFinite(actionId)) return null;
     if (actionPhaseCache.has(actionId)) return actionPhaseCache.get(actionId);
-    const action = Array.isArray(model?.actions)
-      ? model.actions.find((x) => x && x.id === actionId)
-      : null;
+    const action = getActionRecord(actionId);
     const ids = action?.phases?.ids;
     if (!Array.isArray(ids) || ids.length === 0) {
       actionPhaseCache.set(actionId, null);
@@ -164,21 +171,50 @@ export function createInferenceController(options) {
     return result;
   }
 
+  function getActionGroupForAction(actionId) {
+    if (!Number.isFinite(actionId)) return "";
+    if (actionGroupCache.has(actionId)) return actionGroupCache.get(actionId);
+    const action = getActionRecord(actionId);
+    const raw = typeof action?.actionGroup === "string" ? action.actionGroup.trim() : "";
+    const value = raw || "";
+    actionGroupCache.set(actionId, value);
+    return value;
+  }
+
+  function collectRowsForActionId(actionId, totalRows) {
+    const rows = [];
+    for (let i = 0; i < totalRows; i++) {
+      const pair = getInteractionsPair?.(model, i);
+      if (pair && pair.aId === actionId) rows.push(i);
+    }
+    return rows;
+  }
+
+  function collectRowsForActionGroup(targetGroup, totalRows) {
+    const rows = [];
+    for (let i = 0; i < totalRows; i++) {
+      const pair = getInteractionsPair?.(model, i);
+      if (!pair) continue;
+      const actionGroup = getActionGroupForAction(pair.aId);
+      if (actionGroup && actionGroup === targetGroup) rows.push(i);
+    }
+    return rows;
+  }
+
   function getRows(scope) {
     const totalRows = getInteractionsRowCount?.(model) || 0;
     if (scope === "project") {
       return Array.from({ length: totalRows }, (_, i) => i);
     }
-    if (scope === "action") {
+    if (scope === "action" || scope === "actionGroup") {
       const activePair = getInteractionsPair?.(model, sel.r);
       if (!activePair) return [];
       const targetId = activePair.aId;
-      const rows = [];
-      for (let i = 0; i < totalRows; i++) {
-        const pair = getInteractionsPair?.(model, i);
-        if (pair && pair.aId === targetId) rows.push(i);
+      if (scope === "actionGroup") {
+        const group = getActionGroupForAction(targetId);
+        if (group) return collectRowsForActionGroup(group, totalRows);
       }
-      return rows;
+      return collectRowsForActionId(targetId, totalRows);
     }
     if (selection.rows && selection.rows.size) {
       return Array.from(selection.rows).sort((a, b) => a - b);
@@ -203,7 +239,15 @@ export function createInferenceController(options) {
         if (allowedPhases && !allowedPhases.has(pk.p)) continue;
         const key = noteKeyForPair(pair, pk.p);
         const note = model?.notes?.[key];
-        targets.push({ key, field: pk.field, phase: pk.p, note, pair, row: r });
+        targets.push({
+          key,
+          field: pk.field,
+          phase: pk.p,
+          note,
+          pair,
+          row: r,
+          actionGroup: getActionGroupForAction(pair.aId),
+        });
       }
     }
     return { targets, allowed: true };
@@ -215,12 +259,12 @@ export function createInferenceController(options) {
       statusBar?.set?.("Inference only applies to the Interactions view.");
       return { applied: 0 };
     }
-    const suggestionScope =
-      options.scope === "project"
-        ? "project"
-        : options.scope === "action"
-          ? "project"
-          : "action";
+    const suggestionScope = (() => {
+      if (options.scope === "project") return "project";
+      if (options.scope === "action" || options.scope === "actionGroup")
+        return "project";
+      return "action";
+    })();
     const { targets: broaderTargets, allowed: suggestionAllowed } =
       suggestionScope === options.scope
         ? { targets, allowed }
@@ -273,6 +317,15 @@ export function createInferenceController(options) {
       const hasValue = hasStructuredValue(note, target.field);
       const info = describeInteractionInference(note);
       const currentSource = normalizeInteractionSource(info?.source);
+      const hasManualOutcomeWithDefaults =
+        !options.fillIntentionalBlanks &&
+        target.field !== "outcome" &&
+        hasStructuredValue(note, "outcome") &&
+        currentSource === DEFAULT_INTERACTION_SOURCE;
+      if (hasManualOutcomeWithDefaults) {
+        result.skippedManualOutcome++;
+        continue;
+      }
       const isManualWithDefaults =
         currentSource === DEFAULT_INTERACTION_SOURCE && hasValue;
       if (isManualWithDefaults && !options.fillIntentionalBlanks) {
