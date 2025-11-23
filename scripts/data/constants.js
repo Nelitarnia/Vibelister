@@ -45,6 +45,7 @@ export const Ids = Object.freeze({
   tagSidebar: "tag-pane",
   tagForm: "tag-form",
   tagInput: "tag-input",
+  tagSort: "tag-sort",
   tagRename: "tag-rename",
   tagDelete: "tag-delete",
   tagList: "tag-list",

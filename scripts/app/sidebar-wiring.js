@@ -98,6 +98,7 @@ export function initSidebarControllers({
     toggleButton: dom.tagToggleButton,
     form: dom.tagForm,
     input: dom.tagInput,
+    sortSelect: dom.tagSort,
     renameButton: dom.tagRenameButton,
     deleteButton: dom.tagDeleteButton,
     listElement: dom.tagList,
