@@ -62,6 +62,22 @@ export function initGridMouse(deps) {
     // If editing and clicking outside editor (but inside sheet), commit; palette handles itself
     if (isEditing() && e.target !== editor) endEdit(true);
 
+    const addToSelection = e.ctrlKey || e.metaKey;
+    if (addToSelection) {
+      if (SelectionCtl?.toggleRow) {
+        SelectionCtl.toggleRow(r);
+      } else if (selection?.rows) {
+        if (selection.rows.has(r)) selection.rows.delete(r);
+        else selection.rows.add(r);
+        if (selection.anchor == null) selection.anchor = r;
+      }
+      sel.r = r;
+      sel.c = c;
+      ensureVisible(r, c);
+      render();
+      return;
+    }
+
     // Clicking cells without Shift implies single-cell intent → disarm wide-selection
     if (!e.shiftKey && selection && selection.colsAll) {
       if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
