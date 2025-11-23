@@ -136,14 +136,95 @@ export async function openInferenceDialog(options = {}) {
     overlay.setAttribute("aria-modal", "true");
     overlay.tabIndex = -1;
 
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;gap:10px;";
+
     const title = document.createElement("h2");
     title.textContent = "Inference";
-    title.style.cssText = "margin:0;font-size:20px;font-weight:600;color:#f0f2ff;";
+    title.style.cssText = "margin:0;font-size:20px;font-weight:600;color:#f0f2ff;flex:1;";
+
+    const infoButton = document.createElement("button");
+    infoButton.type = "button";
+    infoButton.textContent = "?";
+    infoButton.title = "How inference picks suggestions";
+    infoButton.setAttribute("aria-expanded", "false");
+    applyButtonStyle(infoButton);
+    infoButton.style.padding = "6px 10px";
+    infoButton.style.fontWeight = "700";
+    infoButton.style.minWidth = "32px";
+
+    header.append(title, infoButton);
 
     const description = document.createElement("p");
     description.textContent =
       "Pick the scope and toggles for applying or clearing inferred interaction metadata.";
     description.style.cssText = "margin:0;font-size:14px;color:#9aa4c9;";
+
+    const infoPanel = document.createElement("div");
+    infoPanel.id = "inference-info";
+    infoPanel.style.cssText =
+      "display:none;border:1px solid #27314f;border-radius:10px;padding:12px 14px;" +
+      "background:#0b1020;color:#dfe6ff;font-size:13px;line-height:1.5;";
+    infoPanel.setAttribute("role", "region");
+    infoPanel.setAttribute("aria-label", "Inference explanation");
+    infoPanel.tabIndex = -1;
+
+    const infoIntro = document.createElement("p");
+    infoIntro.style.cssText = "margin:0 0 10px;";
+    infoIntro.textContent =
+      "Inference speeds up repetitive note entry by reusing values you've already set." +
+      " It suggests outcomes, ends, and tags when similar rows share recognizable patterns.";
+
+    const infoList = document.createElement("ul");
+    infoList.style.cssText = "margin:0 0 10px 18px;padding:0;display:grid;gap:8px;";
+
+    const addInfo = (label, text) => {
+      const item = document.createElement("li");
+      item.style.cssText = "color:#dfe6ff;";
+      const strong = document.createElement("strong");
+      strong.textContent = `${label}: `;
+      const span = document.createElement("span");
+      span.textContent = text;
+      item.append(strong, span);
+      infoList.appendChild(item);
+    };
+
+    addInfo(
+      "Modifier propagation",
+      "Finds consensus across rows that share the same action, input, and modifier setup, then mirrors that value.",
+    );
+    addInfo(
+      "Action groups",
+      "Spreads consistent outcomes, ends, or tags within the same action group or phase when enough rows agree.",
+    );
+    addInfo(
+      "Modifier profiles",
+      "Uses recurring values tied to a variant signature to seed suggestions even outside the original group.",
+    );
+    addInfo(
+      "Input defaults",
+      "When an action/input pairing repeats the same value often enough, that value becomes the default suggestion.",
+    );
+    addInfo(
+      "Trend preferences",
+      "Recent edits and clears teach the heuristic which values you keep applying; weak signals are ignored until they are consistent.",
+    );
+
+    const infoFooter = document.createElement("p");
+    infoFooter.style.cssText = "margin:0;color:#b8c4f2;font-size:12px;";
+    infoFooter.textContent =
+      "Manual values stay as-is (unless you explicitly allow filling blanks). Thresholds in Advanced tune how much agreement is needed.";
+
+    infoPanel.append(infoIntro, infoList, infoFooter);
+
+    const toggleInfo = () => {
+      const willShow = infoPanel.style.display === "none";
+      infoPanel.style.display = willShow ? "block" : "none";
+      infoButton.setAttribute("aria-expanded", String(willShow));
+      if (willShow) infoPanel.focus?.();
+    };
+
+    infoButton.addEventListener("click", toggleInfo);
 
     const trendsHint = document.createElement("p");
     trendsHint.textContent =
@@ -386,8 +467,9 @@ export async function openInferenceDialog(options = {}) {
     footer.append(closeButton, clearButton, runButton);
 
     box.append(
-      title,
+      header,
       description,
+      infoPanel,
       trendsHint,
       tabs,
       basicSection,
