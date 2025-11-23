@@ -144,9 +144,10 @@ export function createInferenceController(options) {
       });
     if (!useSelection) return matches;
     if (selection.colsAll) return matches;
-    if (selection.cols && selection.cols.size)
+    const hasMultiColumnSelection = selection.cols && selection.cols.size > 1;
+    if (hasMultiColumnSelection)
       return matches.filter(({ idx }) => selection.cols.has(idx));
-    return matches.filter(({ idx }) => idx === sel.c);
+    return matches;
   }
 
   const actionPhaseCache = new Map();
@@ -285,11 +286,14 @@ export function createInferenceController(options) {
       if (!suggestionAllowed) return targets;
       if (suggestionScope === options.scope) return targets;
       const merged = [...targets];
-      const seen = new Set(targets.map((item) => item.key));
+      const seen = new Set(
+        targets.map((item) => `${item.key}:${item.field}`),
+      );
       for (const target of broaderTargets) {
-        if (!seen.has(target.key)) {
+        const dedupeKey = `${target.key}:${target.field}`;
+        if (!seen.has(dedupeKey)) {
           merged.push(target);
-          seen.add(target.key);
+          seen.add(dedupeKey);
         }
       }
       return merged;
