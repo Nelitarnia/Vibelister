@@ -87,7 +87,8 @@ function parseNumber(value) {
 function buildScopeSelector(defaultValue) {
   const scopes = [
     { value: "selection", label: "Current selection" },
-    { value: "action", label: "Entire action group" },
+    { value: "action", label: "Entire action" },
+    { value: "actionGroup", label: "Entire action group" },
     { value: "project", label: "Entire project" },
   ];
   const fieldset = document.createElement("fieldset");

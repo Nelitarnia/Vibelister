@@ -181,21 +181,40 @@ export function createInferenceController(options) {
     return value;
   }
 
+  function collectRowsForActionId(actionId, totalRows) {
+    const rows = [];
+    for (let i = 0; i < totalRows; i++) {
+      const pair = getInteractionsPair?.(model, i);
+      if (pair && pair.aId === actionId) rows.push(i);
+    }
+    return rows;
+  }
+
+  function collectRowsForActionGroup(targetGroup, totalRows) {
+    const rows = [];
+    for (let i = 0; i < totalRows; i++) {
+      const pair = getInteractionsPair?.(model, i);
+      if (!pair) continue;
+      const actionGroup = getActionGroupForAction(pair.aId);
+      if (actionGroup && actionGroup === targetGroup) rows.push(i);
+    }
+    return rows;
+  }
+
   function getRows(scope) {
     const totalRows = getInteractionsRowCount?.(model) || 0;
     if (scope === "project") {
       return Array.from({ length: totalRows }, (_, i) => i);
     }
-    if (scope === "action") {
+    if (scope === "action" || scope === "actionGroup") {
       const activePair = getInteractionsPair?.(model, sel.r);
       if (!activePair) return [];
       const targetId = activePair.aId;
-      const rows = [];
-      for (let i = 0; i < totalRows; i++) {
-        const pair = getInteractionsPair?.(model, i);
-        if (pair && pair.aId === targetId) rows.push(i);
+      if (scope === "actionGroup") {
+        const group = getActionGroupForAction(targetId);
+        if (group) return collectRowsForActionGroup(group, totalRows);
       }
-      return rows;
+      return collectRowsForActionId(targetId, totalRows);
     }
     if (selection.rows && selection.rows.size) {
       return Array.from(selection.rows).sort((a, b) => a - b);
@@ -240,12 +259,12 @@ export function createInferenceController(options) {
       statusBar?.set?.("Inference only applies to the Interactions view.");
       return { applied: 0 };
     }
-    const suggestionScope =
-      options.scope === "project"
-        ? "project"
-        : options.scope === "action"
-          ? "project"
-          : "action";
+    const suggestionScope = (() => {
+      if (options.scope === "project") return "project";
+      if (options.scope === "action" || options.scope === "actionGroup")
+        return "project";
+      return "action";
+    })();
     const { targets: broaderTargets, allowed: suggestionAllowed } =
       suggestionScope === options.scope
         ? { targets, allowed }
