@@ -34,7 +34,7 @@ const DEFAULT_OPTIONS = Object.freeze({
   includeTag: true,
   overwriteInferred: true,
   onlyFillEmpty: false,
-  fillIntentionalBlanks: false,
+  skipManualOutcome: false,
 });
 
 function hasStructuredValue(note, field) {
@@ -63,7 +63,7 @@ function normalizeOptions(payload = {}) {
     includeTag: payload.includeTag !== false,
     overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
-    fillIntentionalBlanks: !!payload.fillIntentionalBlanks,
+    skipManualOutcome: !!payload.skipManualOutcome,
     defaultConfidence: hasDefaultConfidence
       ? normalizeInteractionConfidence(payload.defaultConfidence)
       : null,
@@ -335,7 +335,7 @@ export function createInferenceController(options) {
       const info = describeInteractionInference(note);
       const currentSource = normalizeInteractionSource(info?.source);
       const hasManualOutcomeWithDefaults =
-        !options.fillIntentionalBlanks &&
+        options.skipManualOutcome &&
         target.field !== "outcome" &&
         hasStructuredValue(note, "outcome") &&
         currentSource === DEFAULT_INTERACTION_SOURCE;
@@ -345,7 +345,7 @@ export function createInferenceController(options) {
       }
       const isManualWithDefaults =
         currentSource === DEFAULT_INTERACTION_SOURCE && hasValue;
-      if (isManualWithDefaults && !options.fillIntentionalBlanks) {
+      if (isManualWithDefaults && options.skipManualOutcome) {
         result.skippedManual++;
         continue;
       }
@@ -568,7 +568,7 @@ export function createInferenceController(options) {
           includeTag: DEFAULT_OPTIONS.includeTag,
           overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
           onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
-          fillIntentionalBlanks: DEFAULT_OPTIONS.fillIntentionalBlanks,
+          skipManualOutcome: DEFAULT_OPTIONS.skipManualOutcome,
           scope: DEFAULT_OPTIONS.scope,
           thresholdOverrides: lastThresholdOverrides,
         },

@@ -341,17 +341,17 @@ export async function openInferenceDialog(options = {}) {
       "Skip cells that already contain structured values so inference only touches blanks.",
     );
     const {
-      label: fillIntentionalLabel,
-      input: fillIntentionalInput,
+      label: skipManualOutcomeLabel,
+      input: skipManualOutcomeInput,
     } = buildCheckbox(
-      "Fill intentionally blank End/Tag",
-      !!defaults.fillIntentionalBlanks,
-      "Allow inference to fill End/Tag when Outcome is already manual with default confidence/source.",
+      "Skip rows with manual Outcome",
+      !!defaults.skipManualOutcome,
+      "When enabled, inference leaves End/Tag untouched if the row already has a manual Outcome.",
     );
     overwriteLabel.style.marginTop = "8px";
     onlyEmptyLabel.style.marginTop = "8px";
-    fillIntentionalLabel.style.marginTop = "8px";
-    runOptions.append(overwriteLabel, onlyEmptyLabel, fillIntentionalLabel);
+    skipManualOutcomeLabel.style.marginTop = "8px";
+    runOptions.append(overwriteLabel, onlyEmptyLabel, skipManualOutcomeLabel);
 
     const basicSection = document.createElement("div");
     basicSection.append(scopeSelector, includeRow, runOptions);
@@ -640,7 +640,7 @@ export async function openInferenceDialog(options = {}) {
         includeTag: includeTagInput.checked,
         overwriteInferred: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
-        fillIntentionalBlanks: fillIntentionalInput.checked,
+        skipManualOutcome: skipManualOutcomeInput.checked,
         thresholdOverrides: {
           consensusMinGroupSize: parseNumber(consensusMinGroupSize.value),
           consensusMinExistingRatio: parseNumber(consensusMinExistingRatio.value),
