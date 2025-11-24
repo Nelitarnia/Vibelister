@@ -498,6 +498,14 @@ export function createInferenceController(options) {
 
   function runWithHistory(label, mutate, formatter, shouldRecord) {
     if (typeof runModelMutation === "function") {
+      let formattedStatus;
+      const statusCallback =
+        typeof formatter === "function"
+          ? (value) => {
+              formattedStatus = formatter(value);
+              return formattedStatus;
+            }
+          : undefined;
       const undoOptions = makeUndoConfig
         ? makeUndoConfig({
             label,
@@ -509,13 +517,15 @@ export function createInferenceController(options) {
       const res = runModelMutation(label, mutate, {
         undo: undoOptions,
         shouldRecord,
-        status: (value) => formatter(value),
+        status: statusCallback,
       });
       if (res && formatter && !res.status) {
-        const statusText = formatter(res);
+        const statusText = formattedStatus ?? formatter(res);
         if (statusText) res.status = statusText;
       }
-      if (res?.status && statusBar?.set) statusBar.set(res.status);
+      if (res?.status && statusBar?.set && !statusCallback) {
+        statusBar.set(res.status);
+      }
       return res;
     }
     const result = mutate();
