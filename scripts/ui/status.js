@@ -1,4 +1,7 @@
 const DEFAULT_HISTORY_LIMIT = 50;
+const DISPLAY_CHAR_LIMIT = 140;
+
+const NBSP = "\u00a0";
 
 function pad2(v) {
   return v < 10 ? `0${v}` : `${v}`;
@@ -6,6 +9,16 @@ function pad2(v) {
 
 function formatTimestamp(date) {
   return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+}
+
+function formatDisplayText(text) {
+  if (!text) return "";
+  if (text.length <= DISPLAY_CHAR_LIMIT) return text;
+  return `${text.slice(0, DISPLAY_CHAR_LIMIT - 1).trimEnd()}…`;
+}
+
+function normalizeDisplayValue(text) {
+  return text && text.trim() ? text : NBSP;
 }
 
 export function initStatusBar(element, opts = {}) {
@@ -23,9 +36,9 @@ export function initStatusBar(element, opts = {}) {
   let latest = element.textContent || "";
   const messageEl = document.createElement("span");
   messageEl.className = "status__text";
-  messageEl.textContent = latest && latest.trim() ? latest : "\u00a0";
   while (element.firstChild) element.removeChild(element.firstChild);
   element.appendChild(messageEl);
+  updateDisplayedMessage(latest);
   let panel = null;
   let isOpen = false;
   let outsideHandler = null;
@@ -156,15 +169,34 @@ export function initStatusBar(element, opts = {}) {
     else showHistory();
   }
 
+  function updateDisplayedMessage(msg) {
+    const displayText = formatDisplayText(msg);
+    const visible = normalizeDisplayValue(displayText);
+
+    if (messageEl && messageEl.parentNode !== element && element)
+      element.insertBefore(messageEl, element.firstChild);
+    if (messageEl && messageEl.parentNode === element) messageEl.textContent = visible;
+    else if (messageEl) messageEl.textContent = visible;
+    else if (element) element.textContent = visible;
+
+    if (messageEl) {
+      const hasMessage = msg && msg.trim();
+      if (hasMessage) {
+        messageEl.dataset.fullMessage = msg;
+        messageEl.setAttribute("title", msg);
+        messageEl.setAttribute("aria-label", msg);
+      } else {
+        delete messageEl.dataset.fullMessage;
+        messageEl.removeAttribute("title");
+        messageEl.removeAttribute("aria-label");
+      }
+    }
+  }
+
   function set(message, opts = {}) {
     const msg = message == null ? "" : String(message);
     latest = msg;
-    if (messageEl && messageEl.parentNode !== element && element)
-      element.insertBefore(messageEl, element.firstChild);
-    if (messageEl && messageEl.parentNode === element)
-      messageEl.textContent = msg || "\u00a0";
-    else if (messageEl) messageEl.textContent = msg || "\u00a0";
-    else if (element) element.textContent = msg || "\u00a0";
+    updateDisplayedMessage(msg);
     const skipHistory = opts.skipHistory ?? msg.trim() === "";
     if (!skipHistory) {
       pushHistory({
