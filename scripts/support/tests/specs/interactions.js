@@ -1799,6 +1799,58 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "inference emits status once through mutation runner",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        addAction("Strike");
+        addInput("High");
+        addOutcome("Hit");
+        buildInteractionsPairs(model);
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+          ],
+        };
+
+        const statusBar = {
+          messages: [],
+          set(msg) {
+            this.messages.push(msg);
+          },
+        };
+
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([0]), colsAll: true },
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar,
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (typeof opts.status === "function") {
+              const message = opts.status(res);
+              if (message) statusBar.set(message);
+            }
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+
+        const res = controller.runInference({ scope: "project" });
+        assert.ok(res.status, "status text produced by formatter");
+        assert.deepStrictEqual(
+          statusBar.messages,
+          [res.status],
+          "status applied exactly once",
+        );
+      },
+    },
+    {
       name: "profile trends ignore reverted inference edits",
       run(assert) {
         resetInferenceProfiles();
