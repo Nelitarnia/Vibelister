@@ -95,7 +95,11 @@ export function initInteractionTools(options = {}) {
     refresh();
   }
 
-  acceptButton?.addEventListener("click", () => run(actions.acceptInferred));
+  function promoteInferred() {
+    run(actions.acceptInferred);
+  }
+
+  acceptButton?.addEventListener("click", promoteInferred);
   clearButton?.addEventListener("click", () =>
     run(actions.clearInferenceMetadata),
   );

@@ -113,6 +113,7 @@ export function initGridKeys(deps) {
     toggleCommentsSidebar,
     toggleTagsSidebar,
     openInferenceSidebar,
+    acceptInferred,
     window: winOverride,
     document: docOverride,
     navigator: navOverride,
@@ -531,6 +532,19 @@ export function initGridKeys(deps) {
     ) {
       e.preventDefault();
       openInferenceSidebar();
+      return;
+    }
+    if (
+      mod &&
+      !e.shiftKey &&
+      !e.altKey &&
+      (keyLower === "." || keyLower === "decimal")
+    ) {
+      e.preventDefault();
+      if (typeof acceptInferred === "function") {
+        const result = acceptInferred();
+        if (result?.status) setStatusMessage(result.status);
+      }
       return;
     }
     if (

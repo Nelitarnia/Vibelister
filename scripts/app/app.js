@@ -794,6 +794,7 @@ const disposeKeys = initGridKeys({
   toggleCommentsSidebar: () => commentsUI?.toggle?.(),
   toggleTagsSidebar: () => tagUI?.toggle?.(),
   openInferenceSidebar: () => toggleInteractionToolsPane?.(),
+  acceptInferred: () => interactionActions?.acceptInferred?.(),
 });
 
 // Initialize palette (handles both Outcome and End cells)
