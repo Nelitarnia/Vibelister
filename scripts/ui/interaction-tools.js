@@ -95,11 +95,22 @@ export function initInteractionTools(options = {}) {
     refresh();
   }
 
-  acceptButton?.addEventListener("click", () => run(actions.acceptInferred));
+  function promoteInferred() {
+    run(actions.acceptInferred);
+  }
+
+  acceptButton?.addEventListener("click", promoteInferred);
   clearButton?.addEventListener("click", () =>
     run(actions.clearInferenceMetadata),
   );
   uncertainButton?.addEventListener("click", () => run(actions.toggleUncertain));
+
+  pane?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.altKey) {
+      e.preventDefault();
+      promoteInferred();
+    }
+  });
 
   uncertaintyDefaultInput?.addEventListener("input", (e) => {
     const next =
