@@ -105,13 +105,6 @@ export function initInteractionTools(options = {}) {
   );
   uncertainButton?.addEventListener("click", () => run(actions.toggleUncertain));
 
-  pane?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.altKey) {
-      e.preventDefault();
-      promoteInferred();
-    }
-  });
-
   uncertaintyDefaultInput?.addEventListener("input", (e) => {
     const next =
       typeof actions.setDefaultUncertainty === "function"
