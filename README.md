@@ -88,9 +88,11 @@ This is a generated view which puts together the Actions and Inputs you've liste
 
 To help navigate Interactions, there is an Outline that can be brought out with Ctrl+Shift+O (or clicking the small button to the left). You can also immediately jump between actions with Ctrl+Shift+Up or Ctrl+Shift+Down, or step through each action and its variants with Ctrl+Shift+Alt+Up or Ctrl+Shift+Alt+Down.
 
-While adding Actions to the End-column, you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed". You can also see most recently added Actions to quickly select them by holding Ctrl while the palette is open.
+While adding Actions to the End-column, you can additionally filter through Modifers on the search bar with "+". For example, "+ Falling" or "Attack + Slowed". You can also see most recently added Actions to quickly select them by holding Ctrl and pressing Space while the palette is open.
 
 Although the default mode in Interactions is comparing Actions vs Inputs (AI), pressing Ctrl+Shift+A lets you switch to Actions vs Actions (AA) comparing in Interactions-view. (It's rather specialized, but could come in handy in some kind of situations.)
+
+Another potentially useful feature is to copy modifiers from the base Action to the search query while placing Actions - this can be done with Ctrl+Shift+>.
 
 ## Phases
 

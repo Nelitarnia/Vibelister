@@ -209,9 +209,4 @@ This document outlines a maintainable directory layout tailored to the current c
 
 ## Transition tips
 
-- Move files incrementally, updating import paths in small batches to keep diffs manageable.
-- Add `index.js` aggregators only if they reduce import noise; otherwise rely on explicit paths for clarity.
-- Update `README.md` once you begin the migration so new contributors know where to look.
-- Consider introducing a build step (e.g., Vite, Parcel) after reorganizing so bundling respects the new structure.
-
 Adopting this layout keeps domain, UI, and support code clearly separated while remaining flexible for future expansion.
