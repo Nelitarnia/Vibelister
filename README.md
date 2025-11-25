@@ -127,6 +127,14 @@ While testing Actions vs Actions, you can choose to mirror the Phase 0 notes to 
 
 The recommended default settings for this feature are included when starting a new project: the Mirrored column is pre-enabled for "Uncertain", "Impossible", "No effect", "Overrides" and "Changes". Dual Of defaults are also pre-filled so "Uncertain", "Impossible" and "Changes" reference themselves, while "No effect" and "Overrides" point to each other.
 
+## Inference
+
+It's possible to use automatic inference to predict notes based on the manually set notes in the project so far. Running inference makes the program attempt to set empty notes in the selected scope (from current selection to entire project). If it succeeds, it generates a likely note while also giving the cell values for uncertainty and source. Uncertainty means how likely the inference is and source means which data point was the primary factor in deciding the result.
+
+Inference deduces results from similarity between Actions (through both modified Actions and user-set Action Groups), commonly seen Input or Modifier patterns as well as a trend of recently set Actions.
+
+Besides the dialog for automatic inference in the Tools drop-down menu, there's also an Inference sub-panel which can be opened with Ctrl+Shift+U. It contains some tools for manually adjusting uncertainty, promoting notes to manual or simply deleting inferred notes and their metadata.
+
 ## Other features
 
 You can create box-shaped multi-cell selections by holding down Shift while clicking cells or moving on the sheet with arrow keys.
@@ -151,12 +159,10 @@ You can clean up your project file using a dialog in Tools -> Clean Up...
 
 - Freezing certain columns so that they always stay visible (like in Libreoffice Calc, etc.)
 - Ability to create rectangular selections by dragging.
-- Creating Action/Input groups to filter visibility in large sheets like Interactions.
+- Creating Input groups to filter visibility in large sheets like Interactions.
 - Option to show the canonical IDs of data elements for debugging purposes.
 - Giving custom Phase rules to modified Actions.
 - Ability to jump between elements with a stable ID as if they were links for faster navigation.
-- Predictive analysis to auto-fill cells (maybe one day in the future...)
-  - Ability to create Action types or categories would likely help guide this feature.
 - Exporting or importing files in more formats.
 - Other cleaning up and streamlining around the files.
 - Write better instructions for the user, and add helpful tooltips.

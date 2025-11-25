@@ -97,7 +97,7 @@ body {
 
 .status__text {
   display: inline-block;
-  max-width: 42ch;
+  max-width: 60ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
