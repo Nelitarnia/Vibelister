@@ -2047,7 +2047,7 @@ export function getInteractionsTests() {
       },
     },
     {
-      name: "inference skips end/tag when manual outcome uses defaults",
+      name: "inference skips end/tag when manual outcome uses defaults and skip option",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
         addAction("Strike");
@@ -2086,7 +2086,10 @@ export function getInteractionsTests() {
           getInteractionsRowCount: (m) => getInteractionsRowCount(m),
         });
 
-        const res = controller.runInference({ scope: "project" });
+        const res = controller.runInference({
+          scope: "project",
+          skipManualOutcome: true,
+        });
 
         assert.strictEqual(res.applied, 0, "no inference applied to manual phase");
         assert.strictEqual(res.skippedManual, 1, "manual outcome skipped");
