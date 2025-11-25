@@ -1019,18 +1019,25 @@ export function initPalette(ctx) {
     const mode = pal.mode;
     if (!mode) return;
 
-    if (mode.supportsRecentToggle && e.key === "Control" && !pal.showRecent) {
+    const wantsRecentToggle =
+      mode.supportsRecentToggle &&
+      !pal.showRecent &&
+      e.ctrlKey &&
+      !e.altKey &&
+      !e.metaKey &&
+      (e.code === "Space" || e.key === " ");
+    if (wantsRecentToggle) {
+      e.preventDefault();
       buildRecentItems();
       return;
     }
 
     const wantsBaseModHotkey =
       mode.name === "end" &&
-      e.altKey &&
       e.shiftKey &&
       !e.metaKey &&
-      !e.ctrlKey &&
-      (e.key === "." || e.key === ">");
+      (e.key === "." || e.key === ">") &&
+      ((e.ctrlKey && !e.altKey) || (e.altKey && !e.ctrlKey));
     if (wantsBaseModHotkey) {
       const baseMods = getBaseActionModNames(Number(sel?.r));
       if (baseMods.length) {
@@ -1191,7 +1198,7 @@ export function initPalette(ctx) {
     const mode = pal.mode;
     if (!mode) return;
     if (!pal.showRecent) return;
-    if (e.key === "Control" || !e.ctrlKey) {
+    if (!e.ctrlKey) {
       pal.showRecent = false;
       refilter();
     }
