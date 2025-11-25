@@ -55,6 +55,26 @@ export function initPalette(ctx) {
       .map(Number)
       .filter(Number.isFinite);
 
+  const modNamesFromVariantSig = (variantSig) => {
+    const ids = sortIdsByUserOrder(idsFromSig(variantSig), model);
+    const modRows = Array.isArray(model?.modifiers) ? model.modifiers : [];
+    const names = [];
+    for (const id of ids) {
+      const nm = modRows.find((m) => (m?.id | 0) === (id | 0))?.name;
+      const trimmed = typeof nm === "string" ? nm.trim() : "";
+      if (trimmed) names.push(trimmed);
+    }
+    return names;
+  };
+
+  const getBaseActionModNames = (rowIndex) => {
+    const activeView = typeof getActiveView === "function" ? getActiveView() : "";
+    if (activeView !== "interactions") return [];
+    const pair = getInteractionsPair(model, rowIndex);
+    if (!pair) return [];
+    return modNamesFromVariantSig(pair.variantSig || "");
+  };
+
   // Normalize “Action (A+B)” or “Action — A+B” to “Action +A +B”
   const normalizeCellTextToQuery = (s, model = null) => {
     const txt = String(s || "").trim();
@@ -1001,6 +1021,55 @@ export function initPalette(ctx) {
 
     if (mode.supportsRecentToggle && e.key === "Control" && !pal.showRecent) {
       buildRecentItems();
+      return;
+    }
+
+    const wantsBaseModHotkey =
+      mode.name === "end" &&
+      e.altKey &&
+      e.shiftKey &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      (e.key === "." || e.key === ">");
+    if (wantsBaseModHotkey) {
+      const baseMods = getBaseActionModNames(Number(sel?.r));
+      if (baseMods.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        pal.prefillActive = false;
+        pal.showRecent = false;
+        const current = String(pal.query || "").trim();
+        const existing = new Set(
+          current
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((tok) => tok.toLowerCase()),
+        );
+        const modTokens = baseMods
+          .map((name) => `+${name}`)
+          .filter((tok) => !existing.has(tok.toLowerCase()));
+        if (modTokens.length) {
+          const nextQuery = current
+            ? `${current} ${modTokens.join(" ")}`
+            : modTokens.join(" ");
+          pal.query = nextQuery;
+          if (!mode.consumeTyping && editor) {
+            try {
+              editor.value = nextQuery;
+            } catch (_) {}
+          }
+          refilter();
+          setTimeout(() => {
+            if (!pal.isOpen) return;
+            try {
+              const end = editor.value.length;
+              if (typeof editor.setSelectionRange === "function") {
+                editor.setSelectionRange(end, end);
+              }
+            } catch (_) {}
+          }, 0);
+        }
+      }
       return;
     }
 
