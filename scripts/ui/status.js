@@ -218,7 +218,8 @@ export function initStatusBar(element, opts = {}) {
     return history.map((entry) => ({ ...entry }));
   }
 
-  function handleClick() {
+  function handleClick(e) {
+    if (e && panel && panel.contains(e.target)) return;
     toggleHistory();
   }
 
