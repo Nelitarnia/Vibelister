@@ -43,6 +43,7 @@ export function initStatusBar(element, opts = {}) {
   let isOpen = false;
   let outsideHandler = null;
   let escHandler = null;
+  let focusHandler = null;
   const panelId = element.id
     ? `${element.id}-history`
     : `status-history-${Math.random().toString(36).slice(2)}`;
@@ -68,6 +69,7 @@ export function initStatusBar(element, opts = {}) {
     panel.innerHTML = "";
     panel.setAttribute("role", "log");
     panel.setAttribute("aria-label", "Status message history");
+    if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "-1");
 
     const heading = document.createElement("div");
     heading.className = "status-history__header";
@@ -89,6 +91,8 @@ export function initStatusBar(element, opts = {}) {
     for (const entry of [...history].reverse()) {
       const item = document.createElement("li");
       item.className = "status-history__item";
+      item.setAttribute("role", "listitem");
+      item.tabIndex = 0;
 
       const time = document.createElement("time");
       time.className = "status-history__item-time";
@@ -126,9 +130,25 @@ export function initStatusBar(element, opts = {}) {
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
-      hideHistory();
-      element.focus();
+      hideHistory(true);
     }
+  }
+
+  function onDocumentFocusIn(e) {
+    if (!panel || !isOpen) return;
+    if (panel.contains(e.target)) return;
+    if (element.contains(e.target)) return;
+    hideHistory();
+  }
+
+  function focusFirstHistoryEntry() {
+    if (!panel) return;
+    const firstItem = panel.querySelector(".status-history__item");
+    if (firstItem) {
+      firstItem.focus({ preventScroll: true });
+      return;
+    }
+    panel.focus({ preventScroll: true });
   }
 
   function showHistory() {
@@ -138,6 +158,7 @@ export function initStatusBar(element, opts = {}) {
     panel.style.display = "flex";
     isOpen = true;
     element.setAttribute("aria-expanded", "true");
+    focusFirstHistoryEntry();
     if (!outsideHandler) {
       outsideHandler = onDocumentMouseDown;
       document.addEventListener("mousedown", outsideHandler, true);
@@ -146,9 +167,13 @@ export function initStatusBar(element, opts = {}) {
       escHandler = onDocumentKeyDown;
       document.addEventListener("keydown", escHandler, true);
     }
+    if (!focusHandler) {
+      focusHandler = onDocumentFocusIn;
+      document.addEventListener("focusin", focusHandler, true);
+    }
   }
 
-  function hideHistory() {
+  function hideHistory(shouldFocusElement = false) {
     if (!panel) return;
     panel.dataset.open = "false";
     panel.style.display = "none";
@@ -162,6 +187,11 @@ export function initStatusBar(element, opts = {}) {
       document.removeEventListener("keydown", escHandler, true);
       escHandler = null;
     }
+    if (focusHandler) {
+      document.removeEventListener("focusin", focusHandler, true);
+      focusHandler = null;
+    }
+    if (shouldFocusElement) element.focus({ preventScroll: true });
   }
 
   function toggleHistory() {
