@@ -6,6 +6,7 @@ import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
   getInteractionsPair,
   getInteractionsRowCount,
+  isInteractionPhaseColumnActiveForRow,
   noteKeyForPair,
 } from "./interactions.js";
 
@@ -13,6 +14,7 @@ export const CLEANUP_ACTION_IDS = Object.freeze({
   orphanNotes: "cleanup-orphan-notes",
   orphanEndVariants: "cleanup-end-variants",
   orphanComments: "cleanup-orphan-comments",
+  phaseOverflowNotes: "cleanup-phase-overflow-notes",
 });
 
 const CLEANUP_ACTIONS = [
@@ -40,7 +42,22 @@ const CLEANUP_ACTIONS = [
     defaultSelected: true,
     collect: collectOrphanComments,
   },
+  {
+    id: CLEANUP_ACTION_IDS.phaseOverflowNotes,
+    label: "Trim notes outside active phases",
+    description: "Clear notes/comments outside an action's phase range.",
+    kind: "notes",
+    defaultSelected: true,
+    collect: collectPhaseOverflowNotes,
+  },
 ];
+
+function parsePhaseSuffix(key) {
+  const text = String(key || "");
+  const match = /^(.*)\|p(\d+)$/.exec(text);
+  if (!match) return null;
+  return { baseKey: match[1], phase: Number(match[2]) };
+}
 
 function baseKeyOf(key) {
   const text = String(key || "");
@@ -62,6 +79,18 @@ function buildVariantCatalogMap(model) {
     catalog.set(key, set);
   }
   return catalog;
+}
+
+function buildInteractionRowLookup(model) {
+  const lookup = new Map();
+  const rowCount = getInteractionsRowCount(model) || 0;
+  for (let r = 0; r < rowCount; r++) {
+    const pair = getInteractionsPair(model, r);
+    if (!pair) continue;
+    const baseKey = noteKeyForPair(pair, undefined);
+    if (baseKey) lookup.set(baseKey, r);
+  }
+  return lookup;
 }
 
 function hasVariant(catalog, actionId, sig) {
@@ -356,6 +385,90 @@ function collectOrphanComments(ctx) {
   return { targets };
 }
 
+function hasPhaseField(note) {
+  if (!note || typeof note !== "object") return false;
+  return (
+    Object.prototype.hasOwnProperty.call(note, "outcomeId") ||
+    Object.prototype.hasOwnProperty.call(note, "result") ||
+    Object.prototype.hasOwnProperty.call(note, "endActionId") ||
+    Object.prototype.hasOwnProperty.call(note, "endVariantSig") ||
+    Object.prototype.hasOwnProperty.call(note, "tags")
+  );
+}
+
+function isPhaseAllowedForNote(model, parsed, phase, lookup) {
+  if (!Number.isFinite(phase)) return true;
+  const actions = Array.isArray(model?.actions) ? model.actions : [];
+  const action = actions.find((row) => row && row.id === parsed?.actionId);
+  const ids = action?.phases?.ids;
+  if (!Array.isArray(ids) || ids.length === 0) return true;
+  if (ids.includes(phase)) return true;
+  const rowIndex = lookup?.get(parsed?.baseKey);
+  if (!Number.isInteger(rowIndex)) return false;
+  const column = { key: `p${phase}:outcome` };
+  const viewDef = { columns: [column] };
+  return isInteractionPhaseColumnActiveForRow(model, viewDef, rowIndex, 0, column);
+}
+
+function collectPhaseOverflowNotes(ctx) {
+  const {
+    model,
+    noteEntries,
+    invalidNoteKeys,
+    includeBypassed,
+    bypassLookup,
+    actionIdSet,
+    inputIdSet,
+    phaseRowLookup,
+  } = ctx;
+  const targets = [];
+  const commentTargets = [];
+  const skipBypass = !includeBypassed;
+  const interactionComments = model?.comments?.interactions;
+  const entries = new Map(noteEntries);
+  const commentKeys = interactionComments ? Object.keys(interactionComments) : [];
+  for (const key of commentKeys) {
+    if (!entries.has(key)) entries.set(key, undefined);
+  }
+
+  for (const [key, note] of entries.entries()) {
+    const info = parsePhaseSuffix(key);
+    if (!info) continue;
+
+    const hasComment = interactionComments
+      ? Object.prototype.hasOwnProperty.call(interactionComments, key)
+      : false;
+    if (!hasPhaseField(note) && !hasComment) continue;
+
+    const parsed = parseNoteKey(info.baseKey);
+    if (!parsed) continue;
+    if (skipBypass) {
+      if (
+        noteReferencesBypassedVariant(parsed, {
+          bypassLookup,
+          actionIdSet,
+          inputIdSet,
+        })
+      ) {
+        continue;
+      }
+    }
+    if (isPhaseAllowedForNote(model, parsed, info.phase, phaseRowLookup)) {
+      continue;
+    }
+
+    const alreadyInvalid = invalidNoteKeys?.has(key);
+    if (!alreadyInvalid && hasPhaseField(note)) {
+      targets.push(key);
+      invalidNoteKeys?.add(key);
+    }
+    if (hasComment) {
+      commentTargets.push(key);
+    }
+  }
+  return { targets, commentTargets };
+}
+
 function applyTargets(model, analysis) {
   const removedById = new Map();
   let removedNotes = 0;
@@ -367,37 +480,53 @@ function applyTargets(model, analysis) {
       : null;
 
   for (const entry of analysis.actions) {
-    const { def, targets } = entry;
+    const targets = Array.isArray(entry.targets) ? entry.targets : [];
+    const commentTargets = Array.isArray(entry.commentTargets)
+      ? entry.commentTargets
+      : [];
+    const { def } = entry;
+    let removed = 0;
     if (def.kind === "notes") {
       if (!notes) {
         removedById.set(def.id, 0);
-        continue;
-      }
-      let removed = 0;
-      for (const key of targets) {
-        if (Object.prototype.hasOwnProperty.call(notes, key)) {
-          delete notes[key];
-          removed++;
+      } else {
+        for (const key of targets) {
+          if (Object.prototype.hasOwnProperty.call(notes, key)) {
+            delete notes[key];
+            removed++;
+          }
         }
       }
       removedNotes += removed;
-      removedById.set(def.id, removed);
     } else if (def.kind === "comments") {
       const rows = commentStore?.interactions;
       if (!rows || typeof rows !== "object") {
         removedById.set(def.id, 0);
-        continue;
-      }
-      let removed = 0;
-      for (const rowId of targets) {
-        if (Object.prototype.hasOwnProperty.call(rows, rowId)) {
-          delete rows[rowId];
-          removed++;
+      } else {
+        for (const rowId of targets) {
+          if (Object.prototype.hasOwnProperty.call(rows, rowId)) {
+            delete rows[rowId];
+            removed++;
+          }
         }
       }
       removedComments += removed;
-      removedById.set(def.id, removed);
     }
+
+    if (commentTargets.length) {
+      const rows = commentStore?.interactions;
+      if (rows && typeof rows === "object") {
+        for (const rowId of commentTargets) {
+          if (Object.prototype.hasOwnProperty.call(rows, rowId)) {
+            delete rows[rowId];
+            removedComments++;
+            removed++;
+          }
+        }
+      }
+    }
+
+    removedById.set(def.id, removed);
   }
 
   return {
@@ -425,6 +554,7 @@ function formatRunResult(analysis, applyResult, { apply } = {}) {
   const perAction = [];
   const removedLookup = applyResult?.removedById;
   for (const entry of safeAnalysis.actions) {
+    const candidates = Number(entry.candidates) || 0;
     const removed = apply
       ? removedLookup instanceof Map
         ? removedLookup.get(entry.def.id) || 0
@@ -434,7 +564,7 @@ function formatRunResult(analysis, applyResult, { apply } = {}) {
       id: entry.def.id,
       label: entry.def.label,
       kind: entry.def.kind,
-      candidates: entry.targets.length,
+      candidates,
       removed,
     });
   }
@@ -464,6 +594,7 @@ function collectTargets(model, selectedActions, options = {}) {
   const bypassLookup = buildBypassLookup(model);
   const actionIdSet = buildIdSet(model?.actions);
   const inputIdSet = buildIdSet(model?.inputs);
+  const phaseRowLookup = buildInteractionRowLookup(model);
   const ctx = {
     model,
     variantCatalog,
@@ -474,6 +605,7 @@ function collectTargets(model, selectedActions, options = {}) {
     bypassLookup,
     actionIdSet,
     inputIdSet,
+    phaseRowLookup,
   };
   const actions = [];
   let totalCandidates = 0;
@@ -481,11 +613,18 @@ function collectTargets(model, selectedActions, options = {}) {
     const collector = action.collect;
     if (typeof collector !== "function") continue;
     const result = collector(ctx) || { targets: [] };
-    const targets = Array.isArray(result.targets)
+    const rawTargets = Array.isArray(result.targets)
       ? result.targets.map((key) => String(key))
       : [];
-    actions.push({ def: action, targets });
-    totalCandidates += targets.length;
+    const rawComments = Array.isArray(result.commentTargets)
+      ? result.commentTargets.map((key) => String(key))
+      : [];
+    const targets = action.kind === "comments" ? [] : rawTargets;
+    const commentTargets =
+      action.kind === "comments" ? rawTargets : rawComments;
+    const candidates = targets.length + commentTargets.length;
+    actions.push({ def: action, targets, commentTargets, candidates });
+    totalCandidates += candidates;
   }
   return { actions, totalCandidates };
 }
