@@ -161,5 +161,54 @@ export function getCleanupTests() {
         assert.ok(!model.comments.interactions[rowId], "comment deleted after opt-in run");
       },
     },
+    {
+      name: "removes notes and comments for inactive phases",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Phased");
+        action.phases = { ids: [0], labels: {} };
+        const input = addInput("Button");
+        const outcome = addOutcome("Win");
+        const baseKey = `ai|${action.id}|${input.id}|`;
+        const allowedKey = `${baseKey}|p0`;
+        const blockedKey = `${baseKey}|p2`;
+        model.notes[allowedKey] = { outcomeId: outcome.id };
+        model.notes[blockedKey] = { outcomeId: outcome.id, tags: ["off"] };
+        model.comments.interactions[blockedKey] = {
+          default: { value: "phase comment" },
+        };
+        const controller = createCleanupController({
+          model,
+          runModelMutation: (_label, fn) => fn(),
+          makeUndoConfig: () => ({}),
+        });
+        const noPhaseCleanup = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.orphanNotes],
+          apply: true,
+        });
+        assert.strictEqual(
+          noPhaseCleanup.totalRemoved,
+          0,
+          "phase overflow ignored when action is not selected",
+        );
+        assert.ok(model.notes[blockedKey], "inactive phase note remains by default");
+        assert.ok(
+          model.comments.interactions[blockedKey],
+          "inactive phase comment remains by default",
+        );
+        const phaseCleanup = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.phaseOverflowNotes],
+          apply: true,
+        });
+        assert.strictEqual(
+          phaseCleanup.totalRemoved,
+          2,
+          "removes the phase-specific note and its comment",
+        );
+        assert.ok(model.notes[allowedKey], "allowed phase note is preserved");
+        assert.ok(!model.notes[blockedKey], "disallowed phase note removed");
+        assert.ok(!model.comments.interactions[blockedKey], "phase comment removed");
+      },
+    },
   ];
 }
