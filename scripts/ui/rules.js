@@ -109,16 +109,25 @@ export function openRulesDialog(model) {
       "div",
       {
         style:
-          "margin:8px 0;padding:8px;border:1px solid #273052;border-radius:10px;background:#0c1224;",
+          "margin:8px 0;padding:8px;border:1px solid #273052;border-radius:10px;background:#0c1224;display:flex;flex-direction:column;gap:12px;",
       },
       [h("h3", null, ["Groups"])],
     );
     groups.forEach((g, gi) => {
+      const card = h(
+        "div",
+        {
+          style:
+            "display:grid;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid #1f2743;box-shadow:0 8px 28px rgba(0,0,0,.32);background:" +
+            (gi % 2 === 0 ? "#0d1a32;" : "#0c152a;"),
+        },
+        [],
+      );
       const line = h(
         "div",
         {
           style:
-            "display:grid;grid-template-columns:1fr auto auto auto auto auto auto;gap:6px;align-items:center;margin:6px 0;padding:6px;border:1px solid #1f2743;border-radius:8px;background:#0b1020;",
+            "display:grid;grid-template-columns:1fr auto auto auto auto auto auto;gap:8px;align-items:center;padding:6px 6px 0;border-top:1px solid #243154;",
         },
         [],
       );
@@ -232,7 +241,7 @@ export function openRulesDialog(model) {
       };
       line.appendChild(moveUp);
       line.appendChild(moveDown);
-      const memHdr = h("div", { style: "grid-column:1/-1;margin-top:6px;" }, [
+      const memHdr = h("div", { style: "grid-column:1/-1;margin-top:8px;" }, [
         h("div", { style: "opacity:.8;margin-bottom:4px;" }, ["Members"]),
       ]);
       const mems = h(
@@ -262,9 +271,10 @@ export function openRulesDialog(model) {
           return lab;
         }),
       );
-      gWrap.appendChild(line);
-      gWrap.appendChild(memHdr);
-      gWrap.appendChild(mems);
+      card.appendChild(line);
+      card.appendChild(memHdr);
+      card.appendChild(mems);
+      gWrap.appendChild(card);
     });
     const addG = h(
       "button",
