@@ -1,8 +1,10 @@
 import {
   createEmptyCommentMap,
+  INTERACTION_COMMENT_META_KEY,
   makeCommentCellKey,
   makeCommentColumnKey,
   makeCommentRowKey,
+  normalizeInteractionCommentMetadata,
   normalizeCommentsMap,
 } from "../data/comments.js";
 
@@ -77,7 +79,12 @@ function resolveCommentCoords(viewDef, rowOrId) {
   const rowId = resolveRowId(rowOrId);
   if (!rowId) return null;
   const rowKey = makeCommentRowKey(viewKey, rowId);
-  return { viewKey, rowId, rowKey };
+  const base = { viewKey, rowId, rowKey };
+  if (viewKey === "interactions") {
+    const rowMeta = normalizeInteractionCommentMetadata(rowId, rowOrId);
+    if (rowMeta) base.rowMeta = rowMeta;
+  }
+  return base;
 }
 
 function extendWithColumn(coords, viewDef, columnOrIndex) {
@@ -87,7 +94,7 @@ function extendWithColumn(coords, viewDef, columnOrIndex) {
   return { ...coords, columnKey, cellKey };
 }
 
-function ensureRowBucket(store, viewKey, rowId) {
+function ensureRowBucket(store, viewKey, rowId, rowMeta = null) {
   if (!store) return null;
   if (!store[viewKey] || typeof store[viewKey] !== "object") {
     store[viewKey] = {};
@@ -96,14 +103,40 @@ function ensureRowBucket(store, viewKey, rowId) {
   if (!viewBucket[rowId] || typeof viewBucket[rowId] !== "object") {
     viewBucket[rowId] = {};
   }
+  if (viewKey === "interactions" && rowMeta) {
+    const meta =
+      viewBucket[rowId][INTERACTION_COMMENT_META_KEY] &&
+      typeof viewBucket[rowId][INTERACTION_COMMENT_META_KEY] === "object"
+        ? viewBucket[rowId][INTERACTION_COMMENT_META_KEY]
+        : {};
+    viewBucket[rowId][INTERACTION_COMMENT_META_KEY] = { ...meta, ...rowMeta };
+  }
   return viewBucket[rowId];
+}
+
+function isInteractionMetaKey(viewKey, columnKey) {
+  return viewKey === "interactions" && String(columnKey) === INTERACTION_COMMENT_META_KEY;
+}
+
+function readInteractionRowMeta(viewKey, rowId, rowBucket) {
+  if (viewKey !== "interactions") return null;
+  const meta = normalizeInteractionCommentMetadata(
+    rowId,
+    rowBucket && rowBucket[INTERACTION_COMMENT_META_KEY],
+  );
+  return meta || null;
+}
+
+function hasCommentColumns(viewKey, rowBucket) {
+  if (!rowBucket || typeof rowBucket !== "object") return false;
+  return Object.keys(rowBucket).some((key) => !isInteractionMetaKey(viewKey, key));
 }
 
 export function setComment(model, viewDef, rowOrId, columnOrIndex, value) {
   const store = ensureCommentStore(model);
   const coords = extendWithColumn(resolveCommentCoords(viewDef, rowOrId), viewDef, columnOrIndex);
   if (!store || !coords) return null;
-  const rowBucket = ensureRowBucket(store, coords.viewKey, coords.rowId);
+  const rowBucket = ensureRowBucket(store, coords.viewKey, coords.rowId, coords.rowMeta);
   if (!rowBucket) return null;
   const previous = Object.prototype.hasOwnProperty.call(rowBucket, coords.columnKey)
     ? rowBucket[coords.columnKey]
@@ -112,9 +145,11 @@ export function setComment(model, viewDef, rowOrId, columnOrIndex, value) {
     return null;
   }
   rowBucket[coords.columnKey] = cloneCommentValue(value);
+  const rowMeta = coords.rowMeta || readInteractionRowMeta(coords.viewKey, coords.rowId, rowBucket);
   return {
     type: "set",
     ...coords,
+    rowMeta: rowMeta ? cloneCommentValue(rowMeta) : null,
     value: rowBucket[coords.columnKey],
     previous,
   };
@@ -131,12 +166,14 @@ export function deleteComment(model, viewDef, rowOrId, columnOrIndex) {
     const rowBucket = viewBucket[baseCoords.rowId];
     if (!rowBucket || typeof rowBucket !== "object") return null;
     const snapshot = { ...rowBucket };
+    const rowMeta = baseCoords.rowMeta || readInteractionRowMeta(baseCoords.viewKey, baseCoords.rowId, rowBucket);
     delete viewBucket[baseCoords.rowId];
     return {
       type: "deleteRow",
       ...baseCoords,
       columnKey: null,
       cellKey: null,
+      rowMeta: rowMeta ? cloneCommentValue(rowMeta) : null,
       previous: snapshot,
     };
   }
@@ -149,13 +186,15 @@ export function deleteComment(model, viewDef, rowOrId, columnOrIndex) {
     return null;
   }
   const previous = rowBucket[coords.columnKey];
+  const rowMeta = coords.rowMeta || readInteractionRowMeta(coords.viewKey, coords.rowId, rowBucket);
   delete rowBucket[coords.columnKey];
-  if (!Object.keys(rowBucket).length) {
+  if (!hasCommentColumns(coords.viewKey, rowBucket)) {
     delete viewBucket[coords.rowId];
   }
   return {
     type: "delete",
     ...coords,
+    rowMeta: rowMeta ? cloneCommentValue(rowMeta) : null,
     previous,
   };
 }
@@ -214,8 +253,10 @@ export function listCommentsForView(model, viewDef, options = {}) {
     if (!columns || typeof columns !== "object") continue;
     const rowId = String(rawRowId);
     const rowIndex = resolveRowIndex(rowId);
+    const rowMeta = readInteractionRowMeta(viewKey, rowId, columns);
     for (const [rawColumnKey, value] of Object.entries(columns)) {
       const columnKey = String(rawColumnKey);
+      if (isInteractionMetaKey(viewKey, columnKey)) continue;
       const columnInfo = columnMap.get(columnKey);
       const columnIndex = columnInfo ? columnInfo.index : -1;
       const cellKey = columnIndex >= 0
@@ -231,6 +272,7 @@ export function listCommentsForView(model, viewDef, options = {}) {
         columnIndex,
         cellKey,
         value: cloneCommentValue(value),
+        rowMeta: rowMeta ? cloneCommentValue(rowMeta) : null,
         column: columnInfo ? columnInfo.column : null,
       });
     }
@@ -267,10 +309,12 @@ export function listCommentsForCell(model, viewDef, rowOrId, columnOrIndex) {
   if (!Object.prototype.hasOwnProperty.call(rowBucket, coords.columnKey)) {
     return [];
   }
+  const rowMeta = coords.rowMeta || readInteractionRowMeta(coords.viewKey, coords.rowId, rowBucket);
   return [
     {
       ...coords,
       type: "value",
+      rowMeta: rowMeta ? cloneCommentValue(rowMeta) : null,
       value: rowBucket[coords.columnKey],
     },
   ];
@@ -289,6 +333,7 @@ export function makeCommentClipboardPayload(entry) {
   if (entry.rowId != null) payload.data.rowId = String(entry.rowId);
   if (entry.columnKey != null) payload.data.columnKey = String(entry.columnKey);
   if (entry.cellKey != null) payload.data.cellKey = String(entry.cellKey);
+  if (entry.rowMeta != null) payload.data.rowMeta = cloneCommentValue(entry.rowMeta);
   return payload;
 }
 
@@ -305,6 +350,7 @@ export function extractCommentClipboardData(payload) {
   if (data.rowId != null) result.rowId = String(data.rowId);
   if (data.columnKey != null) result.columnKey = String(data.columnKey);
   if (data.cellKey != null) result.cellKey = String(data.cellKey);
+  if (data.rowMeta != null) result.rowMeta = cloneCommentValue(data.rowMeta);
   return result;
 }
 
@@ -319,6 +365,14 @@ export function setCommentInactive(model, viewDef, rowOrId, columnOrIndex, inact
   const viewBucket = store[coords.viewKey];
   const rowBucket = viewBucket?.[coords.rowId];
   if (!rowBucket || typeof rowBucket !== "object") return null;
+  if (coords.rowMeta) {
+    const meta =
+      rowBucket[INTERACTION_COMMENT_META_KEY] &&
+      typeof rowBucket[INTERACTION_COMMENT_META_KEY] === "object"
+        ? rowBucket[INTERACTION_COMMENT_META_KEY]
+        : {};
+    rowBucket[INTERACTION_COMMENT_META_KEY] = { ...meta, ...coords.rowMeta };
+  }
   if (!Object.prototype.hasOwnProperty.call(rowBucket, coords.columnKey)) return null;
   const current = rowBucket[coords.columnKey];
   if (!current || typeof current !== "object") return null;
@@ -329,39 +383,30 @@ export function setCommentInactive(model, viewDef, rowOrId, columnOrIndex, inact
   const next = { ...current };
   if (desiredInactive) next.inactive = true;
   else if (Object.prototype.hasOwnProperty.call(next, "inactive")) delete next.inactive;
+  const rowMeta = coords.rowMeta || readInteractionRowMeta(coords.viewKey, coords.rowId, rowBucket);
   rowBucket[coords.columnKey] = next;
   return {
     type: "set",
     ...coords,
+    rowMeta: rowMeta ? cloneCommentValue(rowMeta) : null,
     value: cloneCommentValue(next),
     previous,
   };
 }
 
-function parseInteractionCommentRowId(rowId) {
-  if (rowId == null) return null;
-  const raw = String(rowId);
-  if (!raw) return null;
-  const parts = raw.split("|");
-  if (!parts.length) return null;
-  if (parts[0] === "ai" && parts.length >= 2) {
-    const aId = Number(parts[1]);
-    return Number.isFinite(aId) ? { kind: "AI", aId } : null;
-  }
-  if (parts[0] === "aa" && parts.length >= 3) {
-    const aId = Number(parts[1]);
-    const rhsActionId = Number(parts[2]);
-    return {
-      kind: "AA",
-      aId: Number.isFinite(aId) ? aId : null,
-      rhsActionId: Number.isFinite(rhsActionId) ? rhsActionId : null,
-    };
-  }
-  const maybeId = Number(parts[0]);
-  if (Number.isFinite(maybeId)) {
-    return { kind: "AI", aId: maybeId };
-  }
-  return null;
+function parseInteractionCommentRowId(rowId, rowBucket = null) {
+  const meta = normalizeInteractionCommentMetadata(
+    rowId,
+    rowBucket && rowBucket[INTERACTION_COMMENT_META_KEY],
+  );
+  if (!meta) return null;
+  const aId = Number(meta.actionId);
+  const rhs = Number(meta.rhsActionId);
+  return {
+    kind: meta.kind || null,
+    aId: Number.isFinite(aId) ? aId : null,
+    rhsActionId: Number.isFinite(rhs) ? rhs : null,
+  };
 }
 
 export function removeInteractionsCommentsForActionIds(model, actionIds) {
@@ -379,7 +424,7 @@ export function removeInteractionsCommentsForActionIds(model, actionIds) {
 
   const removed = [];
   for (const [rowId, columns] of Object.entries(viewBucket)) {
-    const meta = parseInteractionCommentRowId(rowId);
+    const meta = parseInteractionCommentRowId(rowId, columns);
     if (!meta) continue;
     const matches =
       (meta.aId != null && ids.has(String(meta.aId))) ||
@@ -391,6 +436,7 @@ export function removeInteractionsCommentsForActionIds(model, actionIds) {
         snapshot[columnKey] = cloneCommentValue(value);
       }
     }
+    const rowMeta = readInteractionRowMeta("interactions", rowId, columns);
     delete viewBucket[rowId];
     removed.push({
       type: "deleteRow",
@@ -399,6 +445,7 @@ export function removeInteractionsCommentsForActionIds(model, actionIds) {
       rowKey: makeCommentRowKey("interactions", rowId),
       columnKey: null,
       cellKey: null,
+      rowMeta: rowMeta ? cloneCommentValue(rowMeta) : null,
       previous: snapshot,
     });
   }

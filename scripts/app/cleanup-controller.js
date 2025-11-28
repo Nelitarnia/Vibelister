@@ -4,6 +4,10 @@
 import { buildInteractionsPairs, canonicalSig } from "../data/variants/variants.js";
 import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
+  INTERACTION_COMMENT_META_KEY,
+  normalizeInteractionCommentMetadata,
+} from "../data/comments.js";
+import {
   getInteractionsPair,
   getInteractionsRowCount,
   isInteractionPhaseColumnActiveForRow,
@@ -165,6 +169,48 @@ function parseNoteKey(baseKey) {
     };
   }
   return null;
+}
+
+function readInteractionCommentMeta(rowId, rowValue) {
+  if (!rowValue || typeof rowValue !== "object") {
+    return normalizeInteractionCommentMetadata(rowId, null);
+  }
+  return normalizeInteractionCommentMetadata(rowId, rowValue[INTERACTION_COMMENT_META_KEY]);
+}
+
+function baseKeyFromInteractionMeta(meta) {
+  if (!meta || !meta.kind) return null;
+  const kind = String(meta.kind || "").toUpperCase();
+  if (kind === "AA") {
+    if (!Number.isFinite(meta.actionId) || !Number.isFinite(meta.rhsActionId)) return null;
+    return `aa|${meta.actionId}|${meta.rhsActionId}|${canonicalSig(meta.variantSig || "")}|${canonicalSig(meta.rhsVariantSig || "")}`;
+  }
+  const actionId = Number(meta.actionId);
+  const inputId = Number(meta.inputId);
+  if (!Number.isFinite(actionId) || !Number.isFinite(inputId)) return null;
+  return `ai|${actionId}|${inputId}|${canonicalSig(meta.variantSig || "")}`;
+}
+
+function parsedNoteFromInteractionMeta(meta) {
+  const baseKey = baseKeyFromInteractionMeta(meta);
+  if (!baseKey) return null;
+  if (String(meta.kind || "").toUpperCase() === "AA") {
+    return {
+      kind: "AA",
+      actionId: Number(meta.actionId),
+      rhsActionId: Number(meta.rhsActionId),
+      variantSig: canonicalSig(meta.variantSig || ""),
+      rhsVariantSig: canonicalSig(meta.rhsVariantSig || ""),
+      baseKey,
+    };
+  }
+  return {
+    kind: "AI",
+    actionId: Number(meta.actionId),
+    inputId: Number(meta.inputId),
+    variantSig: canonicalSig(meta.variantSig || ""),
+    baseKey,
+  };
 }
 
 function parseSigParts(sig) {
@@ -362,16 +408,17 @@ function collectOrphanComments(ctx) {
   const store = model?.comments?.interactions;
   if (!store || typeof store !== "object") return { targets };
   const skipBypass = !includeBypassed;
-  for (const rowId of Object.keys(store)) {
-    const key = String(rowId);
-    const baseKey = baseKeyOf(key);
+  for (const [rowId, rowValue] of Object.entries(store)) {
+    const meta = readInteractionCommentMeta(rowId, rowValue);
+    const parsed = parsedNoteFromInteractionMeta(meta);
+    const baseKey = baseKeyFromInteractionMeta(meta) || baseKeyOf(String(rowId));
     if (baseKey && validBases.has(baseKey)) {
       continue;
     }
     if (skipBypass) {
-      const parsed = parseNoteKey(baseKey);
+      const parsedFallback = parsed || parseNoteKey(baseKey);
       if (
-        noteReferencesBypassedVariant(parsed, {
+        noteReferencesBypassedVariant(parsedFallback, {
           bypassLookup,
           actionIdSet,
           inputIdSet,
@@ -380,7 +427,7 @@ function collectOrphanComments(ctx) {
         continue;
       }
     }
-    targets.push(key);
+    targets.push(String(rowId));
   }
   return { targets };
 }
@@ -425,20 +472,11 @@ function collectPhaseOverflowNotes(ctx) {
   const commentTargets = [];
   const skipBypass = !includeBypassed;
   const interactionComments = model?.comments?.interactions;
-  const entries = new Map(noteEntries);
-  const commentKeys = interactionComments ? Object.keys(interactionComments) : [];
-  for (const key of commentKeys) {
-    if (!entries.has(key)) entries.set(key, undefined);
-  }
-
-  for (const [key, note] of entries.entries()) {
+  for (const [key, note] of noteEntries) {
     const info = parsePhaseSuffix(key);
     if (!info) continue;
 
-    const hasComment = interactionComments
-      ? Object.prototype.hasOwnProperty.call(interactionComments, key)
-      : false;
-    if (!hasPhaseField(note) && !hasComment) continue;
+    if (!hasPhaseField(note)) continue;
 
     const parsed = parseNoteKey(info.baseKey);
     if (!parsed) continue;
@@ -458,12 +496,31 @@ function collectPhaseOverflowNotes(ctx) {
     }
 
     const alreadyInvalid = invalidNoteKeys?.has(key);
-    if (!alreadyInvalid && hasPhaseField(note)) {
+    if (!alreadyInvalid) {
       targets.push(key);
       invalidNoteKeys?.add(key);
     }
-    if (hasComment) {
-      commentTargets.push(key);
+  }
+
+  if (interactionComments && typeof interactionComments === "object") {
+    for (const [rowId, rowValue] of Object.entries(interactionComments)) {
+      const meta = readInteractionCommentMeta(rowId, rowValue);
+      if (!meta || !Number.isFinite(meta.phase)) continue;
+      const parsed = parsedNoteFromInteractionMeta(meta) || parseNoteKey(baseKeyOf(String(rowId)));
+      if (!parsed) {
+        commentTargets.push(String(rowId));
+        continue;
+      }
+      if (
+        skipBypass &&
+        noteReferencesBypassedVariant(parsed, { bypassLookup, actionIdSet, inputIdSet })
+      ) {
+        continue;
+      }
+      if (isPhaseAllowedForNote(model, parsed, meta.phase, phaseRowLookup)) {
+        continue;
+      }
+      commentTargets.push(String(rowId));
     }
   }
   return { targets, commentTargets };

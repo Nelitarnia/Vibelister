@@ -1,5 +1,6 @@
 import { createCleanupController, CLEANUP_ACTION_IDS } from "../../../app/cleanup-controller.js";
 import { MOD_STATE_ID } from "../../../data/mod-state.js";
+import { INTERACTION_COMMENT_META_KEY } from "../../../data/comments.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 export function getCleanupTests() {
@@ -132,6 +133,12 @@ export function getCleanupTests() {
         const input = addInput("Button");
         const rowId = `ai|${action.id}|${input.id}|${mod.id}`;
         model.comments.interactions[rowId] = {
+          [INTERACTION_COMMENT_META_KEY]: {
+            kind: "AI",
+            actionId: action.id,
+            inputId: input.id,
+            variantSig: `${mod.id}`,
+          },
           default: { value: "keep" },
         };
         const controller = createCleanupController({
@@ -175,6 +182,13 @@ export function getCleanupTests() {
         model.notes[allowedKey] = { outcomeId: outcome.id };
         model.notes[blockedKey] = { outcomeId: outcome.id, tags: ["off"] };
         model.comments.interactions[blockedKey] = {
+          [INTERACTION_COMMENT_META_KEY]: {
+            kind: "AI",
+            actionId: action.id,
+            inputId: input.id,
+            variantSig: "",
+            phase: 2,
+          },
           default: { value: "phase comment" },
         };
         const controller = createCleanupController({
@@ -219,6 +233,13 @@ export function getCleanupTests() {
         const input = addInput("Button");
         const blockedKey = `ai|${action.id}|${input.id}||p2`;
         model.comments.interactions[blockedKey] = {
+          [INTERACTION_COMMENT_META_KEY]: {
+            kind: "AI",
+            actionId: action.id,
+            inputId: input.id,
+            variantSig: "",
+            phase: 2,
+          },
           default: { value: "phase comment" },
         };
         const controller = createCleanupController({
