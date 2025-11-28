@@ -44,6 +44,7 @@ export function initStatusBar(element, opts = {}) {
   let outsideHandler = null;
   let escHandler = null;
   let focusHandler = null;
+  let shortcutHandler = null;
   const panelId = element.id
     ? `${element.id}-history`
     : `status-history-${Math.random().toString(36).slice(2)}`;
@@ -199,6 +200,30 @@ export function initStatusBar(element, opts = {}) {
     else showHistory();
   }
 
+  function shouldIgnoreShortcutTarget(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    const focusableFormField = target.closest("input, textarea, select, button");
+    if (focusableFormField) return true;
+    return target.isContentEditable;
+  }
+
+  function onGlobalKeyDown(e) {
+    if (!element || !element.isConnected) return;
+    if (element.dataset.interactive !== "true") return;
+    if (e.defaultPrevented) return;
+    if (e.metaKey || e.ctrlKey) return;
+    if (!e.altKey || !e.shiftKey) return;
+    if (shouldIgnoreShortcutTarget(e.target)) return;
+
+    const key = String(e.key || "").toLowerCase();
+    if (key !== "h") return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    if (isOpen) hideHistory(true);
+    else showHistory();
+  }
+
   function updateDisplayedMessage(msg) {
     const displayText = formatDisplayText(msg);
     const visible = normalizeDisplayValue(displayText);
@@ -263,6 +288,10 @@ export function initStatusBar(element, opts = {}) {
   element.dataset.interactive = "true";
   element.addEventListener("click", handleClick);
   element.addEventListener("keydown", handleKeyDown);
+  if (!shortcutHandler) {
+    shortcutHandler = onGlobalKeyDown;
+    document.addEventListener("keydown", shortcutHandler, true);
+  }
 
   ensureLiveRegion();
   if (latest && latest.trim()) {
