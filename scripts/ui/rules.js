@@ -166,6 +166,20 @@ export function openRulesDialog(model) {
       lab.appendChild(document.createTextNode(mod.name || "mod " + mod.id));
       return lab;
     }
+    const fieldBaseStyle =
+      "background:#152038;color:#eaf0ff;border:1px solid #3d4f7a;border-radius:8px;padding:7px 8px;outline:none;transition:border-color .14s ease,box-shadow .14s ease;";
+    const fieldFocusStyle =
+      "border-color:#7ca1ff;box-shadow:0 0 0 2px rgba(124,161,255,.28);";
+    function applyFieldStyles(el, extra = "") {
+      el.style.cssText = fieldBaseStyle + extra;
+      el.onfocus = () => {
+        el.style.cssText = fieldBaseStyle + fieldFocusStyle + extra;
+      };
+      el.onblur = () => {
+        el.style.cssText = fieldBaseStyle + extra;
+      };
+      return el;
+    }
     const gWrap = h(
       "div",
       {
@@ -195,16 +209,12 @@ export function openRulesDialog(model) {
       const name = h("input", {
         value: g.name || "",
         placeholder: "Group name",
-        style:
-          "background:#0e152b;color:#e6e6e6;border:1px solid #2b3558;border-radius:8px;padding:6px;",
       });
+      applyFieldStyles(name, "width:100%;");
       name.oninput = () => (g.name = name.value);
       const mode = h(
         "select",
-        {
-          style:
-            "background:#0e152b;color:#e6e6e6;border:1px solid #2b3558;border-radius:8px;padding:6px;",
-        },
+        {},
         ["EXACT", "AT_LEAST", "AT_MOST", "RANGE"].map((m) => {
           const o = h("option", null, [m]);
           o.value = m;
@@ -212,6 +222,7 @@ export function openRulesDialog(model) {
           return o;
         }),
       );
+      applyFieldStyles(mode, "min-width:138px;");
       mode.onchange = () => {
         g.mode = mode.value;
         render();
@@ -245,9 +256,8 @@ export function openRulesDialog(model) {
         const inp = h("input", {
           type: "number",
           value: g[prop] ?? "",
-          style:
-            "width:60px;background:#0e152b;color:#e6e6e6;border:1px solid #2b3558;border-radius:8px;padding:6px;",
         });
+        applyFieldStyles(inp, "width:70px;");
         inp.oninput = () => (g[prop] = Number(inp.value));
         return h(
           "label",
