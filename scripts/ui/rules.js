@@ -105,6 +105,67 @@ export function openRulesDialog(model) {
   function render() {
     box.innerHTML = "";
     box.appendChild(h("h2", null, ["Modifier Rules"]));
+    const chipBaseStyle =
+      "display:inline-flex;gap:6px;align-items:center;padding:6px;border-radius:8px;border:1px solid #2f3a62;background:#111c36;color:#e6e6e6;transition:border-color .14s ease,box-shadow .14s ease,background .14s ease;";
+    function modChip(mod, opts = {}) {
+      const lab = h(
+        "label",
+        {
+          style: chipBaseStyle,
+        },
+        [],
+      );
+      const cb = h("input", {
+        type: "checkbox",
+        checked: opts.checked ? "checked" : null,
+      });
+      cb.dataset.id = String(mod.id);
+      let hovered = false;
+      let focused = false;
+      function sync() {
+        const isChecked = !!cb.checked;
+        const bg = hovered
+          ? isChecked
+            ? "#1d3665"
+            : "#162447"
+          : isChecked
+            ? "#182c52"
+            : "#111c36";
+        const border = isChecked ? "#4c6fc4" : "#3a4a76";
+        const shadow = focused
+          ? "0 0 0 2px rgba(88,140,255,.45)"
+          : hovered
+            ? "0 0 0 1px rgba(88,140,255,.28)"
+            : "none";
+        lab.style.cssText =
+          chipBaseStyle +
+          `background:${bg};border-color:${border};box-shadow:${shadow};`;
+      }
+      cb.onchange = () => {
+        opts.onChange && opts.onChange(cb.checked);
+        sync();
+      };
+      cb.onfocus = () => {
+        focused = true;
+        sync();
+      };
+      cb.onblur = () => {
+        focused = false;
+        sync();
+      };
+      lab.onmouseenter = () => {
+        hovered = true;
+        sync();
+      };
+      lab.onmouseleave = () => {
+        hovered = false;
+        sync();
+      };
+      sync();
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(mod.name || "mod " + mod.id));
+      return lab;
+    }
     const gWrap = h(
       "div",
       {
@@ -247,29 +308,17 @@ export function openRulesDialog(model) {
       const mems = h(
         "div",
         { style: "display:flex;flex-wrap:wrap;gap:8px;" },
-        mods.map((m) => {
-          const lab = h(
-            "label",
-            {
-              style:
-                "display:inline-flex;gap:6px;align-items:center;border:1px solid #1f2743;padding:6px;border-radius:8px;background:#0d1325;",
+        mods.map((m) =>
+          modChip(m, {
+            checked: g.memberIds?.includes(m.id),
+            onChange: (checked) => {
+              g.memberIds = g.memberIds || [];
+              const i = g.memberIds.indexOf(m.id);
+              if (checked && i < 0) g.memberIds.push(m.id);
+              if (!checked && i >= 0) g.memberIds.splice(i, 1);
             },
-            [],
-          );
-          const cb = h("input", {
-            type: "checkbox",
-            checked: g.memberIds?.includes(m.id) ? "checked" : null,
-          });
-          cb.onchange = () => {
-            g.memberIds = g.memberIds || [];
-            const i = g.memberIds.indexOf(m.id);
-            if (cb.checked && i < 0) g.memberIds.push(m.id);
-            if (!cb.checked && i >= 0) g.memberIds.splice(i, 1);
-          };
-          lab.appendChild(cb);
-          lab.appendChild(document.createTextNode(m.name || "mod " + m.id));
-          return lab;
-        }),
+          }),
+        ),
       );
       card.appendChild(line);
       card.appendChild(memHdr);
@@ -373,21 +422,11 @@ export function openRulesDialog(model) {
     const mxBox = h(
       "div",
       { style: "display:flex;flex-wrap:wrap;gap:8px;margin:6px 0;" },
-      mods.map((m) => {
-        const lab = h(
-          "label",
-          {
-            style:
-              "display:inline-flex;gap:6px;align-items:center;border:1px solid #1f2743;padding:6px;border-radius:8px;background:#0d1325;",
-          },
-          [],
-        );
-        const cb = h("input", { type: "checkbox" });
-        cb.dataset.id = String(m.id);
-        lab.appendChild(cb);
-        lab.appendChild(document.createTextNode(m.name || "mod " + m.id));
-        return lab;
-      }),
+      mods.map((m) =>
+        modChip(m, {
+          onChange: () => {},
+        }),
+      ),
     );
     const addMx = h(
       "button",
@@ -424,7 +463,7 @@ export function openRulesDialog(model) {
           "div",
           {
             style:
-              "display:flex;justify-content:space-between;align-items:center;border:1px solid #1f2743;padding:6px;border-radius:8px;background:#0d1325;margin:4px 0;",
+              "display:flex;justify-content:space-between;align-items:center;border:1px solid #314674;padding:6px;border-radius:8px;background:#111c33;margin:4px 0;box-shadow:0 6px 22px rgba(0,0,0,.32);",
           },
           [h("div", null, [txt])],
         );
