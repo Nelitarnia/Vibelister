@@ -210,5 +210,29 @@ export function getCleanupTests() {
         assert.ok(!model.comments.interactions[blockedKey], "phase comment removed");
       },
     },
+    {
+      name: "removes orphaned comments for inactive phases even without notes",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("Phased");
+        action.phases = { ids: [0], labels: {} };
+        const input = addInput("Button");
+        const blockedKey = `ai|${action.id}|${input.id}||p2`;
+        model.comments.interactions[blockedKey] = {
+          default: { value: "phase comment" },
+        };
+        const controller = createCleanupController({
+          model,
+          runModelMutation: (_label, fn) => fn(),
+          makeUndoConfig: () => ({}),
+        });
+        const phaseCleanup = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.phaseOverflowNotes],
+          apply: true,
+        });
+        assert.strictEqual(phaseCleanup.totalRemoved, 1, "removes the comment row");
+        assert.ok(!model.comments.interactions[blockedKey], "phase comment removed");
+      },
+    },
   ];
 }

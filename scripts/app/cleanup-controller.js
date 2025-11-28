@@ -425,11 +425,21 @@ function collectPhaseOverflowNotes(ctx) {
   const commentTargets = [];
   const skipBypass = !includeBypassed;
   const interactionComments = model?.comments?.interactions;
-  for (const [key, note] of noteEntries) {
-    if (invalidNoteKeys?.has(key)) continue;
+  const entries = new Map(noteEntries);
+  const commentKeys = interactionComments ? Object.keys(interactionComments) : [];
+  for (const key of commentKeys) {
+    if (!entries.has(key)) entries.set(key, undefined);
+  }
+
+  for (const [key, note] of entries.entries()) {
     const info = parsePhaseSuffix(key);
     if (!info) continue;
-    if (!hasPhaseField(note)) continue;
+
+    const hasComment = interactionComments
+      ? Object.prototype.hasOwnProperty.call(interactionComments, key)
+      : false;
+    if (!hasPhaseField(note) && !hasComment) continue;
+
     const parsed = parseNoteKey(info.baseKey);
     if (!parsed) continue;
     if (skipBypass) {
@@ -446,9 +456,13 @@ function collectPhaseOverflowNotes(ctx) {
     if (isPhaseAllowedForNote(model, parsed, info.phase, phaseRowLookup)) {
       continue;
     }
-    targets.push(key);
-    invalidNoteKeys?.add(key);
-    if (interactionComments && Object.prototype.hasOwnProperty.call(interactionComments, key)) {
+
+    const alreadyInvalid = invalidNoteKeys?.has(key);
+    if (!alreadyInvalid && hasPhaseField(note)) {
+      targets.push(key);
+      invalidNoteKeys?.add(key);
+    }
+    if (hasComment) {
       commentTargets.push(key);
     }
   }
