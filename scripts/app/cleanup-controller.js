@@ -13,6 +13,7 @@ import {
   isInteractionPhaseColumnActiveForRow,
   noteKeyForPair,
 } from "./interactions.js";
+import { parsePhaseKey } from "../data/utils.js";
 
 export const CLEANUP_ACTION_IDS = Object.freeze({
   orphanNotes: "cleanup-orphan-notes",
@@ -176,6 +177,10 @@ function readInteractionCommentMeta(rowId, rowValue) {
     return normalizeInteractionCommentMetadata(rowId, null);
   }
   return normalizeInteractionCommentMetadata(rowId, rowValue[INTERACTION_COMMENT_META_KEY]);
+}
+
+function isInteractionMetaKey(columnKey) {
+  return String(columnKey) === INTERACTION_COMMENT_META_KEY;
 }
 
 function baseKeyFromInteractionMeta(meta) {
@@ -504,26 +509,77 @@ function collectPhaseOverflowNotes(ctx) {
 
   if (interactionComments && typeof interactionComments === "object") {
     for (const [rowId, rowValue] of Object.entries(interactionComments)) {
+      if (!rowValue || typeof rowValue !== "object") continue;
       const meta = readInteractionCommentMeta(rowId, rowValue);
-      if (!meta || !Number.isFinite(meta.phase)) continue;
-      const parsed = parsedNoteFromInteractionMeta(meta) || parseNoteKey(baseKeyOf(String(rowId)));
-      if (!parsed) {
+      const parsed =
+        parsedNoteFromInteractionMeta(meta) || parseNoteKey(baseKeyOf(String(rowId)));
+      const columnEntries = Object.entries(rowValue).filter(
+        ([key]) => !isInteractionMetaKey(key),
+      );
+      if (!columnEntries.length) continue;
+
+      const invalidColumns = [];
+      for (const [columnKey] of columnEntries) {
+        const pk = parsePhaseKey(columnKey);
+        const phase =
+          pk && Number.isFinite(pk.p)
+            ? pk.p
+            : meta && Number.isFinite(meta.phase)
+            ? meta.phase
+            : null;
+        if (!Number.isFinite(phase)) continue;
+        if (
+          skipBypass &&
+          parsed &&
+          noteReferencesBypassedVariant(parsed, { bypassLookup, actionIdSet, inputIdSet })
+        ) {
+          continue;
+        }
+        if (!parsed || !isPhaseAllowedForNote(model, parsed, phase, phaseRowLookup)) {
+          invalidColumns.push(String(columnKey));
+        }
+      }
+
+      if (!invalidColumns.length) continue;
+
+      const totalColumns = columnEntries.length;
+      if (invalidColumns.length === totalColumns) {
         commentTargets.push(String(rowId));
-        continue;
+      } else {
+        for (const columnKey of invalidColumns) {
+          commentTargets.push({ rowId: String(rowId), columnKey });
+        }
       }
-      if (
-        skipBypass &&
-        noteReferencesBypassedVariant(parsed, { bypassLookup, actionIdSet, inputIdSet })
-      ) {
-        continue;
-      }
-      if (isPhaseAllowedForNote(model, parsed, meta.phase, phaseRowLookup)) {
-        continue;
-      }
-      commentTargets.push(String(rowId));
     }
   }
   return { targets, commentTargets };
+}
+
+function hasCommentColumns(rowBucket) {
+  if (!rowBucket || typeof rowBucket !== "object") return false;
+  return Object.keys(rowBucket).some((key) => !isInteractionMetaKey(key));
+}
+
+function deleteCommentTarget(rows, target) {
+  if (!rows || typeof rows !== "object") return 0;
+  const isObject = target && typeof target === "object";
+  const rowId = isObject
+    ? target.rowId ?? target.id ?? target.commentRowId ?? null
+    : target ?? null;
+  if (rowId == null) return 0;
+  const rowKey = String(rowId);
+  if (isObject && Object.prototype.hasOwnProperty.call(target, "columnKey")) {
+    const columnKey = String(target.columnKey);
+    const rowBucket = rows[rowKey];
+    if (!rowBucket || typeof rowBucket !== "object") return 0;
+    if (!Object.prototype.hasOwnProperty.call(rowBucket, columnKey)) return 0;
+    delete rowBucket[columnKey];
+    if (!hasCommentColumns(rowBucket)) delete rows[rowKey];
+    return 1;
+  }
+  if (!Object.prototype.hasOwnProperty.call(rows, rowKey)) return 0;
+  delete rows[rowKey];
+  return 1;
 }
 
 function applyTargets(model, analysis) {
@@ -560,11 +616,8 @@ function applyTargets(model, analysis) {
       if (!rows || typeof rows !== "object") {
         removedById.set(def.id, 0);
       } else {
-        for (const rowId of targets) {
-          if (Object.prototype.hasOwnProperty.call(rows, rowId)) {
-            delete rows[rowId];
-            removed++;
-          }
+        for (const target of targets) {
+          removed += deleteCommentTarget(rows, target);
         }
       }
       removedComments += removed;
@@ -573,12 +626,10 @@ function applyTargets(model, analysis) {
     if (commentTargets.length) {
       const rows = commentStore?.interactions;
       if (rows && typeof rows === "object") {
-        for (const rowId of commentTargets) {
-          if (Object.prototype.hasOwnProperty.call(rows, rowId)) {
-            delete rows[rowId];
-            removedComments++;
-            removed++;
-          }
+        for (const target of commentTargets) {
+          const delta = deleteCommentTarget(rows, target);
+          removedComments += delta;
+          removed += delta;
         }
       }
     }
@@ -670,11 +721,16 @@ function collectTargets(model, selectedActions, options = {}) {
     const collector = action.collect;
     if (typeof collector !== "function") continue;
     const result = collector(ctx) || { targets: [] };
+    const normalizeTarget = (value) => {
+      if (value == null) return value;
+      if (typeof value === "string" || typeof value === "number") return String(value);
+      return value;
+    };
     const rawTargets = Array.isArray(result.targets)
-      ? result.targets.map((key) => String(key))
+      ? result.targets.map((key) => normalizeTarget(key))
       : [];
     const rawComments = Array.isArray(result.commentTargets)
-      ? result.commentTargets.map((key) => String(key))
+      ? result.commentTargets.map((key) => normalizeTarget(key))
       : [];
     const targets = action.kind === "comments" ? [] : rawTargets;
     const commentTargets =
