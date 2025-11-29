@@ -584,7 +584,7 @@ export function initGridKeys(deps) {
       !e.altKey &&
       (e.key === "ArrowRight" || e.key === "ArrowLeft")
     ) {
-      if (editor.style.display !== "none") {
+      if (gridIsEditing()) {
         e.preventDefault();
         return; // don't cycle while editing
       }
