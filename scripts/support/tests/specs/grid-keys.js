@@ -2182,6 +2182,8 @@ export function getGridKeysTests() {
           columns: Array.from({ length: 5 }, (_, i) => ({ key: `col${i}` })),
         };
 
+        let editing = false;
+
         resetSelectionState();
         globalSelection.rows.add(0);
         globalSelection.cols.add(1);
@@ -2214,7 +2216,7 @@ export function getGridKeysTests() {
         const cycleEvents = [];
 
         const dispose = initGridKeys({
-          isEditing: () => false,
+          isEditing: () => editing,
           getActiveView: () => "actions",
           selection: globalSelection,
           sel: globalSel,
@@ -2382,6 +2384,53 @@ export function getGridKeysTests() {
             prevColumn,
             "Ctrl+Shift+ArrowLeft should leave the selection in place",
           );
+
+          cycleEvents.length = 0;
+          editor.style.display = "block";
+          const ctrlShiftRightVisible = {
+            key: "ArrowRight",
+            ctrlKey: true,
+            metaKey: false,
+            shiftKey: true,
+            altKey: false,
+            prevented: false,
+          };
+          dispatchCapture(ctrlShiftRightVisible);
+          dispatchBubble(ctrlShiftRightVisible);
+          assert.deepStrictEqual(
+            cycleEvents,
+            [1],
+            "Ctrl+Shift+Arrow should cycle even if the editor is merely visible",
+          );
+          assert.strictEqual(
+            ctrlShiftRightVisible.prevented,
+            true,
+            "Visible editor without editing should still allow cycling",
+          );
+
+          editing = true;
+          cycleEvents.length = 0;
+          const ctrlShiftLeftWhileEditing = {
+            key: "ArrowLeft",
+            ctrlKey: true,
+            metaKey: false,
+            shiftKey: true,
+            altKey: false,
+            prevented: false,
+          };
+          dispatchCapture(ctrlShiftLeftWhileEditing);
+          dispatchBubble(ctrlShiftLeftWhileEditing);
+          assert.deepStrictEqual(
+            cycleEvents,
+            [],
+            "Ctrl+Shift+Arrow should not cycle while an edit session is active",
+          );
+          assert.strictEqual(
+            ctrlShiftLeftWhileEditing.prevented,
+            true,
+            "Editing guard should consume the shortcut without cycling",
+          );
+          editing = false;
         } finally {
           dispose?.();
           resetSelectionState();
