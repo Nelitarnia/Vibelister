@@ -10,6 +10,7 @@ import {
   writeStructuredToEvent,
 } from "../app/clipboard-codec.js";
 import { isInteractionPhaseColumnActiveForRow } from "../app/interactions.js";
+import { parsePhaseKey } from "../data/utils.js";
 
 export function computeDestinationIndices(options = {}) {
   const {
@@ -794,6 +795,12 @@ export function initGridKeys(deps) {
 
   function columnsCompatible(meta, col) {
     if (!meta || !col) return false;
+    const structuredType = meta.structured?.type;
+    if (structuredType && String(col?.kind || "") === "interactions") {
+      const pk = parsePhaseKey(col.key);
+      if (pk?.field === "end" && String(structuredType).toLowerCase() === "action")
+        return true;
+    }
     if (
       meta.colKey != null &&
       col.key != null &&

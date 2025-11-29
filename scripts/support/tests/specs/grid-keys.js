@@ -201,6 +201,156 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "action references paste into end columns",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          activeElement: null,
+        };
+
+        const selection = {
+          rows: new Set(),
+          cols: new Set(),
+          colsAll: false,
+          horizontalMode: false,
+        };
+        const sel = { r: 0, c: 1 };
+
+        const view = {
+          key: "interactions",
+          columns: [
+            { key: "action", kind: "refRO", entity: "action" },
+            { key: "p0:end", kind: "interactions" },
+          ],
+        };
+
+        const statusMessages = [];
+        const appliedPayloads = [];
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "interactions",
+          selection,
+          sel,
+          editor: {},
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          moveSelectionForTab: () => {},
+          ensureVisible: () => {},
+          viewDef: () => view,
+          getRowCount: () => 1,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: (_label, fn) => fn(),
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: (_r, _c, payload) => {
+            appliedPayloads.push(payload);
+            return true;
+          },
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => false,
+          status: { set: (msg) => statusMessages.push(msg) },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => ({ isOpen: () => false }),
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: { platform: "" },
+        });
+
+        try {
+          const pasteListener = (listeners.get("paste") || []).find(
+            (entry) => entry.capture,
+          )?.cb;
+          assert.ok(pasteListener, "paste listener registered");
+
+          const structuredRange = {
+            version: 1,
+            cells: [
+              [
+                {
+                  colKey: "action",
+                  colKind: "refRO",
+                  structured: { type: "action", data: { id: 7, variantSig: "v1" } },
+                },
+              ],
+            ],
+          };
+
+          const event = {
+            clipboardData: {
+              getData(type) {
+                if (type === MIME_RANGE) return JSON.stringify(structuredRange);
+                return "";
+              },
+              types: [MIME_RANGE, "text/plain"],
+            },
+            preventDefault() {
+              this.prevented = true;
+            },
+            prevented: false,
+          };
+
+          pasteListener(event);
+
+          assert.ok(event.prevented, "paste handler should prevent default paste");
+          assert.deepStrictEqual(
+            appliedPayloads,
+            [{ type: "action", data: { id: 7, variantSig: "v1" } }],
+            "action payload forwarded to structured paste handler",
+          );
+          assert.ok(
+            statusMessages.some((msg) => msg.startsWith("Pasted 1 cell")),
+            "paste reports applied cell",
+          );
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
       name: "grid keydown defers Enter when palette is open",
       run(assert) {
         const listeners = new Map();
