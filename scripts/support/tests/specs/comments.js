@@ -100,6 +100,7 @@ export function getCommentTests() {
             rowKey: "actions:42",
             columnKey: "name",
             cellKey: "actions:42|name",
+            rowMeta: null,
             value: payload,
           },
         ]);

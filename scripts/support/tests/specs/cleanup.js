@@ -1,5 +1,6 @@
 import { createCleanupController, CLEANUP_ACTION_IDS } from "../../../app/cleanup-controller.js";
 import { MOD_STATE_ID } from "../../../data/mod-state.js";
+import { INTERACTION_COMMENT_META_KEY } from "../../../data/comments.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 export function getCleanupTests() {
@@ -132,6 +133,12 @@ export function getCleanupTests() {
         const input = addInput("Button");
         const rowId = `ai|${action.id}|${input.id}|${mod.id}`;
         model.comments.interactions[rowId] = {
+          [INTERACTION_COMMENT_META_KEY]: {
+            kind: "AI",
+            actionId: action.id,
+            inputId: input.id,
+            variantSig: `${mod.id}`,
+          },
           default: { value: "keep" },
         };
         const controller = createCleanupController({
@@ -175,6 +182,13 @@ export function getCleanupTests() {
         model.notes[allowedKey] = { outcomeId: outcome.id };
         model.notes[blockedKey] = { outcomeId: outcome.id, tags: ["off"] };
         model.comments.interactions[blockedKey] = {
+          [INTERACTION_COMMENT_META_KEY]: {
+            kind: "AI",
+            actionId: action.id,
+            inputId: input.id,
+            variantSig: "",
+            phase: 2,
+          },
           default: { value: "phase comment" },
         };
         const controller = createCleanupController({
@@ -219,6 +233,13 @@ export function getCleanupTests() {
         const input = addInput("Button");
         const blockedKey = `ai|${action.id}|${input.id}||p2`;
         model.comments.interactions[blockedKey] = {
+          [INTERACTION_COMMENT_META_KEY]: {
+            kind: "AI",
+            actionId: action.id,
+            inputId: input.id,
+            variantSig: "",
+            phase: 2,
+          },
           default: { value: "phase comment" },
         };
         const controller = createCleanupController({
@@ -232,6 +253,68 @@ export function getCleanupTests() {
         });
         assert.strictEqual(phaseCleanup.totalRemoved, 1, "removes the comment row");
         assert.ok(!model.comments.interactions[blockedKey], "phase comment removed");
+      },
+    },
+    {
+      name: "removes only disallowed phase comments when rows mix phases",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("Phased");
+        action.phases = { ids: [1], labels: {} };
+        const input = addInput("Button");
+        const baseKey = `ai|${action.id}|${input.id}|`;
+        model.comments.interactions[baseKey] = {
+          "p0:outcome": { value: "phase 0 comment" },
+          "p1:outcome": { value: "phase 1 comment" },
+        };
+        const controller = createCleanupController({
+          model,
+          runModelMutation: (_label, fn) => fn(),
+          makeUndoConfig: () => ({}),
+        });
+        const result = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.phaseOverflowNotes],
+          apply: true,
+        });
+        assert.strictEqual(result.totalRemoved, 1, "only the disallowed phase comment is removed");
+        const row = model.comments.interactions[baseKey];
+        assert.ok(row, "row remains when a valid column exists");
+        assert.ok(
+          !Object.prototype.hasOwnProperty.call(row, "p0:outcome"),
+          "out-of-range phase column cleared",
+        );
+        assert.ok(Object.prototype.hasOwnProperty.call(row, "p1:outcome"), "valid phase kept");
+      },
+    },
+    {
+      name: "cleans phase comments that lack explicit metadata",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("Phased");
+        action.phases = { ids: [0], labels: {} };
+        const input = addInput("Button");
+        const baseKey = `ai|${action.id}|${input.id}|`;
+        model.comments.interactions[baseKey] = {
+          default: { value: "keep" },
+          "p2:outcome": { value: "drop" },
+        };
+        const controller = createCleanupController({
+          model,
+          runModelMutation: (_label, fn) => fn(),
+          makeUndoConfig: () => ({}),
+        });
+        const result = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.phaseOverflowNotes],
+          apply: true,
+        });
+        assert.strictEqual(result.totalRemoved, 1, "removes the out-of-range phase comment");
+        const row = model.comments.interactions[baseKey];
+        assert.ok(row, "row preserved due to remaining columns");
+        assert.ok(row.default, "non-phase column left intact");
+        assert.ok(
+          !Object.prototype.hasOwnProperty.call(row, "p2:outcome"),
+          "phase-specific comment removed",
+        );
       },
     },
   ];

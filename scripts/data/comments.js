@@ -1,4 +1,7 @@
 // comments.js — helpers for comment storage and key generation
+import { canonicalSig } from "./variants/variants.js";
+
+export const INTERACTION_COMMENT_META_KEY = "__meta";
 
 export const DEFAULT_COMMENT_VIEW_KEYS = Object.freeze([
   "actions",
@@ -13,6 +16,97 @@ function normalizeRowId(rowId) {
   if (Number.isFinite(asNumber)) return String(asNumber);
   const str = String(rowId ?? "").trim();
   return str || "row";
+}
+
+function normalizeInteractionId(value) {
+  const id = Number(value);
+  return Number.isFinite(id) ? id : null;
+}
+
+function normalizeInteractionPhase(value) {
+  const phase = Number(value);
+  return Number.isFinite(phase) ? phase : null;
+}
+
+function parseInteractionCommentRowKey(rowId) {
+  if (!rowId && rowId !== 0) return null;
+  const text = String(rowId);
+  if (!text) return null;
+  const match = /^(.*)\|p(\d+)$/.exec(text);
+  const baseKey = match ? match[1] : text;
+  const phase = match ? Number(match[2]) : null;
+  const parts = baseKey.split("|");
+  const head = parts[0]?.toLowerCase() || "";
+  if (head === "aa" && parts.length >= 5) {
+    const lhs = normalizeInteractionId(parts[1]);
+    const rhs = normalizeInteractionId(parts[2]);
+    if (lhs == null || rhs == null) return null;
+    return {
+      kind: "AA",
+      actionId: lhs,
+      rhsActionId: rhs,
+      variantSig: canonicalSig(parts[3] || ""),
+      rhsVariantSig: canonicalSig(parts[4] || ""),
+      phase,
+    };
+  }
+  if (head === "ai" && parts.length >= 4) {
+    const actionId = normalizeInteractionId(parts[1]);
+    const inputId = normalizeInteractionId(parts[2]);
+    if (actionId == null) return null;
+    return {
+      kind: "AI",
+      actionId,
+      inputId,
+      variantSig: canonicalSig(parts[3] || ""),
+      phase,
+    };
+  }
+  if (Number.isFinite(Number(head)) && parts.length >= 3) {
+    const actionId = normalizeInteractionId(parts[0]);
+    const inputId = normalizeInteractionId(parts[1]);
+    if (actionId == null) return null;
+    return {
+      kind: "AI",
+      actionId,
+      inputId,
+      variantSig: canonicalSig(parts[2] || ""),
+      phase,
+    };
+  }
+  return phase == null ? null : { phase };
+}
+
+export function normalizeInteractionCommentMetadata(rowId, rawMeta = null) {
+  const meta = {};
+  const parsed = parseInteractionCommentRowKey(rowId);
+  if (parsed) Object.assign(meta, parsed);
+  const fromMeta = rawMeta && typeof rawMeta === "object" ? rawMeta : null;
+  if (fromMeta) {
+    if (fromMeta.kind) meta.kind = String(fromMeta.kind).toUpperCase();
+    const aId = normalizeInteractionId(fromMeta.actionId);
+    if (aId != null) meta.actionId = aId;
+    const inputId = normalizeInteractionId(fromMeta.inputId);
+    if (inputId != null) meta.inputId = inputId;
+    const rhsId = normalizeInteractionId(fromMeta.rhsActionId);
+    if (rhsId != null) meta.rhsActionId = rhsId;
+    if (Object.prototype.hasOwnProperty.call(fromMeta, "variantSig")) {
+      meta.variantSig = canonicalSig(fromMeta.variantSig || "");
+    }
+    if (Object.prototype.hasOwnProperty.call(fromMeta, "rhsVariantSig")) {
+      meta.rhsVariantSig = canonicalSig(fromMeta.rhsVariantSig || "");
+    }
+    const phase = normalizeInteractionPhase(fromMeta.phase);
+    if (phase != null) meta.phase = phase;
+  }
+  if (meta.kind === "AA") {
+    if (!Object.prototype.hasOwnProperty.call(meta, "rhsVariantSig")) {
+      meta.rhsVariantSig = canonicalSig(meta.rhsVariantSig || "");
+    }
+  } else if (meta.kind === "AI" && !Object.prototype.hasOwnProperty.call(meta, "inputId")) {
+    meta.inputId = normalizeInteractionId(meta.inputId);
+  }
+  return Object.keys(meta).length ? meta : null;
 }
 
 function normalizeViewKey(viewKey) {
@@ -55,7 +149,17 @@ export function normalizeCommentsMap(rawComments, viewKeys = DEFAULT_COMMENT_VIE
       const bucket = {};
       if (rows && typeof rows === "object" && !Array.isArray(rows)) {
         for (const [rowKey, value] of Object.entries(rows)) {
-          bucket[normalizeRowId(rowKey)] = value;
+          const normalizedRowId = normalizeRowId(rowKey);
+          if (safeViewKey === "interactions") {
+            const rowValue = value && typeof value === "object" && !Array.isArray(value)
+              ? { ...value }
+              : { default: value };
+            const meta = normalizeInteractionCommentMetadata(rowKey, rowValue[INTERACTION_COMMENT_META_KEY]);
+            if (meta) rowValue[INTERACTION_COMMENT_META_KEY] = meta;
+            bucket[normalizedRowId] = rowValue;
+          } else {
+            bucket[normalizedRowId] = value;
+          }
         }
       }
       normalized[safeViewKey] = bucket;
