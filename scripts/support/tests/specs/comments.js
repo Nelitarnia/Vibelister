@@ -19,6 +19,7 @@ import {
 } from "../../../app/comments.js";
 import { createGridCommands } from "../../../app/grid-commands.js";
 import { createGridRenderer } from "../../../app/grid-renderer.js";
+import { initCommentsUI } from "../../../ui/comments.js";
 
 const SAMPLE_COLOR = COMMENT_COLOR_PRESETS[0]?.id || "crimson";
 const SECONDARY_COLOR = COMMENT_COLOR_PRESETS[1]?.id || SAMPLE_COLOR;
@@ -572,6 +573,126 @@ export function getCommentTests() {
 
           if (previousWindow === undefined) delete globalThis.window;
           else globalThis.window = previousWindow;
+        }
+      },
+    },
+    {
+      name: "comments UI initializes color selector from filter metadata",
+      run(assert) {
+        class StubElement {
+          constructor(tag) {
+            this.tag = tag;
+            this.children = [];
+            this.dataset = {};
+            this.style = { setProperty: () => {}, removeProperty: () => {} };
+            this.attributes = {};
+            this.listeners = new Map();
+            this._textContent = "";
+            this.value = "";
+          }
+
+          appendChild(child) {
+            if (child) {
+              this.children.push(child);
+            }
+            return child;
+          }
+
+          removeChild(child) {
+            const idx = this.children.indexOf(child);
+            if (idx >= 0) {
+              this.children.splice(idx, 1);
+            }
+            return child;
+          }
+
+          get firstChild() {
+            return this.children[0] || null;
+          }
+
+          get options() {
+            return this.children;
+          }
+
+          set textContent(value) {
+            this._textContent = value == null ? "" : String(value);
+          }
+
+          get textContent() {
+            return this._textContent;
+          }
+
+          setAttribute(name, value) {
+            this.attributes[name] = String(value);
+          }
+
+          removeAttribute(name) {
+            delete this.attributes[name];
+          }
+
+          addEventListener(type, cb) {
+            this.listeners.set(type, cb);
+          }
+
+          removeEventListener(type) {
+            this.listeners.delete(type);
+          }
+        }
+
+        const commentColors = normalizeCommentColorPalette([
+          { id: "sunset", swatch: "#f97316" },
+          { id: "ocean", swatch: "#2563eb" },
+        ]);
+
+        const model = {
+          meta: {},
+          comments: createEmptyCommentMap(["actions"]),
+          actions: [],
+          inputs: [],
+          modifiers: [],
+          outcomes: [],
+        };
+
+        const metadata = {
+          commentColors,
+          commentFilter: { viewKey: "actions", colorIds: ["ocean"] },
+        };
+
+        const sidebar = new StubElement("div");
+        const toggleButton = new StubElement("button");
+        const colorSelect = new StubElement("select");
+
+        const previousDocument = globalThis.document;
+        const documentStub = {
+          createElement: (tag) => new StubElement(tag),
+          createDocumentFragment: (tag) => new StubElement(tag ?? "fragment"),
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        };
+
+        globalThis.document = documentStub;
+
+        try {
+          const commentsUI = initCommentsUI({
+            sidebar,
+            toggleButton,
+            colorSelect,
+            selection: { rows: new Set(), cols: new Set(), colsAll: false },
+            sel: { r: 0, c: 0 },
+            getCellComments: () => [],
+            getActiveView: () => "actions",
+            viewDef: () => ({ key: "actions", columns: [{ key: "name", title: "Name" }] }),
+            dataArray: () => model.actions,
+            model,
+          });
+
+          commentsUI.applyModelMetadata(metadata);
+
+          assert.strictEqual(colorSelect.value, "ocean");
+          assert.deepStrictEqual(commentsUI.getFilter().colorIds, ["ocean"]);
+        } finally {
+          if (previousDocument === undefined) delete globalThis.document;
+          else globalThis.document = previousDocument;
         }
       },
     },

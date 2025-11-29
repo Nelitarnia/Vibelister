@@ -500,6 +500,8 @@ export function initCommentsUI(options = {}) {
       nextFilter = { ...nextFilter, viewKey: getActiveView() };
     }
     filterState = nextFilter;
+    const activeColorId = filterState.colorIds?.[0] || fallbackColorId;
+    setColorSelectValue(activeColorId, { updateFilter: false, updateLastSelected: true });
     persistFilterState(filterState);
     rebuildFilteredEntries();
     syncFromSelection();
