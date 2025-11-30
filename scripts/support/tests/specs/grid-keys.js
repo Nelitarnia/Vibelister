@@ -2327,6 +2327,9 @@ export function getGridKeysTests() {
             "Ctrl+Arrow without Shift should be ignored by shortcuts",
           );
 
+          editing = false;
+          editor.style.display = "none";
+
           const ctrlShiftRight = {
             key: "ArrowRight",
             ctrlKey: true,
