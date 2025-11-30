@@ -250,6 +250,21 @@ function captureInteractionTagEvents() {
 export function getInteractionsTests() {
   return [
     {
+      name: "note key handles missing pairs",
+      run(assert) {
+        assert.strictEqual(
+          noteKeyForPair(null, 0),
+          "",
+          "null pair returns empty key",
+        );
+        assert.strictEqual(
+          noteKeyForPair(undefined, undefined),
+          "",
+          "undefined pair returns empty key",
+        );
+      },
+    },
+    {
       name: "stable ids required for outcome and end cells",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
