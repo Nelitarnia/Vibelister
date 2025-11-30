@@ -128,6 +128,7 @@ function prepareTargets(targets) {
       hasValue: !!currentValue,
       isManual: source === DEFAULT_INTERACTION_SOURCE && !!currentValue,
       isInferred: !!info?.inferred,
+      source,
     };
   });
 }
@@ -139,10 +140,26 @@ function eligibleForSuggestion(target) {
   return target.isInferred;
 }
 
-function registerSuggestion(map, target, source, confidence, value, profilePrefs) {
+function registerSuggestion(
+  map,
+  target,
+  source,
+  confidence,
+  value,
+  profilePrefs,
+  extraMetadata = null,
+) {
   if (profilePrefs?.shouldSkip(target, value)) return;
   if (!map.has(target.key)) map.set(target.key, {});
-  map.get(target.key)[target.field] = { source, confidence, value };
+  map.get(target.key)[target.field] = {
+    source,
+    confidence,
+    value,
+    sourceMetadata:
+      extraMetadata && typeof extraMetadata === "object"
+        ? extraMetadata
+        : undefined,
+  };
 }
 
 function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
@@ -189,12 +206,61 @@ function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
   }
 }
 
+function applyPhaseAdjacency(groups, suggestions, profilePrefs) {
+  for (const list of groups.values()) {
+    const ordered = list
+      .filter((t) => Number.isFinite(t.phase))
+      .sort((a, b) => a.phase - b.phase);
+    let lastAnchor = null;
+    for (const target of ordered) {
+      if (!target.currentValue) continue;
+      const key = valueKey(target.field, target.currentValue);
+      if (!key) {
+        lastAnchor = null;
+        continue;
+      }
+      if (
+        lastAnchor &&
+        key === lastAnchor.valueKey &&
+        target.source === lastAnchor.source
+      ) {
+        const gapDistance = target.phase - lastAnchor.phase;
+        if (gapDistance === 2) {
+          const adjacency = 1 / gapDistance;
+          const confidence = computeSuggestionConfidence(
+            HEURISTIC_SOURCES.phaseAdjacency,
+            { adjacency },
+          );
+          for (const gapTarget of ordered) {
+            if (gapTarget.phase <= lastAnchor.phase || gapTarget.phase >= target.phase)
+              continue;
+            if (!eligibleForSuggestion(gapTarget)) continue;
+            const already = suggestions.get(gapTarget.key)?.[gapTarget.field];
+            if (already) continue;
+            registerSuggestion(
+              suggestions,
+              gapTarget,
+              HEURISTIC_SOURCES.phaseAdjacency,
+              confidence,
+              cloneValue(gapTarget.field, target.currentValue),
+              profilePrefs,
+              { sources: [HEURISTIC_SOURCES.phaseAdjacency] },
+            );
+          }
+        }
+      }
+      lastAnchor = { valueKey: key, source: target.source, phase: target.phase };
+    }
+  }
+}
+
 export const HEURISTIC_SOURCES = Object.freeze({
   actionGroup: "action-group",
   modifierPropagation: "modifier-propagation",
   modifierProfile: "modifier-profile",
   inputDefault: "input-default",
   profileTrend: "profile-trend",
+  phaseAdjacency: "phase-adjacency",
 });
 
 const BASE_CONFIDENCE = Object.freeze({
@@ -203,6 +269,7 @@ const BASE_CONFIDENCE = Object.freeze({
   [HEURISTIC_SOURCES.modifierProfile]: 0.64,
   [HEURISTIC_SOURCES.inputDefault]: 0.48,
   [HEURISTIC_SOURCES.profileTrend]: 0.56,
+  [HEURISTIC_SOURCES.phaseAdjacency]: 0.62,
 });
 
 function clampConfidence(value) {
@@ -234,6 +301,12 @@ function computeSuggestionConfidence(source, context = {}) {
       return clampConfidence(base * preferenceRatio + supportBoost);
     }
     return clampConfidence(base + supportBoost);
+  }
+  if (source === HEURISTIC_SOURCES.phaseAdjacency) {
+    const adjacency = Number(context?.adjacency);
+    if (Number.isFinite(adjacency)) {
+      return clampConfidence(base * adjacency);
+    }
   }
   return clampConfidence(base);
 }
@@ -435,6 +508,7 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
   const byActionGroupPhase = new Map();
   const byModifierProfile = new Map();
   const byInputDefault = new Map();
+  const byPhaseAdjacency = new Map();
 
   for (const target of prepared) {
     const { actionId, inputKey, field, phase, variantSig, actionGroupKey } = target;
@@ -461,6 +535,12 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
 
     if (!byInputDefault.has(groupKey)) byInputDefault.set(groupKey, []);
     byInputDefault.get(groupKey).push(target);
+
+    if (Number.isFinite(target.phase)) {
+      const adjacencyKey = `${actionKey}|${inputKey}|${field}`;
+      if (!byPhaseAdjacency.has(adjacencyKey)) byPhaseAdjacency.set(adjacencyKey, []);
+      byPhaseAdjacency.get(adjacencyKey).push(target);
+    }
   }
 
   applyConsensus(
@@ -506,6 +586,8 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
       minExistingRatio: thresholds.consensusMinExistingRatio,
     },
   );
+
+  applyPhaseAdjacency(byPhaseAdjacency, suggestions, profilePrefs);
 
   for (const list of byInputDefault.values()) {
     const total = list.length;
