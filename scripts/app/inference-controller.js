@@ -24,6 +24,7 @@ const HEURISTIC_LABELS = Object.freeze({
   [HEURISTIC_SOURCES.modifierProfile]: "modifier profile",
   [HEURISTIC_SOURCES.inputDefault]: "input default",
   [HEURISTIC_SOURCES.profileTrend]: "modifier/input trends",
+  [HEURISTIC_SOURCES.phaseAdjacency]: "phase adjacency",
 });
 import { parsePhaseKey } from "../data/utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
@@ -400,10 +401,13 @@ export function createInferenceController(options) {
             prevTags.some((value, idx) => value !== tags[idx]);
           if (changedTags) tagsChanged = true;
         }
-        applyInteractionMetadata(dest, {
+        const metadata = {
           confidence: suggestion.confidence,
           source: suggestion.source,
-        });
+        };
+        if (suggestion.sourceMetadata)
+          metadata.sourceMetadata = suggestion.sourceMetadata;
+        applyInteractionMetadata(dest, metadata);
         result.sources[suggestion.source] =
           (result.sources[suggestion.source] || 0) + 1;
         appliedChange = true;
