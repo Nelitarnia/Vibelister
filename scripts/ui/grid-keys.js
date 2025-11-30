@@ -216,23 +216,35 @@ export function initGridKeys(deps) {
     }
   }
 
-  function onGridKeyDown(e) {
-    if (doc?.querySelector?.('[aria-modal="true"]')) return; // respect modals
-    const ae = doc?.activeElement || null;
-    if (isColorPickerContext(ae)) return;
-    if (isTypingInEditable(ae)) return;
-
-    function paletteIsOpen() {
-      if (typeof getPaletteAPI !== "function") return false;
-      try {
-        const palette = getPaletteAPI();
-        if (!palette) return false;
-        if (typeof palette.isOpen === "function") return !!palette.isOpen();
-      } catch (_) {
-        /* ignore palette lookup issues */
-      }
-      return false;
+  function paletteIsOpen() {
+    if (typeof getPaletteAPI !== "function") return false;
+    try {
+      const palette = getPaletteAPI();
+      if (!palette) return false;
+      if (typeof palette.isOpen === "function") return !!palette.isOpen();
+    } catch (_) {
+      /* ignore palette lookup issues */
     }
+    return false;
+  }
+
+  // Central guard for global shortcuts. A shortcut should only fire when the UI
+  // is not busy with focused text fields, modals, palette interactions, or
+  // in-grid editing (unless explicitly allowed by the caller).
+  function shouldHandleGlobalShortcuts(options = {}) {
+    const { allowWhileEditing = false, activeElement = doc?.activeElement || null } = options;
+
+    if (doc?.querySelector?.('[aria-modal="true"]')) return false; // respect modals
+    if (paletteIsOpen()) return false; // let palette capture its own shortcuts
+    if (!allowWhileEditing && gridIsEditing()) return false;
+    if (isColorPickerContext(activeElement)) return false;
+    if (isTypingInEditable(activeElement)) return false;
+    return true;
+  }
+
+  function onGridKeyDown(e) {
+    if (!shouldHandleGlobalShortcuts({ allowWhileEditing: true, activeElement: doc?.activeElement || null }))
+      return;
 
     // Clear multi-selection with Escape when not editing
     if (!gridIsEditing() && e.key === "Escape" && selection.rows.size > 0) {
@@ -348,9 +360,6 @@ export function initGridKeys(deps) {
 
     // In-cell editing mode
     if (gridIsEditing()) {
-      if (paletteIsOpen()) {
-        return;
-      }
       let keyDef;
       // If editing the Interactions → Outcome cell, defer Enter/Escape to the palette handler in App.js
       try {
@@ -479,6 +488,7 @@ export function initGridKeys(deps) {
   }
 
   function onShortcutKeyDown(e) {
+    if (!shouldHandleGlobalShortcuts({ activeElement: doc?.activeElement || null })) return;
     const platform = typeof nav?.platform === "string" ? nav.platform : "";
     const isMac = platform.includes("Mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
