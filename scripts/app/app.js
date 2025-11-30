@@ -735,68 +735,6 @@ const { runSelfTests } = createDiagnosticsController({
   setCell,
 });
 
-const disposeKeys = initGridKeys({
-  // state & selectors
-  isEditing,
-  getActiveView: () => activeView,
-  selection,
-  sel,
-
-  // DOM/controls
-  editor,
-
-  // grid APIs
-  clearSelection,
-  render,
-  beginEdit,
-  endEdit,
-  moveSel,
-  moveSelectionForTab,
-  ensureVisible,
-
-  viewDef,
-  getRowCount,
-  dataArray,
-  isModColumn,
-  modIdFromKey,
-  setModForSelection,
-  setCell,
-  runModelTransaction,
-  makeUndoConfig,
-
-  // app-level actions
-  cycleView,
-  saveToDisk,
-  openFromDisk,
-  newProject,
-  doGenerate,
-  runSelfTests,
-  deleteRows: deleteSelectedRows,
-  clearCells: clearSelectedCells,
-  addRowsAbove,
-  addRowsBelow,
-
-  // clipboard helpers
-  model,
-  getCellText: (r, c) => cellValueToPlainText(getCell(r, c)),
-  getStructuredCell,
-  applyStructuredCell,
-  getCellCommentClipboardPayload,
-  applyCellCommentClipboardPayload,
-  status: statusBar,
-  undo,
-  redo,
-  getPaletteAPI: () => paletteAPI,
-  toggleInteractionsOutline: () => interactionsOutline?.toggle?.(),
-  jumpToInteractionsAction: (delta) => interactionsOutline?.jumpToAction?.(delta),
-  jumpToInteractionsVariant: (delta) =>
-    interactionsOutline?.jumpToVariant?.(delta),
-  toggleCommentsSidebar: () => commentsUI?.toggle?.(),
-  toggleTagsSidebar: () => tagUI?.toggle?.(),
-  openInferenceSidebar: () => toggleInteractionToolsPane?.(),
-  acceptInferred: () => interactionActions?.acceptInferred?.(),
-});
-
 // Initialize palette (handles both Outcome and End cells)
 paletteAPI = initPalette({
   editor,
@@ -957,6 +895,68 @@ sheet.addEventListener("scroll", () => {
     setActiveViewState: (key) => (activeView = key),
     getCommentsUI: () => commentsUI,
   }));
+
+const disposeKeys = initGridKeys({
+  // state & selectors
+  isEditing,
+  getActiveView: () => activeView,
+  selection,
+  sel,
+
+  // DOM/controls
+  editor,
+
+  // grid APIs
+  clearSelection,
+  render,
+  beginEdit,
+  endEdit,
+  moveSel,
+  moveSelectionForTab,
+  ensureVisible,
+
+  viewDef,
+  getRowCount,
+  dataArray,
+  isModColumn,
+  modIdFromKey,
+  setModForSelection,
+  setCell,
+  runModelTransaction,
+  makeUndoConfig,
+
+  // app-level actions
+  cycleView,
+  saveToDisk,
+  openFromDisk,
+  newProject,
+  doGenerate,
+  runSelfTests,
+  deleteRows: deleteSelectedRows,
+  clearCells: clearSelectedCells,
+  addRowsAbove,
+  addRowsBelow,
+
+  // clipboard helpers
+  model,
+  getCellText: (r, c) => cellValueToPlainText(getCell(r, c)),
+  getStructuredCell,
+  applyStructuredCell,
+  getCellCommentClipboardPayload,
+  applyCellCommentClipboardPayload,
+  status: statusBar,
+  undo,
+  redo,
+  getPaletteAPI: () => paletteAPI,
+  toggleInteractionsOutline: () => interactionsOutline?.toggle?.(),
+  jumpToInteractionsAction: (delta) => interactionsOutline?.jumpToAction?.(delta),
+  jumpToInteractionsVariant: (delta) =>
+    interactionsOutline?.jumpToVariant?.(delta),
+  toggleCommentsSidebar: () => commentsUI?.toggle?.(),
+  toggleTagsSidebar: () => tagUI?.toggle?.(),
+  openInferenceSidebar: () => toggleInteractionToolsPane?.(),
+  acceptInferred: () => interactionActions?.acceptInferred?.(),
+});
 
 ({ sidePanelHost, commentsUI, tagManager, tagUI, interactionTools } =
   initSidebarControllers({
