@@ -168,6 +168,7 @@ export function describeInteractionInference(note) {
 
 // Key builder
 export function noteKeyForPair(pair, phase) {
+  if (!pair) return "";
   const kind = pair && pair.kind ? String(pair.kind).toUpperCase() : "AI";
   let base = "";
   if (kind === "AA") {
