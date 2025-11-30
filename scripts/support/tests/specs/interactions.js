@@ -1813,7 +1813,7 @@ export function getInteractionsTests() {
       },
     },
     {
-      name: "phase adjacency ignores divergent or multi-phase gaps",
+      name: "phase adjacency ignores divergent anchors",
       run(assert) {
         const setupGapTargets = (actionsPhases) => {
           const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -1873,31 +1873,166 @@ export function getInteractionsTests() {
         const divergentSuggestions = proposeInteractionInferences(divergentTargets);
         const divergentGap = divergentSuggestions.get(noteKeyForPair(divergentPair, 1))?.outcome;
         assert.ok(!divergentGap, "no suggestion when anchors disagree on source");
+      },
+    },
+    {
+      name: "phase adjacency fills multi-phase gaps with scaled confidence and respects eligibility",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Trace");
+        action.phases = { ids: [0, 1, 2, 3, 4], labels: {} };
+        const input = addInput("Mid");
+        const outcome = addOutcome("Circle");
 
-        const { model: distantModel, outcome: distantOutcome, pair: distantPair, targets: distantTargets } =
-          setupGapTargets([0, 1, 2, 3]);
-        const distantStart = noteKeyForPair(distantPair, 0);
-        const distantEnd = noteKeyForPair(distantPair, 3);
-        distantModel.notes[distantStart] = {
-          outcomeId: distantOutcome.id,
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        const startKey = noteKeyForPair(pair, 0);
+        const endKey = noteKeyForPair(pair, 4);
+        model.notes[startKey] = {
+          outcomeId: outcome.id,
           source: HEURISTIC_SOURCES.actionGroup,
         };
-        distantModel.notes[distantEnd] = {
-          outcomeId: distantOutcome.id,
+        model.notes[endKey] = {
+          outcomeId: outcome.id,
           source: HEURISTIC_SOURCES.actionGroup,
         };
-        for (const target of distantTargets) {
-          target.note = distantModel.notes[target.key];
+
+        const targets = [];
+        for (const phase of action.phases.ids) {
+          const key = noteKeyForPair(pair, phase);
+          targets.push({
+            key,
+            field: "outcome",
+            phase,
+            note: model.notes[key],
+            pair,
+            actionGroup: "",
+          });
         }
 
-        const distantSuggestions = proposeInteractionInferences(distantTargets);
-        assert.ok(
-          !distantSuggestions.get(noteKeyForPair(distantPair, 1))?.outcome,
-          "no suggestion for first step of multi-phase gap",
+        const inputKey = `in:${input.id}`;
+        const profiles = {
+          input: {
+            [inputKey]: {
+              outcome: {
+                phases: {
+                  1: {
+                    change: 0,
+                    noop: 5,
+                    clear: 0,
+                    values: { "o:999": { count: 5, value: { outcomeId: 999 } } },
+                  },
+                },
+              },
+            },
+          },
+        };
+
+        const suggestions = proposeInteractionInferences(targets, profiles, {
+          phaseAdjacencyMaxGap: 4,
+        });
+
+        const gapOne = suggestions.get(noteKeyForPair(pair, 1))?.outcome;
+        const gapTwo = suggestions.get(noteKeyForPair(pair, 2))?.outcome;
+        const gapThree = suggestions.get(noteKeyForPair(pair, 3))?.outcome;
+
+        assert.ok(!gapOne, "profile preferences can skip adjacent gap phase");
+        assert.ok(gapTwo, "middle gap receives suggestion");
+        assert.ok(gapThree, "later interior gap receives suggestion");
+        assert.strictEqual(
+          gapTwo.source,
+          HEURISTIC_SOURCES.phaseAdjacency,
+          "phase adjacency source used for middle gap",
         );
+        assert.strictEqual(gapTwo.value.outcomeId, outcome.id);
+        assert.strictEqual(gapThree.source, HEURISTIC_SOURCES.phaseAdjacency);
+        assert.strictEqual(gapThree.value.outcomeId, outcome.id);
         assert.ok(
-          !distantSuggestions.get(noteKeyForPair(distantPair, 2))?.outcome,
-          "no suggestion for second step of multi-phase gap",
+          Math.abs(gapThree.confidence - 0.155) < 1e-9,
+          "confidence scales down for longer gaps",
+        );
+        assert.deepStrictEqual(gapThree.sourceMetadata, {
+          sources: [HEURISTIC_SOURCES.phaseAdjacency],
+        });
+      },
+    },
+    {
+      name: "phase adjacency avoids gaps with conflicting interior phases",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Arc");
+        action.phases = { ids: [0, 1, 2, 3], labels: {} };
+        const input = addInput("Low");
+        const outcome = addOutcome("Graze");
+        const otherOutcome = addOutcome("Skip");
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        const startKey = noteKeyForPair(pair, 0);
+        const endKey = noteKeyForPair(pair, 3);
+        model.notes[startKey] = {
+          outcomeId: outcome.id,
+          source: HEURISTIC_SOURCES.actionGroup,
+        };
+        model.notes[endKey] = {
+          outcomeId: outcome.id,
+          source: HEURISTIC_SOURCES.actionGroup,
+        };
+
+        const conflictingKey = noteKeyForPair(pair, 1);
+        model.notes[conflictingKey] = {
+          outcomeId: otherOutcome.id,
+          source: HEURISTIC_SOURCES.actionGroup,
+        };
+
+        const targets = [];
+        for (const phase of action.phases.ids) {
+          const key = noteKeyForPair(pair, phase);
+          targets.push({
+            key,
+            field: "outcome",
+            phase,
+            note: model.notes[key],
+            pair,
+            actionGroup: "",
+          });
+        }
+
+        const suggestions = proposeInteractionInferences(targets);
+        const interiorSuggestion = suggestions.get(noteKeyForPair(pair, 2))?.outcome;
+        assert.ok(
+          !interiorSuggestion,
+          "intervening differing values prevent spanning the gap",
         );
       },
     },

@@ -206,7 +206,14 @@ function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
   }
 }
 
-function applyPhaseAdjacency(groups, suggestions, profilePrefs) {
+const DEFAULT_PHASE_ADJACENCY_MAX_GAP = 4;
+
+function applyPhaseAdjacency(
+  groups,
+  suggestions,
+  profilePrefs,
+  { maxGapDistance = DEFAULT_PHASE_ADJACENCY_MAX_GAP } = {},
+) {
   for (const list of groups.values()) {
     const ordered = list
       .filter((t) => Number.isFinite(t.phase))
@@ -219,34 +226,48 @@ function applyPhaseAdjacency(groups, suggestions, profilePrefs) {
         lastAnchor = null;
         continue;
       }
+      const gapDistance = lastAnchor ? target.phase - lastAnchor.phase : null;
       if (
         lastAnchor &&
+        gapDistance > 1 &&
+        gapDistance <= maxGapDistance &&
         key === lastAnchor.valueKey &&
         target.source === lastAnchor.source
       ) {
-        const gapDistance = target.phase - lastAnchor.phase;
-        if (gapDistance === 2) {
-          const adjacency = 1 / gapDistance;
-          const confidence = computeSuggestionConfidence(
+        const interiorTargets = ordered.filter(
+          (gapTarget) =>
+            gapTarget.phase > lastAnchor.phase && gapTarget.phase < target.phase,
+        );
+        const hasConflicts = interiorTargets.some((gapTarget) => {
+          if (!gapTarget?.currentValue) return false;
+          const interiorKey = valueKey(gapTarget.field, gapTarget.currentValue);
+          const matchesValue = interiorKey && interiorKey === key;
+          const matchesSource = gapTarget.source === lastAnchor.source;
+          return !matchesValue || !matchesSource;
+        });
+        if (hasConflicts) {
+          lastAnchor = { valueKey: key, source: target.source, phase: target.phase };
+          continue;
+        }
+
+        const adjacency = 1 / gapDistance;
+        const confidence = computeSuggestionConfidence(
+          HEURISTIC_SOURCES.phaseAdjacency,
+          { adjacency },
+        );
+        for (const gapTarget of interiorTargets) {
+          if (!eligibleForSuggestion(gapTarget)) continue;
+          const already = suggestions.get(gapTarget.key)?.[gapTarget.field];
+          if (already) continue;
+          registerSuggestion(
+            suggestions,
+            gapTarget,
             HEURISTIC_SOURCES.phaseAdjacency,
-            { adjacency },
+            confidence,
+            cloneValue(gapTarget.field, target.currentValue),
+            profilePrefs,
+            { sources: [HEURISTIC_SOURCES.phaseAdjacency] },
           );
-          for (const gapTarget of ordered) {
-            if (gapTarget.phase <= lastAnchor.phase || gapTarget.phase >= target.phase)
-              continue;
-            if (!eligibleForSuggestion(gapTarget)) continue;
-            const already = suggestions.get(gapTarget.key)?.[gapTarget.field];
-            if (already) continue;
-            registerSuggestion(
-              suggestions,
-              gapTarget,
-              HEURISTIC_SOURCES.phaseAdjacency,
-              confidence,
-              cloneValue(gapTarget.field, target.currentValue),
-              profilePrefs,
-              { sources: [HEURISTIC_SOURCES.phaseAdjacency] },
-            );
-          }
         }
       }
       lastAnchor = { valueKey: key, source: target.source, phase: target.phase };
@@ -322,6 +343,7 @@ export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
   inputDefaultMinExistingRatio: 0.5,
   profileTrendMinObservations: 3,
   profileTrendMinPreferenceRatio: 0.55,
+  phaseAdjacencyMaxGap: DEFAULT_PHASE_ADJACENCY_MAX_GAP,
 });
 
 function normalizeThresholds(override = {}) {
@@ -361,6 +383,9 @@ function normalizeThresholds(override = {}) {
     profileTrendMinPreferenceRatio: Number.isFinite(override.profileTrendMinPreferenceRatio)
       ? override.profileTrendMinPreferenceRatio
       : defaults.profileTrendMinPreferenceRatio,
+    phaseAdjacencyMaxGap: Number.isFinite(override.phaseAdjacencyMaxGap)
+      ? override.phaseAdjacencyMaxGap
+      : defaults.phaseAdjacencyMaxGap,
   };
 }
 
@@ -587,7 +612,9 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
     },
   );
 
-  applyPhaseAdjacency(byPhaseAdjacency, suggestions, profilePrefs);
+  applyPhaseAdjacency(byPhaseAdjacency, suggestions, profilePrefs, {
+    maxGapDistance: thresholds.phaseAdjacencyMaxGap,
+  });
 
   for (const list of byInputDefault.values()) {
     const total = list.length;
