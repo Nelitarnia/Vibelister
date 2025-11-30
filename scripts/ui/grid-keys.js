@@ -487,18 +487,28 @@ export function initGridKeys(deps) {
     }
   }
 
-  function onShortcutKeyDown(e) {
-    if (!shouldHandleGlobalShortcuts({ activeElement: doc?.activeElement || null })) return;
-    const platform = typeof nav?.platform === "string" ? nav.platform : "";
-    const isMac = platform.includes("Mac");
-    const mod = isMac ? e.metaKey : e.ctrlKey;
-    const keyRaw = e.key;
-    const keyLower = String(keyRaw || "").toLowerCase();
-    const plusLike =
-      keyRaw === "=" ||
-      keyRaw === "+" ||
-      keyRaw === "Add" ||
-      keyLower === "add";
+    function onShortcutKeyDown(e) {
+      const activeElement = doc?.activeElement || null;
+      const platform = typeof nav?.platform === "string" ? nav.platform : "";
+      const isMac = platform.includes("Mac");
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      const keyRaw = e.key;
+      const keyLower = String(keyRaw || "").toLowerCase();
+      const isViewCycleShortcut =
+        mod && e.shiftKey && !e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft");
+
+      if (!shouldHandleGlobalShortcuts({ activeElement })) {
+        if (isViewCycleShortcut && gridIsEditing()) {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      const plusLike =
+        keyRaw === "=" ||
+        keyRaw === "+" ||
+        keyRaw === "Add" ||
+        keyLower === "add";
 
     if (mod && keyLower === "s") {
       e.preventDefault();
@@ -588,15 +598,10 @@ export function initGridKeys(deps) {
       runSelfTests();
       return;
     }
-    if (
-      mod &&
-      e.shiftKey &&
-      !e.altKey &&
-      (e.key === "ArrowRight" || e.key === "ArrowLeft")
-    ) {
-      if (gridIsEditing()) {
-        e.preventDefault();
-        return; // don't cycle while editing
+      if (isViewCycleShortcut) {
+        if (gridIsEditing()) {
+          e.preventDefault();
+          return; // don't cycle while editing
       }
       e.preventDefault();
       cycleView(e.key === "ArrowRight" ? 1 : -1);
