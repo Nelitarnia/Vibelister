@@ -24,6 +24,8 @@ const FALLBACK_THRESHOLD_DEFAULTS = Object.freeze({
   inputDefaultMinExistingRatio: 0.5,
   profileTrendMinObservations: 3,
   profileTrendMinPreferenceRatio: 0.55,
+  phaseAdjacencyMaxGap: 4,
+  phaseAdjacencyEnabled: true,
 });
 
 function buttonStyle({ emphasis = false } = {}) {
@@ -132,6 +134,8 @@ function derivePresetThresholds(baseThresholds = {}, variant = "default") {
       profileTrendMinPreferenceRatio: clampRatio(
         base.profileTrendMinPreferenceRatio - 0.1,
       ),
+      phaseAdjacencyMaxGap: base.phaseAdjacencyMaxGap,
+      phaseAdjacencyEnabled: base.phaseAdjacencyEnabled,
     };
   }
   if (variant === "strict") {
@@ -155,6 +159,8 @@ function derivePresetThresholds(baseThresholds = {}, variant = "default") {
       profileTrendMinPreferenceRatio: clampRatio(
         base.profileTrendMinPreferenceRatio + 0.1,
       ),
+      phaseAdjacencyMaxGap: base.phaseAdjacencyMaxGap,
+      phaseAdjacencyEnabled: base.phaseAdjacencyEnabled,
     };
   }
   return { ...base };
@@ -476,6 +482,27 @@ export async function openInferenceDialog(options = {}) {
         title: "Strength threshold before trends override base defaults.",
       },
     );
+    const { wrapper: phaseAdjacencyMaxGapLabel, input: phaseAdjacencyMaxGap } =
+      buildNumberField(
+        "Phase adjacency max gap",
+        defaults.thresholdOverrides?.phaseAdjacencyMaxGap,
+        {
+          min: 2,
+          step: 1,
+          title: "Largest phase gap to bridge when suggesting adjacent fills.",
+        },
+      );
+    const {
+      label: phaseAdjacencyEnabledLabel,
+      input: phaseAdjacencyEnabled,
+    } = buildCheckbox(
+      "Enable phase adjacency",
+      defaults.thresholdOverrides?.phaseAdjacencyEnabled !== false,
+      "Uncheck to disable inference based on surrounding phase anchors.",
+    );
+    phaseAdjacencyEnabled.style.alignSelf = "flex-start";
+    phaseAdjacencyEnabledLabel.style.marginTop = "6px";
+    phaseAdjacencyEnabledLabel.style.gap = "8px";
 
     function setThresholdInputs(values = {}) {
       const pairs = {
@@ -489,10 +516,16 @@ export async function openInferenceDialog(options = {}) {
         inputDefaultMinExistingRatio,
         profileTrendMinObservations,
         profileTrendMinPreferenceRatio,
+        phaseAdjacencyMaxGap,
+        phaseAdjacencyEnabled,
       };
       for (const [key, input] of Object.entries(pairs)) {
         const value = values[key];
-        input.value = value == null ? "" : value;
+        if (input.type === "checkbox") {
+          input.checked = value == null ? false : !!value;
+        } else {
+          input.value = value == null ? "" : value;
+        }
       }
     }
 
@@ -547,6 +580,8 @@ export async function openInferenceDialog(options = {}) {
       inputDefaultMinExistingRatioLabel,
       profileTrendMinObservationsLabel,
       profileTrendMinPreferenceRatioLabel,
+      phaseAdjacencyMaxGapLabel,
+      phaseAdjacencyEnabledLabel,
     );
 
     const advancedHint = document.createElement("p");
@@ -658,6 +693,8 @@ export async function openInferenceDialog(options = {}) {
           profileTrendMinPreferenceRatio: parseNumber(
             profileTrendMinPreferenceRatio.value,
           ),
+          phaseAdjacencyMaxGap: parseNumber(phaseAdjacencyMaxGap.value),
+          phaseAdjacencyEnabled: phaseAdjacencyEnabled.checked,
         },
       };
     }

@@ -312,7 +312,9 @@ export function createInferenceController(options) {
     const thresholdOverrides = { ...baseThresholds };
     const overrides = options.thresholdOverrides || {};
     for (const [key, value] of Object.entries(overrides)) {
-      if (Number.isFinite(value)) thresholdOverrides[key] = value;
+      if (Number.isFinite(value) || typeof value === "boolean") {
+        thresholdOverrides[key] = value;
+      }
     }
     lastThresholdOverrides = thresholdOverrides;
     const suggestions = proposeInteractionInferences(

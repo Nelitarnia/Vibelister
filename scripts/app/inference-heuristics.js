@@ -207,13 +207,23 @@ function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
 }
 
 const DEFAULT_PHASE_ADJACENCY_MAX_GAP = 4;
+const DEFAULT_PHASE_ADJACENCY_ENABLED = true;
 
 function applyPhaseAdjacency(
   groups,
   suggestions,
   profilePrefs,
-  { maxGapDistance = DEFAULT_PHASE_ADJACENCY_MAX_GAP } = {},
+  {
+    maxGapDistance = DEFAULT_PHASE_ADJACENCY_MAX_GAP,
+    enabled = DEFAULT_PHASE_ADJACENCY_ENABLED,
+  } = {},
 ) {
+  if (enabled === false) return;
+  const allowedGapDistance = Number.isFinite(maxGapDistance)
+    ? maxGapDistance
+    : DEFAULT_PHASE_ADJACENCY_MAX_GAP;
+  if (allowedGapDistance < 2) return;
+
   for (const list of groups.values()) {
     const ordered = list
       .filter((t) => Number.isFinite(t.phase))
@@ -230,7 +240,7 @@ function applyPhaseAdjacency(
       if (
         lastAnchor &&
         gapDistance > 1 &&
-        gapDistance <= maxGapDistance &&
+        gapDistance <= allowedGapDistance &&
         key === lastAnchor.valueKey &&
         target.source === lastAnchor.source
       ) {
@@ -344,6 +354,7 @@ export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
   profileTrendMinObservations: 3,
   profileTrendMinPreferenceRatio: 0.55,
   phaseAdjacencyMaxGap: DEFAULT_PHASE_ADJACENCY_MAX_GAP,
+  phaseAdjacencyEnabled: DEFAULT_PHASE_ADJACENCY_ENABLED,
 });
 
 function normalizeThresholds(override = {}) {
@@ -386,6 +397,10 @@ function normalizeThresholds(override = {}) {
     phaseAdjacencyMaxGap: Number.isFinite(override.phaseAdjacencyMaxGap)
       ? override.phaseAdjacencyMaxGap
       : defaults.phaseAdjacencyMaxGap,
+    phaseAdjacencyEnabled:
+      typeof override.phaseAdjacencyEnabled === "boolean"
+        ? override.phaseAdjacencyEnabled
+        : defaults.phaseAdjacencyEnabled,
   };
 }
 
@@ -614,6 +629,7 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
 
   applyPhaseAdjacency(byPhaseAdjacency, suggestions, profilePrefs, {
     maxGapDistance: thresholds.phaseAdjacencyMaxGap,
+    enabled: thresholds.phaseAdjacencyEnabled,
   });
 
   for (const list of byInputDefault.values()) {

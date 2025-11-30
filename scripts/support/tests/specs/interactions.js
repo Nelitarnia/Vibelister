@@ -2037,6 +2037,125 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "phase adjacency can be disabled via threshold overrides",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Shelve");
+        action.phases = { ids: [0, 1, 2], labels: {} };
+        const input = addInput("Mid");
+        const outcome = addOutcome("Hold");
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        model.notes[noteKeyForPair(pair, 0)] = {
+          outcomeId: outcome.id,
+          source: HEURISTIC_SOURCES.actionGroup,
+        };
+        model.notes[noteKeyForPair(pair, 2)] = {
+          outcomeId: outcome.id,
+          source: HEURISTIC_SOURCES.actionGroup,
+        };
+
+        const targets = action.phases.ids.map((phase) => ({
+          key: noteKeyForPair(pair, phase),
+          field: "outcome",
+          phase,
+          note: model.notes[noteKeyForPair(pair, phase)],
+          pair,
+          actionGroup: "",
+        }));
+
+        const overrides = {
+          consensusMinGroupSize: 99,
+          actionGroupMinGroupSize: 99,
+          actionGroupPhaseMinGroupSize: 99,
+          inputDefaultMinGroupSize: 99,
+          phaseAdjacencyEnabled: false,
+        };
+
+        const suggestions = proposeInteractionInferences(targets, null, overrides);
+        const gap = suggestions.get(noteKeyForPair(pair, 1))?.outcome;
+
+        assert.ok(!gap, "disabling phase adjacency suppresses gap suggestions");
+      },
+    },
+    {
+      name: "phase adjacency respects tightened max gap threshold",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Strafe");
+        action.phases = { ids: [0, 1, 2, 3], labels: {} };
+        const input = addInput("High");
+        const outcome = addOutcome("Glide");
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        model.notes[noteKeyForPair(pair, 0)] = {
+          outcomeId: outcome.id,
+          source: HEURISTIC_SOURCES.actionGroup,
+        };
+        model.notes[noteKeyForPair(pair, 3)] = {
+          outcomeId: outcome.id,
+          source: HEURISTIC_SOURCES.actionGroup,
+        };
+
+        const targets = action.phases.ids.map((phase) => ({
+          key: noteKeyForPair(pair, phase),
+          field: "outcome",
+          phase,
+          note: model.notes[noteKeyForPair(pair, phase)],
+          pair,
+          actionGroup: "",
+        }));
+
+        const overrides = {
+          consensusMinGroupSize: 99,
+          actionGroupMinGroupSize: 99,
+          actionGroupPhaseMinGroupSize: 99,
+          inputDefaultMinGroupSize: 99,
+          phaseAdjacencyMaxGap: 2,
+          phaseAdjacencyEnabled: true,
+        };
+
+        const suggestions = proposeInteractionInferences(targets, null, overrides);
+        const gapOne = suggestions.get(noteKeyForPair(pair, 1))?.outcome;
+        const gapTwo = suggestions.get(noteKeyForPair(pair, 2))?.outcome;
+
+        assert.ok(!gapOne, "gaps beyond the tightened max gap are ignored");
+        assert.ok(!gapTwo, "interior gaps remain empty when max gap is too small");
+      },
+    },
+    {
       name: "applyInference fills empty cells with heuristic metadata",
       run(assert) {
         const { model, addAction, addInput, addModifier, addOutcome } =
