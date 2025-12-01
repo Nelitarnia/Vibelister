@@ -66,7 +66,8 @@ function registerSuggestion(
 ) {
   if (profilePrefs?.shouldSkip(target, value)) return;
   if (!map.has(target.key)) map.set(target.key, {});
-  map.get(target.key)[target.field] = {
+
+  const candidate = {
     source,
     confidence,
     value,
@@ -75,6 +76,11 @@ function registerSuggestion(
         ? extraMetadata
         : undefined,
   };
+
+  const existing = map.get(target.key)[target.field];
+  if (existing && !shouldReplaceSuggestion(existing, candidate)) return;
+
+  map.get(target.key)[target.field] = candidate;
 }
 
 function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
@@ -107,8 +113,6 @@ function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
     const confidence = computeSuggestionConfidence(source, { agreementRatio });
     for (const target of list) {
       if (!eligibleForSuggestion(target)) continue;
-      const already = suggestions.get(target.key)?.[target.field];
-      if (already) continue;
       registerSuggestion(
         suggestions,
         target,
@@ -182,8 +186,6 @@ function applyPhaseAdjacency(
         );
         for (const gapTarget of interiorTargets) {
           if (!eligibleForSuggestion(gapTarget)) continue;
-          const already = suggestions.get(gapTarget.key)?.[gapTarget.field];
-          if (already) continue;
           registerSuggestion(
             suggestions,
             gapTarget,
@@ -217,6 +219,28 @@ const BASE_CONFIDENCE = Object.freeze({
   [HEURISTIC_SOURCES.profileTrend]: 0.56,
   [HEURISTIC_SOURCES.phaseAdjacency]: 0.62,
 });
+
+const SOURCE_PRIORITY = new Map(
+  [
+    HEURISTIC_SOURCES.modifierPropagation,
+    HEURISTIC_SOURCES.modifierProfile,
+    HEURISTIC_SOURCES.phaseAdjacency,
+    HEURISTIC_SOURCES.actionGroup,
+    HEURISTIC_SOURCES.profileTrend,
+    HEURISTIC_SOURCES.inputDefault,
+  ].map((source, index) => [source, index]),
+);
+
+function shouldReplaceSuggestion(existing, candidate) {
+  const existingConfidence = Number(existing?.confidence) || 0;
+  const candidateConfidence = Number(candidate?.confidence) || 0;
+  if (candidateConfidence > existingConfidence) return true;
+  if (candidateConfidence < existingConfidence) return false;
+
+  const existingPriority = SOURCE_PRIORITY.get(existing?.source) ?? Number.MAX_SAFE_INTEGER;
+  const candidatePriority = SOURCE_PRIORITY.get(candidate?.source) ?? Number.MAX_SAFE_INTEGER;
+  return candidatePriority < existingPriority;
+}
 
 function clampConfidence(value) {
   if (!Number.isFinite(value)) return 0;
@@ -549,8 +573,6 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
     );
     for (const target of list) {
       if (!eligibleForSuggestion(target)) continue;
-      const already = suggestions.get(target.key)?.[target.field];
-      if (already) continue;
       registerSuggestion(
         suggestions,
         target,
@@ -565,8 +587,6 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
   if (profilePrefs) {
     for (const target of prepared) {
       if (!eligibleForSuggestion(target)) continue;
-      const already = suggestions.get(target.key)?.[target.field];
-      if (already) continue;
       if (!profilePrefs.hasSignal(target)) continue;
       if (profilePrefs.shouldSkip(target)) continue;
       const preferred = profilePrefs.preferredValue(target);

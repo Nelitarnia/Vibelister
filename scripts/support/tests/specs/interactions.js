@@ -1745,6 +1745,153 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "higher-confidence suggestions replace earlier heuristics",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome } = makeModelFixture();
+        const action = addAction("Blend");
+        const modifier = addModifier("Charged");
+        const outcome = addOutcome("Stun");
+        const input = addInput("Heavy");
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 2,
+              variants: [
+                { variantSig: "", rowIndex: 0, rowCount: 1 },
+                { variantSig: `${modifier.id}`, rowIndex: 1, rowCount: 1 },
+              ],
+            },
+          ],
+          totalRows: 2,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
+        };
+
+        const basePair = getPair(model, 0);
+        const baseKey = noteKeyForPair(basePair, 1);
+        model.notes[baseKey] = { outcomeId: outcome.id };
+
+        const targets = [];
+        for (let r = 0; r < 2; r++) {
+          const pair = getPair(model, r);
+          const key = noteKeyForPair(pair, 1);
+          targets.push({
+            key,
+            field: "outcome",
+            phase: 1,
+            note: model.notes[key],
+            pair,
+            row: r,
+          });
+        }
+
+        const inputKey = `in:${input.id}`;
+        const profiles = {
+          input: {
+            [inputKey]: {
+              outcome: {
+                phases: {
+                  1: {
+                    change: 10,
+                    noop: 0,
+                    clear: 0,
+                    values: {
+                      [`o:${outcome.id}`]: {
+                        count: 10,
+                        value: { outcomeId: outcome.id },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
+
+        const suggestions = proposeInteractionInferences(targets, profiles, {
+          profileTrendMinObservations: 1,
+          profileTrendMinPreferenceRatio: 0,
+        });
+        const inferredPair = getPair(model, 1);
+        const suggestion = suggestions.get(noteKeyForPair(inferredPair, 1))?.outcome;
+
+        assert.ok(suggestion, "modifier row receives a suggestion");
+        assert.strictEqual(
+          suggestion.source,
+          HEURISTIC_SOURCES.profileTrend,
+          "profile trend overrides earlier consensus",
+        );
+        assert.ok(suggestion.confidence > 0.6, "higher-confidence source wins");
+      },
+    },
+    {
+      name: "lower-confidence suggestions cannot displace existing ones",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome } = makeModelFixture();
+        const action = addAction("Crash");
+        const modifier = addModifier("Brutal");
+        const outcome = addOutcome("Knockdown");
+        const input = addInput("Mid");
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 2,
+              variants: [
+                { variantSig: "", rowIndex: 0, rowCount: 1 },
+                { variantSig: `${modifier.id}`, rowIndex: 1, rowCount: 1 },
+              ],
+            },
+          ],
+          totalRows: 2,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
+        };
+
+        const basePair = getPair(model, 0);
+        const baseKey = noteKeyForPair(basePair, 1);
+        model.notes[baseKey] = { outcomeId: outcome.id };
+
+        const targets = [];
+        for (let r = 0; r < 2; r++) {
+          const pair = getPair(model, r);
+          const key = noteKeyForPair(pair, 1);
+          targets.push({
+            key,
+            field: "outcome",
+            phase: 1,
+            note: model.notes[key],
+            pair,
+            row: r,
+          });
+        }
+
+        const suggestions = proposeInteractionInferences(targets);
+        const inferredPair = getPair(model, 1);
+        const suggestion = suggestions.get(noteKeyForPair(inferredPair, 1))?.outcome;
+
+        assert.ok(suggestion, "modifier row receives a suggestion");
+        assert.strictEqual(
+          suggestion.source,
+          HEURISTIC_SOURCES.modifierPropagation,
+          "early high-confidence suggestion remains",
+        );
+        assert.ok(
+          suggestion.confidence > 0.3 && suggestion.confidence < 0.5,
+          "modifier consensus confidence preserved over later defaults",
+        );
+      },
+    },
+    {
       name: "phase adjacency fills single missing phase between matching anchors",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
