@@ -18,6 +18,7 @@ import { getColumnKindTests } from "../scripts/support/tests/specs/column-kinds.
 import { getCommentTests } from "../scripts/support/tests/specs/comments.js";
 import { getClipboardTests } from "../scripts/support/tests/specs/clipboard.js";
 import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
+import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -27,6 +28,10 @@ for (const spec of getModelVariantTests()) {
 
 for (const spec of getInteractionsTests()) {
   test(`Interactions › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInferenceUtilsTests()) {
+  test(`Inference utils › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getPersistenceTests()) {

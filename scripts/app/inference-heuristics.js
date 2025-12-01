@@ -2,31 +2,17 @@ import {
   DEFAULT_INTERACTION_SOURCE,
   describeInteractionInference,
   normalizeInteractionSource,
-  normalizeInteractionTags,
 } from "./interactions.js";
-
-function normalizeVariantSig(pair) {
-  if (!pair) return "";
-  const sig =
-    typeof pair.variantSig === "string" || typeof pair.variantSig === "number"
-      ? String(pair.variantSig)
-      : "";
-  return sig;
-}
-
-function normalizeInputKey(pair) {
-  if (!pair) return "";
-  const kind = String(pair.kind || "AI").toUpperCase();
-  if (kind === "AA") {
-    return Number.isFinite(pair.rhsActionId) ? `rhs:${pair.rhsActionId}` : "";
-  }
-  return Number.isFinite(pair.iId) ? `in:${pair.iId}` : "";
-}
-
-function normalizeActionId(pair) {
-  const id = Number(pair?.aId);
-  return Number.isFinite(id) ? id : null;
-}
+import {
+  cloneValue,
+  extractNoteFieldValue,
+  normalizeActionId,
+  normalizeInputKey,
+  normalizePhaseKey,
+  normalizeVariantSig,
+  parseModifierIds,
+  valueKey,
+} from "./inference-utils.js";
 
 function normalizeActionGroup(group) {
   if (group == null) return "";
@@ -35,78 +21,7 @@ function normalizeActionGroup(group) {
 }
 
 function extractFieldValue(target) {
-  const { note, field } = target;
-  if (!note || typeof note !== "object") return null;
-  if (field === "outcome") {
-    if (Number.isFinite(note.outcomeId)) return { outcomeId: note.outcomeId };
-    if (typeof note.result === "string" && note.result.trim()) {
-      return { result: note.result.trim() };
-    }
-    return null;
-  }
-  if (field === "end") {
-    if (Number.isFinite(note.endActionId)) {
-      return {
-        endActionId: note.endActionId,
-        endVariantSig:
-          typeof note.endVariantSig === "string" ? note.endVariantSig : "",
-      };
-    }
-    if (typeof note.endFree === "string" && note.endFree.trim()) {
-      return { endFree: note.endFree.trim() };
-    }
-    return null;
-  }
-  if (field === "tag") {
-    const tags = normalizeInteractionTags(note.tags);
-    return tags.length ? { tags } : null;
-  }
-  return null;
-}
-
-function valueKey(field, value) {
-  if (!value) return "";
-  if (field === "outcome") {
-    if (Number.isFinite(value.outcomeId)) return `o:${value.outcomeId}`;
-    if (typeof value.result === "string") return `r:${value.result}`;
-  }
-  if (field === "end") {
-    if (Number.isFinite(value.endActionId)) {
-      const sig = typeof value.endVariantSig === "string" ? value.endVariantSig : "";
-      return `e:${value.endActionId}|${sig}`;
-    }
-    if (typeof value.endFree === "string") return `f:${value.endFree}`;
-  }
-  if (field === "tag") {
-    const tags = normalizeInteractionTags(value.tags);
-    return `t:${tags.join("|")}`;
-  }
-  return "";
-}
-
-function cloneValue(field, value) {
-  if (!value) return null;
-  if (field === "outcome") {
-    if (Number.isFinite(value.outcomeId)) return { outcomeId: value.outcomeId };
-    if (typeof value.result === "string") return { result: value.result };
-    return null;
-  }
-  if (field === "end") {
-    if (Number.isFinite(value.endActionId)) {
-      return {
-        endActionId: value.endActionId,
-        endVariantSig:
-          typeof value.endVariantSig === "string" ? value.endVariantSig : "",
-      };
-    }
-    if (typeof value.endFree === "string") return { endFree: value.endFree };
-    return null;
-  }
-  if (field === "tag") {
-    const tags = normalizeInteractionTags(value.tags);
-    return tags.length ? { tags } : { tags: [] };
-  }
-  return null;
+  return extractNoteFieldValue(target?.note, target?.field);
 }
 
 function prepareTargets(targets) {
@@ -404,18 +319,6 @@ function normalizeThresholds(override = {}) {
   };
 }
 
-function modifierIdsFromSig(sig) {
-  if (!sig) return [];
-  return String(sig)
-    .split("+")
-    .map((id) => Number(id))
-    .filter((id) => Number.isFinite(id));
-}
-
-function normalizePhaseKey(phase) {
-  return phase == null ? null : String(phase);
-}
-
 function selectProfileBucket(container, phase, allowPhaseFallback) {
   if (!container) return null;
   const phaseKey = normalizePhaseKey(phase);
@@ -465,7 +368,7 @@ function summarizeProfileForTarget(target, profiles, cache) {
   );
   mergeBucket(inputBucket);
 
-  const modIds = modifierIdsFromSig(target.variantSig);
+  const modIds = parseModifierIds(target.variantSig);
   for (const modId of modIds) {
     const bucket = selectProfileBucket(
       profiles.modifier?.[modId]?.[field],

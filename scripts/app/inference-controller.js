@@ -14,9 +14,9 @@ import {
 } from "./inference-heuristics.js";
 import {
   captureInferenceProfilesSnapshot,
-  extractNoteFieldValue,
   recordProfileImpact,
 } from "./inference-profiles.js";
+import { extractNoteFieldValue } from "./inference-utils.js";
 import {
   buildInteractionsPairs,
   buildScopedInteractionsPairs,

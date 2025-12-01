@@ -31,6 +31,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── inference-controller.js
 │   │   ├── inference-heuristics.js
 │   │   ├── inference-profiles.js
+│   │   ├── inference-utils.js
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
 │   │   ├── project-info-controller.js
@@ -65,6 +66,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       │   ├── comments.js
 │   │       │   ├── deletion.js
 │   │       │   ├── grid-keys.js
+│   │       │   ├── inference-utils.js
 │   │       │   ├── interactions.js
 │   │       │   ├── mod-state.js
 │   │       │   ├── model-fixtures.js
@@ -142,6 +144,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `inference-controller.js` scopes interaction cells for inference runs, applies or clears inferred metadata with undo/status wiring, and skips manual edits so bulk operations respect source flags.
 - `inference-heuristics.js` layers modifier propagation, modifier profiles, and input defaults to propose inferred outcome/end/tag values with source-specific confidence metadata.
 - `inference-profiles.js` maintains per-modifier and per-input trend profiles, decaying counts, snapshotting them for heuristic runs, and exposing a read-only view that leans suggestions toward recently observed "no change" patterns.
+- `inference-utils.js` centralizes the shared normalization, extraction, keying, and cloning helpers consumed by heuristics, profiles, and inference-aware interactions.
 - `interaction-bulk-actions.js` coordinates toolbar and sidebar bulk actions for interaction cells, applying Uncertain toggles, accepting inferred metadata, and clearing inference flags with undo/status updates.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `interaction-tags.js` provides undo-friendly helpers for renaming and deleting interaction tags across the notes map so UI controllers can reuse consistent mutation wiring.
@@ -190,6 +193,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - The `tests/` subtree now keeps reusable spec modules (`specs/`) separate from browser runners (`tests.js`, `tests-ui.js`), ensuring Node and in-app harnesses share the same assertions and fixtures.
 - `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
 - `specs/cleanup.js` seeds fixture models with stale notes/comments and verifies the cleanup controller only prunes unreachable entries.
+- `specs/inference-utils.js` covers normalization, keying, and cloning behaviors so inference helpers stay stable across refactors.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.
 
 ### `tests/`

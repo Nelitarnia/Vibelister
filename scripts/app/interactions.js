@@ -10,44 +10,18 @@ import {
   getInteractionsRowCount,
 } from "./interactions-data.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
+import { recordProfileImpact } from "./inference-profiles.js";
 import {
   extractNoteFieldValue,
-  recordProfileImpact,
-} from "./inference-profiles.js";
+  normalizeInteractionTags,
+  normalizeTagList,
+} from "./inference-utils.js";
 
 export const DEFAULT_INTERACTION_CONFIDENCE = 1;
 export const DEFAULT_INTERACTION_SOURCE = "manual";
 
 export { getInteractionsRowCount, getPairFromIndex as getInteractionsPair };
-
-function expandTagCandidates(value) {
-  if (Array.isArray(value)) {
-    return value.flatMap((v) => expandTagCandidates(v));
-  }
-  if (value && typeof value === "object") {
-    if ("tags" in value) return expandTagCandidates(value.tags);
-    if ("tag" in value) return expandTagCandidates(value.tag);
-  }
-  if (value == null) return [];
-  const text = typeof value === "string" ? value : String(value);
-  return text
-    .split(/[\n,]/)
-    .map((tag) => tag.trim())
-    .filter(Boolean);
-}
-
-function normalizeTagList(value) {
-  const seen = new Set();
-  const tags = [];
-  for (const tag of expandTagCandidates(value)) {
-    const key = tag.toLowerCase();
-    if (!seen.has(key)) {
-      seen.add(key);
-      tags.push(tag);
-    }
-  }
-  return tags;
-}
+export { normalizeInteractionTags, normalizeTagList };
 
 export function normalizeInteractionConfidence(value) {
   const num = Number(value);
@@ -145,10 +119,6 @@ function extractInteractionMetadata(value) {
 
 function formatTagList(value) {
   return Array.isArray(value) && value.length ? value.join(", ") : "";
-}
-
-export function normalizeInteractionTags(value) {
-  return normalizeTagList(value);
 }
 
 function areTagListsEqual(a, b) {
