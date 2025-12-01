@@ -222,7 +222,8 @@ function violatesConstraints(setArr, maps) {
   return false;
 }
 
-function computeVariantsForAction(action, model) {
+function computeVariantsForAction(action, model, options = {}) {
+  const includeMarked = !!options.includeMarked;
   const set = action.modSet || {};
   const requiredIds = [];
   const requiredSet = new Set();
@@ -231,7 +232,8 @@ function computeVariantsForAction(action, model) {
     const id = Number(key);
     if (!Number.isFinite(id)) continue;
     const isRequired = modStateIsRequired(value);
-    const isActive = modStateIsOn(value) || isRequired;
+    const isActive =
+      isRequired || (includeMarked ? modStateActiveish(value) : modStateIsOn(value));
     if (isRequired) {
       requiredIds.push(id);
       requiredSet.add(id);
@@ -289,7 +291,9 @@ function computeVariantsForAction(action, model) {
   return uniq.length ? uniq : [""];
 }
 
-export function buildInteractionsPairs(model) {
+export function buildInteractionsPairs(model, options = {}) {
+  const includeBypass = !!options.includeBypass;
+  const targetIndexField = options.targetIndexField || "interactionsIndex";
   const actions = (model.actions || []).filter(
     (a) => a && (a.name || "").trim().length,
   );
@@ -316,12 +320,15 @@ export function buildInteractionsPairs(model) {
   const actionVariantCache = new Map();
 
   function getVariantsForAction(action) {
-    if (actionVariantCache.has(action)) return actionVariantCache.get(action);
-    let variants = useG ? computeVariantsForAction(action, model) : [""];
+    const cacheKey = `${includeBypass ? "b" : "d"}:${action.id}`;
+    if (actionVariantCache.has(cacheKey)) return actionVariantCache.get(cacheKey);
+    let variants = useG
+      ? computeVariantsForAction(action, model, { includeMarked: includeBypass })
+      : [""];
     const truncated = variants.length > CAP_PER_ACTION;
     if (truncated) variants = variants.slice(0, CAP_PER_ACTION);
     const entry = { variants, truncated };
-    actionVariantCache.set(action, entry);
+    actionVariantCache.set(cacheKey, entry);
     return entry;
   }
 
@@ -363,8 +370,9 @@ export function buildInteractionsPairs(model) {
       indexGroups.push(group);
     }
     model.interactionsPairs = [];
-    model.interactionsIndex = {
+    model[targetIndexField] = {
       mode: "AA",
+      includeBypass,
       groups: indexGroups,
       totalRows,
       actionsOrder: actions.map((a) => a.id),
@@ -408,8 +416,9 @@ export function buildInteractionsPairs(model) {
     indexGroups.push(group);
   }
   model.interactionsPairs = [];
-  model.interactionsIndex = {
+  model[targetIndexField] = {
     mode: "AI",
+    includeBypass,
     groups: indexGroups,
     totalRows,
     actionsOrder: actions.map((a) => a.id),

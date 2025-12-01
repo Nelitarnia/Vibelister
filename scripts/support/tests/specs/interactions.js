@@ -11,6 +11,7 @@ import {
   getInteractionsRowCount,
   collectInteractionTags,
   describeInteractionInference,
+  DEFAULT_INTERACTION_SOURCE,
 } from "../../../app/interactions.js";
 import { createInteractionBulkActions } from "../../../app/interaction-bulk-actions.js";
 import { createInteractionTagManager } from "../../../app/interaction-tags.js";
@@ -30,6 +31,7 @@ import { initPalette } from "../../../ui/palette.js";
 import { formatEndActionLabel } from "../../../data/column-kinds.js";
 import { MOD } from "../../../data/constants.js";
 import { buildInteractionsPairs } from "../../../data/variants/variants.js";
+import { MOD_STATE_ID } from "../../../data/mod-state.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 function plainCellText(value) {
@@ -2282,6 +2284,167 @@ export function getInteractionsTests() {
           [res.status],
           "status applied exactly once",
         );
+      },
+    },
+    {
+      name: "inference can source bypass variants when opted in",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
+          makeModelFixture();
+        const modifier = addModifier("Bypassable");
+        const action = addAction("Strike", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        const input = addInput("High");
+        const outcome = addOutcome("Hit");
+
+        groupExact(1, [modifier], { required: false, name: "Bypassable" });
+
+        buildInteractionsPairs(model);
+        buildInteractionsPairs(model, {
+          includeBypass: true,
+          targetIndexField: "interactionsIndexBypass",
+        });
+
+        const bypassPair = getInteractionsPair(model, 1, { includeBypass: true });
+        assert.ok(bypassPair, "bypass pair available when opt-in index is built");
+        const bypassKey = noteKeyForPair(bypassPair, 0);
+        model.notes[bypassKey] = {
+          outcomeId: outcome.id,
+          source: DEFAULT_INTERACTION_SOURCE,
+        };
+
+        const basePair = getInteractionsPair(model, 0, { includeBypass: true });
+        const baseKey = noteKeyForPair(basePair, 0);
+
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+          ],
+        };
+        const includeBypassCalls = [];
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([0]), colsAll: true },
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (opts.status) res.status = opts.status(res);
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r, opts) => {
+            includeBypassCalls.push(!!opts?.includeBypass);
+            return getInteractionsPair(m, r, opts);
+          },
+          getInteractionsRowCount: (m, opts) => {
+            includeBypassCalls.push(!!opts?.includeBypass);
+            return getInteractionsRowCount(m, opts);
+          },
+        });
+
+        controller.runInference({ scope: "project" });
+        assert.ok(!model.notes[baseKey], "legacy path ignores bypass-only sources");
+
+        const res = controller.runInference({
+          scope: "project",
+          inferFromBypassed: true,
+          inferToBypassed: true,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        });
+
+        assert.strictEqual(
+          model.notes[baseKey]?.outcomeId,
+          outcome.id,
+          "base variant inferred from bypass source when opt-in enabled",
+        );
+        assert.ok(
+          includeBypassCalls.some(Boolean),
+          "inference passes bypass-inclusive flag to accessors",
+        );
+        assert.ok((res?.applied || 0) >= 1, "inference applied at least one change");
+      },
+    },
+    {
+      name: "clear inference targets bypass rows when opted in",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
+          makeModelFixture();
+        const modifier = addModifier("Bypassable");
+        const action = addAction("Sweep", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        addInput("Light");
+        const outcome = addOutcome("Graze");
+
+        groupExact(1, [modifier], { required: false, name: "Bypassable" });
+
+        buildInteractionsPairs(model);
+        buildInteractionsPairs(model, {
+          includeBypass: true,
+          targetIndexField: "interactionsIndexBypass",
+        });
+
+        const bypassPair = getInteractionsPair(model, 1, { includeBypass: true });
+        assert.ok(bypassPair, "bypass row present when index includes marked modifiers");
+        const bypassKey = noteKeyForPair(bypassPair, 0);
+        model.notes[bypassKey] = {
+          outcomeId: outcome.id,
+          source: HEURISTIC_SOURCES.modifierPropagation,
+        };
+
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+          ],
+        };
+        const includeBypassCalls = [];
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([0]), colsAll: true },
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate) => mutate(),
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r, opts) => getInteractionsPair(m, r, opts),
+          getInteractionsRowCount: (m, opts) => {
+            includeBypassCalls.push(!!opts?.includeBypass);
+            return getInteractionsRowCount(m, opts);
+          },
+        });
+
+        const baseClear = controller.runClear({ scope: "project" });
+        assert.strictEqual(baseClear.cleared, 0, "legacy clear ignores bypass rows");
+        assert.ok(!includeBypassCalls.some(Boolean), "bypass flag stays off by default");
+
+        const bypassClear = controller.runClear({
+          scope: "project",
+          inferFromBypassed: true,
+          inferToBypassed: true,
+        });
+
+        assert.strictEqual(
+          bypassClear.cleared,
+          1,
+          "bypass-inclusive clear removes inferred bypass note",
+        );
+        assert.ok(
+          includeBypassCalls.some(Boolean),
+          "bypass-inclusive flag forwarded to row counter",
+        );
+        assert.ok(!model.notes[bypassKey], "bypass note cleared after opt-in run");
       },
     },
     {

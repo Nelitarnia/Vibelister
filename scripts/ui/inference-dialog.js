@@ -333,6 +333,23 @@ export async function openInferenceDialog(options = {}) {
     );
     includeRow.append(includeEndLabel, includeTagLabel);
 
+    const bypassRow = document.createElement("div");
+    bypassRow.style.cssText = "display:flex;flex-wrap:wrap;gap:14px;";
+    const {
+      label: inferFromBypassLabel,
+      input: inferFromBypassInput,
+    } = buildCheckbox(
+      "Infer from bypassed modifiers",
+      !!defaults.inferFromBypassed,
+      "When enabled, bypass/marked modifiers participate when mining inference sources.",
+    );
+    const { label: inferToBypassLabel, input: inferToBypassInput } = buildCheckbox(
+      "Infer to bypassed modifiers",
+      !!defaults.inferToBypassed,
+      "When enabled, bypass/marked modifier rows are eligible inference targets.",
+    );
+    bypassRow.append(inferFromBypassLabel, inferToBypassLabel);
+
     const runOptions = document.createElement("div");
     runOptions.style.cssText =
       "display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start;";
@@ -360,7 +377,7 @@ export async function openInferenceDialog(options = {}) {
     runOptions.append(overwriteLabel, onlyEmptyLabel, skipManualOutcomeLabel);
 
     const basicSection = document.createElement("div");
-    basicSection.append(scopeSelector, includeRow, runOptions);
+    basicSection.append(scopeSelector, includeRow, bypassRow, runOptions);
 
     const advancedSection = document.createElement("div");
     advancedSection.style.cssText =
@@ -673,6 +690,8 @@ export async function openInferenceDialog(options = {}) {
         scope: getScope(),
         includeEnd: includeEndInput.checked,
         includeTag: includeTagInput.checked,
+        inferFromBypassed: inferFromBypassInput.checked,
+        inferToBypassed: inferToBypassInput.checked,
         overwriteInferred: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
         skipManualOutcome: skipManualOutcomeInput.checked,

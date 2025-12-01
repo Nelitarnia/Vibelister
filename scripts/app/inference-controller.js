@@ -17,6 +17,8 @@ import {
   extractNoteFieldValue,
   recordProfileImpact,
 } from "./inference-profiles.js";
+import { buildInteractionsPairs } from "../data/variants/variants.js";
+import { getInteractionsIndex } from "./interactions-data.js";
 
 const HEURISTIC_LABELS = Object.freeze({
   [HEURISTIC_SOURCES.actionGroup]: "action group similarity",
@@ -33,6 +35,8 @@ const DEFAULT_OPTIONS = Object.freeze({
   scope: "selection",
   includeEnd: true,
   includeTag: true,
+  inferFromBypassed: false,
+  inferToBypassed: false,
   overwriteInferred: true,
   onlyFillEmpty: false,
   skipManualOutcome: false,
@@ -62,6 +66,8 @@ function normalizeOptions(payload = {}) {
     scope: payload.scope || DEFAULT_OPTIONS.scope,
     includeEnd: payload.includeEnd !== false,
     includeTag: payload.includeTag !== false,
+    inferFromBypassed: !!payload.inferFromBypassed,
+    inferToBypassed: !!payload.inferToBypassed,
     overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
     skipManualOutcome: !!payload.skipManualOutcome,
@@ -99,6 +105,31 @@ export function createInferenceController(options) {
   const OUT_OF_VIEW_STATUS = "Inference only applies to the Interactions view.";
   const NO_TARGETS_STATUS =
     "Select Outcome, End, or Tag cells in the Interactions view to run inference.";
+  const BYPASS_INDEX_FIELD = "interactionsIndexBypass";
+
+  function shouldUseBypassIndex(options) {
+    return !!(options?.inferFromBypassed || options?.inferToBypassed);
+  }
+
+  function ensureBypassIndex() {
+    const existing = getInteractionsIndex(model, { includeBypass: true });
+    if (existing) return existing;
+    buildInteractionsPairs(model, {
+      includeBypass: true,
+      targetIndexField: BYPASS_INDEX_FIELD,
+    });
+    return getInteractionsIndex(model, { includeBypass: true });
+  }
+
+  function getIndexAccess(options) {
+    const includeBypass = shouldUseBypassIndex(options);
+    if (includeBypass) ensureBypassIndex();
+    const getPair = (rowIndex) =>
+      getInteractionsPair?.(model, rowIndex, { includeBypass });
+    const getRowCount = () =>
+      getInteractionsRowCount?.(model, { includeBypass }) || 0;
+    return { getPair, getRowCount, includeBypass };
+  }
 
   function formatStatus(result, actionLabel) {
     if (!result) return "";
@@ -190,19 +221,19 @@ export function createInferenceController(options) {
     return value;
   }
 
-  function collectRowsForActionId(actionId, totalRows) {
+  function collectRowsForActionId(actionId, totalRows, getPair) {
     const rows = [];
     for (let i = 0; i < totalRows; i++) {
-      const pair = getInteractionsPair?.(model, i);
+      const pair = getPair?.(i);
       if (pair && pair.aId === actionId) rows.push(i);
     }
     return rows;
   }
 
-  function collectRowsForActionGroup(targetGroup, totalRows) {
+  function collectRowsForActionGroup(targetGroup, totalRows, getPair) {
     const rows = [];
     for (let i = 0; i < totalRows; i++) {
-      const pair = getInteractionsPair?.(model, i);
+      const pair = getPair?.(i);
       if (!pair) continue;
       const actionGroup = getActionGroupForAction(pair.aId);
       if (actionGroup && actionGroup === targetGroup) rows.push(i);
@@ -210,20 +241,20 @@ export function createInferenceController(options) {
     return rows;
   }
 
-  function getRows(scope) {
-    const totalRows = getInteractionsRowCount?.(model) || 0;
+  function getRows(scope, indexAccess) {
+    const totalRows = indexAccess.getRowCount();
     if (scope === "project") {
       return Array.from({ length: totalRows }, (_, i) => i);
     }
     if (scope === "action" || scope === "actionGroup") {
-      const activePair = getInteractionsPair?.(model, sel.r);
+      const activePair = indexAccess.getPair(sel.r);
       if (!activePair) return [];
       const targetId = activePair.aId;
       if (scope === "actionGroup") {
         const group = getActionGroupForAction(targetId);
-        if (group) return collectRowsForActionGroup(group, totalRows);
+        if (group) return collectRowsForActionGroup(group, totalRows, indexAccess.getPair);
       }
-      return collectRowsForActionId(targetId, totalRows);
+      return collectRowsForActionId(targetId, totalRows, indexAccess.getPair);
     }
     if (selection.rows && selection.rows.size) {
       return Array.from(selection.rows).sort((a, b) => a - b);
@@ -231,16 +262,16 @@ export function createInferenceController(options) {
     return [sel.r];
   }
 
-  function collectTargets(scope, options) {
+  function collectTargets(scope, options, indexAccess) {
     if (typeof getActiveView === "function" && getActiveView() !== "interactions") {
       return { targets: [], allowed: false, reason: OUT_OF_VIEW_STATUS };
     }
     const def = typeof viewDef === "function" ? viewDef() : viewDef;
-    const rows = getRows(scope);
+    const rows = getRows(scope, indexAccess);
     const columns = getRelevantColumns(def, options, scope === "selection");
     const targets = [];
     for (const r of rows) {
-      const pair = getInteractionsPair?.(model, r);
+      const pair = indexAccess.getPair(r);
       if (!pair) continue;
       const allowedPhases = getAllowedPhasesForAction(pair.aId);
       for (const { pk } of columns) {
@@ -263,7 +294,12 @@ export function createInferenceController(options) {
   }
 
   function applyInference(options) {
-    const { targets, allowed, reason } = collectTargets(options.scope, options);
+    const indexAccess = getIndexAccess(options);
+    const { targets, allowed, reason } = collectTargets(
+      options.scope,
+      options,
+      indexAccess,
+    );
     if (!allowed) {
       const status = reason || OUT_OF_VIEW_STATUS;
       statusBar?.set?.(status);
@@ -282,7 +318,7 @@ export function createInferenceController(options) {
     const { targets: broaderTargets, allowed: suggestionAllowed } =
       suggestionScope === options.scope
         ? { targets, allowed }
-        : collectTargets(suggestionScope, options);
+        : collectTargets(suggestionScope, options, indexAccess);
     const suggestionTargets = (() => {
       if (!suggestionAllowed) return targets;
       if (suggestionScope === options.scope) return targets;
@@ -441,7 +477,12 @@ export function createInferenceController(options) {
   }
 
   function clearInference(options) {
-    const { targets, allowed, reason } = collectTargets(options.scope, options);
+    const indexAccess = getIndexAccess(options);
+    const { targets, allowed, reason } = collectTargets(
+      options.scope,
+      options,
+      indexAccess,
+    );
     if (!allowed) {
       const status = reason || OUT_OF_VIEW_STATUS;
       statusBar?.set?.(status);
@@ -572,6 +613,8 @@ export function createInferenceController(options) {
         defaults: {
           includeEnd: DEFAULT_OPTIONS.includeEnd,
           includeTag: DEFAULT_OPTIONS.includeTag,
+          inferFromBypassed: DEFAULT_OPTIONS.inferFromBypassed,
+          inferToBypassed: DEFAULT_OPTIONS.inferToBypassed,
           overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
           onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
           skipManualOutcome: DEFAULT_OPTIONS.skipManualOutcome,

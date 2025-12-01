@@ -1,14 +1,17 @@
 // interactions-data.js — shared helpers for lazy Interactions rows
 
-export function getInteractionsIndex(model) {
-  if (!model || !model.interactionsIndex) return null;
-  const index = model.interactionsIndex;
-  if (!Array.isArray(index.groups)) return null;
+export function getInteractionsIndex(model, options = {}) {
+  if (!model) return null;
+  const indexKey = options?.includeBypass
+    ? "interactionsIndexBypass"
+    : "interactionsIndex";
+  const index = model[indexKey];
+  if (!index || !Array.isArray(index.groups)) return null;
   return index;
 }
 
-export function getInteractionsRowCount(model) {
-  const index = getInteractionsIndex(model);
+export function getInteractionsRowCount(model, options = {}) {
+  const index = getInteractionsIndex(model, options);
   if (!index) return 0;
   const total = Number(index.totalRows);
   if (Number.isFinite(total) && total >= 0) return total;
@@ -32,9 +35,9 @@ function findVariantEntry(index, rowIndex) {
   return null;
 }
 
-export function getInteractionsPair(model, rowIndex) {
+export function getInteractionsPair(model, rowIndex, options = {}) {
   if (!Number.isFinite(rowIndex) || rowIndex < 0) return null;
-  const index = getInteractionsIndex(model);
+  const index = getInteractionsIndex(model, options);
   if (!index) return null;
   const info = findVariantEntry(index, rowIndex);
   if (!info) return null;
