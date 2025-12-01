@@ -175,6 +175,28 @@ export function createInferenceController(options) {
     return ids.size ? Array.from(ids) : null;
   }
 
+  function collectActionIdsWithNotes() {
+    const ids = new Set();
+    const entries = Object.entries(model?.notes || {});
+    for (const [key, note] of entries) {
+      if (!note || typeof key !== "string") continue;
+      if (key.startsWith("ai|")) {
+        const parts = key.split("|");
+        const aId = Number(parts[1]);
+        if (Number.isFinite(aId)) ids.add(aId);
+        continue;
+      }
+      if (key.startsWith("aa|")) {
+        const parts = key.split("|");
+        const aId = Number(parts[1]);
+        const rhsId = Number(parts[2]);
+        if (Number.isFinite(aId)) ids.add(aId);
+        if (Number.isFinite(rhsId)) ids.add(rhsId);
+      }
+    }
+    return ids;
+  }
+
   function buildRowLookup(indexAccess) {
     const lookup = new Map();
     const total = indexAccess.getRowCount();
@@ -211,7 +233,18 @@ export function createInferenceController(options) {
       return { indexAccess: baseAccess, rows: baseRows };
     }
     const scopedIds = getScopedActionIds(options.scope, baseRows, baseAccess);
-    const index = ensureBypassIndex(scopedIds);
+    const actionIds = (() => {
+      const combined = new Set();
+      if (Array.isArray(scopedIds)) {
+        for (const id of scopedIds) combined.add(id);
+      }
+      if (options.inferFromBypassed) {
+        const notedIds = collectActionIdsWithNotes();
+        for (const id of notedIds) combined.add(id);
+      }
+      return combined.size ? Array.from(combined) : null;
+    })();
+    const index = ensureBypassIndex(actionIds);
     const indexAccess = {
       includeBypass,
       getPair: (rowIndex) =>
