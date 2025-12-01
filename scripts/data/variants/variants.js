@@ -222,7 +222,8 @@ function violatesConstraints(setArr, maps) {
   return false;
 }
 
-function computeVariantsForAction(action, model) {
+function computeVariantsForAction(action, model, options = {}) {
+  const includeMarked = !!options.includeMarked;
   const set = action.modSet || {};
   const requiredIds = [];
   const requiredSet = new Set();
@@ -231,7 +232,8 @@ function computeVariantsForAction(action, model) {
     const id = Number(key);
     if (!Number.isFinite(id)) continue;
     const isRequired = modStateIsRequired(value);
-    const isActive = modStateIsOn(value) || isRequired;
+    const isActive =
+      isRequired || (includeMarked ? modStateActiveish(value) : modStateIsOn(value));
     if (isRequired) {
       requiredIds.push(id);
       requiredSet.add(id);
@@ -289,10 +291,27 @@ function computeVariantsForAction(action, model) {
   return uniq.length ? uniq : [""];
 }
 
-export function buildInteractionsPairs(model) {
-  const actions = (model.actions || []).filter(
-    (a) => a && (a.name || "").trim().length,
-  );
+export function buildInteractionsPairs(model, options = {}) {
+  const includeBypass = !!options.includeBypass;
+  const targetIndexField = options.targetIndexField || "interactionsIndex";
+  const isBaseIndex = !includeBypass && targetIndexField === "interactionsIndex";
+  const currentBaseVersion = Number(model?.interactionsIndexVersion) || 0;
+  const baseVersion = isBaseIndex ? currentBaseVersion + 1 : currentBaseVersion;
+  const actionSet = options.actionIds
+    ? new Set(
+        options.actionIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id)),
+      )
+    : null;
+  const actionsSource = Array.isArray(options.actions)
+    ? options.actions
+    : model.actions || [];
+  const actions = actionsSource.filter((a) => {
+    if (!a || !(a.name || "").trim().length) return false;
+    if (actionSet && !actionSet.has(a.id)) return false;
+    return true;
+  });
   const inputs = (model.inputs || []).filter(
     (i) => i && (i.name || "").trim().length,
   );
@@ -316,12 +335,15 @@ export function buildInteractionsPairs(model) {
   const actionVariantCache = new Map();
 
   function getVariantsForAction(action) {
-    if (actionVariantCache.has(action)) return actionVariantCache.get(action);
-    let variants = useG ? computeVariantsForAction(action, model) : [""];
+    const cacheKey = `${includeBypass ? "b" : "d"}:${action.id}`;
+    if (actionVariantCache.has(cacheKey)) return actionVariantCache.get(cacheKey);
+    let variants = useG
+      ? computeVariantsForAction(action, model, { includeMarked: includeBypass })
+      : [""];
     const truncated = variants.length > CAP_PER_ACTION;
     if (truncated) variants = variants.slice(0, CAP_PER_ACTION);
     const entry = { variants, truncated };
-    actionVariantCache.set(action, entry);
+    actionVariantCache.set(cacheKey, entry);
     return entry;
   }
 
@@ -363,14 +385,17 @@ export function buildInteractionsPairs(model) {
       indexGroups.push(group);
     }
     model.interactionsPairs = [];
-    model.interactionsIndex = {
+    model[targetIndexField] = {
       mode: "AA",
+      includeBypass,
+      baseVersion,
       groups: indexGroups,
       totalRows,
       actionsOrder: actions.map((a) => a.id),
       inputsOrder: [],
       variantCatalog,
     };
+    if (isBaseIndex) model.interactionsIndexVersion = baseVersion;
     return {
       actionsCount: actions.length,
       inputsCount: actions.length,
@@ -408,19 +433,63 @@ export function buildInteractionsPairs(model) {
     indexGroups.push(group);
   }
   model.interactionsPairs = [];
-  model.interactionsIndex = {
+  model[targetIndexField] = {
     mode: "AI",
+    includeBypass,
+    baseVersion,
     groups: indexGroups,
     totalRows,
     actionsOrder: actions.map((a) => a.id),
     inputsOrder: inputs.map((i) => i.id),
     variantCatalog,
   };
+  if (isBaseIndex) model.interactionsIndexVersion = baseVersion;
   return {
     actionsCount: actions.length,
     inputsCount: inputs.length,
     pairsCount: totalRows,
     capped,
     cappedActions,
+    index: model[targetIndexField],
   };
+}
+
+export function buildScopedInteractionsPairs(model, actionIds, options = {}) {
+  const includeBypass = !!options.includeBypass;
+  const baseVersion = Number(model?.interactionsIndexVersion) || 0;
+  const normalizedIds = Array.isArray(actionIds)
+    ? Array.from(
+        new Set(
+          actionIds
+            .map((id) => Number(id))
+            .filter((id) => Number.isFinite(id) && id >= 0),
+        ),
+      )
+        .sort((a, b) => a - b)
+    : [];
+  const targetIndexField = options.targetIndexField || "interactionsIndex";
+  const cacheField = options.cacheField || `${targetIndexField}Cache`;
+  const cacheKey = `${includeBypass ? "b" : "d"}:${
+    normalizedIds.length ? normalizedIds.join(",") : "all"
+  }`;
+  const cache = (() => {
+    const existing = model[cacheField];
+    if (existing && typeof existing === "object") return existing;
+    const created = {};
+    model[cacheField] = created;
+    return created;
+  })();
+  if (cache[cacheKey] && cache[cacheKey].baseVersion === baseVersion) {
+    return { index: cache[cacheKey].index, summary: cache[cacheKey].summary };
+  }
+  const summary = buildInteractionsPairs(model, {
+    ...options,
+    includeBypass,
+    targetIndexField,
+    actionIds: normalizedIds,
+  });
+  const index = model[targetIndexField];
+  if (index)
+    cache[cacheKey] = { index, summary, baseVersion: index.baseVersion ?? baseVersion };
+  return { index, summary };
 }
