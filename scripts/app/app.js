@@ -94,6 +94,7 @@ import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { createProjectInfoController } from "./project-info-controller.js";
 import { createCleanupController } from "./cleanup-controller.js";
 import { createInferenceController } from "./inference-controller.js";
+import { resetInferenceProfiles } from "./inference-profiles.js";
 import { createInteractionBulkActions } from "./interaction-bulk-actions.js";
 import {
   getCoreDomElements,
@@ -718,6 +719,7 @@ const {
   getSuggestedName,
   closeMenus: () => menusAPI?.closeAllMenus?.(),
   onModelReset: () => {
+    resetInferenceProfiles();
     interactionsOutline?.refresh?.();
     tagUI?.refresh?.();
     commentsUI?.applyModelMetadata?.(model.meta);

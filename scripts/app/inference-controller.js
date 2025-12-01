@@ -497,6 +497,8 @@ export function createInferenceController(options) {
           source: options.defaultSource,
         }
       : null;
+    // resetInferenceProfiles runs on model resets (see app.js) so each project
+    // starts with fresh modifier/input trend data before we capture a snapshot.
     const profileSnapshot = captureInferenceProfilesSnapshot();
     const thresholdOverrides = { ...baseThresholds };
     const overrides = options.thresholdOverrides || {};
