@@ -110,9 +110,66 @@ export function createInferenceController(options) {
     "Select Outcome, End, or Tag cells in the Interactions view to run inference.";
   const BYPASS_INDEX_FIELD = "interactionsIndexBypass";
   const BYPASS_SCOPED_INDEX_FIELD = "interactionsIndexBypassScoped";
+  const BYPASS_SCOPED_CACHE_WARNING_DEFAULTS = Object.freeze({
+    entries: 8,
+    rows: 150000,
+  });
+  const enableBypassCacheTelemetry = options?.enableBypassCacheTelemetry !== false;
+  const bypassCacheWarningThreshold = Object.freeze({
+    entries:
+      Number(options?.bypassCacheWarningEntries) > 0
+        ? Number(options.bypassCacheWarningEntries)
+        : BYPASS_SCOPED_CACHE_WARNING_DEFAULTS.entries,
+    rows:
+      Number(options?.bypassCacheWarningRows) > 0
+        ? Number(options.bypassCacheWarningRows)
+        : BYPASS_SCOPED_CACHE_WARNING_DEFAULTS.rows,
+  });
+  let bypassCacheWarningShown = false;
 
   function shouldUseBypassIndex(options) {
     return !!(options?.inferFromBypassed || options?.inferToBypassed);
+  }
+
+  function summarizeBypassScopedCache(cache) {
+    const stats = { entries: 0, rows: 0 };
+    if (!cache || typeof cache !== "object") return stats;
+    for (const value of Object.values(cache)) {
+      if (!value || typeof value !== "object") continue;
+      stats.entries++;
+      const rowCount = (() => {
+        const pairs = value?.summary?.pairsCount;
+        if (Number.isFinite(pairs)) return pairs;
+        const indexRows = value?.index?.totalRows;
+        if (Number.isFinite(indexRows)) return indexRows;
+        const indexPairs = value?.index?.summary?.pairsCount;
+        return Number.isFinite(indexPairs) ? indexPairs : null;
+      })();
+      if (Number.isFinite(rowCount)) stats.rows += rowCount;
+    }
+    return stats;
+  }
+
+  function warnOnBypassScopedCache(cache) {
+    if (!enableBypassCacheTelemetry || bypassCacheWarningShown) return;
+    const stats = summarizeBypassScopedCache(cache);
+    const hitsEntryThreshold =
+      Number.isFinite(bypassCacheWarningThreshold.entries) &&
+      stats.entries >= bypassCacheWarningThreshold.entries;
+    const hitsRowThreshold =
+      Number.isFinite(bypassCacheWarningThreshold.rows) &&
+      stats.rows >= bypassCacheWarningThreshold.rows;
+    if (!hitsEntryThreshold && !hitsRowThreshold) return;
+    bypassCacheWarningShown = true;
+    const approxRows =
+      stats.rows > 0 ? ` (~${stats.rows.toLocaleString()} indexed rows)` : "";
+    const message =
+      "Bypass scoped cache is growing; broaden inference scope or restart to reclaim memory." +
+      ` (${stats.entries} scoped entries${approxRows})`;
+    if (typeof console !== "undefined" && typeof console.debug === "function") {
+      console.debug(message);
+    }
+    statusBar?.set?.(message);
   }
 
   function ensureBypassIndex(actionIds) {
@@ -163,6 +220,7 @@ export function createInferenceController(options) {
       cacheField,
     });
     const nextCached = cache[cacheKey];
+    if (nextCached && nextCached !== cached) warnOnBypassScopedCache(cache);
     if (nextCached && nextCached.index && isIndexCurrent(nextCached.index))
       return nextCached.index;
     return index || ensureBypassIndex();
