@@ -1,6 +1,7 @@
 // interactions-data.js — shared helpers for lazy Interactions rows
 
 export function getInteractionsIndex(model, options = {}) {
+  if (options?.index) return options.index;
   if (!model) return null;
   const indexKey = options?.includeBypass
     ? "interactionsIndexBypass"

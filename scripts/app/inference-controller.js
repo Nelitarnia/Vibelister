@@ -17,7 +17,10 @@ import {
   extractNoteFieldValue,
   recordProfileImpact,
 } from "./inference-profiles.js";
-import { buildInteractionsPairs } from "../data/variants/variants.js";
+import {
+  buildInteractionsPairs,
+  buildScopedInteractionsPairs,
+} from "../data/variants/variants.js";
 import { getInteractionsIndex } from "./interactions-data.js";
 
 const HEURISTIC_LABELS = Object.freeze({
@@ -106,28 +109,88 @@ export function createInferenceController(options) {
   const NO_TARGETS_STATUS =
     "Select Outcome, End, or Tag cells in the Interactions view to run inference.";
   const BYPASS_INDEX_FIELD = "interactionsIndexBypass";
+  const BYPASS_SCOPED_INDEX_FIELD = "interactionsIndexBypassScoped";
 
   function shouldUseBypassIndex(options) {
     return !!(options?.inferFromBypassed || options?.inferToBypassed);
   }
 
-  function ensureBypassIndex() {
-    const existing = getInteractionsIndex(model, { includeBypass: true });
-    if (existing) return existing;
-    buildInteractionsPairs(model, {
+  function ensureBypassIndex(actionIds) {
+    const normalizedIds = Array.isArray(actionIds)
+      ? Array.from(
+          new Set(
+            actionIds
+              .map((id) => Number(id))
+              .filter((id) => Number.isFinite(id)),
+          ),
+        )
+          .sort((a, b) => a - b)
+      : [];
+    const useFullIndex = normalizedIds.length === 0;
+    if (useFullIndex) {
+      const existing = getInteractionsIndex(model, { includeBypass: true });
+      if (existing) return existing;
+      buildInteractionsPairs(model, {
+        includeBypass: true,
+        targetIndexField: BYPASS_INDEX_FIELD,
+      });
+      return getInteractionsIndex(model, { includeBypass: true });
+    }
+    const cacheField = `${BYPASS_SCOPED_INDEX_FIELD}Cache`;
+    const cacheKey = normalizedIds.join(",");
+    const cache = (() => {
+      const existing = model[cacheField];
+      if (existing && typeof existing === "object") return existing;
+      const created = {};
+      model[cacheField] = created;
+      return created;
+    })();
+    const cached = cache[cacheKey];
+    if (cached) return cached.index || cached;
+    const { index } = buildScopedInteractionsPairs(model, normalizedIds, {
       includeBypass: true,
-      targetIndexField: BYPASS_INDEX_FIELD,
+      targetIndexField: BYPASS_SCOPED_INDEX_FIELD,
+      cacheField,
     });
-    return getInteractionsIndex(model, { includeBypass: true });
+    const nextCached = cache[cacheKey];
+    if (nextCached && nextCached.index) return nextCached.index;
+    return index || ensureBypassIndex();
+  }
+
+  function getBaseIndexAccess() {
+    const getPair = (rowIndex) => getInteractionsPair?.(model, rowIndex);
+    const getRowCount = () => getInteractionsRowCount?.(model) || 0;
+    return { getPair, getRowCount, includeBypass: false };
+  }
+
+  function getScopedActionIds(scope) {
+    if (scope === "project") return null;
+    const baseAccess = getBaseIndexAccess();
+    const rows = getRows(scope, baseAccess);
+    const ids = new Set();
+    for (const row of rows) {
+      const pair = baseAccess.getPair(row);
+      if (pair && Number.isFinite(pair.aId)) ids.add(pair.aId);
+    }
+    return ids.size ? Array.from(ids) : null;
   }
 
   function getIndexAccess(options) {
     const includeBypass = shouldUseBypassIndex(options);
-    if (includeBypass) ensureBypassIndex();
+    if (!includeBypass) {
+      const getPair = (rowIndex) => getInteractionsPair?.(model, rowIndex);
+      const getRowCount = () => getInteractionsRowCount?.(model) || 0;
+      return { getPair, getRowCount, includeBypass };
+    }
+    const scopedIds = getScopedActionIds(options.scope);
+    const index = ensureBypassIndex(scopedIds);
     const getPair = (rowIndex) =>
-      getInteractionsPair?.(model, rowIndex, { includeBypass });
+      getInteractionsPair?.(model, rowIndex, {
+        includeBypass: true,
+        index,
+      });
     const getRowCount = () =>
-      getInteractionsRowCount?.(model, { includeBypass }) || 0;
+      getInteractionsRowCount?.(model, { includeBypass: true, index }) || 0;
     return { getPair, getRowCount, includeBypass };
   }
 

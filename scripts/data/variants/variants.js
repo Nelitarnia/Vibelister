@@ -294,9 +294,21 @@ function computeVariantsForAction(action, model, options = {}) {
 export function buildInteractionsPairs(model, options = {}) {
   const includeBypass = !!options.includeBypass;
   const targetIndexField = options.targetIndexField || "interactionsIndex";
-  const actions = (model.actions || []).filter(
-    (a) => a && (a.name || "").trim().length,
-  );
+  const actionSet = options.actionIds
+    ? new Set(
+        options.actionIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id)),
+      )
+    : null;
+  const actionsSource = Array.isArray(options.actions)
+    ? options.actions
+    : model.actions || [];
+  const actions = actionsSource.filter((a) => {
+    if (!a || !(a.name || "").trim().length) return false;
+    if (actionSet && !actionSet.has(a.id)) return false;
+    return true;
+  });
   const inputs = (model.inputs || []).filter(
     (i) => i && (i.name || "").trim().length,
   );
@@ -431,5 +443,44 @@ export function buildInteractionsPairs(model, options = {}) {
     pairsCount: totalRows,
     capped,
     cappedActions,
+    index: model[targetIndexField],
   };
+}
+
+export function buildScopedInteractionsPairs(model, actionIds, options = {}) {
+  const includeBypass = !!options.includeBypass;
+  const normalizedIds = Array.isArray(actionIds)
+    ? Array.from(
+        new Set(
+          actionIds
+            .map((id) => Number(id))
+            .filter((id) => Number.isFinite(id) && id >= 0),
+        ),
+      )
+        .sort((a, b) => a - b)
+    : [];
+  const targetIndexField = options.targetIndexField || "interactionsIndex";
+  const cacheField = options.cacheField || `${targetIndexField}Cache`;
+  const cacheKey = `${includeBypass ? "b" : "d"}:${
+    normalizedIds.length ? normalizedIds.join(",") : "all"
+  }`;
+  const cache = (() => {
+    const existing = model[cacheField];
+    if (existing && typeof existing === "object") return existing;
+    const created = {};
+    model[cacheField] = created;
+    return created;
+  })();
+  if (cache[cacheKey]) {
+    return { index: cache[cacheKey].index, summary: cache[cacheKey].summary };
+  }
+  const summary = buildInteractionsPairs(model, {
+    ...options,
+    includeBypass,
+    targetIndexField,
+    actionIds: normalizedIds,
+  });
+  const index = model[targetIndexField];
+  if (index) cache[cacheKey] = { index, summary };
+  return { index, summary };
 }
