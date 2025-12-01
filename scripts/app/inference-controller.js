@@ -163,35 +163,70 @@ export function createInferenceController(options) {
     return { getPair, getRowCount, includeBypass: false };
   }
 
-  function getScopedActionIds(scope) {
+  function getScopedActionIds(scope, baseRows, baseAccess) {
     if (scope === "project") return null;
-    const baseAccess = getBaseIndexAccess();
-    const rows = getRows(scope, baseAccess);
+    const effectiveBaseAccess = baseAccess || getBaseIndexAccess();
+    const rows = baseRows || getRows(scope, effectiveBaseAccess);
     const ids = new Set();
     for (const row of rows) {
-      const pair = baseAccess.getPair(row);
+      const pair = effectiveBaseAccess.getPair(row);
       if (pair && Number.isFinite(pair.aId)) ids.add(pair.aId);
     }
     return ids.size ? Array.from(ids) : null;
   }
 
+  function buildRowLookup(indexAccess) {
+    const lookup = new Map();
+    const total = indexAccess.getRowCount();
+    for (let i = 0; i < total; i++) {
+      const pair = indexAccess.getPair(i);
+      if (!pair) continue;
+      const key = noteKeyForPair(pair);
+      if (!lookup.has(key)) lookup.set(key, []);
+      lookup.get(key).push(i);
+    }
+    return lookup;
+  }
+
+  function mapRowsToIndex(rows, sourceAccess, targetAccess) {
+    if (!Array.isArray(rows) || !rows.length) return [];
+    const targetLookup = buildRowLookup(targetAccess);
+    const mapped = new Set();
+    for (const row of rows) {
+      const pair = sourceAccess.getPair(row);
+      if (!pair) continue;
+      const key = noteKeyForPair(pair);
+      const candidates = targetLookup.get(key);
+      if (!Array.isArray(candidates)) continue;
+      for (const candidate of candidates) mapped.add(candidate);
+    }
+    return Array.from(mapped).sort((a, b) => a - b);
+  }
+
   function getIndexAccess(options) {
     const includeBypass = shouldUseBypassIndex(options);
+    const baseAccess = getBaseIndexAccess();
+    const baseRows = getRows(options.scope, baseAccess);
     if (!includeBypass) {
-      const getPair = (rowIndex) => getInteractionsPair?.(model, rowIndex);
-      const getRowCount = () => getInteractionsRowCount?.(model) || 0;
-      return { getPair, getRowCount, includeBypass };
+      return { indexAccess: baseAccess, rows: baseRows };
     }
-    const scopedIds = getScopedActionIds(options.scope);
+    const scopedIds = getScopedActionIds(options.scope, baseRows, baseAccess);
     const index = ensureBypassIndex(scopedIds);
-    const getPair = (rowIndex) =>
-      getInteractionsPair?.(model, rowIndex, {
-        includeBypass: true,
-        index,
-      });
-    const getRowCount = () =>
-      getInteractionsRowCount?.(model, { includeBypass: true, index }) || 0;
-    return { getPair, getRowCount, includeBypass };
+    const indexAccess = {
+      includeBypass,
+      getPair: (rowIndex) =>
+        getInteractionsPair?.(model, rowIndex, {
+          includeBypass: true,
+          index,
+        }),
+      getRowCount: () =>
+        getInteractionsRowCount?.(model, { includeBypass: true, index }) || 0,
+    };
+    const rows =
+      options.scope === "project"
+        ? Array.from({ length: indexAccess.getRowCount() }, (_, i) => i)
+        : mapRowsToIndex(baseRows, baseAccess, indexAccess);
+    return { indexAccess, rows };
   }
 
   function formatStatus(result, actionLabel) {
@@ -325,15 +360,15 @@ export function createInferenceController(options) {
     return [sel.r];
   }
 
-  function collectTargets(scope, options, indexAccess) {
+  function collectTargets(scope, options, indexAccess, rows) {
     if (typeof getActiveView === "function" && getActiveView() !== "interactions") {
       return { targets: [], allowed: false, reason: OUT_OF_VIEW_STATUS };
     }
     const def = typeof viewDef === "function" ? viewDef() : viewDef;
-    const rows = getRows(scope, indexAccess);
+    const resolvedRows = Array.isArray(rows) ? rows : getRows(scope, indexAccess);
     const columns = getRelevantColumns(def, options, scope === "selection");
     const targets = [];
-    for (const r of rows) {
+    for (const r of resolvedRows) {
       const pair = indexAccess.getPair(r);
       if (!pair) continue;
       const allowedPhases = getAllowedPhasesForAction(pair.aId);
@@ -357,11 +392,12 @@ export function createInferenceController(options) {
   }
 
   function applyInference(options) {
-    const indexAccess = getIndexAccess(options);
+    const { indexAccess, rows } = getIndexAccess(options);
     const { targets, allowed, reason } = collectTargets(
       options.scope,
       options,
       indexAccess,
+      rows,
     );
     if (!allowed) {
       const status = reason || OUT_OF_VIEW_STATUS;
@@ -540,11 +576,12 @@ export function createInferenceController(options) {
   }
 
   function clearInference(options) {
-    const indexAccess = getIndexAccess(options);
+    const { indexAccess, rows } = getIndexAccess(options);
     const { targets, allowed, reason } = collectTargets(
       options.scope,
       options,
       indexAccess,
+      rows,
     );
     if (!allowed) {
       const status = reason || OUT_OF_VIEW_STATUS;

@@ -2287,6 +2287,100 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "bypass inference respects selection rows from base index",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
+          makeModelFixture();
+        const modifier = addModifier("Bypassable");
+        addAction("Base", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        const target = addAction("Target");
+        const inputA = addInput("High");
+        addInput("Low");
+        const outcome = addOutcome("Hit");
+
+        groupExact(1, [modifier], { required: false, name: "Bypassable" });
+
+        buildInteractionsPairs(model);
+        buildInteractionsPairs(model, {
+          includeBypass: true,
+          targetIndexField: "interactionsIndexBypass",
+        });
+
+        const sourcePair = getInteractionsPair(model, 0);
+        const sourceKey = noteKeyForPair(sourcePair, 0);
+        model.notes[sourceKey] = {
+          outcomeId: outcome.id,
+          source: DEFAULT_INTERACTION_SOURCE,
+        };
+
+        const targetPair = getInteractionsPair(model, 2);
+        const targetKey = noteKeyForPair(targetPair, 0);
+        assert.ok(!model.notes[targetKey], "target row starts empty");
+
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+          ],
+        };
+        const includeBypassCalls = [];
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([2]), colsAll: true },
+          sel: { r: 2, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate) => mutate(),
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r, opts) => {
+            includeBypassCalls.push(!!opts?.includeBypass);
+            return getInteractionsPair(m, r, opts);
+          },
+          getInteractionsRowCount: (m, opts) => {
+            includeBypassCalls.push(!!opts?.includeBypass);
+            return getInteractionsRowCount(m, opts);
+          },
+        });
+
+        const res = controller.runInference({
+          scope: "selection",
+          inferFromBypassed: true,
+          inferToBypassed: true,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        });
+
+        assert.strictEqual(
+          model.notes[targetKey]?.outcomeId,
+          outcome.id,
+          "selection row mapped into bypass index targets expected pair",
+        );
+        assert.ok(res.applied >= 1, "inference applied after bypass remap");
+        assert.ok(
+          includeBypassCalls.some(Boolean),
+          "bypass flags forwarded through selection run",
+        );
+        assert.strictEqual(
+          targetPair?.aId,
+          target.id,
+          "selection still resolves to target action id",
+        );
+        assert.strictEqual(
+          targetPair?.iId,
+          inputA.id,
+          "selection still resolves to target input id",
+        );
+      },
+    },
+    {
       name: "inference can source bypass variants when opted in",
       run(assert) {
         const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
