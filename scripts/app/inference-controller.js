@@ -116,6 +116,14 @@ export function createInferenceController(options) {
   }
 
   function ensureBypassIndex(actionIds) {
+    const currentBaseVersion = Number(model?.interactionsIndexVersion) || 0;
+    const isIndexCurrent = (idx) => {
+      const baseVersion = Number(idx?.baseVersion);
+      if (!Number.isFinite(currentBaseVersion) || currentBaseVersion === 0)
+        return true;
+      if (!Number.isFinite(baseVersion)) return false;
+      return baseVersion === currentBaseVersion;
+    };
     const normalizedIds = Array.isArray(actionIds)
       ? Array.from(
           new Set(
@@ -129,7 +137,7 @@ export function createInferenceController(options) {
     const useFullIndex = normalizedIds.length === 0;
     if (useFullIndex) {
       const existing = getInteractionsIndex(model, { includeBypass: true });
-      if (existing) return existing;
+      if (existing && isIndexCurrent(existing)) return existing;
       buildInteractionsPairs(model, {
         includeBypass: true,
         targetIndexField: BYPASS_INDEX_FIELD,
@@ -146,14 +154,17 @@ export function createInferenceController(options) {
       return created;
     })();
     const cached = cache[cacheKey];
-    if (cached) return cached.index || cached;
+    if (cached && isIndexCurrent(cached.index || cached)) {
+      return cached.index || cached;
+    }
     const { index } = buildScopedInteractionsPairs(model, normalizedIds, {
       includeBypass: true,
       targetIndexField: BYPASS_SCOPED_INDEX_FIELD,
       cacheField,
     });
     const nextCached = cache[cacheKey];
-    if (nextCached && nextCached.index) return nextCached.index;
+    if (nextCached && nextCached.index && isIndexCurrent(nextCached.index))
+      return nextCached.index;
     return index || ensureBypassIndex();
   }
 
@@ -255,6 +266,8 @@ export function createInferenceController(options) {
       getRowCount: () =>
         getInteractionsRowCount?.(model, { includeBypass: true, index }) || 0,
     };
+    const mappedSelRow = mapRowsToIndex([sel.r], baseAccess, indexAccess)[0];
+    if (mappedSelRow != null) indexAccess.activeRow = mappedSelRow;
     const rows =
       options.scope === "project"
         ? Array.from({ length: indexAccess.getRowCount() }, (_, i) => i)
@@ -374,11 +387,15 @@ export function createInferenceController(options) {
 
   function getRows(scope, indexAccess) {
     const totalRows = indexAccess.getRowCount();
+    const activeRow =
+      Number.isFinite(indexAccess?.activeRow) && indexAccess.activeRow >= 0
+        ? indexAccess.activeRow
+        : sel.r;
     if (scope === "project") {
       return Array.from({ length: totalRows }, (_, i) => i);
     }
     if (scope === "action" || scope === "actionGroup") {
-      const activePair = indexAccess.getPair(sel.r);
+      const activePair = indexAccess.getPair(activeRow);
       if (!activePair) return [];
       const targetId = activePair.aId;
       if (scope === "actionGroup") {
@@ -417,7 +434,10 @@ export function createInferenceController(options) {
           note,
           pair,
           row: r,
-          actionGroup: getActionGroupForAction(pair.aId),
+          actionGroup:
+            indexAccess.includeBypass
+              ? getActionGroupForAction(pair.aId) || "__bypass__"
+              : getActionGroupForAction(pair.aId),
         });
       }
     }
@@ -443,6 +463,7 @@ export function createInferenceController(options) {
     }
     const suggestionScope = (() => {
       if (options.scope === "project") return "project";
+      if (indexAccess.includeBypass) return "project";
       if (options.scope === "action" || options.scope === "actionGroup")
         return "project";
       return "action";

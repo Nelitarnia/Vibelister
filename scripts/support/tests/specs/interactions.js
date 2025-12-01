@@ -2381,6 +2381,88 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "bypass cache invalidates after base index rebuild",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
+          makeModelFixture();
+        const modifier = addModifier("Bypassable");
+        const source = addAction("Bypassed", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        addAction("Other");
+        const input = addInput("High");
+        const outcome = addOutcome("Hit");
+
+        groupExact(1, [modifier], { required: false, name: "Bypassable" });
+
+        buildInteractionsPairs(model);
+        buildInteractionsPairs(model, {
+          includeBypass: true,
+          targetIndexField: "interactionsIndexBypass",
+        });
+
+        const target = addAction("Target");
+        buildInteractionsPairs(model); // rebuild base after adding target
+
+        const sourceRow = findPairIndex(
+          model,
+          (p) => p.aId === source.id && p.iId === input.id,
+        );
+        const sourcePair = getInteractionsPair(model, sourceRow);
+        const sourceKey = noteKeyForPair(sourcePair, 0);
+        model.notes[sourceKey] = {
+          outcomeId: outcome.id,
+          source: DEFAULT_INTERACTION_SOURCE,
+        };
+
+        const targetRow = findPairIndex(
+          model,
+          (p) => p.aId === target.id && p.iId === input.id,
+        );
+        const targetPair = getInteractionsPair(model, targetRow);
+        const targetKey = noteKeyForPair(targetPair, 0);
+
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+          ],
+        };
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([targetRow]), colsAll: true },
+          sel: { r: targetRow, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate) => mutate(),
+          makeUndoConfig: () => ({}),
+          getInteractionsPair,
+          getInteractionsRowCount,
+        });
+
+        const res = controller.runInference({
+          scope: "selection",
+          inferFromBypassed: true,
+          inferToBypassed: true,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        });
+
+        assert.strictEqual(
+          model.notes[targetKey]?.outcomeId,
+          outcome.id,
+          "bypass cache rebuilt after base index change",
+        );
+        assert.ok(res.applied >= 1, "inference applied after cache rebuild");
+      },
+    },
+    {
       name: "inference can source bypass variants when opted in",
       run(assert) {
         const { model, addAction, addInput, addModifier, addOutcome, groupExact } =

@@ -294,6 +294,9 @@ function computeVariantsForAction(action, model, options = {}) {
 export function buildInteractionsPairs(model, options = {}) {
   const includeBypass = !!options.includeBypass;
   const targetIndexField = options.targetIndexField || "interactionsIndex";
+  const isBaseIndex = !includeBypass && targetIndexField === "interactionsIndex";
+  const currentBaseVersion = Number(model?.interactionsIndexVersion) || 0;
+  const baseVersion = isBaseIndex ? currentBaseVersion + 1 : currentBaseVersion;
   const actionSet = options.actionIds
     ? new Set(
         options.actionIds
@@ -385,12 +388,14 @@ export function buildInteractionsPairs(model, options = {}) {
     model[targetIndexField] = {
       mode: "AA",
       includeBypass,
+      baseVersion,
       groups: indexGroups,
       totalRows,
       actionsOrder: actions.map((a) => a.id),
       inputsOrder: [],
       variantCatalog,
     };
+    if (isBaseIndex) model.interactionsIndexVersion = baseVersion;
     return {
       actionsCount: actions.length,
       inputsCount: actions.length,
@@ -431,12 +436,14 @@ export function buildInteractionsPairs(model, options = {}) {
   model[targetIndexField] = {
     mode: "AI",
     includeBypass,
+    baseVersion,
     groups: indexGroups,
     totalRows,
     actionsOrder: actions.map((a) => a.id),
     inputsOrder: inputs.map((i) => i.id),
     variantCatalog,
   };
+  if (isBaseIndex) model.interactionsIndexVersion = baseVersion;
   return {
     actionsCount: actions.length,
     inputsCount: inputs.length,
@@ -449,6 +456,7 @@ export function buildInteractionsPairs(model, options = {}) {
 
 export function buildScopedInteractionsPairs(model, actionIds, options = {}) {
   const includeBypass = !!options.includeBypass;
+  const baseVersion = Number(model?.interactionsIndexVersion) || 0;
   const normalizedIds = Array.isArray(actionIds)
     ? Array.from(
         new Set(
@@ -471,7 +479,7 @@ export function buildScopedInteractionsPairs(model, actionIds, options = {}) {
     model[cacheField] = created;
     return created;
   })();
-  if (cache[cacheKey]) {
+  if (cache[cacheKey] && cache[cacheKey].baseVersion === baseVersion) {
     return { index: cache[cacheKey].index, summary: cache[cacheKey].summary };
   }
   const summary = buildInteractionsPairs(model, {
@@ -481,6 +489,7 @@ export function buildScopedInteractionsPairs(model, actionIds, options = {}) {
     actionIds: normalizedIds,
   });
   const index = model[targetIndexField];
-  if (index) cache[cacheKey] = { index, summary };
+  if (index)
+    cache[cacheKey] = { index, summary, baseVersion: index.baseVersion ?? baseVersion };
   return { index, summary };
 }

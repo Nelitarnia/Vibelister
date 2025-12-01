@@ -8,6 +8,15 @@ export function getInteractionsIndex(model, options = {}) {
     : "interactionsIndex";
   const index = model[indexKey];
   if (!index || !Array.isArray(index.groups)) return null;
+  const expectedBaseVersion = Number(model?.interactionsIndexVersion);
+  const indexBaseVersion = Number(index?.baseVersion);
+  if (
+    Number.isFinite(expectedBaseVersion) &&
+    Number.isFinite(indexBaseVersion) &&
+    indexBaseVersion !== expectedBaseVersion
+  ) {
+    return null;
+  }
   return index;
 }
 
