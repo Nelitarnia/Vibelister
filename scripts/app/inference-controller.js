@@ -707,52 +707,60 @@ export function createInferenceController(options) {
       return { cleared: 0, allowed: true, status: NO_TARGETS_STATUS };
     }
     const notes = model?.notes || {};
-    const result = { cleared: 0, skippedManual: 0 };
+    const groupedTargets = new Map();
     for (const target of targets) {
-      const note = notes[target.key];
+      const list = groupedTargets.get(target.key) || [];
+      list.push(target);
+      groupedTargets.set(target.key, list);
+    }
+    const result = { cleared: 0, skippedManual: 0 };
+    for (const [noteKey, noteTargets] of groupedTargets.entries()) {
+      const note = notes[noteKey];
       if (!note || typeof note !== "object") continue;
-      const previousValue = extractNoteFieldValue(note, target.field);
       const info = describeInteractionInference(note);
       const currentSource = normalizeInteractionSource(info?.source);
       if (currentSource === DEFAULT_INTERACTION_SOURCE) {
-        result.skippedManual++;
+        result.skippedManual += noteTargets.length;
         continue;
       }
       if (!info?.inferred) continue;
-      if (target.field === "outcome") {
-        delete note.outcomeId;
-        delete note.result;
-      } else if (target.field === "end") {
-        delete note.endActionId;
-        delete note.endVariantSig;
-        delete note.endFree;
-      } else if (target.field === "tag") {
-        const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
-        delete note.tags;
-        if (previous.length) {
-          emitInteractionTagChangeEvent(null, {
-            reason: "clearInference",
-            noteKey: target.key,
-            pair: target.pair,
-            phase: target.phase,
-            tags: previous,
-            count: previous.length,
-          });
+      for (const target of noteTargets) {
+        const previousValue = extractNoteFieldValue(note, target.field);
+        if (target.field === "outcome") {
+          delete note.outcomeId;
+          delete note.result;
+        } else if (target.field === "end") {
+          delete note.endActionId;
+          delete note.endVariantSig;
+          delete note.endFree;
+        } else if (target.field === "tag") {
+          const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
+          delete note.tags;
+          if (previous.length) {
+            emitInteractionTagChangeEvent(null, {
+              reason: "clearInference",
+              noteKey: target.key,
+              pair: target.pair,
+              phase: target.phase,
+              tags: previous,
+              count: previous.length,
+            });
+          }
         }
+        result.cleared++;
+        const nextValue = extractNoteFieldValue(note, target.field);
+        recordProfileImpact({
+          pair: target.pair,
+          field: target.field,
+          previousValue,
+          nextValue,
+          phase: target.phase,
+          inferred: true,
+          delta: -1,
+        });
       }
       applyInteractionMetadata(note, null);
-      if (!Object.keys(note).length) delete notes[target.key];
-      result.cleared++;
-      const nextValue = extractNoteFieldValue(note, target.field);
-      recordProfileImpact({
-        pair: target.pair,
-        field: target.field,
-        previousValue,
-        nextValue,
-        phase: target.phase,
-        inferred: true,
-        delta: -1,
-      });
+      if (!Object.keys(note).length) delete notes[noteKey];
     }
     return result;
   }
