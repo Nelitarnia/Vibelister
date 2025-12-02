@@ -3148,6 +3148,125 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "bypass inference honors scoped selection suggestions",
+      run(assert) {
+        function buildRun(enableBypass = false) {
+          const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
+            makeModelFixture();
+
+          const modifier = addModifier("Bypassable");
+          const outcome = addOutcome("Hit");
+          const inputs = Array.from({ length: 6 }, (_, idx) =>
+            addInput(`Input ${idx + 1}`),
+          );
+
+          groupExact(1, [modifier], { required: false, name: "Bypassable" });
+
+          const sharedActions = Array.from({ length: 4 }, (_, idx) => {
+            const action = addAction(`Shared ${idx + 1}`, {});
+            action.actionGroup = "Shared";
+            return action;
+          });
+
+          Array.from({ length: 24 }, (_, idx) => {
+            const modSet = idx % 3 === 0 ? { [modifier.id]: MOD_STATE_ID.BYPASS } : {};
+            const action = addAction(`Action ${idx + 1}`, modSet);
+          });
+
+          buildInteractionsPairs(model);
+          buildInteractionsPairs(model, {
+            includeBypass: true,
+            targetIndexField: "interactionsIndexBypass",
+          });
+
+          const viewDef = {
+            columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
+          };
+
+          const sourceRow = findPairIndex(
+            model,
+            (pair) => pair?.aId === sharedActions[0].id && pair?.iId === inputs[0].id,
+          );
+          const sourcePair = getInteractionsPair(model, sourceRow, {
+            includeBypass: enableBypass,
+          });
+          const sourceKey = noteKeyForPair(sourcePair, 0);
+          model.notes[sourceKey] = {
+            outcomeId: outcome.id,
+            source: DEFAULT_INTERACTION_SOURCE,
+          };
+
+          const targetRow = findPairIndex(
+            model,
+            (pair) => pair?.aId === sharedActions[1].id && pair?.iId === inputs[0].id,
+          );
+          const selectionRows = new Set();
+          const selectedActions = new Set([sharedActions[0].id, sharedActions[1].id]);
+          const baseRowCount = getInteractionsRowCount(model);
+          for (let r = 0; r < baseRowCount; r++) {
+            const pair = getInteractionsPair(model, r);
+            if (pair && selectedActions.has(pair.aId)) selectionRows.add(r);
+          }
+          const selection = { rows: selectionRows, colsAll: true };
+
+          let pairCalls = 0;
+          const controller = createInferenceController({
+            model,
+            selection,
+            sel: { r: targetRow, c: 2 },
+            getActiveView: () => "interactions",
+            viewDef: () => viewDef,
+            statusBar: { set() {} },
+            runModelMutation: (label, mutate) => mutate(),
+            makeUndoConfig: () => ({}),
+            getInteractionsPair: (m, r, opts) => {
+              pairCalls++;
+              return getInteractionsPair(m, r, opts);
+            },
+            getInteractionsRowCount: (m, opts) => getInteractionsRowCount(m, opts),
+          });
+
+          const totalRows = getInteractionsRowCount(model, { includeBypass: enableBypass });
+
+          const res = controller.runInference({
+            scope: "selection",
+            inferFromBypassed: enableBypass,
+            inferToBypassed: enableBypass,
+            thresholdOverrides: {
+              consensusMinGroupSize: 1,
+              consensusMinExistingRatio: 0,
+              actionGroupMinGroupSize: 1,
+              actionGroupMinExistingRatio: 0,
+            },
+          });
+
+          return { res, pairCalls, totalRows };
+        }
+
+        const baseline = buildRun(false);
+        const bypass = buildRun(true);
+
+        assert.ok(
+          baseline.res.applied >= 1,
+          "baseline inference applies within scoped selection",
+        );
+        assert.strictEqual(
+          bypass.res.applied,
+          baseline.res.applied,
+          "bypass run keeps applied count stable",
+        );
+        assert.strictEqual(
+          bypass.res.empty,
+          baseline.res.empty,
+          "bypass run preserves empty count",
+        );
+        assert.ok(
+          bypass.pairCalls <= baseline.pairCalls * 4,
+          `bypass run avoids ballooning lookups on scoped selections (baseline: ${baseline.pairCalls}, bypass: ${bypass.pairCalls})`,
+        );
+      },
+    },
+    {
       name: "profile trends ignore reverted inference edits",
       run(assert) {
         resetInferenceProfiles();
