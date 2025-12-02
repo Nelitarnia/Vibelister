@@ -1830,6 +1830,93 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "consensus ignores inferred anchors unless opted in",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome } = makeModelFixture();
+        const action = addAction("Resin");
+        const modifierA = addModifier("Twist");
+        const modifierB = addModifier("Jab");
+        const input = addInput("Strong");
+        const outcome = addOutcome("Poison");
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 3,
+              variants: [
+                { variantSig: "", rowIndex: 0, rowCount: 1 },
+                { variantSig: `${modifierA.id}`, rowIndex: 1, rowCount: 1 },
+                { variantSig: `${modifierB.id}`, rowIndex: 2, rowCount: 1 },
+              ],
+            },
+          ],
+          totalRows: 3,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: {
+            [action.id]: ["", `${modifierA.id}`, `${modifierB.id}`],
+          },
+        };
+
+        const manualPair = getPair(model, 0);
+        const manualKey = noteKeyForPair(manualPair, 1);
+        model.notes[manualKey] = { outcomeId: outcome.id };
+
+        const inferredPair = getPair(model, 1);
+        const inferredKey = noteKeyForPair(inferredPair, 1);
+        model.notes[inferredKey] = {
+          outcomeId: outcome.id,
+          source: "model",
+          confidence: 0.4,
+        };
+
+        const targets = [];
+        for (let r = 0; r < 3; r++) {
+          const pair = getPair(model, r);
+          const key = noteKeyForPair(pair, 1);
+          targets.push({
+            key,
+            field: "outcome",
+            phase: 1,
+            note: model.notes[key],
+            pair,
+            row: r,
+          });
+        }
+
+        const suggestions = proposeInteractionInferences(targets);
+        const emptyKey = noteKeyForPair(getPair(model, 2), 1);
+
+        assert.strictEqual(
+          suggestions.get(emptyKey)?.outcome,
+          undefined,
+          "inferred sources do not drive consensus",
+        );
+        assert.strictEqual(
+          suggestions.get(inferredKey)?.outcome,
+          undefined,
+          "inferred targets stay untouched without opt-in",
+        );
+
+        const optInTargets = targets.map((t) =>
+          t.key === inferredKey
+            ? { ...t, allowInferredExisting: true, allowInferredTargets: true }
+            : t,
+        );
+        const optInSuggestions = proposeInteractionInferences(optInTargets);
+        const optedSuggestion = optInSuggestions.get(emptyKey)?.outcome;
+
+        assert.strictEqual(
+          optedSuggestion?.value.outcomeId,
+          outcome.id,
+          "opt-in allows inferred value to seed consensus",
+        );
+      },
+    },
+    {
       name: "lower-confidence suggestions cannot displace existing ones",
       run(assert) {
         const { model, addAction, addInput, addModifier, addOutcome } = makeModelFixture();
@@ -1919,14 +2006,8 @@ export function getInteractionsTests() {
         const pair = getPair(model, 0);
         const startKey = noteKeyForPair(pair, 0);
         const endKey = noteKeyForPair(pair, 2);
-        model.notes[startKey] = {
-          outcomeId: outcome.id,
-          source: HEURISTIC_SOURCES.modifierPropagation,
-        };
-        model.notes[endKey] = {
-          outcomeId: outcome.id,
-          source: HEURISTIC_SOURCES.modifierPropagation,
-        };
+        model.notes[startKey] = { outcomeId: outcome.id };
+        model.notes[endKey] = { outcomeId: outcome.id };
 
         const targets = [];
         for (let phase = 0; phase <= 2; phase++) {
@@ -2025,6 +2106,81 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "phase adjacency ignores inferred anchors unless opted in",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Anchor");
+        action.phases = { ids: [0, 1, 2], labels: {} };
+        const input = addInput("High");
+        const outcome = addOutcome("Connect");
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        const phase0Key = noteKeyForPair(pair, 0);
+        const phase2Key = noteKeyForPair(pair, 2);
+        model.notes[phase0Key] = {
+          outcomeId: outcome.id,
+          source: "model",
+          confidence: 0.35,
+        };
+        model.notes[phase2Key] = {
+          outcomeId: outcome.id,
+          source: "model",
+          confidence: 0.38,
+        };
+
+        const targets = [];
+        for (let p = 0; p < 3; p++) {
+          const key = noteKeyForPair(pair, p);
+          targets.push({
+            key,
+            field: "outcome",
+            phase: p,
+            note: model.notes[key],
+            pair,
+            actionGroup: null,
+          });
+        }
+
+        const suggestions = proposeInteractionInferences(targets);
+        assert.strictEqual(
+          suggestions.get(noteKeyForPair(pair, 1))?.outcome,
+          undefined,
+          "inferred anchors do not seed adjacency",
+        );
+
+        const optInTargets = targets.map((t) => ({
+          ...t,
+          allowInferredExisting: true,
+        }));
+        const optInSuggestions = proposeInteractionInferences(optInTargets);
+        const adjacencySuggestion = optInSuggestions.get(
+          noteKeyForPair(pair, 1),
+        )?.outcome;
+
+        assert.strictEqual(
+          adjacencySuggestion?.value.outcomeId,
+          outcome.id,
+          "opt-in re-enables adjacency from inferred anchors",
+        );
+      },
+    },
+    {
       name: "phase adjacency fills multi-phase gaps with scaled confidence and respects eligibility",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -2052,14 +2208,8 @@ export function getInteractionsTests() {
         const pair = getPair(model, 0);
         const startKey = noteKeyForPair(pair, 0);
         const endKey = noteKeyForPair(pair, 4);
-        model.notes[startKey] = {
-          outcomeId: outcome.id,
-          source: HEURISTIC_SOURCES.actionGroup,
-        };
-        model.notes[endKey] = {
-          outcomeId: outcome.id,
-          source: HEURISTIC_SOURCES.actionGroup,
-        };
+        model.notes[startKey] = { outcomeId: outcome.id };
+        model.notes[endKey] = { outcomeId: outcome.id };
 
         const targets = [];
         for (const phase of action.phases.ids) {
