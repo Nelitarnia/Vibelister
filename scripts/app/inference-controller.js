@@ -438,6 +438,7 @@ export function createInferenceController(options) {
             indexAccess.includeBypass
               ? getActionGroupForAction(pair.aId) || "__bypass__"
               : getActionGroupForAction(pair.aId),
+          allowInferredTargets: options?.overwriteInferred !== false,
         });
       }
     }

@@ -297,7 +297,7 @@ export async function openInferenceDialog(options = {}) {
     const infoFooter = document.createElement("p");
     infoFooter.style.cssText = "margin:0;color:#b8c4f2;font-size:12px;";
     infoFooter.textContent =
-      "Manual values stay as-is (unless you explicitly allow filling blanks). Thresholds in Advanced tune how much agreement is needed.";
+      "Manual values stay as-is (unless you explicitly allow filling blanks). Inferred cells are treated like blanks for sourcing and only change when you allow overwrites. Thresholds in Advanced tune how much agreement is needed.";
 
     infoPanel.append(infoIntro, infoList, infoFooter);
 

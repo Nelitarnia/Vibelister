@@ -30,9 +30,15 @@ function prepareTargets(targets) {
     const variantSig = normalizeVariantSig(target.pair);
     const inputKey = normalizeInputKey(target.pair);
     const actionGroupKey = normalizeActionGroup(target.actionGroup);
-    const currentValue = extractFieldValue(target);
     const info = describeInteractionInference(target.note);
     const source = normalizeInteractionSource(info?.source);
+    const isInferred = !!info?.inferred;
+    const allowInferredExisting = !!target?.allowInferredExisting;
+    const allowInferredTargets = !!target?.allowInferredTargets;
+    const includeValue = !isInferred || allowInferredExisting;
+    const currentValue = includeValue ? extractFieldValue(target) : null;
+    const hasValue = includeValue && !!currentValue;
+    const isManual = hasValue && source === DEFAULT_INTERACTION_SOURCE;
     return {
       ...target,
       actionId,
@@ -40,9 +46,10 @@ function prepareTargets(targets) {
       inputKey,
       actionGroupKey,
       currentValue,
-      hasValue: !!currentValue,
-      isManual: source === DEFAULT_INTERACTION_SOURCE && !!currentValue,
-      isInferred: !!info?.inferred,
+      hasValue,
+      isManual,
+      isInferred,
+      allowInferredTargets,
       source,
     };
   });
@@ -50,9 +57,10 @@ function prepareTargets(targets) {
 
 function eligibleForSuggestion(target) {
   if (!target) return false;
+  if (target.isInferred && !target.allowInferredTargets) return false;
   if (!target.hasValue) return true;
   if (target.isManual) return false;
-  return target.isInferred;
+  return target.isInferred && target.allowInferredTargets;
 }
 
 function registerSuggestion(
