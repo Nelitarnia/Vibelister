@@ -326,54 +326,62 @@ export function createInteractionBulkActions(options = {}) {
       "Clear inference metadata",
       () => {
         const notes = model?.notes || (model.notes = {});
+        const groupedTargets = new Map();
+        for (const target of targets) {
+          const list = groupedTargets.get(target.key) || [];
+          list.push(target);
+          groupedTargets.set(target.key, list);
+        }
         const result = {
           cleared: 0,
           removed: 0,
           skippedManual: 0,
           skippedEmpty: 0,
         };
-        for (const target of targets) {
-          const note = notes[target.key];
+        for (const [noteKey, noteTargets] of groupedTargets.entries()) {
+          const note = notes[noteKey];
           if (!note || typeof note !== "object") {
-            result.skippedEmpty++;
+            result.skippedEmpty += noteTargets.length;
             continue;
           }
-          const hadValue = hasStructuredValue(note, target.field);
           const info = describeInteractionInference(note);
           if (!info?.inferred) {
-            result.skippedManual++;
+            result.skippedManual += noteTargets.length;
             continue;
           }
-          if (target.field === "outcome") {
-            delete note.outcomeId;
-            delete note.result;
-          } else if (target.field === "end") {
-            delete note.endActionId;
-            delete note.endVariantSig;
-            delete note.endFree;
-          } else if (target.field === "tag") {
-            const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
-            delete note.tags;
-            if (previous.length) {
-              emitInteractionTagChangeEvent(null, {
-                reason: "clearInference",
-                noteKey: target.key,
-                pair: target.pair,
-                phase: target.phase,
-                tags: previous,
-                count: previous.length,
-              });
+          for (const target of noteTargets) {
+            const hadValue = hasStructuredValue(note, target.field);
+            if (target.field === "outcome") {
+              delete note.outcomeId;
+              delete note.result;
+            } else if (target.field === "end") {
+              delete note.endActionId;
+              delete note.endVariantSig;
+              delete note.endFree;
+            } else if (target.field === "tag") {
+              const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
+              delete note.tags;
+              if (previous.length) {
+                emitInteractionTagChangeEvent(null, {
+                  reason: "clearInference",
+                  noteKey: target.key,
+                  pair: target.pair,
+                  phase: target.phase,
+                  tags: previous,
+                  count: previous.length,
+                });
+              }
+            }
+            if (!hasStructuredValue(note, target.field)) {
+              result.cleared++;
+            } else if (!hadValue) {
+              result.skippedEmpty++;
             }
           }
           applyInteractionMetadata(note, null);
-          if (!hasStructuredValue(note, target.field)) {
-            result.cleared++;
-            if (!Object.keys(note).length) {
-              delete notes[target.key];
-              result.removed++;
-            }
-          } else if (!hadValue) {
-            result.skippedEmpty++;
+          if (!Object.keys(note).length) {
+            delete notes[noteKey];
+            result.removed++;
           }
         }
         return result;
