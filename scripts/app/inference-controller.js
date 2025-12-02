@@ -255,7 +255,8 @@ export function createInferenceController(options) {
       }
       return combined.size ? Array.from(combined) : null;
     })();
-    const index = ensureBypassIndex(actionIds);
+    const useFullBypassIndex = options.inferToBypassed || options.inferFromBypassed;
+    const index = ensureBypassIndex(useFullBypassIndex ? null : actionIds);
     const indexAccess = {
       includeBypass,
       getPair: (rowIndex) =>

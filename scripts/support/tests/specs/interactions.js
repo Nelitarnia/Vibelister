@@ -2745,13 +2745,13 @@ export function getInteractionsTests() {
           },
         });
 
-        const scopedBypassIndex = model.interactionsIndexBypassScoped;
+        const bypassIndex = model.interactionsIndexBypass;
         const rebuiltPair = (() => {
-          const total = Number(scopedBypassIndex?.totalRows) || 0;
+          const total = Number(bypassIndex?.totalRows) || 0;
           for (let i = 0; i < total; i++) {
             const pair = getInteractionsPair(model, i, {
               includeBypass: true,
-              index: scopedBypassIndex,
+              index: bypassIndex,
             });
             if (pair?.aId === source.id && pair?.variantSig === String(modifier.id))
               return pair;
@@ -2760,10 +2760,10 @@ export function getInteractionsTests() {
         })();
 
         assert.ok(
-          Array.isArray(scopedBypassIndex?.groups),
-          "bypass scoped index rebuilt for inference run",
+          Array.isArray(bypassIndex?.groups),
+          "bypass index rebuilt for inference run",
         );
-        assert.ok(rebuiltPair, "rebuilt bypass scoped index exposes bypass pair");
+        assert.ok(rebuiltPair, "rebuilt bypass index exposes bypass pair");
         assert.ok(
           model.notes[noteKeyForPair(rebuiltPair, 0)],
           "bypass note remains accessible after rebuild",
@@ -3012,6 +3012,139 @@ export function getInteractionsTests() {
           "bypass-inclusive flag forwarded to row counter",
         );
         assert.ok(!model.notes[bypassKey], "bypass note cleared after opt-in run");
+      },
+    },
+    {
+      name: "bypass inference on large selections matches baseline speed and counts",
+      run(assert) {
+        function buildRun(options = {}) {
+          const {
+            model,
+            addAction,
+            addInput,
+            addModifier,
+            addOutcome,
+            groupExact,
+          } = makeModelFixture();
+          const modifier = addModifier("Bypassable");
+          const outcome = addOutcome("Hit");
+          groupExact(1, [modifier], { required: false, name: "Bypassable" });
+
+          Array.from({ length: 4 }, (_, idx) => addInput(`Input ${idx + 1}`));
+          const bypassActionIds = new Set();
+          Array.from({ length: 24 }, (_, idx) => {
+            const modSet = idx % 2 ? { [modifier.id]: MOD_STATE_ID.BYPASS } : {};
+            const action = addAction(`Action ${idx + 1}`, modSet);
+            if (modSet[modifier.id] === MOD_STATE_ID.BYPASS)
+              bypassActionIds.add(action.id);
+          });
+
+          buildInteractionsPairs(model);
+          buildInteractionsPairs(model, {
+            includeBypass: true,
+            targetIndexField: "interactionsIndexBypass",
+          });
+
+          const baseRowCount = getInteractionsRowCount(model);
+          for (let row = 0; row < baseRowCount; row += 6) {
+            const pair = getInteractionsPair(model, row);
+            const key = noteKeyForPair(pair, 0);
+            model.notes[key] = {
+              outcomeId: outcome.id,
+              source: DEFAULT_INTERACTION_SOURCE,
+            };
+          }
+
+          const selectionRows = new Set(
+            Array.from({ length: Math.min(baseRowCount, 120) }, (_, idx) => idx),
+          );
+          const bypassRow = findPairIndex(
+            model,
+            (pair) => pair?.variantSig === String(modifier.id),
+          );
+          if (bypassRow >= 0) selectionRows.add(bypassRow);
+          const viewDef = {
+            columns: [
+              { key: "action" },
+              { key: "input" },
+              { key: "p1:outcome" },
+            ],
+          };
+
+          const calls = [];
+          const controller = createInferenceController({
+            model,
+            selection: { rows: selectionRows, colsAll: true },
+            sel: { r: 0, c: 2 },
+            getActiveView: () => "interactions",
+            viewDef: () => viewDef,
+            statusBar: { set() {} },
+            runModelMutation: (label, mutate) => mutate(),
+            makeUndoConfig: () => ({}),
+            getInteractionsPair: (m, r, opts) => getInteractionsPair(m, r, opts),
+            getInteractionsRowCount: (m, opts = {}) => {
+              const count = getInteractionsRowCount(m, opts);
+              calls.push({
+                includeBypass: !!opts?.includeBypass,
+                indexTotal: opts?.index?.totalRows,
+                count,
+              });
+              return count;
+            },
+          });
+
+          const start = performance.now();
+          const res = controller.runInference({
+            scope: "selection",
+            thresholdOverrides: {
+              consensusMinGroupSize: 1,
+              consensusMinExistingRatio: 0,
+              actionGroupMinGroupSize: 1,
+              actionGroupMinExistingRatio: 0,
+              inputDefaultMinGroupSize: 1,
+              inputDefaultMinExistingRatio: 0,
+            },
+            ...options,
+          });
+          const elapsed = performance.now() - start;
+          const bypassSelected = Array.from(selectionRows).some((row) => {
+            const pair = getInteractionsPair(model, row);
+            return pair?.aId && bypassActionIds.has(pair.aId);
+          });
+
+          return { res, elapsed, model, calls, selectionSize: selectionRows.size, bypassSelected };
+        }
+
+        const baseRun = buildRun();
+        const bypassRun = buildRun({ inferFromBypassed: true, inferToBypassed: true });
+
+        assert.ok(baseRun.selectionSize > 30, "covers large selection set");
+        assert.ok(baseRun.bypassSelected, "selection includes bypassed actions");
+        assert.strictEqual(
+          baseRun.res?.applied || 0,
+          bypassRun.res?.applied || 0,
+          "bypass inference matches applied count from baseline run",
+        );
+        assert.strictEqual(
+          baseRun.res?.empty || 0,
+          bypassRun.res?.empty || 0,
+          "bypass inference counts empties same as baseline",
+        );
+
+        const bypassIndexSize = bypassRun.model.interactionsIndexBypass?.totalRows;
+        const bypassCounts = bypassRun.calls
+          .filter((call) => call.includeBypass && Number.isFinite(call.indexTotal))
+          .map((call) => call.indexTotal);
+        assert.ok(
+          bypassCounts.length && bypassCounts.every((count) => count === bypassIndexSize),
+          "full bypass index used for inference run",
+        );
+
+        const runtimeBuffer = Math.max(5, baseRun.elapsed * 0.5);
+        assert.ok(
+          bypassRun.elapsed <= baseRun.elapsed + runtimeBuffer,
+          "bypass run stays within baseline runtime budget",
+        );
       },
     },
     {
