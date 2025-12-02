@@ -97,6 +97,11 @@ export function getModelSnapshotTests() {
           variantCatalog: { [action.id]: [""] },
         };
         model.interactionsPairs = [];
+        model.interactionsIndexBypass = { groups: [{ variantSig: "" }] };
+        model.interactionsIndexBypassScoped = { groups: [] };
+        model.interactionsIndexBypassCache = { scoped: true };
+        model.interactionsIndexBypassScopedCache = { cached: true };
+        model.interactionsIndexCache = { scoped: true };
         model.notes.foo = { notes: "hi" };
         model.nextId = Number.NaN;
 
@@ -119,6 +124,41 @@ export function getModelSnapshotTests() {
           snapshot.model.interactionsIndex.groups,
           [],
           "interactions groups cleared",
+        );
+        assert.ok(
+          !Object.prototype.hasOwnProperty.call(
+            snapshot.model,
+            "interactionsIndexBypass",
+          ),
+          "bypass index removed from snapshot",
+        );
+        assert.ok(
+          !Object.prototype.hasOwnProperty.call(
+            snapshot.model,
+            "interactionsIndexBypassScoped",
+          ),
+          "scoped bypass index removed from snapshot",
+        );
+        assert.ok(
+          !Object.prototype.hasOwnProperty.call(
+            snapshot.model,
+            "interactionsIndexBypassCache",
+          ),
+          "bypass cache omitted from snapshot",
+        );
+        assert.ok(
+          !Object.prototype.hasOwnProperty.call(
+            snapshot.model,
+            "interactionsIndexBypassScopedCache",
+          ),
+          "scoped bypass cache omitted from snapshot",
+        );
+        assert.ok(
+          !Object.prototype.hasOwnProperty.call(
+            snapshot.model,
+            "interactionsIndexCache",
+          ),
+          "scoped index cache omitted from snapshot",
         );
         assert.deepStrictEqual(snapshot.model.notes, {}, "notes omitted");
         assert.strictEqual(
