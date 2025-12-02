@@ -2528,6 +2528,100 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "rebuilds bypass indexes after cleanup before inference",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
+          makeModelFixture();
+        const modifier = addModifier("Bypassable");
+        const source = addAction("Base", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        const target = addAction("Target");
+        const input = addInput("High");
+        const outcome = addOutcome("Hit");
+
+        groupExact(1, [modifier], { required: false, name: "Bypassable" });
+
+        buildInteractionsPairs(model);
+
+        const bypassPair = {
+          kind: "AI",
+          aId: source.id,
+          iId: input.id,
+          variantSig: String(modifier.id),
+        };
+        const bypassKey = noteKeyForPair(bypassPair, 0);
+        model.notes[bypassKey] = {
+          outcomeId: outcome.id,
+          source: DEFAULT_INTERACTION_SOURCE,
+        };
+
+        delete model.interactionsIndexBypass;
+        delete model.interactionsIndexBypassScoped;
+        delete model.interactionsIndexBypassCache;
+        delete model.interactionsIndexBypassScopedCache;
+
+        const targetRow = findPairIndex(model, (p) => p.aId === target.id);
+        assert.ok(targetRow >= 0, "target row found in base index");
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+          ],
+        };
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([targetRow]), colsAll: true },
+          sel: { r: targetRow, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate) => mutate(),
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r, opts) => getInteractionsPair(m, r, opts),
+          getInteractionsRowCount: (m, opts) => getInteractionsRowCount(m, opts),
+        });
+
+        const res = controller.runInference({
+          scope: "project",
+          inferFromBypassed: true,
+          inferToBypassed: true,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        });
+
+        const scopedBypassIndex = model.interactionsIndexBypassScoped;
+        const rebuiltPair = (() => {
+          const total = Number(scopedBypassIndex?.totalRows) || 0;
+          for (let i = 0; i < total; i++) {
+            const pair = getInteractionsPair(model, i, {
+              includeBypass: true,
+              index: scopedBypassIndex,
+            });
+            if (pair?.aId === source.id && pair?.variantSig === String(modifier.id))
+              return pair;
+          }
+          return null;
+        })();
+
+        assert.ok(
+          Array.isArray(scopedBypassIndex?.groups),
+          "bypass scoped index rebuilt for inference run",
+        );
+        assert.ok(rebuiltPair, "rebuilt bypass scoped index exposes bypass pair");
+        assert.ok(
+          model.notes[noteKeyForPair(rebuiltPair, 0)],
+          "bypass note remains accessible after rebuild",
+        );
+        assert.ok(res, "inference run completed after bypass rebuild");
+      },
+    },
+    {
       name: "bypass cache invalidates after base index rebuild",
       run(assert) {
         const { model, addAction, addInput, addModifier, addOutcome, groupExact } =

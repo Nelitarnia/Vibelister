@@ -37,6 +37,16 @@ function cloneValue(value, seen = new WeakMap()) {
   return copy;
 }
 
+function clearBypassDerivedFields(target) {
+  if (!target || typeof target !== "object") return;
+  delete target.interactionsIndexBypass;
+  delete target.interactionsIndexBypassScoped;
+  delete target.interactionsIndexBypassCache;
+  delete target.interactionsIndexBypassScopedCache;
+  delete target.interactionsIndexCache;
+  delete target.interactionsIndexScopedCache;
+}
+
 export function snapshotModel(model, options = {}) {
   if (!model || typeof model !== "object") {
     throw new Error("snapshotModel requires a model object");
@@ -51,6 +61,7 @@ export function snapshotModel(model, options = {}) {
   const cloned = cloneValue(model);
 
   if (!includeDerived) {
+    clearBypassDerivedFields(cloned);
     cloned.interactionsPairs = [];
     const mode =
       cloned.interactionsIndex && cloned.interactionsIndex.mode
