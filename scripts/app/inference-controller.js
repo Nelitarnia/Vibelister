@@ -327,10 +327,28 @@ export function createInferenceController(options) {
     };
     const mappedSelRow = mapRowsToIndex([sel.r], baseAccess, indexAccess)[0];
     if (mappedSelRow != null) indexAccess.activeRow = mappedSelRow;
-    const rows =
-      options.scope === "project"
-        ? Array.from({ length: indexAccess.getRowCount() }, (_, i) => i)
-        : mapRowsToIndex(baseRows, baseAccess, indexAccess);
+    const rows = (() => {
+      if (options.scope === "project") {
+        return Array.from({ length: indexAccess.getRowCount() }, (_, i) => i);
+      }
+      const mapped = mapRowsToIndex(baseRows, baseAccess, indexAccess);
+      if (!options.inferToBypassed) return mapped;
+      const merged = new Set(mapped);
+      const totalRows = indexAccess.getRowCount();
+      if (Array.isArray(actionIds) && actionIds.length) {
+        for (const id of actionIds) {
+          const byActionRows = collectRowsForActionId(
+            id,
+            totalRows,
+            indexAccess.getPair,
+          );
+          for (const row of byActionRows) merged.add(row);
+        }
+      } else if (options.scope === "selection" || options.scope === "action") {
+        for (let i = 0; i < totalRows; i++) merged.add(i);
+      }
+      return Array.from(merged).sort((a, b) => a - b);
+    })();
     return { indexAccess, rows };
   }
 
