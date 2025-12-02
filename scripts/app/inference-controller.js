@@ -269,10 +269,58 @@ export function createInferenceController(options) {
     };
     const mappedSelRow = mapRowsToIndex([sel.r], baseAccess, indexAccess)[0];
     if (mappedSelRow != null) indexAccess.activeRow = mappedSelRow;
-    const rows =
-      options.scope === "project"
-        ? Array.from({ length: indexAccess.getRowCount() }, (_, i) => i)
-        : mapRowsToIndex(baseRows, baseAccess, indexAccess);
+    const preferBypassRows = (candidateRows) => {
+      if (!Array.isArray(candidateRows) || !candidateRows.length) return [];
+      const fallback = [];
+      const preferred = new Map();
+      for (const row of candidateRows) {
+        const pair = indexAccess.getPair(row);
+        if (!pair) {
+          fallback.push(row);
+          continue;
+        }
+        const key = `${pair.aId}|${pair.iId}`;
+        const isBypassVariant = !!pair.variantSig;
+        const existing = preferred.get(key);
+        if (!existing || (isBypassVariant && !existing.isBypass)) {
+          preferred.set(key, { row, isBypass: isBypassVariant });
+        }
+      }
+      const merged = [...fallback, ...Array.from(preferred.values(), (v) => v.row)];
+      return Array.from(new Set(merged)).sort((a, b) => a - b);
+    };
+    const rows = (() => {
+      if (options.scope === "project") {
+        return Array.from({ length: indexAccess.getRowCount() }, (_, i) => i);
+      }
+      const mapped = mapRowsToIndex(baseRows, baseAccess, indexAccess);
+      if (!options.inferToBypassed) return mapped;
+      const merged = new Set(mapped);
+      const totalRows = indexAccess.getRowCount();
+      if (
+        options.inferToBypassed &&
+        Array.isArray(actionIds) &&
+        actionIds.length
+      ) {
+        const scoped = new Set(actionIds);
+        const preferredByAction = new Map();
+        for (let i = 0; i < totalRows; i++) {
+          const pair = indexAccess.getPair(i);
+          if (!pair || !scoped.has(pair.aId)) continue;
+          const key = `${pair.aId}|${pair.iId}`;
+          const isBypassVariant = !!pair.variantSig;
+          const existing = preferredByAction.get(key);
+          if (!existing || (isBypassVariant && !existing.isBypass)) {
+            preferredByAction.set(key, { row: i, isBypass: isBypassVariant });
+          }
+        }
+        for (const { row } of preferredByAction.values()) merged.add(row);
+      } else if (options.scope === "selection" || options.scope === "action") {
+        for (let i = 0; i < totalRows; i++) merged.add(i);
+      }
+      const mergedRows = Array.from(merged).sort((a, b) => a - b);
+      return options.inferToBypassed ? preferBypassRows(mergedRows) : mergedRows;
+    })();
     return { indexAccess, rows };
   }
 
