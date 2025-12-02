@@ -1152,8 +1152,14 @@ export function initPalette(ctx) {
         if (typeof moveSelectionForEnter === "function") {
           moveSelectionForEnter();
         }
-      }
-      else {
+      } else {
+        const wantsClear =
+          (mode.name === "end" || mode.name === "outcome") &&
+          !String(pal.query || "").trim();
+        if (wantsClear) {
+          setCell(sel.r, sel.c, null);
+          render();
+        }
         close();
         endEdit(false);
       }

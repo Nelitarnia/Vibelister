@@ -744,6 +744,167 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "Enter clears end cell when palette has no matches and query is blank",
+      run(assert) {
+        class FakeElement {
+          constructor(tag) {
+            this.tagName = String(tag || "div").toUpperCase();
+            this.children = [];
+            this.style = {};
+            this.dataset = {};
+            this.parentElement = null;
+            this.offsetParent = null;
+            this.offsetHeight = 0;
+            this.scrollHeight = 0;
+            this.textContent = "";
+            this.innerHTML = "";
+          }
+
+          appendChild(child) {
+            if (!child) return child;
+            child.parentElement = this;
+            child.offsetParent = this;
+            this.children.push(child);
+            return child;
+          }
+
+          setAttribute(name, value) {
+            this[name] = value;
+            return value;
+          }
+
+          removeAttribute(name) {
+            delete this[name];
+          }
+
+          contains(target) {
+            return this === target || this.children.includes(target);
+          }
+
+          getBoundingClientRect() {
+            return { top: 0, bottom: 400 };
+          }
+        }
+
+        const documentStub = {
+          activeElement: { tagName: "DIV" },
+          querySelector: () => null,
+          getElementById: () => null,
+          createElement(tag) {
+            return new FakeElement(tag);
+          },
+          createDocumentFragment() {
+            return {
+              children: [],
+              appendChild(child) {
+                this.children.push(child);
+                return child;
+              },
+            };
+          },
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        };
+
+        const editorListeners = new Map();
+        const editorParent = new FakeElement("div");
+        const editor = {
+          style: { display: "none" },
+          value: "",
+          parentElement: editorParent,
+          offsetHeight: 24,
+          focus() {
+            documentStub.activeElement = this;
+          },
+          setSelectionRange() {},
+          addEventListener(type, cb) {
+            const arr = editorListeners.get(type) || [];
+            arr.push(cb);
+            editorListeners.set(type, arr);
+          },
+          removeEventListener(type, cb) {
+            const arr = editorListeners.get(type) || [];
+            const idx = arr.indexOf(cb);
+            if (idx >= 0) arr.splice(idx, 1);
+            editorListeners.set(type, arr);
+          },
+        };
+
+        const sheet = new FakeElement("div");
+        sheet.addEventListener = () => {};
+        sheet.removeEventListener = () => {};
+        sheet.getBoundingClientRect = () => ({ top: 0, bottom: 400 });
+
+        const sel = { r: 2, c: 3 };
+        let setCellArgs = null;
+        let renderCalls = 0;
+        let endEditCalls = 0;
+
+        const palette = initPalette({
+          editor,
+          sheet,
+          getActiveView: () => "interactions",
+          viewDef: () => ({ columns: [{ key: "p1:end" }] }),
+          sel,
+          model: { actions: [], modifiers: [] },
+          setCell: (r, c, v) => {
+            setCellArgs = { r, c, v };
+          },
+          render: () => {
+            renderCalls += 1;
+          },
+          getCellRect: () => ({ left: 0, top: 0, width: 120, height: 24 }),
+          HEADER_HEIGHT: 24,
+          endEdit: () => {
+            endEditCalls += 1;
+          },
+          moveSelectionForTab: () => {},
+          moveSelectionForEnter: () => {},
+          document: documentStub,
+        });
+
+        palette.openForCurrentCell({
+          r: sel.r,
+          c: sel.c,
+          initialText: "",
+          focusEditor: false,
+        });
+
+        const keydownListeners = editorListeners.get("keydown") || [];
+        const paletteKeydown = keydownListeners[0];
+        assert.ok(paletteKeydown, "palette should register keydown listener");
+
+        const keyEvent = {
+          key: "Enter",
+          preventDefault() {
+            this.prevented = true;
+          },
+          stopPropagation() {
+            this.stopped = true;
+          },
+          stopImmediatePropagation() {
+            this.stoppedImmediate = true;
+          },
+          prevented: false,
+          metaKey: false,
+          ctrlKey: false,
+          altKey: false,
+          shiftKey: false,
+        };
+
+        paletteKeydown(keyEvent);
+
+        assert.deepStrictEqual(
+          setCellArgs,
+          { r: sel.r, c: sel.c, v: null },
+          "blank query Enter should clear the current end cell",
+        );
+        assert.strictEqual(renderCalls, 1, "clearing cell should trigger render");
+        assert.strictEqual(endEditCalls, 1, "palette should close editing session");
+        assert.strictEqual(palette.isOpen(), false, "palette should close after Enter");
+      },
+    },
+    {
       name: "Ctrl+Shift+L toggles comments sidebar",
       run(assert) {
         const listeners = new Map();
