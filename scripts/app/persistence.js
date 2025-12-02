@@ -87,6 +87,16 @@ export function createPersistenceController({
     return text.replace(/\r\n?/g, "\n");
   }
 
+  function clearBypassIndexArtifacts(target) {
+    if (!target || typeof target !== "object") return;
+    delete target.interactionsIndexBypass;
+    delete target.interactionsIndexBypassScoped;
+    delete target.interactionsIndexBypassCache;
+    delete target.interactionsIndexBypassScopedCache;
+    delete target.interactionsIndexCache;
+    delete target.interactionsIndexScopedCache;
+  }
+
   function stripDefaultInteractionMetadata(note) {
     if (!note || typeof note !== "object") return;
     const hasConfidence = Object.prototype.hasOwnProperty.call(
@@ -193,6 +203,7 @@ export function createPersistenceController({
   }
 
   function upgradeModelInPlace(o) {
+    clearBypassIndexArtifacts(o);
     if (!o.meta)
       o.meta = { schema: 0, projectName: "", interactionsMode: "AI", columnWidths: {} };
     if (typeof o.meta.projectName !== "string") o.meta.projectName = "";
@@ -303,6 +314,7 @@ export function createPersistenceController({
   }
 
   function newProject() {
+    clearBypassIndexArtifacts(model);
     Object.assign(model, {
       meta: {
         schema: SCHEMA_VERSION,
@@ -345,6 +357,8 @@ export function createPersistenceController({
       const m = await getFsModule();
       const { data, name } = await m.openJson();
       upgradeModelInPlace(data);
+      clearBypassIndexArtifacts(data);
+      clearBypassIndexArtifacts(model);
       Object.assign(model, data);
       clearHistory();
       ensureSeedRows();
