@@ -700,7 +700,8 @@ export function initPalette(ctx) {
       } catch (_) {}
       pal.query = queryText;
       const modePrefersSelection = pal.mode?.selectTextOnOpen !== false;
-      const shouldSelectAll = modePrefersSelection && queryText.length > 0;
+      const shouldSelectAll =
+        modePrefersSelection && claimEditor && queryText.length > 0;
       const canAdjustSelection =
         typeof editor.setSelectionRange === "function" ||
         typeof editor.select === "function" ||
