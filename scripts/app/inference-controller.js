@@ -511,12 +511,30 @@ export function createInferenceController(options) {
       statusBar?.set?.(NO_TARGETS_STATUS);
       return { applied: 0, allowed: true, status: NO_TARGETS_STATUS };
     }
+    const requestedScope = options.scope || DEFAULT_OPTIONS.scope;
+    const selectionActionIds = (() => {
+      if (requestedScope !== "selection" || !selection?.rows?.size) return null;
+      const ids = new Set();
+      for (const row of selection.rows) {
+        const pair = indexAccess.getPair(row);
+        if (pair && Number.isFinite(pair.aId)) ids.add(pair.aId);
+      }
+      return ids.size ? Array.from(ids) : null;
+    })();
     const suggestionScope = (() => {
-      if (options.scope === "project") return "project";
-      if (indexAccess.includeBypass) return "project";
-      if (options.scope === "action" || options.scope === "actionGroup")
+      if (requestedScope === "project") return "project";
+      if (requestedScope === "actionGroup") return "actionGroup";
+      if (requestedScope === "action") return "action";
+      if (
+        requestedScope === "selection" &&
+        indexAccess.includeBypass &&
+        Array.isArray(selectionActionIds) &&
+        selectionActionIds.length === 1
+      ) {
         return "project";
-      return "action";
+      }
+      if (requestedScope === "selection" && !indexAccess.includeBypass) return "action";
+      return requestedScope;
     })();
     const { targets: broaderTargets, allowed: suggestionAllowed } =
       suggestionScope === options.scope
