@@ -157,18 +157,23 @@ You can clean up your project file using a dialog in Tools -> Clean Up...
 
 # To do
 
+## Known Bugs
+- In certain projects, the Inference settings "infer to bypassed" and "infer from bypassed" don't work properly. (Exact reason is unknown.)
+
 ## Ideas for later
 
+- Warning dialogue when opening or loading a project if data is about to get lost.
+- Split screen functionality.
 - Freezing certain columns so that they always stay visible (like in Libreoffice Calc, etc.)
 - Ability to create rectangular selections by dragging.
 - Creating Input groups to filter visibility in large sheets like Interactions.
 - Option to show the canonical IDs of data elements for debugging purposes.
-- Giving custom Phase rules to modified Actions.
 - Ability to jump between elements with a stable ID as if they were links for faster navigation.
 - Exporting or importing files in more formats.
 - Other cleaning up and streamlining around the files.
 - Write better instructions for the user, and add helpful tooltips.
 - Cover functionalities not currently covered by adding tests to the test suite.
+- Data analysis features?
 - ...And more!
 
 ---
