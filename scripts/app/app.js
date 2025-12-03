@@ -111,6 +111,177 @@ function initA11y() {
   statusBar?.ensureLiveRegion();
 }
 
+function setupViewState({ appContext, statusBar }) {
+  const { model, state } = appContext;
+  return createViewStateController({
+    getActiveView: appContext.getActiveView,
+    model,
+    VIEWS,
+    buildInteractionPhaseColumns,
+    Selection,
+    MIN_ROWS,
+    MOD,
+    statusBar,
+    getPaletteAPI: () => state.paletteAPI,
+    parsePhasesSpec,
+    formatPhasesSpec,
+    getInteractionsCell,
+    setInteractionsCell,
+    getStructuredCellInteractions,
+    applyStructuredCellInteractions,
+  });
+}
+
+function setupRenderer({ appContext, viewState, dom }) {
+  const { model } = appContext;
+  const { sheet, cellsLayer, spacer, colHdrs, rowHdrs } = dom;
+  return createGridRenderer({
+    sheet,
+    cellsLayer,
+    spacer,
+    colHdrs,
+    rowHdrs,
+    selection,
+    SelectionNS,
+    sel,
+    getActiveView: appContext.getActiveView,
+    viewDef: viewState.viewDef,
+    dataArray: viewState.dataArray,
+    getRowCount: viewState.getRowCount,
+    getCell,
+    isRowSelected,
+    model,
+    rebuildInteractionPhaseColumns: viewState.rebuildInteractionPhaseColumns,
+    noteKeyForPair,
+    parsePhaseKey,
+    ROW_HEIGHT,
+    updateSelectionSnapshot: viewState.updateSelectionSnapshot,
+    isModColumn,
+    modIdFromKey,
+    getInteractionsPair,
+    describeInteractionInference,
+    getCommentColors: () => model.meta.commentColors,
+  });
+}
+
+function setupHistory({
+  appContext,
+  viewState,
+  rendererApi,
+  menuItems,
+  statusBar,
+}) {
+  return createHistoryController({
+    model: appContext.model,
+    viewDef: viewState.viewDef,
+    getActiveView: appContext.getActiveView,
+    setActiveView: callSetActiveView,
+    selectionCursor: sel,
+    SelectionCtl,
+    ensureVisible: rendererApi.ensureVisible,
+    VIEWS,
+    statusBar,
+    undoMenuItem: menuItems.undoMenuItem,
+    redoMenuItem: menuItems.redoMenuItem,
+    rebuildActionColumnsFromModifiers,
+    rebuildInteractionsInPlace,
+    pruneNotesToValidPairs,
+    invalidateViewDef: viewState.invalidateViewDef,
+    layout: rendererApi.layout,
+    render: rendererApi.render,
+    historyLimit: 200,
+  });
+}
+
+function setupGridCommands({
+  appContext,
+  viewState,
+  historyApi,
+  rendererApi,
+  statusBar,
+}) {
+  return createGridCommands({
+    getActiveView: appContext.getActiveView,
+    viewDef: viewState.viewDef,
+    dataArray: viewState.dataArray,
+    selection,
+    SelectionNS,
+    SelectionCtl,
+    sel,
+    model: appContext.model,
+    statusBar,
+    runModelMutation: historyApi.runModelMutation,
+    runModelTransaction: historyApi.runModelTransaction,
+    makeUndoConfig: historyApi.makeUndoConfig,
+    clearInteractionsSelection,
+    isInteractionPhaseColumnActiveForRow,
+    clearCellForKind,
+    setCellForKind,
+    kindCtx: viewState.kindCtx,
+    makeRow,
+    insertBlankRows,
+    sanitizeModifierRulesAfterDeletion,
+    setCell,
+    render: rendererApi.render,
+    isModColumn,
+    parsePhaseKey,
+    noteKeyForPair,
+    getInteractionsPair,
+  });
+}
+
+function setupDialogs({ appContext, viewState, historyApi, statusBar }) {
+  const { model } = appContext;
+  const { viewDef } = viewState;
+  const { runModelMutation, makeUndoConfig } = historyApi;
+
+  const { openProjectInfoDialog: openProjectInfo } = createProjectInfoController({
+    model,
+    runModelMutation,
+    makeUndoConfig,
+    statusBar,
+  });
+
+  const { openCleanupDialog } = createCleanupController({
+    model,
+    runModelMutation,
+    makeUndoConfig,
+    statusBar,
+  });
+
+  const { openInferenceDialog } = createInferenceController({
+    model,
+    selection,
+    sel,
+    getActiveView: appContext.getActiveView,
+    viewDef,
+    statusBar,
+    runModelMutation,
+    makeUndoConfig,
+    getInteractionsPair,
+    getInteractionsRowCount,
+  });
+
+  const interactionActions = createInteractionBulkActions({
+    model,
+    selection,
+    sel,
+    getActiveView: appContext.getActiveView,
+    viewDef,
+    statusBar,
+    runModelMutation,
+    makeUndoConfig,
+    getInteractionsPair,
+  });
+
+  return {
+    openProjectInfo,
+    openCleanupDialog,
+    openInferenceDialog,
+    interactionActions,
+  };
+}
+
 // Core model + views
 const appContext = createAppContext();
 const { model, state } = appContext;
@@ -148,23 +319,7 @@ const menuItems = menusDom.items;
 
 const { openSettingsDialog } = createSettingsController({ statusBar });
 
-const viewState = createViewStateController({
-  getActiveView: getActiveViewState,
-  model,
-  VIEWS,
-  buildInteractionPhaseColumns,
-  Selection,
-  MIN_ROWS,
-  MOD,
-  statusBar,
-  getPaletteAPI: () => state.paletteAPI,
-  parsePhasesSpec,
-  formatPhasesSpec,
-  getInteractionsCell,
-  setInteractionsCell,
-  getStructuredCellInteractions,
-  applyStructuredCellInteractions,
-});
+const viewState = setupViewState({ appContext, statusBar });
 
 const {
   saveCurrentViewState,
@@ -180,38 +335,13 @@ const {
   updateScrollSnapshot,
 } = viewState;
 
-const {
-  render,
-  layout,
-  ensureVisible,
-  getColGeomFor,
-} = createGridRenderer({
-  sheet,
-  cellsLayer,
-  spacer,
-  colHdrs,
-  rowHdrs,
-  selection,
-  SelectionNS,
-  sel,
-  getActiveView: getActiveViewState,
-  viewDef,
-  dataArray,
-  getRowCount,
-  getCell,
-  isRowSelected,
-  model,
-  rebuildInteractionPhaseColumns,
-  noteKeyForPair,
-  parsePhaseKey,
-  ROW_HEIGHT,
-  updateSelectionSnapshot,
-  isModColumn,
-  modIdFromKey,
-  getInteractionsPair,
-  describeInteractionInference,
-  getCommentColors: () => model.meta.commentColors,
+const rendererApi = setupRenderer({
+  appContext,
+  viewState,
+  dom: { sheet, cellsLayer, spacer, colHdrs, rowHdrs },
 });
+
+const { render, layout, ensureVisible, getColGeomFor } = rendererApi;
 
 onSelectionChanged(() => render());
 
@@ -229,6 +359,14 @@ const interactionsOutline = createInteractionsOutline({
 });
 interactionsOutline?.refresh?.();
 
+const historyApi = setupHistory({
+  appContext,
+  viewState,
+  rendererApi,
+  menuItems,
+  statusBar,
+});
+
 const {
   makeUndoConfig,
   runModelMutation,
@@ -238,25 +376,14 @@ const {
   redo,
   getUndoState,
   clearHistory,
-} = createHistoryController({
-  model,
-  viewDef,
-  getActiveView: getActiveViewState,
-  setActiveView: callSetActiveView,
-  selectionCursor: sel,
-  SelectionCtl,
-  ensureVisible,
-  VIEWS,
+} = historyApi;
+
+const gridCommandsApi = setupGridCommands({
+  appContext,
+  viewState,
+  historyApi,
+  rendererApi,
   statusBar,
-  undoMenuItem: menuItems.undoMenuItem,
-  redoMenuItem: menuItems.redoMenuItem,
-  rebuildActionColumnsFromModifiers,
-  rebuildInteractionsInPlace,
-  pruneNotesToValidPairs,
-  invalidateViewDef,
-  layout,
-  render,
-  historyLimit: 200,
 });
 
 const {
@@ -273,72 +400,18 @@ const {
   getCellComments,
   getCellCommentClipboardPayload,
   applyCellCommentClipboardPayload,
-} = createGridCommands({
-  getActiveView: getActiveViewState,
-  viewDef,
-  dataArray,
-  selection,
-  SelectionNS,
-  SelectionCtl,
-  sel,
-  model,
-  statusBar,
-  runModelMutation,
-  runModelTransaction,
-  makeUndoConfig,
-  clearInteractionsSelection,
-  isInteractionPhaseColumnActiveForRow,
-  clearCellForKind,
-  setCellForKind,
-  kindCtx,
-  makeRow,
-  insertBlankRows,
-  sanitizeModifierRulesAfterDeletion,
-  setCell,
-  render,
-  isModColumn,
-  parsePhaseKey,
-  noteKeyForPair,
-  getInteractionsPair,
-});
+} = gridCommandsApi;
 
-const { openProjectInfoDialog: openProjectInfo } = createProjectInfoController({
-  model,
-  runModelMutation,
-  makeUndoConfig,
+const {
+  openProjectInfo,
+  openCleanupDialog,
+  openInferenceDialog,
+  interactionActions,
+} = setupDialogs({
+  appContext,
+  viewState,
+  historyApi,
   statusBar,
-});
-
-const { openCleanupDialog } = createCleanupController({
-  model,
-  runModelMutation,
-  makeUndoConfig,
-  statusBar,
-});
-
-const { openInferenceDialog } = createInferenceController({
-  model,
-  selection,
-  sel,
-  getActiveView: getActiveViewState,
-  viewDef,
-  statusBar,
-  runModelMutation,
-  makeUndoConfig,
-  getInteractionsPair,
-  getInteractionsRowCount,
-});
-
-const interactionActions = createInteractionBulkActions({
-  model,
-  selection,
-  sel,
-  getActiveView: getActiveViewState,
-  viewDef,
-  statusBar,
-  runModelMutation,
-  makeUndoConfig,
-  getInteractionsPair,
 });
 
 // Sidebars wired after view controller is created
