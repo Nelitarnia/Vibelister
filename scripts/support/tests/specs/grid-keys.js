@@ -898,8 +898,8 @@ export function getGridKeysTests() {
         const firstItem = list?.children?.[0];
         assert.strictEqual(
           firstItem?.children?.[0]?.textContent,
-          "—",
-          "blank query should prepend clear placeholder",
+          "Clear value",
+          "blank query should prepend clear placeholder label",
         );
 
         const keyListeners = editorListeners.get("keydown") || [];
@@ -936,8 +936,8 @@ export function getGridKeysTests() {
         const outcomeClear = outcomeList?.children?.[0];
         assert.strictEqual(
           outcomeClear?.children?.[0]?.textContent,
-          "—",
-          "outcome palette should also prepend clear placeholder",
+          "Clear value",
+          "outcome palette should also prepend clear placeholder label",
         );
 
         outcomeClear?.onclick?.({ preventDefault() {}, stopPropagation() {} });
