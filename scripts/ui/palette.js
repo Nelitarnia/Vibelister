@@ -153,6 +153,14 @@ export function initPalette(ctx) {
           (r.name || "").trim(),
         );
         const out = [];
+        if (!q) {
+          out.push({
+            display: "—",
+            description: "Clear value",
+            data: { clear: true },
+            skipRecent: true,
+          });
+        }
         for (const r of rows) {
           const nm = r.name || "";
           if (q && !nm.toLowerCase().startsWith(q)) continue;
@@ -161,10 +169,17 @@ export function initPalette(ctx) {
         return out;
       },
       commit: (it) => {
-        setCell(sel.r, sel.c, Number(it.data.outcomeId));
+        if (it?.data?.clear) {
+          setCell(sel.r, sel.c, null);
+        } else {
+          setCell(sel.r, sel.c, Number(it.data.outcomeId));
+        }
         render();
       },
-      recentKeyOf: (it) => `o:${it.data.outcomeId}`,
+      recentKeyOf: (it) => {
+        if (it?.data?.clear) return "";
+        return `o:${it.data.outcomeId}`;
+      },
     },
     {
       name: "modifierState",
@@ -250,6 +265,15 @@ export function initPalette(ctx) {
         const seen = new Set();
         const out = [];
 
+        if (!a && (!mods || !mods.length)) {
+          out.push({
+            display: "—",
+            description: "Clear value",
+            data: { clear: true },
+            skipRecent: true,
+          });
+        }
+
         const pairCount = getInteractionsRowCount(model);
         if (pairCount > 0) {
           for (let i = 0; i < pairCount; i++) {
@@ -311,11 +335,12 @@ export function initPalette(ctx) {
         return out;
       },
       commit: (it) => {
-        setCell(sel.r, sel.c, it.data);
+        if (it?.data?.clear) setCell(sel.r, sel.c, null);
+        else setCell(sel.r, sel.c, it.data);
         render();
       },
       recentKeyOf: (it) =>
-        `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
+        it?.data?.clear ? "" : `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
     },
     {
       name: "tag",
@@ -851,6 +876,7 @@ export function initPalette(ctx) {
   function updateRecent(item) {
     const mode = pal.mode;
     if (!mode || !mode.recentKeyOf) return;
+    if (item?.skipRecent) return;
     const key = mode.recentKeyOf(item);
     if (!key) return;
     const bag = pal.recent.get(mode.name) || [];

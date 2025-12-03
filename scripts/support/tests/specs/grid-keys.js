@@ -487,6 +487,7 @@ export function getGridKeysTests() {
             this.tagName = String(tag || "div").toUpperCase();
             this.children = [];
             this.style = {};
+            this.dataset = {};
             this.parentElement = null;
             this.offsetParent = null;
             this.offsetHeight = 0;
@@ -503,6 +504,8 @@ export function getGridKeysTests() {
           }
 
           setAttribute() {}
+
+          removeAttribute() {}
 
           getBoundingClientRect() {
             return { top: 0, bottom: 400 };
@@ -741,6 +744,206 @@ export function getGridKeysTests() {
         } finally {
           dispose?.();
         }
+      },
+    },
+    {
+      name: "blank queries show clear option first and Enter/click clear the cell",
+      async run(assert) {
+        class FakeElement {
+          constructor(tag) {
+            this.tagName = String(tag || "div").toUpperCase();
+            this.children = [];
+            this.style = {};
+            this.dataset = {};
+            this.parentElement = null;
+            this.offsetParent = null;
+            this.offsetHeight = 0;
+            this.scrollHeight = 0;
+            this.textContent = "";
+            this.id = "";
+          }
+
+          appendChild(child) {
+            if (!child) return child;
+            if (child.isFragment && Array.isArray(child.children)) {
+              child.children.forEach((grand) => this.appendChild(grand));
+              return child;
+            }
+            child.parentElement = this;
+            child.offsetParent = this;
+            this.children.push(child);
+            return child;
+          }
+
+          contains(target) {
+            if (this === target) return true;
+            return this.children.some((child) =>
+              typeof child.contains === "function" ? child.contains(target) : child === target,
+            );
+          }
+
+          setAttribute() {}
+
+          removeAttribute() {}
+
+          getBoundingClientRect() {
+            return { top: 0, bottom: 400 };
+          }
+        }
+
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const editorListeners = new Map();
+        const editorParent = new FakeElement("div");
+        const editor = {
+          style: { display: "block" },
+          value: "",
+          selectionStart: 0,
+          selectionEnd: 0,
+          parentElement: editorParent,
+          offsetHeight: 24,
+          focus() {},
+          addEventListener(type, cb) {
+            const arr = editorListeners.get(type) || [];
+            arr.push(cb);
+            editorListeners.set(type, arr);
+          },
+          removeEventListener(type, cb) {
+            const arr = editorListeners.get(type) || [];
+            const idx = arr.indexOf(cb);
+            if (idx >= 0) arr.splice(idx, 1);
+            editorListeners.set(type, arr);
+          },
+        };
+        editorParent.appendChild(editor);
+
+        const documentStub = {
+          activeElement: { tagName: "DIV" },
+          querySelector: () => null,
+          getElementById: () => null,
+          createElement(tag) {
+            return new FakeElement(tag);
+          },
+          createDocumentFragment() {
+            return {
+              isFragment: true,
+              children: [],
+              appendChild(child) {
+                this.children.push(child);
+                return child;
+              },
+            };
+          },
+          addEventListener() {},
+          removeEventListener() {},
+        };
+
+        const sheet = new FakeElement("div");
+        sheet.addEventListener = () => {};
+        sheet.removeEventListener = () => {};
+
+        const sel = { r: 0, c: 0 };
+        const viewColumn = { key: "p0:end" };
+        const model = {
+          outcomes: [{ id: 7, name: "Win" }],
+          actions: [{ id: 1, name: "Close" }],
+          modifiers: [],
+        };
+
+        let setCellValue = undefined;
+        let endEditCalls = 0;
+
+        const palette = initPalette({
+          editor,
+          sheet,
+          getActiveView: () => "interactions",
+          viewDef: () => ({ columns: [viewColumn] }),
+          sel,
+          model,
+          setCell: (r, c, v) => {
+            setCellValue = v;
+          },
+          render: () => {},
+          getCellRect: () => ({ left: 0, top: 0, width: 120, height: 24 }),
+          HEADER_HEIGHT: 24,
+          endEdit: () => {
+            endEditCalls += 1;
+          },
+          moveSelectionForTab: () => {},
+          moveSelectionForEnter: () => {},
+          document: documentStub,
+        });
+
+        palette.openForCurrentCell({ r: 0, c: 0, initialText: "", focusEditor: false });
+
+        const paletteRoot = editorParent.children.find((child) => child.id === "universalPalette");
+        assert.ok(paletteRoot, "palette root should be attached to editor parent");
+        const list = paletteRoot.children[0];
+        const firstItem = list?.children?.[0];
+        assert.strictEqual(
+          firstItem?.children?.[0]?.textContent,
+          "—",
+          "blank query should prepend clear placeholder",
+        );
+
+        const keyListeners = editorListeners.get("keydown") || [];
+        const keydown = keyListeners.find((entry) => typeof entry === "function") ||
+          keyListeners.find((entry) => entry && typeof entry.cb === "function")?.cb;
+        assert.ok(keydown, "editor keydown listener should be registered");
+
+        const enterEvent = {
+          key: "Enter",
+          preventDefault() {
+            this.prevented = true;
+          },
+          stopPropagation() {},
+          stopImmediatePropagation() {},
+          prevented: false,
+          metaKey: false,
+          ctrlKey: false,
+          altKey: false,
+          shiftKey: false,
+        };
+
+        keydown(enterEvent);
+
+        assert.strictEqual(setCellValue, null, "Enter should clear the cell value");
+        assert.ok(endEditCalls > 0, "clearing via Enter should exit edit mode");
+
+        viewColumn.key = "dualof";
+        setCellValue = undefined;
+        palette.openForCurrentCell({ r: 0, c: 0, initialText: "", focusEditor: false });
+
+        const outcomeList = editorParent.children.find(
+          (child) => child.id === "universalPalette",
+        )?.children?.[0];
+        const outcomeClear = outcomeList?.children?.[0];
+        assert.strictEqual(
+          outcomeClear?.children?.[0]?.textContent,
+          "—",
+          "outcome palette should also prepend clear placeholder",
+        );
+
+        outcomeClear?.onclick?.({ preventDefault() {}, stopPropagation() {} });
+
+        assert.strictEqual(setCellValue, null, "clicking clear option should clear the cell");
+        assert.ok(endEditCalls > 1, "clicking clear option should exit edit mode");
       },
     },
     {
