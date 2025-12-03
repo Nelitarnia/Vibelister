@@ -28,8 +28,11 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── interaction-bulk-actions.js
 │   │   ├── interactions.js
 │   │   ├── interactions-data.js
+│   │   ├── inference-application.js
 │   │   ├── inference-controller.js
 │   │   ├── inference-heuristics.js
+│   │   ├── inference-index-access.js
+│   │   ├── inference-targets.js
 │   │   ├── inference-profiles.js
 │   │   ├── inference-utils.js
 │   │   ├── outcomes.js
@@ -142,6 +145,9 @@ This document outlines a maintainable directory layout tailored to the current c
 - `comment-events.js` centralizes the DOM event dispatch for comment mutations so grid commands and other controllers can signal UI refreshes without duplicating `CustomEvent` wiring.
 - `cleanup-controller.js` rebuilds variant catalogs, analyzes orphaned notes/comments, and coordinates the cleanup dialog so destructive operations participate in the shared undo history.
 - `inference-controller.js` scopes interaction cells for inference runs, applies or clears inferred metadata with undo/status wiring, and skips manual edits so bulk operations respect source flags.
+- `inference-application.js` applies the proposed suggestions to interaction notes, coordinating metadata updates, profile impact tracking, and tag-change events while honoring overwrite/skip rules.
+- `inference-index-access.js` encapsulates index construction and selection mapping for regular vs. bypass interactions, including scoped bypass caches and active-row remapping.
+- `inference-targets.js` resolves requested vs. suggestion scopes, gathers eligible cells for inference, and shares scope-plan metadata so the controller can log intent.
 - `inference-heuristics.js` layers modifier propagation, modifier profiles, and input defaults to propose inferred outcome/end/tag values with source-specific confidence metadata.
 - `inference-profiles.js` maintains per-modifier and per-input trend profiles, decaying counts, snapshotting them for heuristic runs, and exposing a read-only view that leans suggestions toward recently observed "no change" patterns.
 - `inference-utils.js` centralizes the shared normalization, extraction, keying, and cloning helpers consumed by heuristics, profiles, and inference-aware interactions.
