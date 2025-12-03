@@ -38,9 +38,12 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── inference-utils.js
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
+│   │   ├── menus-bootstrap.js
 │   │   ├── project-info-controller.js
 │   │   ├── selection.js
 │   │   ├── settings-controller.js
+│   │   ├── sidebar-bootstrap.js
+│   │   ├── tabs-bootstrap.js
 │   │   ├── types.js
 │   │   ├── user-settings.js
 │   │   ├── view-state.js
@@ -136,6 +139,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - House entry points and cross-cutting application logic.
 - `app.js` stays the primary bootstrap file, while `interactions.js`, `outcomes.js`, `selection.js`, `types.js`, and `views.js` remain close by.
 - `dom-elements.js` centralizes DOM lookups so bootstrap wiring can share a consistent set of handles.
+- `menus-bootstrap.js`, `sidebar-bootstrap.js`, and `tabs-bootstrap.js` resolve only the DOM nodes required by menus, sidebars, and tabs so the entry file can pass focused handles into their controllers.
 - `app-root.js` builds the root application context (model, shared UI handles, lifecycle helpers) so `app.js` can bootstrap via a single factory instead of coordinating module-level globals.
 - `clipboard-codec.js` lives here because it bridges app state with external data.
 - `history.js` wraps undo/redo wiring so the entry point just injects dependencies and consumes the resulting API.

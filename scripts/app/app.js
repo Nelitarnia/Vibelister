@@ -98,11 +98,11 @@ import { resetInferenceProfiles } from "./inference-profiles.js";
 import { createInteractionBulkActions } from "./interaction-bulk-actions.js";
 import {
   getCoreDomElements,
-  getMenuDomElements,
   getProjectNameElement,
-  getSidebarDomElements,
-  getTabDomElements,
 } from "./dom-elements.js";
+import { bootstrapMenus } from "./menus-bootstrap.js";
+import { bootstrapSidebar } from "./sidebar-bootstrap.js";
+import { bootstrapTabs } from "./tabs-bootstrap.js";
 import { createAppContext } from "./app-root.js";
 import { initSidebarControllers } from "./sidebar-wiring.js";
 import { createViewController } from "./view-controller.js";
@@ -129,9 +129,9 @@ const getActiveViewState = appContext.getActiveView;
 
 // DOM
 const coreDom = getCoreDomElements();
-const menuDom = getMenuDomElements(Ids);
-const sidebarDom = getSidebarDomElements(Ids);
-const tabDom = getTabDomElements(Ids);
+const menusDom = bootstrapMenus(Ids);
+const sidebarDom = bootstrapSidebar(Ids);
+const tabsDom = bootstrapTabs(Ids);
 const projectNameEl = getProjectNameElement(Ids);
 const {
   sheet,
@@ -143,52 +143,8 @@ const {
   statusEl,
   dragLine,
 } = coreDom;
-const { undoMenuItem, redoMenuItem, commentToggleButton, tagToggleButton, commentAddButton } =
-  menuDom;
-const {
-  sidePanel,
-  sidePanelTitle,
-  sidePanelCloseButton,
-  commentPane,
-  tagPane,
-  tagForm,
-  tagInput,
-  tagSort,
-  tagRenameButton,
-  tagDeleteButton,
-  tagList,
-  tagEmpty,
-  commentList,
-  commentEmpty,
-  commentEditor,
-  commentTextarea,
-  commentColorSelect,
-  commentSaveButton,
-  commentDeleteButton,
-  commentCancelButton,
-  commentSelectionLabel,
-  commentPrevButton,
-  commentNextButton,
-  commentTabs,
-  commentTabComments,
-  commentTabCustomize,
-  commentPageComments,
-  commentPageCustomize,
-  commentPaletteList,
-  commentPaletteApply,
-  commentPaletteReset,
-  interactionToolsPane,
-  interactionToolsToggle,
-  interactionAcceptButton,
-  interactionClearButton,
-  interactionUncertainButton,
-  interactionUncertaintyValue,
-  interactionSourceValue,
-  interactionUncertaintyDefault,
-  interactionUncertaintyDefaultValue,
-} = sidebarDom;
-const { tabActions, tabInputs, tabModifiers, tabOutcomes, tabInteractions } = tabDom;
 const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
+const menuItems = menusDom.items;
 
 const { openSettingsDialog } = createSettingsController({ statusBar });
 
@@ -292,8 +248,8 @@ const {
   ensureVisible,
   VIEWS,
   statusBar,
-  undoMenuItem,
-  redoMenuItem,
+  undoMenuItem: menuItems.undoMenuItem,
+  redoMenuItem: menuItems.redoMenuItem,
   rebuildActionColumnsFromModifiers,
   rebuildInteractionsInPlace,
   pruneNotesToValidPairs,
@@ -866,7 +822,7 @@ sheet.addEventListener("scroll", () => {
 // Tabs & views
 ({ setActiveView, cycleView, getActiveView, toggleInteractionsMode } =
   createViewController({
-    tabs: { tabActions, tabInputs, tabModifiers, tabOutcomes, tabInteractions },
+    tabs: tabsDom,
     sheet,
     sel,
     selection,
@@ -962,51 +918,7 @@ const disposeKeys = initGridKeys({
   tagUI: state.tagUI,
   interactionTools: state.interactionTools,
 } = initSidebarControllers({
-  dom: {
-    sidePanel,
-    sidePanelTitle,
-    sidePanelCloseButton,
-    commentPane,
-    tagPane,
-    tagForm,
-    tagInput,
-    tagSort,
-    tagRenameButton,
-    tagDeleteButton,
-    tagList,
-    tagEmpty,
-    commentList,
-    commentEmpty,
-    commentEditor,
-    commentTextarea,
-    commentColorSelect,
-    commentSaveButton,
-    commentDeleteButton,
-    commentCancelButton,
-    commentSelectionLabel,
-    commentPrevButton,
-    commentNextButton,
-    commentTabs,
-    commentTabComments,
-    commentTabCustomize,
-    commentPageComments,
-    commentPageCustomize,
-    commentPaletteList,
-    commentPaletteApply,
-    commentPaletteReset,
-    commentToggleButton,
-    commentAddButton,
-    tagToggleButton,
-    interactionToolsPane,
-    interactionToolsToggle,
-    interactionAcceptButton,
-    interactionClearButton,
-    interactionUncertainButton,
-  interactionUncertaintyValue,
-  interactionSourceValue,
-  interactionUncertaintyDefault,
-  interactionUncertaintyDefaultValue,
-  },
+  dom: sidebarDom,
   SelectionCtl,
   selection,
   sel,
@@ -1084,7 +996,7 @@ function getSuggestedName() {
 
 // Initialize menus module (handles menu triggers & items)
 state.menusAPI = initMenus({
-  Ids,
+  dom: menusDom,
   setActiveView,
   newProject,
   openFromDisk,
