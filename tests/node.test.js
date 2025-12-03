@@ -19,6 +19,7 @@ import { getCommentTests } from "../scripts/support/tests/specs/comments.js";
 import { getClipboardTests } from "../scripts/support/tests/specs/clipboard.js";
 import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
 import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
+import { getInferenceControllerTests } from "../scripts/support/tests/specs/inference-controller.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -32,6 +33,10 @@ for (const spec of getInteractionsTests()) {
 
 for (const spec of getInferenceUtilsTests()) {
   test(`Inference utils › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInferenceControllerTests()) {
+  test(`Inference controller › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getPersistenceTests()) {
