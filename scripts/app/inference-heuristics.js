@@ -272,9 +272,10 @@ function computeSuggestionConfidence(source, context = {}) {
   }
   if (source === HEURISTIC_SOURCES.profileTrend) {
     const preferenceRatio = context.preferenceRatio;
-    const supportBoost = Number.isFinite(context.supportCount)
-      ? Math.min(context.supportCount, 20) * 0.01
-      : 0;
+    const supportBoost =
+      Number.isFinite(context.supportCount) && context.supportCount > 0
+        ? Math.min(context.supportCount * 0.005, 0.05)
+        : 0;
     if (Number.isFinite(preferenceRatio)) {
       return clampConfidence(base * preferenceRatio + supportBoost);
     }
