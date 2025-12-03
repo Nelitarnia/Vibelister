@@ -24,26 +24,31 @@ export function initMenus(deps) {
     getUndoState,
   } = deps;
 
+  const getMenuElement =
+    typeof deps.getMenuElement === "function"
+      ? deps.getMenuElement
+      : (id) => document.getElementById(id);
+
   const menus = {
     file: {
-      trigger: document.getElementById(Ids.mFile),
-      popup: document.getElementById(Ids.menuFile),
+      trigger: getMenuElement(Ids.mFile),
+      popup: getMenuElement(Ids.menuFile),
     },
     edit: {
-      trigger: document.getElementById(Ids.mEdit),
-      popup: document.getElementById(Ids.menuEdit),
+      trigger: getMenuElement(Ids.mEdit),
+      popup: getMenuElement(Ids.menuEdit),
     },
     sheet: {
-      trigger: document.getElementById(Ids.mSheet),
-      popup: document.getElementById(Ids.menuSheet),
+      trigger: getMenuElement(Ids.mSheet),
+      popup: getMenuElement(Ids.menuSheet),
     },
     tools: {
-      trigger: document.getElementById(Ids.mTools),
-      popup: document.getElementById(Ids.menuTools),
+      trigger: getMenuElement(Ids.mTools),
+      popup: getMenuElement(Ids.menuTools),
     },
     view: {
-      trigger: document.getElementById(Ids.mView),
-      popup: document.getElementById(Ids.menuView),
+      trigger: getMenuElement(Ids.mView),
+      popup: getMenuElement(Ids.menuView),
     },
   };
 
@@ -84,13 +89,13 @@ export function initMenus(deps) {
   // View radios
   function updateViewMenuRadios(key) {
     ["actions", "inputs", "modifiers", "interactions"].forEach((n) => {
-      const e = document.getElementById("view-" + n);
+      const e = getMenuElement("view-" + n);
       if (e) e.setAttribute("aria-checked", String(n === key));
     });
   }
 
   // Helpers
-  const el = (id) => document.getElementById(id);
+  const el = (id) => getMenuElement(id);
   const undoItem = el(Ids.editUndo);
   const redoItem = el(Ids.editRedo);
 

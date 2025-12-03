@@ -106,6 +106,8 @@ import {
 import { createInitialModel } from "./model-init.js";
 import { initSidebarControllers } from "./sidebar-wiring.js";
 import { createViewController } from "./view-controller.js";
+import { initPaletteFeature } from "./palette-feature.js";
+import { initMenusFeature } from "./menus-feature.js";
 
 export function createApp() {
   function initA11y() {
@@ -116,13 +118,16 @@ export function createApp() {
   const model = createInitialModel();
 
   let activeView = "actions";
-  let paletteAPI = null;
-  let menusAPI = null;
-  let sidePanelHost = null;
-  let commentsUI = null;
-  let tagManager = null;
-  let tagUI = null;
-  let interactionTools = null;
+  const appContext = {
+    palette: null,
+    colorPicker: null,
+    menus: null,
+    sidePanelHost: null,
+    commentsUI: null,
+    tagManager: null,
+    tagUI: null,
+    interactionTools: null,
+  };
   let toggleInteractionToolsPane = null;
   let setActiveView = null;
   let cycleView = null;
@@ -197,6 +202,8 @@ export function createApp() {
   } = sidebarDom;
   const { tabActions, tabInputs, tabModifiers, tabOutcomes, tabInteractions } = tabDom;
   const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
+  appContext.model = model;
+  appContext.statusBar = statusBar;
 
   const { openSettingsDialog } = createSettingsController({ statusBar });
 
@@ -209,7 +216,7 @@ export function createApp() {
     MIN_ROWS,
     MOD,
     statusBar,
-    getPaletteAPI: () => paletteAPI,
+    getPaletteAPI: () => appContext.palette,
     parsePhasesSpec,
     formatPhasesSpec,
     getInteractionsCell,
@@ -689,7 +696,7 @@ export function createApp() {
     render,
     updateSelectionSnapshot,
     getActiveView: () => activeView,
-    getPaletteAPI: () => paletteAPI,
+    getPaletteAPI: () => appContext.palette,
   });
 
   const {
@@ -720,12 +727,12 @@ export function createApp() {
     updateProjectNameWidget,
     setProjectNameFromFile,
     getSuggestedName,
-    closeMenus: () => menusAPI?.closeAllMenus?.(),
+    closeMenus: () => appContext.menus?.closeAllMenus?.(),
     onModelReset: () => {
       resetInferenceProfiles();
       interactionsOutline?.refresh?.();
-      tagUI?.refresh?.();
-      commentsUI?.applyModelMetadata?.(model.meta);
+      appContext.tagUI?.refresh?.();
+      appContext.commentsUI?.applyModelMetadata?.(model.meta);
       emitInteractionTagChangeEvent(null, { reason: "reset", force: true });
     },
   });
@@ -741,45 +748,38 @@ export function createApp() {
   });
 
   // Initialize palette (handles both Outcome and End cells)
-  paletteAPI = initPalette({
-    editor,
-    sheet,
+  const { paletteAPI, colorPickerAPI } = initPaletteFeature({
+    dom: { editor, sheet },
+    selection: sel,
+    getCell,
+    getCellRect,
     getActiveView: () => activeView,
     viewDef,
-    sel,
     model,
-    setCell: setCellSelectionAware,
+    setCellSelectionAware,
     render,
-    getCellRect,
-    HEADER_HEIGHT,
-    ROW_HEIGHT,
+    headerHeight: HEADER_HEIGHT,
+    rowHeight: ROW_HEIGHT,
     endEdit,
     moveSelectionForTab: advanceSelectionAfterPaletteTab,
     moveSelectionForEnter: () => moveSel(1, 0, false),
-  });
-
-  const colorPickerAPI = initColorPicker({
-    parent: editor?.parentElement || sheet,
-    sheet,
-    sel,
-    getCellRect,
-    getColorValue: (r, c) => cellValueToPlainText(getCell(r, c)),
-    setColorValue: (r, c, v) => setCellSelectionAware(r, c, v),
-    render,
     makeUndoConfig,
     beginUndoableTransaction,
+    cellValueToPlainText,
   });
+  appContext.palette = paletteAPI;
+  appContext.colorPicker = colorPickerAPI;
 
   // Adapter: unify palette entrypoints for refPick columns
-  if (!paletteAPI.openReference) {
-    paletteAPI.openReference = ({ entity, target } = {}) => {
+  if (!appContext.palette?.openReference) {
+    appContext.palette.openReference = ({ entity, target } = {}) => {
       try {
         if (entity === "outcome") {
-          if (typeof paletteAPI.openOutcome === "function") {
-            return !!paletteAPI.openOutcome(target);
+          if (typeof appContext.palette.openOutcome === "function") {
+            return !!appContext.palette.openOutcome(target);
           }
-          if (typeof paletteAPI.openForCurrentCell === "function") {
-            return !!paletteAPI.openForCurrentCell({
+          if (typeof appContext.palette.openForCurrentCell === "function") {
+            return !!appContext.palette.openForCurrentCell({
               r: target?.r,
               c: target?.c,
               initialText: target?.initialText,
@@ -788,27 +788,21 @@ export function createApp() {
           }
           return false;
         }
-        if (entity === "action" && typeof paletteAPI.openAction === "function")
-          return !!paletteAPI.openAction(target);
-        if (entity === "input" && typeof paletteAPI.openInput === "function")
-          return !!paletteAPI.openInput(target);
+        if (
+          entity === "action" &&
+          typeof appContext.palette.openAction === "function"
+        )
+          return !!appContext.palette.openAction(target);
+        if (
+          entity === "input" &&
+          typeof appContext.palette.openInput === "function"
+        )
+          return !!appContext.palette.openInput(target);
       } catch (_) {
         /* noop */
       }
       return false; // fall back to text editor if no specific picker exists
     };
-  }
-
-  if (paletteAPI && colorPickerAPI) {
-    const baseIsOpen =
-      typeof paletteAPI.isOpen === "function"
-        ? paletteAPI.isOpen.bind(paletteAPI)
-        : () => false;
-    if (typeof colorPickerAPI.openColor === "function")
-      paletteAPI.openColor = colorPickerAPI.openColor;
-    if (typeof colorPickerAPI.close === "function")
-      paletteAPI.closeColor = colorPickerAPI.close;
-    paletteAPI.isOpen = () => baseIsOpen() || !!colorPickerAPI.isOpen?.();
   }
 
   // Mouse
@@ -891,14 +885,14 @@ export function createApp() {
       layout,
       render,
       statusBar,
-      menusAPIRef: () => menusAPI,
+      menusAPIRef: () => appContext.menus,
       getRowCount,
       viewDef,
       clamp,
       model,
       getActiveViewState: () => activeView,
       setActiveViewState: (key) => (activeView = key),
-      getCommentsUI: () => commentsUI,
+      getCommentsUI: () => appContext.commentsUI,
     }));
 
   const disposeKeys = initGridKeys({
@@ -952,19 +946,18 @@ export function createApp() {
     status: statusBar,
     undo,
     redo,
-    getPaletteAPI: () => paletteAPI,
+    getPaletteAPI: () => appContext.palette,
     toggleInteractionsOutline: () => interactionsOutline?.toggle?.(),
     jumpToInteractionsAction: (delta) => interactionsOutline?.jumpToAction?.(delta),
     jumpToInteractionsVariant: (delta) =>
       interactionsOutline?.jumpToVariant?.(delta),
-    toggleCommentsSidebar: () => commentsUI?.toggle?.(),
-    toggleTagsSidebar: () => tagUI?.toggle?.(),
+    toggleCommentsSidebar: () => appContext.commentsUI?.toggle?.(),
+    toggleTagsSidebar: () => appContext.tagUI?.toggle?.(),
     openInferenceSidebar: () => toggleInteractionToolsPane?.(),
     acceptInferred: () => interactionActions?.acceptInferred?.(),
   });
 
-  ({ sidePanelHost, commentsUI, tagManager, tagUI, interactionTools } =
-    initSidebarControllers({
+  const sidebarControllers = initSidebarControllers({
     dom: {
       sidePanel,
       sidePanelTitle,
@@ -1005,10 +998,10 @@ export function createApp() {
       interactionAcceptButton,
       interactionClearButton,
       interactionUncertainButton,
-    interactionUncertaintyValue,
-    interactionSourceValue,
-    interactionUncertaintyDefault,
-    interactionUncertaintyDefaultValue,
+      interactionUncertaintyValue,
+      interactionSourceValue,
+      interactionUncertaintyDefault,
+      interactionUncertaintyDefaultValue,
     },
     SelectionCtl,
     selection,
@@ -1031,9 +1024,10 @@ export function createApp() {
     runModelMutation,
     makeUndoConfig,
     interactionActions,
-  }));
+  });
 
-  toggleInteractionToolsPane = () => interactionTools?.toggle?.();
+  Object.assign(appContext, sidebarControllers);
+  toggleInteractionToolsPane = () => appContext.interactionTools?.toggle?.();
 
   // Keyboard: Ctrl+Shift+A toggles Interactions mode
   document.addEventListener("keydown", (e) => {
@@ -1086,8 +1080,9 @@ export function createApp() {
   }
 
   // Initialize menus module (handles menu triggers & items)
-  menusAPI = initMenus({
-    Ids,
+  appContext.menus = initMenusFeature({
+    ids: Ids,
+    getMenuElement: (id) => document.getElementById(id),
     setActiveView,
     newProject,
     openFromDisk,
@@ -1141,8 +1136,9 @@ export function createApp() {
     moveSel,
   };
   const MenusNS = {
-    closeAllMenus: menusAPI.closeAllMenus,
-    updateViewMenuRadios: menusAPI.updateViewMenuRadios,
+    closeAllMenus: (...args) => appContext.menus?.closeAllMenus?.(...args),
+    updateViewMenuRadios: (...args) =>
+      appContext.menus?.updateViewMenuRadios?.(...args),
   };
   const SelectionNS_Export = SelectionNS; // expose under namespaces index for discoverability
   const IONS = { openFromDisk, saveToDisk };
@@ -1178,8 +1174,8 @@ export function createApp() {
     disposeMouse?.();
     disposeDrag?.();
     disposeKeys?.();
-    menusAPI?.destroy?.();
-    paletteAPI?.closeAllMenus?.();
+    appContext.menus?.destroy?.();
+    appContext.palette?.closeAllMenus?.();
   }
 
   return {
@@ -1187,8 +1183,9 @@ export function createApp() {
     destroy,
     setActiveView: callSetActiveView,
     getActiveView,
-    getPaletteAPI: () => paletteAPI,
-    getMenusAPI: () => menusAPI,
+    getPaletteAPI: () => appContext.palette,
+    getMenusAPI: () => appContext.menus,
+    context: appContext,
     model,
   };
 }
