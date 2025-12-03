@@ -20,6 +20,7 @@ import { getClipboardTests } from "../scripts/support/tests/specs/clipboard.js";
 import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
 import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
 import { getInferenceControllerTests } from "../scripts/support/tests/specs/inference-controller.js";
+import { getAppInitTests } from "../scripts/support/tests/specs/app-init.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -37,6 +38,10 @@ for (const spec of getInferenceUtilsTests()) {
 
 for (const spec of getInferenceControllerTests()) {
   test(`Inference controller › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getAppInitTests()) {
+  test(`App init › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getPersistenceTests()) {

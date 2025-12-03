@@ -65,6 +65,8 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── support/
 │   │   └── tests/
 │   │       ├── specs/
+│   │       │   ├── app-harness.js
+│   │       │   ├── app-init.js
 │   │       │   ├── assertions.js
 │   │       │   ├── cleanup.js
 │   │       │   ├── clipboard.js
@@ -203,6 +205,8 @@ This document outlines a maintainable directory layout tailored to the current c
 
 - Offer a home for cross-cutting helpers that are not part of the runtime app bundle, such as lightweight test harnesses.
 - The `tests/` subtree now keeps reusable spec modules (`specs/`) separate from browser runners (`tests.js`, `tests-ui.js`), ensuring Node and in-app harnesses share the same assertions and fixtures.
+- `specs/app-harness.js` builds a stub DOM, Id map, and controller set so bootstrap and view wiring can be exercised without the browser.
+- `specs/app-init.js` hosts contract tests that assert the staged bootstrap surface keeps exposing render/history/view APIs and tab callbacks.
 - `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
 - `specs/cleanup.js` seeds fixture models with stale notes/comments and verifies the cleanup controller only prunes unreachable entries.
 - `specs/inference-utils.js` covers normalization, keying, and cloning behaviors so inference helpers stay stable across refactors.
