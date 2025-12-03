@@ -155,7 +155,7 @@ export function initPalette(ctx) {
         const out = [];
         if (!q) {
           out.push({
-            display: "—",
+            display: "",
             description: "Clear value",
             data: { clear: true },
             skipRecent: true,
@@ -267,7 +267,7 @@ export function initPalette(ctx) {
 
         if (!a && (!mods || !mods.length)) {
           out.push({
-            display: "—",
+            display: "",
             description: "Clear value",
             data: { clear: true },
             skipRecent: true,
@@ -948,11 +948,6 @@ export function initPalette(ctx) {
         item.style.padding = "6px 10px";
         item.style.cursor = "pointer";
         item.className = "pal-item";
-        if (it.description) {
-          item.style.display = "flex";
-          item.style.flexDirection = "column";
-          item.style.gap = "2px";
-        }
         if (idx === pal.selIndex) {
           item.style.background = "#374151";
           item.setAttribute("aria-selected", "true");
@@ -962,21 +957,38 @@ export function initPalette(ctx) {
           ? it.displaySegments
           : null;
         const fallback = typeof it.display === "string" ? it.display : "";
-        const ariaLabel = fallback
-          || (segments
-            ? segments.map((seg) => (seg && seg.text) || "").join("")
-            : "");
+        const hasLabelContent = Boolean(
+          (segments && segments.some((seg) => seg && seg.text)) || fallback,
+        );
+        const ariaLabel =
+          fallback
+            || (segments
+              ? segments.map((seg) => (seg && seg.text) || "").join("")
+              : "")
+            || (it.description && !hasLabelContent ? it.description : "");
 
         if (it.description) {
-          const label = doc.createElement("div");
-          renderSegments(label, segments, fallback);
-          label.style.fontWeight = "600";
-          const desc = doc.createElement("div");
-          desc.textContent = it.description;
-          desc.style.opacity = "0.72";
-          desc.style.fontSize = "11px";
-          item.appendChild(label);
-          item.appendChild(desc);
+          if (hasLabelContent) {
+            item.style.display = "flex";
+            item.style.flexDirection = "column";
+            item.style.gap = "2px";
+
+            const label = doc.createElement("div");
+            renderSegments(label, segments, fallback);
+            label.style.fontWeight = "600";
+            const desc = doc.createElement("div");
+            desc.textContent = it.description;
+            desc.style.opacity = "0.72";
+            desc.style.fontSize = "11px";
+            item.appendChild(label);
+            item.appendChild(desc);
+          } else {
+            const desc = doc.createElement("div");
+            desc.textContent = it.description;
+            desc.style.opacity = "0.72";
+            desc.style.fontSize = "11px";
+            item.appendChild(desc);
+          }
         } else {
           renderSegments(item, segments, fallback);
         }
