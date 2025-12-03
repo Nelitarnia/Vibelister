@@ -22,8 +22,8 @@ const FALLBACK_THRESHOLD_DEFAULTS = Object.freeze({
   actionGroupPhaseMinExistingRatio: 0.72,
   inputDefaultMinGroupSize: 2,
   inputDefaultMinExistingRatio: 0.5,
-  profileTrendMinObservations: 3,
-  profileTrendMinPreferenceRatio: 0.55,
+  profileTrendMinObservations: 5,
+  profileTrendMinPreferenceRatio: 0.65,
   phaseAdjacencyMaxGap: 4,
   phaseAdjacencyEnabled: true,
 });

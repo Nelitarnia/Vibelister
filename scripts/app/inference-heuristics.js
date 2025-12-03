@@ -272,9 +272,10 @@ function computeSuggestionConfidence(source, context = {}) {
   }
   if (source === HEURISTIC_SOURCES.profileTrend) {
     const preferenceRatio = context.preferenceRatio;
-    const supportBoost = Number.isFinite(context.supportCount)
-      ? Math.min(context.supportCount, 20) * 0.01
-      : 0;
+    const supportBoost =
+      Number.isFinite(context.supportCount) && context.supportCount > 0
+        ? Math.min(context.supportCount * 0.005, 0.05)
+        : 0;
     if (Number.isFinite(preferenceRatio)) {
       return clampConfidence(base * preferenceRatio + supportBoost);
     }
@@ -298,8 +299,8 @@ export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
   actionGroupPhaseMinExistingRatio: 0.72,
   inputDefaultMinGroupSize: 2,
   inputDefaultMinExistingRatio: 0.5,
-  profileTrendMinObservations: 3,
-  profileTrendMinPreferenceRatio: 0.55,
+  profileTrendMinObservations: 5,
+  profileTrendMinPreferenceRatio: 0.65,
   phaseAdjacencyMaxGap: DEFAULT_PHASE_ADJACENCY_MAX_GAP,
   phaseAdjacencyEnabled: DEFAULT_PHASE_ADJACENCY_ENABLED,
 });
@@ -336,10 +337,13 @@ function normalizeThresholds(override = {}) {
       ? override.inputDefaultMinExistingRatio
       : defaults.inputDefaultMinExistingRatio,
     profileTrendMinObservations: Number.isFinite(override.profileTrendMinObservations)
-      ? override.profileTrendMinObservations
+      ? Math.max(override.profileTrendMinObservations, defaults.profileTrendMinObservations)
       : defaults.profileTrendMinObservations,
     profileTrendMinPreferenceRatio: Number.isFinite(override.profileTrendMinPreferenceRatio)
-      ? override.profileTrendMinPreferenceRatio
+      ? Math.max(
+          override.profileTrendMinPreferenceRatio,
+          defaults.profileTrendMinPreferenceRatio,
+        )
       : defaults.profileTrendMinPreferenceRatio,
     phaseAdjacencyMaxGap: Number.isFinite(override.phaseAdjacencyMaxGap)
       ? override.phaseAdjacencyMaxGap
