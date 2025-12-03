@@ -3,7 +3,7 @@
 
 export function initMenus(deps) {
   const {
-    Ids,
+    dom = {},
     setActiveView,
     newProject,
     openFromDisk,
@@ -24,28 +24,9 @@ export function initMenus(deps) {
     getUndoState,
   } = deps;
 
-  const menus = {
-    file: {
-      trigger: document.getElementById(Ids.mFile),
-      popup: document.getElementById(Ids.menuFile),
-    },
-    edit: {
-      trigger: document.getElementById(Ids.mEdit),
-      popup: document.getElementById(Ids.menuEdit),
-    },
-    sheet: {
-      trigger: document.getElementById(Ids.mSheet),
-      popup: document.getElementById(Ids.menuSheet),
-    },
-    tools: {
-      trigger: document.getElementById(Ids.mTools),
-      popup: document.getElementById(Ids.menuTools),
-    },
-    view: {
-      trigger: document.getElementById(Ids.mView),
-      popup: document.getElementById(Ids.menuView),
-    },
-  };
+  const menus = dom.menus || {};
+  const items = dom.items || {};
+  const viewRadios = dom.viewRadios || {};
 
   function closeAllMenus() {
     for (const k in menus) {
@@ -71,7 +52,7 @@ export function initMenus(deps) {
 
   // Open/close behavior
   ["file", "edit", "sheet", "tools", "view"].forEach((k) => {
-    menus[k].trigger?.addEventListener("click", (e) => {
+    menus?.[k]?.trigger?.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleMenu(k);
     });
@@ -83,16 +64,14 @@ export function initMenus(deps) {
 
   // View radios
   function updateViewMenuRadios(key) {
-    ["actions", "inputs", "modifiers", "interactions"].forEach((n) => {
-      const e = document.getElementById("view-" + n);
-      if (e) e.setAttribute("aria-checked", String(n === key));
+    Object.entries(viewRadios).forEach(([name, element]) => {
+      element?.setAttribute("aria-checked", String(name === key));
     });
   }
 
   // Helpers
-  const el = (id) => document.getElementById(id);
-  const undoItem = el(Ids.editUndo);
-  const redoItem = el(Ids.editRedo);
+  const undoItem = items.undoMenuItem;
+  const redoItem = items.redoMenuItem;
 
   const undoShortcutSuffix = " (Ctrl/Cmd+Z)";
   const redoShortcutSuffix = " (Ctrl/Cmd+Y)";
@@ -134,29 +113,29 @@ export function initMenus(deps) {
   refreshUndoMenu();
 
   // File menu
-  el(Ids.fileNew)?.addEventListener("click", () => {
+  items.fileNew?.addEventListener("click", () => {
     closeAllMenus();
     newProject();
   });
-  el(Ids.fileOpenDisk)?.addEventListener("click", () => {
+  items.fileOpenDisk?.addEventListener("click", () => {
     closeAllMenus();
     openFromDisk();
   });
-  el(Ids.fileSaveDisk)?.addEventListener("click", () => {
+  items.fileSaveDisk?.addEventListener("click", () => {
     closeAllMenus();
     saveToDisk(false);
   });
-  el(Ids.fileSaveAs)?.addEventListener("click", () => {
+  items.fileSaveAs?.addEventListener("click", () => {
     closeAllMenus();
     saveToDisk(true);
   });
-  el(Ids.fileProjectInfo)?.addEventListener("click", async () => {
+  items.fileProjectInfo?.addEventListener("click", async () => {
     closeAllMenus();
     if (typeof openProjectInfo === "function") {
       await openProjectInfo();
     }
   });
-  el(Ids.fileExportJson)?.addEventListener("click", () => {
+  items.fileExportJson?.addEventListener("click", () => {
     closeAllMenus();
     saveToDisk(true);
   }); // export = Save As fallback
@@ -171,7 +150,7 @@ export function initMenus(deps) {
   });
 
   // Edit menu
-  el(Ids.editPreferences)?.addEventListener("click", async () => {
+  items.editPreferences?.addEventListener("click", async () => {
     closeAllMenus();
     if (typeof openSettings === "function") {
       await openSettings();
@@ -179,68 +158,68 @@ export function initMenus(deps) {
   });
 
   // Sheet menu
-  el(Ids.sheetAddRowsAbove)?.addEventListener("click", () => {
+  items.sheetAddRowsAbove?.addEventListener("click", () => {
     closeAllMenus();
     if (typeof addRowsAbove === "function") addRowsAbove();
   });
-  el(Ids.sheetAddRowsBelow)?.addEventListener("click", () => {
+  items.sheetAddRowsBelow?.addEventListener("click", () => {
     closeAllMenus();
     if (typeof addRowsBelow === "function") addRowsBelow();
   });
-  el(Ids.sheetClearCells)?.addEventListener("click", () => {
+  items.sheetClearCells?.addEventListener("click", () => {
     closeAllMenus();
     if (typeof clearCells === "function") clearCells();
   });
-  el(Ids.sheetDeleteRows)?.addEventListener("click", () => {
+  items.sheetDeleteRows?.addEventListener("click", () => {
     closeAllMenus();
     if (typeof deleteRows === "function") deleteRows();
   });
 
   // Tools menu
-  el(Ids.toolsGenerate)?.addEventListener("click", () => {
+  items.toolsGenerate?.addEventListener("click", () => {
     closeAllMenus();
     doGenerate();
   });
-  el(Ids.toolsCleanup)?.addEventListener("click", async () => {
+  items.toolsCleanup?.addEventListener("click", async () => {
     closeAllMenus();
     if (typeof openCleanup === "function") {
       await openCleanup();
     }
   });
-  el(Ids.toolsInference)?.addEventListener("click", async () => {
+  items.toolsInference?.addEventListener("click", async () => {
     closeAllMenus();
     if (typeof openInference === "function") {
       await openInference();
     }
   });
-  el(Ids.toolsTests)?.addEventListener("click", () => {
+  items.toolsTests?.addEventListener("click", () => {
     closeAllMenus();
     runSelfTests();
   });
-  el(Ids.toolsRules)?.addEventListener("click", async () => {
+  items.toolsRules?.addEventListener("click", async () => {
     closeAllMenus();
     const { openRulesDialog } = await import("./rules.js");
     openRulesDialog(model);
   });
 
   // View menu
-  el(Ids.viewActions)?.addEventListener("click", () => {
+  items.viewActions?.addEventListener("click", () => {
     closeAllMenus();
     setActiveView("actions");
   });
-  el(Ids.viewInputs)?.addEventListener("click", () => {
+  items.viewInputs?.addEventListener("click", () => {
     closeAllMenus();
     setActiveView("inputs");
   });
-  el(Ids.viewModifiers)?.addEventListener("click", () => {
+  items.viewModifiers?.addEventListener("click", () => {
     closeAllMenus();
     setActiveView("modifiers");
   });
-  el(Ids.viewOutcomes)?.addEventListener("click", () => {
+  items.viewOutcomes?.addEventListener("click", () => {
     closeAllMenus();
     setActiveView("outcomes");
   });
-  el(Ids.viewInteractions)?.addEventListener("click", () => {
+  items.viewInteractions?.addEventListener("click", () => {
     closeAllMenus();
     setActiveView("interactions");
   });
