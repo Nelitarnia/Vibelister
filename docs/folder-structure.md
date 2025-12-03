@@ -15,6 +15,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── dev-server.js
 │   ├── app/
 │   │   ├── app.js
+│   │   ├── app-root.js
 │   │   ├── clipboard-codec.js
 │   │   ├── cleanup-controller.js
 │   │   ├── column-widths.js
@@ -37,9 +38,12 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── inference-utils.js
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
+│   │   ├── menus-bootstrap.js
 │   │   ├── project-info-controller.js
 │   │   ├── selection.js
 │   │   ├── settings-controller.js
+│   │   ├── sidebar-bootstrap.js
+│   │   ├── tabs-bootstrap.js
 │   │   ├── types.js
 │   │   ├── user-settings.js
 │   │   ├── view-state.js
@@ -61,6 +65,8 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── support/
 │   │   └── tests/
 │   │       ├── specs/
+│   │       │   ├── app-harness.js
+│   │       │   ├── app-init.js
 │   │       │   ├── assertions.js
 │   │       │   ├── cleanup.js
 │   │       │   ├── clipboard.js
@@ -135,6 +141,8 @@ This document outlines a maintainable directory layout tailored to the current c
 - House entry points and cross-cutting application logic.
 - `app.js` stays the primary bootstrap file, while `interactions.js`, `outcomes.js`, `selection.js`, `types.js`, and `views.js` remain close by.
 - `dom-elements.js` centralizes DOM lookups so bootstrap wiring can share a consistent set of handles.
+- `menus-bootstrap.js`, `sidebar-bootstrap.js`, and `tabs-bootstrap.js` resolve only the DOM nodes required by menus, sidebars, and tabs so the entry file can pass focused handles into their controllers.
+- `app-root.js` builds the root application context (model, shared UI handles, lifecycle helpers) so `app.js` can bootstrap via a single factory instead of coordinating module-level globals.
 - `clipboard-codec.js` lives here because it bridges app state with external data.
 - `history.js` wraps undo/redo wiring so the entry point just injects dependencies and consumes the resulting API.
 - `model-init.js` builds the initial app model, view state, and history surface so the entry point only wires dependencies.
@@ -197,6 +205,8 @@ This document outlines a maintainable directory layout tailored to the current c
 
 - Offer a home for cross-cutting helpers that are not part of the runtime app bundle, such as lightweight test harnesses.
 - The `tests/` subtree now keeps reusable spec modules (`specs/`) separate from browser runners (`tests.js`, `tests-ui.js`), ensuring Node and in-app harnesses share the same assertions and fixtures.
+- `specs/app-harness.js` builds a stub DOM, Id map, and controller set so bootstrap and view wiring can be exercised without the browser.
+- `specs/app-init.js` hosts contract tests that assert the staged bootstrap surface keeps exposing render/history/view APIs and tab callbacks.
 - `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
 - `specs/cleanup.js` seeds fixture models with stale notes/comments and verifies the cleanup controller only prunes unreachable entries.
 - `specs/inference-utils.js` covers normalization, keying, and cloning behaviors so inference helpers stay stable across refactors.
