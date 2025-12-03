@@ -1455,8 +1455,13 @@ export function getInteractionsTests() {
         const listEl = paletteRoot?.children?.[0];
         assert.ok(listEl, "palette list rendered");
 
-        const item = listEl.children.find(
+        const paletteItems = listEl.children.filter(
           (child) => child.className === "pal-item",
+        );
+        assert.ok(paletteItems.length >= 1, "palette should render items");
+        const item = paletteItems.find((child) =>
+          Array.isArray(child.children) &&
+          child.children.some((grand) => grand.tag === "span"),
         );
         assert.ok(item, "palette item created for action variant");
         const spans = item.children.filter((child) => child.tag === "span");

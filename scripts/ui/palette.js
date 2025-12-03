@@ -153,6 +153,14 @@ export function initPalette(ctx) {
           (r.name || "").trim(),
         );
         const out = [];
+        if (!q) {
+          out.push({
+            display: "",
+            description: "Clear value",
+            data: { clear: true },
+            skipRecent: true,
+          });
+        }
         for (const r of rows) {
           const nm = r.name || "";
           if (q && !nm.toLowerCase().startsWith(q)) continue;
@@ -161,10 +169,17 @@ export function initPalette(ctx) {
         return out;
       },
       commit: (it) => {
-        setCell(sel.r, sel.c, Number(it.data.outcomeId));
+        if (it?.data?.clear) {
+          setCell(sel.r, sel.c, null);
+        } else {
+          setCell(sel.r, sel.c, Number(it.data.outcomeId));
+        }
         render();
       },
-      recentKeyOf: (it) => `o:${it.data.outcomeId}`,
+      recentKeyOf: (it) => {
+        if (it?.data?.clear) return "";
+        return `o:${it.data.outcomeId}`;
+      },
     },
     {
       name: "modifierState",
@@ -250,6 +265,15 @@ export function initPalette(ctx) {
         const seen = new Set();
         const out = [];
 
+        if (!a && (!mods || !mods.length)) {
+          out.push({
+            display: "",
+            description: "Clear value",
+            data: { clear: true },
+            skipRecent: true,
+          });
+        }
+
         const pairCount = getInteractionsRowCount(model);
         if (pairCount > 0) {
           for (let i = 0; i < pairCount; i++) {
@@ -311,11 +335,12 @@ export function initPalette(ctx) {
         return out;
       },
       commit: (it) => {
-        setCell(sel.r, sel.c, it.data);
+        if (it?.data?.clear) setCell(sel.r, sel.c, null);
+        else setCell(sel.r, sel.c, it.data);
         render();
       },
       recentKeyOf: (it) =>
-        `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
+        it?.data?.clear ? "" : `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
     },
     {
       name: "tag",
@@ -851,6 +876,7 @@ export function initPalette(ctx) {
   function updateRecent(item) {
     const mode = pal.mode;
     if (!mode || !mode.recentKeyOf) return;
+    if (item?.skipRecent) return;
     const key = mode.recentKeyOf(item);
     if (!key) return;
     const bag = pal.recent.get(mode.name) || [];
@@ -922,11 +948,6 @@ export function initPalette(ctx) {
         item.style.padding = "6px 10px";
         item.style.cursor = "pointer";
         item.className = "pal-item";
-        if (it.description) {
-          item.style.display = "flex";
-          item.style.flexDirection = "column";
-          item.style.gap = "2px";
-        }
         if (idx === pal.selIndex) {
           item.style.background = "#374151";
           item.setAttribute("aria-selected", "true");
@@ -936,21 +957,38 @@ export function initPalette(ctx) {
           ? it.displaySegments
           : null;
         const fallback = typeof it.display === "string" ? it.display : "";
-        const ariaLabel = fallback
-          || (segments
-            ? segments.map((seg) => (seg && seg.text) || "").join("")
-            : "");
+        const hasLabelContent = Boolean(
+          (segments && segments.some((seg) => seg && seg.text)) || fallback,
+        );
+        const ariaLabel =
+          fallback
+            || (segments
+              ? segments.map((seg) => (seg && seg.text) || "").join("")
+              : "")
+            || (it.description && !hasLabelContent ? it.description : "");
 
         if (it.description) {
-          const label = doc.createElement("div");
-          renderSegments(label, segments, fallback);
-          label.style.fontWeight = "600";
-          const desc = doc.createElement("div");
-          desc.textContent = it.description;
-          desc.style.opacity = "0.72";
-          desc.style.fontSize = "11px";
-          item.appendChild(label);
-          item.appendChild(desc);
+          if (hasLabelContent) {
+            item.style.display = "flex";
+            item.style.flexDirection = "column";
+            item.style.gap = "2px";
+
+            const label = doc.createElement("div");
+            renderSegments(label, segments, fallback);
+            label.style.fontWeight = "600";
+            const desc = doc.createElement("div");
+            desc.textContent = it.description;
+            desc.style.opacity = "0.72";
+            desc.style.fontSize = "11px";
+            item.appendChild(label);
+            item.appendChild(desc);
+          } else {
+            const desc = doc.createElement("div");
+            desc.textContent = it.description;
+            desc.style.opacity = "0.72";
+            desc.style.fontSize = "11px";
+            item.appendChild(desc);
+          }
         } else {
           renderSegments(item, segments, fallback);
         }
