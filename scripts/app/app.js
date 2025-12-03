@@ -103,7 +103,7 @@ import {
   getSidebarDomElements,
   getTabDomElements,
 } from "./dom-elements.js";
-import { createInitialModel } from "./model-init.js";
+import { createAppContext } from "./app-root.js";
 import { initSidebarControllers } from "./sidebar-wiring.js";
 import { createViewController } from "./view-controller.js";
 
@@ -112,25 +112,20 @@ function initA11y() {
 }
 
 // Core model + views
-const model = createInitialModel();
+const appContext = createAppContext();
+const { model, state } = appContext;
+export { appContext };
 
-let activeView = "actions";
-let paletteAPI = null;
-let menusAPI = null;
-let sidePanelHost = null;
-let commentsUI = null;
-let tagManager = null;
-let tagUI = null;
-let interactionTools = null;
-let toggleInteractionToolsPane = null;
 let setActiveView = null;
 let cycleView = null;
 let getActiveView = null;
 let toggleInteractionsMode = null;
 
 function callSetActiveView(key) {
-  return setActiveView ? setActiveView(key) : undefined;
+  return appContext.setActiveView(key);
 }
+
+const getActiveViewState = appContext.getActiveView;
 
 // DOM
 const coreDom = getCoreDomElements();
@@ -198,7 +193,7 @@ const statusBar = initStatusBar(statusEl, { historyLimit: 100 });
 const { openSettingsDialog } = createSettingsController({ statusBar });
 
 const viewState = createViewStateController({
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   model,
   VIEWS,
   buildInteractionPhaseColumns,
@@ -206,7 +201,7 @@ const viewState = createViewStateController({
   MIN_ROWS,
   MOD,
   statusBar,
-  getPaletteAPI: () => paletteAPI,
+  getPaletteAPI: () => state.paletteAPI,
   parsePhasesSpec,
   formatPhasesSpec,
   getInteractionsCell,
@@ -243,7 +238,7 @@ const {
   selection,
   SelectionNS,
   sel,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   viewDef,
   dataArray,
   getRowCount,
@@ -269,7 +264,7 @@ const interactionsOutline = createInteractionsOutline({
   Selection,
   SelectionCtl,
   sel,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   ensureVisible,
   render,
   layout,
@@ -290,7 +285,7 @@ const {
 } = createHistoryController({
   model,
   viewDef,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   setActiveView: callSetActiveView,
   selectionCursor: sel,
   SelectionCtl,
@@ -323,7 +318,7 @@ const {
   getCellCommentClipboardPayload,
   applyCellCommentClipboardPayload,
 } = createGridCommands({
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   viewDef,
   dataArray,
   selection,
@@ -369,7 +364,7 @@ const { openInferenceDialog } = createInferenceController({
   model,
   selection,
   sel,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   viewDef,
   statusBar,
   runModelMutation,
@@ -382,7 +377,7 @@ const interactionActions = createInteractionBulkActions({
   model,
   selection,
   sel,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   viewDef,
   statusBar,
   runModelMutation,
@@ -396,7 +391,7 @@ initColumnResize({
   container: colHdrs,
   sheet,
   model,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   viewDef,
   runModelMutation,
   beginUndoableTransaction,
@@ -428,7 +423,7 @@ function getCell(r, c) {
   const vd = viewDef();
   const col = vd.columns[c];
   // Interactions: trust `col.kind` when provided; else default to the meta-kind
-  if (activeView === "interactions") {
+  if (state.activeView === "interactions") {
     const k = String(col?.kind || "");
     if (k === "interactions") {
       return getCellForKind("interactions", kindCtx({ r, c, col, row: null }));
@@ -476,7 +471,7 @@ function setCell(r, c, v) {
     () => {
       const commentChanges = [];
       // Interactions: route by kind; default to meta-kind
-      if (activeView === "interactions") {
+      if (state.activeView === "interactions") {
         const k = String(col?.kind || "interactions");
         const ctx = kindCtx({ r, c, col, row: null, v });
         const wrote = setCellForKind(k, ctx, v);
@@ -517,7 +512,7 @@ function setCell(r, c, v) {
             shouldRebuildInteractions = true;
           }
         }
-      } else if (activeView === "actions" && col?.key === "phases") {
+      } else if (state.activeView === "actions" && col?.key === "phases") {
         const before = row?.phases;
         row.phases = parsePhasesSpec(v);
         changed = changed || before !== row?.phases;
@@ -528,7 +523,7 @@ function setCell(r, c, v) {
       }
 
       return {
-        view: activeView,
+        view: state.activeView,
         changed,
         ensuredRows: arr.length - beforeLen,
         commentChanges,
@@ -610,7 +605,7 @@ const getStructuredCell = makeGetStructuredCell({
   dataArray,
   getStructuredForKind,
   kindCtx,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   isCanonical: isCanonicalStructuredPayload,
 });
 
@@ -619,7 +614,7 @@ const baseApplyStructuredCell = makeApplyStructuredCell({
   dataArray,
   applyStructuredForKind,
   kindCtx,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
 });
 
 function applyStructuredCell(r, c, payload) {
@@ -629,13 +624,13 @@ function applyStructuredCell(r, c, payload) {
   const arr = dataArray();
   const row = Array.isArray(arr) ? arr[r] : null;
   let wasBypassed = null;
-  if (activeView !== "interactions" && col?.kind === "modState" && row) {
+  if (state.activeView !== "interactions" && col?.kind === "modState" && row) {
     wasBypassed = isModStateBypassed(row, col);
   }
   const applied = baseApplyStructuredCell(r, c, payload);
   if (
     applied &&
-    activeView !== "interactions" &&
+    state.activeView !== "interactions" &&
     col?.kind === "modState" &&
     row
   ) {
@@ -685,8 +680,8 @@ const editingController = createEditingController({
   ensureVisible,
   render,
   updateSelectionSnapshot,
-  getActiveView: () => activeView,
-  getPaletteAPI: () => paletteAPI,
+  getActiveView: getActiveViewState,
+  getPaletteAPI: () => state.paletteAPI,
 });
 
 const {
@@ -717,12 +712,12 @@ const {
   updateProjectNameWidget,
   setProjectNameFromFile,
   getSuggestedName,
-  closeMenus: () => menusAPI?.closeAllMenus?.(),
+  closeMenus: () => state.menusAPI?.closeAllMenus?.(),
   onModelReset: () => {
     resetInferenceProfiles();
     interactionsOutline?.refresh?.();
-    tagUI?.refresh?.();
-    commentsUI?.applyModelMetadata?.(model.meta);
+    state.tagUI?.refresh?.();
+    state.commentsUI?.applyModelMetadata?.(model.meta);
     emitInteractionTagChangeEvent(null, { reason: "reset", force: true });
   },
 });
@@ -738,10 +733,10 @@ const { runSelfTests } = createDiagnosticsController({
 });
 
 // Initialize palette (handles both Outcome and End cells)
-paletteAPI = initPalette({
+state.paletteAPI = initPalette({
   editor,
   sheet,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   viewDef,
   sel,
   model,
@@ -768,15 +763,15 @@ const colorPickerAPI = initColorPicker({
 });
 
 // Adapter: unify palette entrypoints for refPick columns
-if (!paletteAPI.openReference) {
-  paletteAPI.openReference = ({ entity, target } = {}) => {
+if (!state.paletteAPI.openReference) {
+  state.paletteAPI.openReference = ({ entity, target } = {}) => {
     try {
       if (entity === "outcome") {
-        if (typeof paletteAPI.openOutcome === "function") {
-          return !!paletteAPI.openOutcome(target);
+        if (typeof state.paletteAPI.openOutcome === "function") {
+          return !!state.paletteAPI.openOutcome(target);
         }
-        if (typeof paletteAPI.openForCurrentCell === "function") {
-          return !!paletteAPI.openForCurrentCell({
+        if (typeof state.paletteAPI.openForCurrentCell === "function") {
+          return !!state.paletteAPI.openForCurrentCell({
             r: target?.r,
             c: target?.c,
             initialText: target?.initialText,
@@ -785,10 +780,10 @@ if (!paletteAPI.openReference) {
         }
         return false;
       }
-      if (entity === "action" && typeof paletteAPI.openAction === "function")
-        return !!paletteAPI.openAction(target);
-      if (entity === "input" && typeof paletteAPI.openInput === "function")
-        return !!paletteAPI.openInput(target);
+      if (entity === "action" && typeof state.paletteAPI.openAction === "function")
+        return !!state.paletteAPI.openAction(target);
+      if (entity === "input" && typeof state.paletteAPI.openInput === "function")
+        return !!state.paletteAPI.openInput(target);
     } catch (_) {
       /* noop */
     }
@@ -796,16 +791,16 @@ if (!paletteAPI.openReference) {
   };
 }
 
-if (paletteAPI && colorPickerAPI) {
+if (state.paletteAPI && colorPickerAPI) {
   const baseIsOpen =
-    typeof paletteAPI.isOpen === "function"
-      ? paletteAPI.isOpen.bind(paletteAPI)
+    typeof state.paletteAPI.isOpen === "function"
+      ? state.paletteAPI.isOpen.bind(state.paletteAPI)
       : () => false;
   if (typeof colorPickerAPI.openColor === "function")
-    paletteAPI.openColor = colorPickerAPI.openColor;
+    state.paletteAPI.openColor = colorPickerAPI.openColor;
   if (typeof colorPickerAPI.close === "function")
-    paletteAPI.closeColor = colorPickerAPI.close;
-  paletteAPI.isOpen = () => baseIsOpen() || !!colorPickerAPI.isOpen?.();
+    state.paletteAPI.closeColor = colorPickerAPI.close;
+  state.paletteAPI.isOpen = () => baseIsOpen() || !!colorPickerAPI.isOpen?.();
 }
 
 // Mouse
@@ -851,10 +846,10 @@ const disposeDrag = initRowDrag({
   ROW_HEIGHT,
   HEADER_HEIGHT,
   isReorderableView: () =>
-    activeView === "actions" ||
-    activeView === "inputs" ||
-    activeView === "modifiers" ||
-    activeView === "outcomes",
+    state.activeView === "actions" ||
+    state.activeView === "inputs" ||
+    state.activeView === "modifiers" ||
+    state.activeView === "outcomes",
   makeUndoConfig,
 });
 
@@ -888,20 +883,20 @@ sheet.addEventListener("scroll", () => {
     layout,
     render,
     statusBar,
-    menusAPIRef: () => menusAPI,
+    menusAPIRef: () => state.menusAPI,
     getRowCount,
     viewDef,
     clamp,
     model,
-    getActiveViewState: () => activeView,
-    setActiveViewState: (key) => (activeView = key),
-    getCommentsUI: () => commentsUI,
+    getActiveViewState: () => state.activeView,
+    setActiveViewState: (key) => (state.activeView = key),
+    getCommentsUI: () => state.commentsUI,
   }));
 
 const disposeKeys = initGridKeys({
   // state & selectors
   isEditing,
-  getActiveView: () => activeView,
+  getActiveView: getActiveViewState,
   selection,
   sel,
 
@@ -949,19 +944,24 @@ const disposeKeys = initGridKeys({
   status: statusBar,
   undo,
   redo,
-  getPaletteAPI: () => paletteAPI,
+  getPaletteAPI: () => state.paletteAPI,
   toggleInteractionsOutline: () => interactionsOutline?.toggle?.(),
   jumpToInteractionsAction: (delta) => interactionsOutline?.jumpToAction?.(delta),
   jumpToInteractionsVariant: (delta) =>
     interactionsOutline?.jumpToVariant?.(delta),
-  toggleCommentsSidebar: () => commentsUI?.toggle?.(),
-  toggleTagsSidebar: () => tagUI?.toggle?.(),
-  openInferenceSidebar: () => toggleInteractionToolsPane?.(),
+  toggleCommentsSidebar: () => state.commentsUI?.toggle?.(),
+  toggleTagsSidebar: () => state.tagUI?.toggle?.(),
+  openInferenceSidebar: () => state.toggleInteractionToolsPane?.(),
   acceptInferred: () => interactionActions?.acceptInferred?.(),
 });
 
-({ sidePanelHost, commentsUI, tagManager, tagUI, interactionTools } =
-  initSidebarControllers({
+({
+  sidePanelHost: state.sidePanelHost,
+  commentsUI: state.commentsUI,
+  tagManager: state.tagManager,
+  tagUI: state.tagUI,
+  interactionTools: state.interactionTools,
+} = initSidebarControllers({
   dom: {
     sidePanel,
     sidePanelTitle,
@@ -1030,7 +1030,7 @@ const disposeKeys = initGridKeys({
   interactionActions,
 }));
 
-toggleInteractionToolsPane = () => interactionTools?.toggle?.();
+state.toggleInteractionToolsPane = () => state.interactionTools?.toggle?.();
 
 // Keyboard: Ctrl+Shift+A toggles Interactions mode
 document.addEventListener("keydown", (e) => {
@@ -1083,7 +1083,7 @@ function getSuggestedName() {
 }
 
 // Initialize menus module (handles menu triggers & items)
-menusAPI = initMenus({
+state.menusAPI = initMenus({
   Ids,
   setActiveView,
   newProject,
@@ -1108,10 +1108,10 @@ menusAPI = initMenus({
 // Row reorder (drag row headers)
 function isReorderableView() {
   return (
-    activeView === "actions" ||
-    activeView === "inputs" ||
-    activeView === "modifiers" ||
-    activeView === "outcomes"
+    state.activeView === "actions" ||
+    state.activeView === "inputs" ||
+    state.activeView === "modifiers" ||
+    state.activeView === "outcomes"
   );
 }
 
@@ -1138,8 +1138,8 @@ const GridNS = {
   moveSel,
 };
 const MenusNS = {
-  closeAllMenus: menusAPI.closeAllMenus,
-  updateViewMenuRadios: menusAPI.updateViewMenuRadios,
+  closeAllMenus: state.menusAPI.closeAllMenus,
+  updateViewMenuRadios: state.menusAPI.updateViewMenuRadios,
 };
 const SelectionNS_Export = SelectionNS; // expose under namespaces index for discoverability
 const IONS = { openFromDisk, saveToDisk };
@@ -1150,6 +1150,18 @@ const VariantsNS = {
   sortIdsByUserOrder,
   modOrderMap,
 };
+
+function destroyApp() {
+  disposeMouse?.();
+  disposeDrag?.();
+  disposeKeys?.();
+  state.interactionTools?.destroy?.();
+  state.commentsUI?.destroy?.();
+  state.tagUI?.destroy?.();
+  state.paletteAPI?.destroy?.();
+  state.menusAPI?.destroy?.();
+  state.toggleInteractionToolsPane = null;
+}
 
 export function initApp() {
   if (!sheet.hasAttribute("tabindex")) sheet.setAttribute("tabindex", "0");
@@ -1162,5 +1174,13 @@ export function initApp() {
   updateProjectNameWidget();
   if (location.hash.includes("test")) runSelfTests();
 }
+
+appContext.setLifecycle({
+  init: initApp,
+  destroy: destroyApp,
+  setActiveView,
+  cycleView,
+  toggleInteractionsMode,
+});
 
 initApp();
