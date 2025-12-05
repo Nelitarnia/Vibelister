@@ -835,6 +835,5 @@ export function createApp() {
     SelectionNS: SelectionNS_Export,
     IONS,
     VariantsNS,
-    disposeInteractions,
   };
 }
