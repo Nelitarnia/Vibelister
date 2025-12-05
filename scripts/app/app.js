@@ -595,56 +595,6 @@ export function createApp() {
 
   state.paletteAPI = paletteAPI;
   
-  // Mouse
-  const disposeMouse = initGridMouse({
-    cellsLayer,
-    rowHdrs,
-    sheet,
-    editor,
-    sel,
-    selection,
-    SelectionNS,
-    SelectionCtl,
-    isEditing,
-    beginEdit,
-    endEdit,
-    render,
-    ensureVisible,
-    viewDef,
-    isModColumn,
-    dataArray,
-    modIdFromKey,
-    setCell,
-    setModForSelection,
-  });
-  
-  // Row drag-reorder on headers
-  const disposeDrag = initRowDrag({
-    rowHdrs,
-    sheet,
-    dragLine,
-    dataArray,
-    getRowCount,
-    ensureMinRows,
-    clamp,
-    selection,
-    sel,
-    clearSelection,
-    SelectionNS,
-    render,
-    layout,
-    runModelMutation,
-    status: statusBar,
-    ROW_HEIGHT,
-    HEADER_HEIGHT,
-    isReorderableView: () =>
-      state.activeView === "actions" ||
-      state.activeView === "inputs" ||
-      state.activeView === "modifiers" ||
-      state.activeView === "outcomes",
-    makeUndoConfig,
-  });
-  
   // Edit
   
   sheet.addEventListener("scroll", () => {
