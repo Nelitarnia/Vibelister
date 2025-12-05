@@ -25,6 +25,7 @@ function createStubDocument() {
       dataset,
       textContent: "",
       innerHTML: "",
+      value: "",
       disabled: false,
       scrollTop: 0,
       scrollLeft: 0,
