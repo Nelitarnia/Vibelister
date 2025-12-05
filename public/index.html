@@ -585,6 +585,11 @@
     </div>
 
     <!-- Load the application code -->
-    <script type="module" src="../scripts/app/app.js"></script>
+    <script type="module">
+      import { createApp } from "../scripts/app/app.js";
+
+      const app = createApp();
+      app.init();
+    </script>
   </body>
 </html>
