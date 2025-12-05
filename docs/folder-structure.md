@@ -24,6 +24,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── diagnostics.js
 │   │   ├── editing-shortcuts.js
 │   │   ├── grid-commands.js
+│   │   ├── grid-cells.js
 │   │   ├── grid-renderer.js
 │   │   ├── history.js
 │   │   ├── interaction-bulk-actions.js
@@ -159,6 +160,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `model-init.js` builds the initial app model, view state, and history surface so the entry point only wires dependencies.
 - `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
+- `grid-cells.js` encapsulates cell lookups, mutations, and structured clipboard helpers behind a dependency-injected factory so the grid can read/write values and comments without coupling to global state.
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
 - `comments.js` exposes undo-friendly helpers for reading and mutating the normalized comment store so the rest of the app can work with stable row IDs and column keys.
 - `comment-events.js` centralizes the DOM event dispatch for comment mutations so grid commands and other controllers can signal UI refreshes without duplicating `CustomEvent` wiring.
