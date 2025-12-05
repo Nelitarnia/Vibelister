@@ -140,14 +140,18 @@ export function initMenus(deps) {
     saveToDisk(true);
   }); // export = Save As fallback
 
-  undoItem?.addEventListener("click", () => {
-    closeAllMenus();
-    if (typeof undo === "function") undo();
-  });
-  redoItem?.addEventListener("click", () => {
-    closeAllMenus();
-    if (typeof redo === "function") redo();
-  });
+  if (undoItem) {
+    undoItem.onclick = () => {
+      closeAllMenus();
+      if (typeof undo === "function") undo();
+    };
+  }
+  if (redoItem) {
+    redoItem.onclick = () => {
+      closeAllMenus();
+      if (typeof redo === "function") redo();
+    };
+  }
 
   // Edit menu
   items.editPreferences?.addEventListener("click", async () => {
