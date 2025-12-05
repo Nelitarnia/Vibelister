@@ -95,6 +95,13 @@ function createStubDocument() {
       return [];
     },
     createElement: (tag) => ensure(tag),
+    addEventListener(type, cb) {
+      const el = ensure(`document:${type}`);
+      el.addEventListener(type, cb);
+    },
+    removeEventListener(type) {
+      elements.delete(`document:${type}`);
+    },
   };
 
   const previous = {
