@@ -70,6 +70,12 @@ function createStubDocument() {
         const cb = listeners.get(ev.type);
         if (typeof cb === "function") cb(ev);
       },
+      querySelector() {
+        return null;
+      },
+      querySelectorAll() {
+        return [];
+      },
       onclick: null,
       focus() {},
       blur() {},
