@@ -242,20 +242,6 @@ export function createApp() {
   
   // Sidebars wired after view controller is created
   
-  initColumnResize({
-    container: colHdrs,
-    sheet,
-    model,
-    getActiveView: getActiveViewState,
-    viewDef,
-    runModelMutation,
-    beginUndoableTransaction,
-    makeUndoConfig,
-    invalidateViewDef,
-    layout,
-    render,
-  });
-  
   function isModColumn(c) {
     return !!c && typeof c.key === "string" && c.key.startsWith("mod:");
   }
