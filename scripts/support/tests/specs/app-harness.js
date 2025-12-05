@@ -110,6 +110,8 @@ function createStubDocument() {
     },
   };
 
+  const winListeners = new Map();
+
   const previous = {
     document: globalThis.document,
     window: globalThis.window,
@@ -120,6 +122,12 @@ function createStubDocument() {
   globalThis.document = documentStub;
   globalThis.window = {
     requestAnimationFrame: (cb) => setTimeout(cb, 0),
+    addEventListener(type, cb) {
+      winListeners.set(type, cb);
+    },
+    removeEventListener(type) {
+      winListeners.delete(type);
+    },
   };
   globalThis.location = { hash: "" };
   globalThis.ResizeObserver = class {
