@@ -39,6 +39,17 @@ function createStubDocument() {
         node.parentNode = this;
         return node;
       },
+      insertBefore(node, reference) {
+        const idx = reference ? this.children.indexOf(reference) : -1;
+        if (idx >= 0) {
+          this.children.splice(idx, 0, node);
+        } else {
+          this.children.push(node);
+        }
+        this.firstChild = this.children[0] || null;
+        node.parentNode = this;
+        return node;
+      },
       removeChild(node) {
         const idx = this.children.indexOf(node);
         if (idx >= 0) this.children.splice(idx, 1);
