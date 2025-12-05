@@ -39,6 +39,17 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
 │   │   ├── menus-bootstrap.js
+│   │   ├── setup-dialogs.js
+│   │   ├── setup-editing.js
+│   │   ├── setup-view-state.js
+│   │   ├── setup-renderer.js
+│   │   ├── setup-history.js
+│   │   ├── setup-grid-commands.js
+│   │   ├── setup-input-handlers.js
+│   │   ├── setup-interaction-tools.js
+│   │   ├── setup-chrome.js
+│   │   ├── setup-palette.js
+│   │   ├── setup-persistence.js
 │   │   ├── project-info-controller.js
 │   │   ├── selection.js
 │   │   ├── settings-controller.js
