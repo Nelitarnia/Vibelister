@@ -13,7 +13,6 @@ import {
   beginEditForKind,
   applyStructuredForKind,
   getStructuredForKind,
-  clearCellForKind,
 } from "../data/column-kinds.js";
 import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
@@ -39,34 +38,22 @@ import {
 } from "./selection.js";
 import {
   noteKeyForPair,
-  getInteractionsCell,
-  setInteractionsCell,
-  getStructuredCellInteractions,
-  applyStructuredCellInteractions,
-  clearInteractionsSelection,
   isInteractionPhaseColumnActiveForRow,
   getInteractionsPair,
   getInteractionsRowCount,
-  describeInteractionInference,
 } from "./interactions.js";
 import { setCommentInactive } from "./comments.js";
 import { emitCommentChangeEvent } from "./comment-events.js";
 import {
-  UI,
-  PHASE_CAP,
   MOD,
-  MIN_ROWS,
   Ids,
   ROW_HEIGHT,
   HEADER_HEIGHT,
 } from "../data/constants.js";
-import { makeRow, insertBlankRows } from "../data/rows.js";
-import { sanitizeModifierRulesAfterDeletion } from "../data/deletion.js";
+import { makeRow } from "../data/rows.js";
 import {
   clamp,
-  parsePhaseKey,
   parsePhasesSpec,
-  formatPhasesSpec,
   visibleCols,
   visibleRows,
   colOffsets,
