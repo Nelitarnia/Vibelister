@@ -58,11 +58,10 @@ import { bootstrapEditingAndPersistence } from "./bootstrap-editing-and-persiste
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { resetInferenceProfiles } from "./inference-profiles.js";
 import { createAppContext } from "./app-root.js";
-import { initSidebarControllers } from "./sidebar-wiring.js";
 import { createViewController } from "./view-controller.js";
 import { bootstrapGridRuntime } from "./bootstrap-grid-runtime.js";
-import { setupInputHandlers } from "./setup-input-handlers.js";
 import { bootstrapShell } from "./bootstrap-shell.js";
+import { bootstrapInteractionsAndLifecycle } from "./bootstrap-interactions-and-lifecycle.js";
 
 export function createApp() {
   // Core model + views
@@ -76,6 +75,8 @@ export function createApp() {
   let interactionsOutline = null;
   let createDoGenerate = null;
 
+  const callSetActiveView = (...args) => setActiveView?.(...args);
+
   const {
     dom: { core: coreDom, sidebar: sidebarDom, tabs: tabsDom, projectNameEl },
     statusBar,
@@ -85,10 +86,6 @@ export function createApp() {
     wireMenus,
     lifecycle: { init: initShell, destroy: destroyShell },
   } = bootstrapShell({ appContext, ids: Ids, statusConfig: { historyLimit: 100 } });
-
-  function callSetActiveView(key) {
-    return appContext.setActiveView(key);
-  }
 
   const getActiveViewState = appContext.getActiveView;
 
@@ -236,7 +233,7 @@ export function createApp() {
 
   ({ interactionsOutline, createDoGenerate } = interactionToolsApi);
 
-  const { undo, redo, getUndoState, clearHistory } = historyApi;
+  const { undo, redo, getUndoState } = historyApi;
   const {
     runModelMutation,
     runModelTransaction,
@@ -372,31 +369,49 @@ export function createApp() {
     rebuildActionColumnsFromModifiers,
     invalidateViewDef,
     buildInteractionsPairs,
-    setActiveView: callSetActiveView,
+    setActiveView,
     statusBar,
   });
 
-  const {
-    disposeMouse,
-    disposeDrag,
-    disposeKeys,
-    disposeColumnResize,
-  } = setupInputHandlers({
-    dom: { cellsLayer, rowHdrs, sheet, editor, dragLine, colHdrs },
-    selectionApi: { selection, sel, SelectionNS, SelectionCtl, clearSelection },
+  return bootstrapInteractionsAndLifecycle({
+    appContext,
+    shellApi: {
+      dom: {
+        cellsLayer,
+        rowHdrs,
+        sheet,
+        editor,
+        dragLine,
+        colHdrs,
+        sidebar: sidebarDom,
+      },
+      statusBar,
+      wireMenus,
+      initShell,
+      destroyShell,
+    },
+    selectionApi: {
+      selection,
+      sel,
+      SelectionNS,
+      SelectionCtl,
+      clearSelection,
+      onSelectionChanged: selectionListeners.onSelectionChanged,
+    },
     editingApi: {
       isEditing,
       beginEdit,
       endEdit,
+      endEditIfOpen,
       moveSel,
       moveSelectionForTab,
     },
     viewApi: {
       viewDef,
-      getRowCount,
       dataArray,
-      getActiveView: getActiveViewState,
-      setActiveView: callSetActiveView,
+      getRowCount,
+      getActiveView,
+      setActiveView,
       cycleView,
       invalidateViewDef,
     },
@@ -416,6 +431,7 @@ export function createApp() {
       beginUndoableTransaction,
       makeUndoConfig,
       ensureMinRows,
+      ensureSeedRows,
       ROW_HEIGHT,
       HEADER_HEIGHT,
       clamp,
@@ -426,13 +442,14 @@ export function createApp() {
       getCell,
       getPaletteAPI,
       interactionsOutline,
+      interactionActions,
       commentsUI: state.commentsUI,
       tagUI: state.tagUI,
-      toggleInteractionToolsPane: () => state.toggleInteractionToolsPane?.(),
-      interactionActions,
+      upgradeModelInPlace,
+      makeRow,
     },
-    historyApi: { undo, redo },
-    persistenceApi: { newProject, openFromDisk, saveToDisk },
+    historyApi: { undo, redo, getUndoState },
+    persistenceApi: { newProject, openFromDisk, saveToDisk, updateProjectNameWidget },
     generationApi: { doGenerate, runSelfTests },
     clipboardApi: {
       getStructuredCell,
@@ -441,146 +458,18 @@ export function createApp() {
       applyCellCommentClipboardPayload,
       cellValueToPlainText,
     },
-    statusBar,
-    toggleInteractionsMode,
+    menuApi: { openSettingsDialog, openProjectInfo, openCleanupDialog, openInferenceDialog },
+    sidebarApi: { getCellComments, setCellComment, deleteCellComment, noteKeyForPair, getInteractionsPair },
+    variantApi: { canonicalSig, compareVariantSig, sortIdsByUserOrder, modOrderMap },
+    viewsMeta: {
+      VIEWS,
+      visibleCols,
+      visibleRows,
+      colOffsets,
+      colWidths,
+      rebuildActionColumnsFromModifiers,
+    },
+    interactionsApi: { toggleInteractionsMode },
+    destroyEditingAndPersistence,
   });
-  
-  ({
-    sidePanelHost: state.sidePanelHost,
-    commentsUI: state.commentsUI,
-    tagManager: state.tagManager,
-    tagUI: state.tagUI,
-    interactionTools: state.interactionTools,
-  } = initSidebarControllers({
-    dom: sidebarDom,
-    SelectionCtl,
-    selection,
-    sel,
-    onSelectionChanged: selectionListeners.onSelectionChanged,
-    getCellComments,
-    setCellComment,
-    deleteCellComment,
-    getActiveView,
-    setActiveView,
-    viewDef,
-    dataArray,
-    render,
-    statusBar,
-    model,
-    ensureVisible,
-    VIEWS,
-    noteKeyForPair,
-    getInteractionsPair,
-    runModelMutation,
-    makeUndoConfig,
-    interactionActions,
-  }));
-
-  state.toggleInteractionToolsPane = () => state.interactionTools?.toggle?.();
-  // Initialize menus module (handles menu triggers & items)
-  state.menusAPI = wireMenus({
-    setActiveView,
-    newProject,
-    openFromDisk,
-    saveToDisk,
-    doGenerate,
-    runSelfTests,
-    model,
-    openSettings: openSettingsDialog,
-    openProjectInfo,
-    openCleanup: openCleanupDialog,
-    openInference: openInferenceDialog,
-    addRowsAbove,
-    addRowsBelow,
-    clearCells: () => clearSelectedCells({}),
-    deleteRows: () => deleteSelectedRows({ reason: "menu" }),
-    undo,
-    redo,
-    getUndoState,
-  });
-
-  // Lightweight namespaces (non-invasive, for readability only)
-  const ModelNS = { upgradeModelInPlace, ensureSeedRows, ensureMinRows, makeRow };
-  const ViewsNS = {
-    setActiveView,
-    rebuildActionColumnsFromModifiers,
-    viewDef,
-    dataArray,
-    getRowCount,
-    visibleCols,
-    visibleRows,
-    colOffsets,
-    colWidths,
-  };
-  const GridNS = {
-    layout,
-    render,
-    ensureVisible,
-    beginEdit,
-    endEdit,
-    endEditIfOpen,
-    moveSel,
-  };
-  const MenusNS = {
-    closeAllMenus: state.menusAPI.closeAllMenus,
-    updateViewMenuRadios: state.menusAPI.updateViewMenuRadios,
-  };
-  const SelectionNS_Export = SelectionNS; // expose under namespaces index for discoverability
-  const IONS = { openFromDisk, saveToDisk };
-  const VariantsNS = {
-    canonicalSig,
-    doGenerate,
-    compareVariantSig,
-    sortIdsByUserOrder,
-    modOrderMap,
-  };
-  
-  function destroyApp() {
-    destroyShell?.();
-    disposeMouse?.();
-    disposeDrag?.();
-    disposeKeys?.();
-    disposeColumnResize?.();
-    state.interactionTools?.destroy?.();
-    state.commentsUI?.destroy?.();
-    state.tagUI?.destroy?.();
-    state.menusAPI?.destroy?.();
-    destroyEditingAndPersistence?.();
-    state.toggleInteractionToolsPane = null;
-  }
-
-  function initApp() {
-    initShell?.();
-    ensureSeedRows();
-    layout();
-    render();
-    new ResizeObserver(() => render()).observe(sheet);
-    setActiveView("actions");
-    updateProjectNameWidget();
-    if (location.hash.includes("test")) runSelfTests();
-  }
-  
-  appContext.setLifecycle({
-    init: initApp,
-    destroy: destroyApp,
-    setActiveView,
-    cycleView,
-    toggleInteractionsMode,
-  });
-
-  return {
-    init: initApp,
-    destroy: destroyApp,
-    setActiveView,
-    cycleView,
-    toggleInteractionsMode,
-    appContext,
-    ModelNS,
-    ViewsNS,
-    GridNS,
-    MenusNS,
-    SelectionNS: SelectionNS_Export,
-    IONS,
-    VariantsNS,
-  };
 }
