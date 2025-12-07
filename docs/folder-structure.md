@@ -16,6 +16,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── app/
 │   │   ├── app.js
 │   │   ├── app-root.js
+│   │   ├── bootstrap-shell.js
 │   │   ├── clipboard-codec.js
 │   │   ├── cleanup-controller.js
 │   │   ├── column-widths.js
@@ -155,6 +156,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `dom-elements.js` centralizes DOM lookups so bootstrap wiring can share a consistent set of handles.
 - `menus-bootstrap.js`, `sidebar-bootstrap.js`, and `tabs-bootstrap.js` resolve only the DOM nodes required by menus, sidebars, and tabs so the entry file can pass focused handles into their controllers.
 - `app-root.js` builds the root application context (model, shared UI handles, lifecycle helpers) so `app.js` can bootstrap via a single factory instead of coordinating module-level globals.
+- `bootstrap-shell.js` resolves DOM handles, status bar wiring, view state initialization, and shell lifecycle hooks so the main bootstrapper consumes a compact descriptor instead of orchestrating each setup step manually.
 - `clipboard-codec.js` lives here because it bridges app state with external data.
 - `history.js` wraps undo/redo wiring so the entry point just injects dependencies and consumes the resulting API.
 - `model-init.js` builds the initial app model, view state, and history surface so the entry point only wires dependencies.

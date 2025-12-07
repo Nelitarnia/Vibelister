@@ -44,12 +44,7 @@ import {
 } from "./interactions.js";
 import { setCommentInactive } from "./comments.js";
 import { emitCommentChangeEvent } from "./comment-events.js";
-import {
-  MOD,
-  Ids,
-  ROW_HEIGHT,
-  HEADER_HEIGHT,
-} from "../data/constants.js";
+import { ROW_HEIGHT, HEADER_HEIGHT, Ids } from "../data/constants.js";
 import { makeRow } from "../data/rows.js";
 import {
   clamp,
@@ -59,21 +54,12 @@ import {
   colOffsets,
   colWidths,
 } from "../data/utils.js";
-import { createSettingsController } from "./settings-controller.js";
 import { createDiagnosticsController } from "./diagnostics.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { resetInferenceProfiles } from "./inference-profiles.js";
-import {
-  getCoreDomElements,
-  getProjectNameElement,
-} from "./dom-elements.js";
-import { bootstrapMenus } from "./menus-bootstrap.js";
-import { bootstrapSidebar } from "./sidebar-bootstrap.js";
-import { bootstrapTabs } from "./tabs-bootstrap.js";
 import { createAppContext } from "./app-root.js";
 import { initSidebarControllers } from "./sidebar-wiring.js";
 import { createViewController } from "./view-controller.js";
-import { setupViewState } from "./setup-view-state.js";
 import { setupRenderer } from "./setup-renderer.js";
 import { setupHistory } from "./setup-history.js";
 import { setupGridCommands } from "./setup-grid-commands.js";
@@ -83,7 +69,7 @@ import { setupPersistence } from "./setup-persistence.js";
 import { setupPalette } from "./setup-palette.js";
 import { setupInteractionTools } from "./setup-interaction-tools.js";
 import { setupInputHandlers } from "./setup-input-handlers.js";
-import { setupChrome } from "./setup-chrome.js";
+import { bootstrapShell } from "./bootstrap-shell.js";
 
 export function createApp() {
   // Core model + views
@@ -94,19 +80,23 @@ export function createApp() {
   let getActiveView = null;
   let toggleInteractionsMode = null;
   let runModelMutationRef = null;
-  
+
+  const {
+    dom: { core: coreDom, sidebar: sidebarDom, tabs: tabsDom, projectNameEl },
+    statusBar,
+    menuItems,
+    viewState,
+    openSettingsDialog,
+    wireMenus,
+    lifecycle: { init: initShell, destroy: destroyShell },
+  } = bootstrapShell({ appContext, ids: Ids, statusConfig: { historyLimit: 100 } });
+
   function callSetActiveView(key) {
     return appContext.setActiveView(key);
   }
-  
+
   const getActiveViewState = appContext.getActiveView;
-  
-  // DOM
-  const coreDom = getCoreDomElements();
-  const menusDom = bootstrapMenus(Ids);
-  const sidebarDom = bootstrapSidebar(Ids);
-  const tabsDom = bootstrapTabs(Ids);
-  const projectNameEl = getProjectNameElement(Ids);
+
   const {
     sheet,
     cellsLayer,
@@ -114,19 +104,8 @@ export function createApp() {
     colHdrs,
     rowHdrs,
     editor,
-    statusEl,
     dragLine,
   } = coreDom;
-  const { statusBar, initA11y, wireMenus } = setupChrome({
-    statusEl,
-    menusDom,
-    statusConfig: { historyLimit: 100 },
-  });
-  const menuItems = menusDom.items;
-  
-  const { openSettingsDialog } = createSettingsController({ statusBar });
-  
-  const viewState = setupViewState({ appContext, statusBar });
   
   const {
     saveCurrentViewState,
@@ -608,6 +587,7 @@ export function createApp() {
   };
   
   function destroyApp() {
+    destroyShell?.();
     disposeMouse?.();
     disposeDrag?.();
     disposeKeys?.();
@@ -619,10 +599,9 @@ export function createApp() {
     state.menusAPI?.destroy?.();
     state.toggleInteractionToolsPane = null;
   }
-  
+
   function initApp() {
-    if (!sheet.hasAttribute("tabindex")) sheet.setAttribute("tabindex", "0");
-    initA11y();
+    initShell?.();
     ensureSeedRows();
     layout();
     render();
