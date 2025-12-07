@@ -60,14 +60,10 @@ import { resetInferenceProfiles } from "./inference-profiles.js";
 import { createAppContext } from "./app-root.js";
 import { initSidebarControllers } from "./sidebar-wiring.js";
 import { createViewController } from "./view-controller.js";
-import { setupRenderer } from "./setup-renderer.js";
-import { setupHistory } from "./setup-history.js";
-import { setupGridCommands } from "./setup-grid-commands.js";
-import { setupDialogs } from "./setup-dialogs.js";
+import { bootstrapGridRuntime } from "./bootstrap-grid-runtime.js";
 import { setupEditing } from "./setup-editing.js";
 import { setupPersistence } from "./setup-persistence.js";
 import { setupPalette } from "./setup-palette.js";
-import { setupInteractionTools } from "./setup-interaction-tools.js";
 import { setupInputHandlers } from "./setup-input-handlers.js";
 import { bootstrapShell } from "./bootstrap-shell.js";
 
@@ -80,6 +76,8 @@ export function createApp() {
   let getActiveView = null;
   let toggleInteractionsMode = null;
   let runModelMutationRef = null;
+  let interactionsOutline = null;
+  let createDoGenerate = null;
 
   const {
     dom: { core: coreDom, sidebar: sidebarDom, tabs: tabsDom, projectNameEl },
@@ -154,102 +152,12 @@ export function createApp() {
 
   const modHelpers = { isModColumn, modIdFromKey };
 
-  const rendererApi = setupRenderer({
-    appContext,
-    viewState,
-    dom: { sheet, cellsLayer, spacer, colHdrs, rowHdrs },
-    getCell,
-    modHelpers,
-  });
-
-  const { render, layout, ensureVisible, getColGeomFor } = rendererApi;
-
-  onSelectionChanged(() => render());
-  const { interactionsOutline, createDoGenerate } = setupInteractionTools({
-    model,
-    selectionApi: {
-      Selection,
-      SelectionCtl,
-      sel,
-      getActiveView: getActiveViewState,
-      ensureVisible,
-      onSelectionChanged,
-    },
-    rendererApi: { render, sheet },
-    layoutApi: { layout },
-  });
-  
-  const historyApi = setupHistory({
-    appContext,
-    viewState,
-    rendererApi,
-    menuItems,
-    statusBar,
-    setActiveView: callSetActiveView,
-    rebuildInteractionsInPlace,
-    pruneNotesToValidPairs,
-  });
-  
-  const {
-    makeUndoConfig,
-    runModelMutation,
-    beginUndoableTransaction,
-    runModelTransaction,
-    undo,
-    redo,
-    getUndoState,
-    clearHistory,
-  } = historyApi;
-
-  runModelMutationRef = runModelMutation;
-  
-  const gridCommandsApi = setupGridCommands({
-    appContext,
-    viewState,
-    historyApi,
-    rendererApi,
-    statusBar,
-    setCell,
-    modHelpers,
-  });
-  
-  const {
-    cloneValueForAssignment,
-    getHorizontalTargetColumns,
-    setModForSelection,
-    addRowsAbove,
-    addRowsBelow,
-    clearSelectedCells,
-    deleteSelectedRows,
-    setCellSelectionAware,
-    setCellComment,
-    deleteCellComment,
-    getCellComments,
-    getCellCommentClipboardPayload,
-    applyCellCommentClipboardPayload,
-  } = gridCommandsApi;
-  
-  const {
-    openProjectInfo,
-    openCleanupDialog,
-    openInferenceDialog,
-    interactionActions,
-  } = setupDialogs({
-    appContext,
-    viewState,
-    historyApi,
-    statusBar,
-  });
-  
-  // Sidebars wired after view controller is created
-  
-  // Deletion & regeneration helpers
   function rebuildInteractionsInPlace() {
     // Rebuild pairs without changing the active view or selection
     buildInteractionsPairs(model);
     interactionsOutline?.refresh?.();
   }
-  
+
   function pruneNotesToValidPairs() {
     // Build the full set of valid base keys using the same composer as Interactions
     // (phase suffixes are intentionally omitted for pruning)
@@ -262,7 +170,7 @@ export function createApp() {
         // Primary (current) scheme
         const base = noteKeyForPair(p, undefined);
         if (base) validBase.add(base);
-  
+
         // Back-compat: earlier keys that may exist in saved projects
         const sigA = canonicalSig(p.variantSig || "");
         if (!p.kind || p.kind === "AI") {
@@ -281,17 +189,88 @@ export function createApp() {
         /* ignore malformed pairs while pruning */
       }
     }
-  
+
     function baseKeyOf(k) {
       const s = String(k || "");
       const i = s.indexOf("|p");
       return i >= 0 ? s.slice(0, i) : s;
     }
-  
+
     for (const k in model.notes) {
       if (!validBase.has(baseKeyOf(k))) delete model.notes[k];
     }
   }
+
+  const {
+    rendererApi,
+    selectionListeners: { onSelectionChanged: onSelectionChangedRender },
+    interactionToolsApi,
+    historyApi,
+    mutationApi,
+    dialogApi,
+    gridCommandsApi,
+  } = bootstrapGridRuntime({
+    appContext,
+    viewState,
+    coreDom,
+    selectionApi: {
+      Selection,
+      SelectionCtl,
+      sel,
+      onSelectionChanged,
+      getActiveView: getActiveViewState,
+    },
+    gridCellsApi: {
+      getCell,
+      setCell,
+      getStructuredCell,
+      applyStructuredCell,
+      cellValueToPlainText,
+    },
+    modHelpers,
+    statusBar,
+    menuItems,
+    setActiveView: callSetActiveView,
+    rebuildInteractionsInPlace,
+    pruneNotesToValidPairs,
+  });
+
+  const { render, layout, ensureVisible, getColGeomFor } = rendererApi;
+
+  ({ interactionsOutline, createDoGenerate } = interactionToolsApi);
+
+  const { undo, redo, getUndoState, clearHistory } = historyApi;
+  const {
+    runModelMutation,
+    runModelTransaction,
+    beginUndoableTransaction,
+    makeUndoConfig,
+  } = mutationApi;
+
+  runModelMutationRef = runModelMutation;
+
+  const {
+    cloneValueForAssignment,
+    getHorizontalTargetColumns,
+    setModForSelection,
+    addRowsAbove,
+    addRowsBelow,
+    clearSelectedCells,
+    deleteSelectedRows,
+    setCellSelectionAware,
+    setCellComment,
+    deleteCellComment,
+    getCellComments,
+    getCellCommentClipboardPayload,
+    applyCellCommentClipboardPayload,
+  } = gridCommandsApi;
+
+  const { openProjectInfo, openCleanupDialog, openInferenceDialog, interactionActions } =
+    dialogApi;
+
+  const onSelectionChanged = onSelectionChangedRender;
+
+  // Sidebars wired after view controller is created
   
   const editingController = setupEditing({
     appContext,
