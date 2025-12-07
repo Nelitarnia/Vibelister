@@ -16,6 +16,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   ├── app/
 │   │   ├── app.js
 │   │   ├── app-root.js
+│   │   ├── bootstrap-editing-and-persistence.js
 │   │   ├── bootstrap-grid-runtime.js
 │   │   ├── bootstrap-shell.js
 │   │   ├── clipboard-codec.js
@@ -157,6 +158,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `dom-elements.js` centralizes DOM lookups so bootstrap wiring can share a consistent set of handles.
 - `menus-bootstrap.js`, `sidebar-bootstrap.js`, and `tabs-bootstrap.js` resolve only the DOM nodes required by menus, sidebars, and tabs so the entry file can pass focused handles into their controllers.
 - `app-root.js` builds the root application context (model, shared UI handles, lifecycle helpers) so `app.js` can bootstrap via a single factory instead of coordinating module-level globals.
+- `bootstrap-editing-and-persistence.js` combines editing, palette, persistence, and diagnostics wiring behind a single entry point so the main bootstrapper can compose the shared context without mutating module state directly.
 - `bootstrap-grid-runtime.js` assembles the grid renderer, interaction tools, history wiring, grid commands, and dialog setup into a single factory that returns focused render/layout, selection, mutation, and dialog facades for the app bootstrapper.
 - `bootstrap-shell.js` resolves DOM handles, status bar wiring, view state initialization, and shell lifecycle hooks so the main bootstrapper consumes a compact descriptor instead of orchestrating each setup step manually.
 - `clipboard-codec.js` lives here because it bridges app state with external data.
