@@ -203,7 +203,7 @@ export function createApp() {
 
   const {
     rendererApi,
-    selectionListeners: { onSelectionChanged: onSelectionChangedRender },
+    selectionListeners,
     interactionToolsApi,
     historyApi,
     mutationApi,
@@ -267,8 +267,6 @@ export function createApp() {
 
   const { openProjectInfo, openCleanupDialog, openInferenceDialog, interactionActions } =
     dialogApi;
-
-  const onSelectionChanged = onSelectionChangedRender;
 
   // Sidebars wired after view controller is created
   
@@ -486,7 +484,7 @@ export function createApp() {
     SelectionCtl,
     selection,
     sel,
-    onSelectionChanged,
+    onSelectionChanged: selectionListeners.onSelectionChanged,
     getCellComments,
     setCellComment,
     deleteCellComment,
