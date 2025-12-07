@@ -54,16 +54,13 @@ import {
   colOffsets,
   colWidths,
 } from "../data/utils.js";
-import { createDiagnosticsController } from "./diagnostics.js";
+import { bootstrapEditingAndPersistence } from "./bootstrap-editing-and-persistence.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { resetInferenceProfiles } from "./inference-profiles.js";
 import { createAppContext } from "./app-root.js";
 import { initSidebarControllers } from "./sidebar-wiring.js";
 import { createViewController } from "./view-controller.js";
 import { bootstrapGridRuntime } from "./bootstrap-grid-runtime.js";
-import { setupEditing } from "./setup-editing.js";
-import { setupPersistence } from "./setup-persistence.js";
-import { setupPalette } from "./setup-palette.js";
 import { setupInputHandlers } from "./setup-input-handlers.js";
 import { bootstrapShell } from "./bootstrap-shell.js";
 
@@ -268,13 +265,27 @@ export function createApp() {
   const { openProjectInfo, openCleanupDialog, openInferenceDialog, interactionActions } =
     dialogApi;
 
-  // Sidebars wired after view controller is created
-  
-  const editingController = setupEditing({
+  const onModelReset = () => {
+    resetInferenceProfiles();
+    interactionsOutline?.refresh?.();
+    state.tagUI?.refresh?.();
+    state.commentsUI?.applyModelMetadata?.(model.meta);
+    emitInteractionTagChangeEvent(null, { reason: "reset", force: true });
+  };
+
+  const {
+    editingController,
+    persistenceApi,
+    diagnosticsApi,
+    getPaletteAPI,
+    destroy: destroyEditingAndPersistence,
+  } = bootstrapEditingAndPersistence({
     appContext,
     viewState,
     rendererApi,
     historyApi,
+    statusBar,
+    dom: { sheet, editor, projectNameEl },
     gridApi: {
       beginEditForKind,
       getCell,
@@ -282,11 +293,16 @@ export function createApp() {
       isInteractionPhaseColumnActiveForRow,
       cloneValueForAssignment,
       getHorizontalTargetColumns,
+      setCellSelectionAware,
+      cellValueToPlainText,
     },
-    paletteApiRef: () => state.paletteAPI,
-    dom: { sheet, editor },
+    closeMenus: () => state.menusAPI?.closeAllMenus?.(),
+    onModelReset,
+    rebuildActionColumnsFromModifiers,
+    VIEWS,
+    setActiveView: callSetActiveView,
   });
-  
+
   const {
     beginEdit,
     endEdit,
@@ -297,7 +313,7 @@ export function createApp() {
     getCellRect,
     isEditing,
   } = editingController;
-  
+
   const {
     newProject,
     openFromDisk,
@@ -308,53 +324,9 @@ export function createApp() {
     updateProjectNameWidget,
     setProjectNameFromFile,
     getSuggestedName,
-  } = setupPersistence({
-    appContext,
-    historyApi,
-    viewState,
-    statusBar,
-    dom: { projectNameEl },
-    closeMenus: () => state.menusAPI?.closeAllMenus?.(),
-    onModelReset: () => {
-      resetInferenceProfiles();
-      interactionsOutline?.refresh?.();
-      state.tagUI?.refresh?.();
-      state.commentsUI?.applyModelMetadata?.(model.meta);
-      emitInteractionTagChangeEvent(null, { reason: "reset", force: true });
-    },
-  });
-  
-  const { runSelfTests } = createDiagnosticsController({
-    model,
-    statusBar,
-    ensureSeedRows,
-    rebuildActionColumnsFromModifiers,
-    VIEWS,
-    setActiveView: callSetActiveView,
-    setCell,
-  });
-  
-  const { paletteAPI } = setupPalette({
-    appContext,
-    viewState,
-    rendererApi,
-    gridApi: {
-      getCell,
-      setCellSelectionAware,
-      cellValueToPlainText,
-    },
-    editingApi: {
-      sel,
-      getCellRect,
-      endEdit,
-      advanceSelectionAfterPaletteTab,
-      moveSel,
-    },
-    historyApi,
-    dom: { editor, sheet },
-  });
+  } = persistenceApi;
 
-  state.paletteAPI = paletteAPI;
+  const { runSelfTests } = diagnosticsApi;
   
   // Edit
   
@@ -452,7 +424,7 @@ export function createApp() {
       addRowsAbove,
       addRowsBelow,
       getCell,
-      getPaletteAPI: () => state.paletteAPI,
+      getPaletteAPI,
       interactionsOutline,
       commentsUI: state.commentsUI,
       tagUI: state.tagUI,
@@ -572,8 +544,8 @@ export function createApp() {
     state.interactionTools?.destroy?.();
     state.commentsUI?.destroy?.();
     state.tagUI?.destroy?.();
-    state.paletteAPI?.destroy?.();
     state.menusAPI?.destroy?.();
+    destroyEditingAndPersistence?.();
     state.toggleInteractionToolsPane = null;
   }
 
