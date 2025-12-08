@@ -1,4 +1,6 @@
+import path from "node:path";
 import { performance } from "node:perf_hooks";
+import { fileURLToPath } from "node:url";
 import { GROUP_MODES } from "./variant-combinatorics.js";
 import { MOD_STATE_ID } from "../mod-state.js";
 import { buildInteractionsPairs } from "./variants.js";
@@ -93,7 +95,10 @@ function runBenchmark({ actionCount = 60, modifierCount = 14, iterations = 50 } 
   };
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+const modulePath = path.resolve(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : "";
+
+if (modulePath === invokedPath) {
   const result = runBenchmark();
   console.table(result);
 }
