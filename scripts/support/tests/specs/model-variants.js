@@ -1,4 +1,7 @@
-import { buildInteractionsPairs } from "../../../data/variants/variants.js";
+import {
+  buildInteractionsPairs,
+  buildScopedInteractionsPairs,
+} from "../../../data/variants/variants.js";
 import { MOD } from "../../../data/constants.js";
 import {
   getInteractionsPair,
@@ -201,6 +204,53 @@ export function getModelVariantTests() {
           sigs,
           [`${req.id}`],
           "required modifier should be preserved even without groups",
+        );
+      },
+    },
+    {
+      name: "scoped cache reused when base version is stable",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("A1");
+        addAction("A2");
+        addInput("I1");
+
+        buildInteractionsPairs(model);
+        const first = buildScopedInteractionsPairs(model, [action.id]);
+
+        assert.ok(first.index, "scoped index produced");
+        assert.ok(first.summary, "scoped summary produced");
+
+        const second = buildScopedInteractionsPairs(model, [action.id]);
+        assert.strictEqual(
+          second.index,
+          first.index,
+          "cached scoped index returned when version matches",
+        );
+        assert.strictEqual(
+          second.summary,
+          first.summary,
+          "cached scoped summary reused",
+        );
+      },
+    },
+    {
+      name: "scoped cache invalidated after base version bump",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("A1");
+        addInput("I1");
+
+        const first = buildScopedInteractionsPairs(model, [action.id]);
+        const cachedIndex = first.index;
+
+        buildInteractionsPairs(model);
+
+        const second = buildScopedInteractionsPairs(model, [action.id]);
+        assert.ok(second.index !== cachedIndex, "version change rebuilds scoped index");
+        assert.ok(
+          model.interactionsIndexCache?.[`d:${action.id}`]?.baseVersion,
+          "cache entry tracked base version",
         );
       },
     },
