@@ -9,6 +9,14 @@ export const GROUP_MODES = {
 
 export const MAX_GROUP_COMBOS = 50000; // safety cap for a single group's choice list
 
+function withTruncationFlag(list, truncated) {
+  Object.defineProperty(list, "truncated", {
+    value: !!truncated,
+    enumerable: false,
+  });
+  return list;
+}
+
 export function kCombos(a, k) {
   const out = [],
     n = a.length;
@@ -32,16 +40,20 @@ export function kCombos(a, k) {
 
 export function rangeCombos(a, min, max) {
   const out = [];
+  let truncated = false;
   const hi = Math.min(a.length, max);
   const lo = Math.max(0, min);
   for (let k = lo; k <= hi; k++) {
     const ks = kCombos(a, k);
     for (let i = 0; i < ks.length; i++) {
       out.push(ks[i]);
-      if (out.length >= MAX_GROUP_COMBOS) return out; // early cut to avoid huge lists
+      if (out.length >= MAX_GROUP_COMBOS) {
+        truncated = true;
+        return withTruncationFlag(out, truncated); // early cut to avoid huge lists
+      }
     }
   }
-  return out;
+  return withTruncationFlag(out, truncated);
 }
 
 export function groupCombos(group, eligibility = {}) {
@@ -55,34 +67,38 @@ export function groupCombos(group, eligibility = {}) {
   const optionalCount = optionalMembers.length;
   const mode = group?.mode || GROUP_MODES.EXACT,
     req = !!group?.required;
+  let truncated = false;
   let ch = [];
   if (mode === GROUP_MODES.EXACT) {
     const total = group?.k ?? 0;
-    if (requiredCount > total) return [];
+    if (requiredCount > total) return withTruncationFlag([], truncated);
     const pick = total - requiredCount;
-    if (pick > optionalCount) return [];
+    if (pick > optionalCount) return withTruncationFlag([], truncated);
     ch = kCombos(optionalMembers, pick);
   } else if (mode === GROUP_MODES.AT_LEAST) {
     const minTotal = group?.k ?? 0;
     const minPick = Math.max(0, minTotal - requiredCount);
-    if (minPick > optionalCount) return [];
+    if (minPick > optionalCount) return withTruncationFlag([], truncated);
     ch = rangeCombos(optionalMembers, minPick, optionalCount);
+    truncated ||= !!ch.truncated;
   } else if (mode === GROUP_MODES.AT_MOST) {
     const maxTotal = group?.k ?? 0;
-    if (requiredCount > maxTotal) return [];
+    if (requiredCount > maxTotal) return withTruncationFlag([], truncated);
     const maxPick = Math.max(0, Math.min(optionalCount, maxTotal - requiredCount));
     ch = rangeCombos(optionalMembers, 0, maxPick);
+    truncated ||= !!ch.truncated;
   } else if (mode === GROUP_MODES.RANGE) {
     const minTotal = group?.kMin ?? 0;
     const maxTotal = group?.kMax ?? members.length;
-    if (requiredCount > maxTotal) return [];
+    if (requiredCount > maxTotal) return withTruncationFlag([], truncated);
     const minPick = Math.max(0, minTotal - requiredCount);
     const maxPick = Math.max(minPick, Math.min(optionalCount, maxTotal - requiredCount));
-    if (minPick > optionalCount) return [];
+    if (minPick > optionalCount) return withTruncationFlag([], truncated);
     ch = rangeCombos(optionalMembers, minPick, maxPick);
+    truncated ||= !!ch.truncated;
   }
 
   if (!req && !ch.some((a) => a.length === 0)) ch.unshift([]);
-  if (req && ch.length === 0) return [];
-  return ch;
+  if (req && ch.length === 0) return withTruncationFlag([], truncated);
+  return withTruncationFlag(ch, truncated);
 }

@@ -5,7 +5,7 @@ import {
   modStateIsOn,
   modStateIsRequired,
 } from "./mod-state-normalize.js";
-import { groupCombos } from "./variant-combinatorics.js";
+import { groupCombos, MAX_GROUP_COMBOS } from "./variant-combinatorics.js";
 import { buildConstraintMaps, violatesConstraints } from "./variant-constraints.js";
 import {
   makeInteractionsIndexCacheContext,
@@ -153,11 +153,16 @@ function computeVariantsForAction(action, model, options = {}) {
   }));
 
   let truncated = false;
+  const truncatedGroups = [];
   let candidates = 0;
   let yielded = 0;
 
-  function markTruncated() {
+  function markTruncated(reason) {
     truncated = true;
+    if (reason?.type === "group" && reason.groupId != null) {
+      const existing = truncatedGroups.find((g) => g.groupId === reason.groupId);
+      if (!existing) truncatedGroups.push(reason);
+    }
   }
 
   const iterator = (function* () {
@@ -185,6 +190,14 @@ function computeVariantsForAction(action, model, options = {}) {
       if (ch.length === 0) {
         if (g.required) return;
         continue;
+      }
+      if (ch.truncated) {
+        markTruncated({
+          type: "group",
+          groupId: g.id,
+          groupName: g.name,
+          limit: MAX_GROUP_COMBOS,
+        });
       }
       choices.push(ch);
     }
@@ -244,6 +257,7 @@ function computeVariantsForAction(action, model, options = {}) {
     candidates,
     yielded,
     truncated,
+    truncatedGroups,
   });
 
   return iterator;
@@ -262,6 +276,7 @@ export function collectVariantsForAction(action, model, options = {}) {
       candidates: diagnostics.candidates ?? uniq.length,
       yielded: diagnostics.yielded ?? uniq.length,
       truncated: !!diagnostics.truncated,
+      truncatedGroups: diagnostics.truncatedGroups || [],
     },
   };
 }
@@ -292,12 +307,27 @@ export function buildInteractionsPairs(model, options = {}) {
     cappedActions = 0;
   const mode = (model.meta && model.meta.interactionsMode) || "AI";
   const actionVariantCache = new Map();
+  const groupTruncations = [];
+  const recordedGroupTruncations = new Set();
 
   const variantDiagnostics = {
     candidates: 0,
     yielded: 0,
     accepted: 0,
   };
+
+  function recordGroupTruncations(action, groups = []) {
+    for (const group of groups) {
+      const key = `${action.id}:${group.groupId ?? group.groupName ?? "?"}`;
+      if (recordedGroupTruncations.has(key)) continue;
+      recordedGroupTruncations.add(key);
+      groupTruncations.push({
+        actionId: action.id,
+        actionName: action.name,
+        ...group,
+      });
+    }
+  }
 
   function insertVariantSorted(list, sig) {
     let lo = 0;
@@ -317,6 +347,7 @@ export function buildInteractionsPairs(model, options = {}) {
     const cacheKey = `${includeBypass ? "b" : "d"}:${action.id}`;
     if (actionVariantCache.has(cacheKey)) {
       const entry = actionVariantCache.get(cacheKey);
+      recordGroupTruncations(action, entry.truncatedGroups);
       if (onVariant) {
         for (const sig of entry.variants) onVariant(sig);
       }
@@ -327,6 +358,7 @@ export function buildInteractionsPairs(model, options = {}) {
         variants: [""],
         truncated: false,
         diagnostics: { candidates: 1, yielded: 1 },
+        truncatedGroups: [],
       };
       variantDiagnostics.candidates += 1;
       variantDiagnostics.yielded += 1;
@@ -344,7 +376,9 @@ export function buildInteractionsPairs(model, options = {}) {
     }
     const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
     const truncated = diagnostics.truncated || variants.length > CAP_PER_ACTION;
-    const entry = { variants, truncated, diagnostics };
+    const truncatedGroups = diagnostics.truncatedGroups || [];
+    recordGroupTruncations(action, truncatedGroups);
+    const entry = { variants, truncated, diagnostics, truncatedGroups };
     variantDiagnostics.candidates += diagnostics.candidates ?? variants.length;
     variantDiagnostics.yielded += diagnostics.yielded ?? variants.length;
     variantDiagnostics.accepted += variants.length;
@@ -399,6 +433,8 @@ export function buildInteractionsPairs(model, options = {}) {
       variantCatalog,
     };
     if (isBaseIndex) model.interactionsIndexVersion = baseVersion;
+    variantDiagnostics.groupTruncations = groupTruncations;
+    variantDiagnostics.truncatedGroupCount = groupTruncations.length;
     return {
       actionsCount: actions.length,
       inputsCount: actions.length,
@@ -406,6 +442,7 @@ export function buildInteractionsPairs(model, options = {}) {
       capped,
       cappedActions,
       variantDiagnostics,
+      groupTruncations,
     };
   } // Default: Actions × Inputs
   for (const a of actions) {
@@ -447,6 +484,8 @@ export function buildInteractionsPairs(model, options = {}) {
     variantCatalog,
   };
   if (isBaseIndex) model.interactionsIndexVersion = baseVersion;
+  variantDiagnostics.groupTruncations = groupTruncations;
+  variantDiagnostics.truncatedGroupCount = groupTruncations.length;
   return {
     actionsCount: actions.length,
     inputsCount: inputs.length,
@@ -455,6 +494,7 @@ export function buildInteractionsPairs(model, options = {}) {
     cappedActions,
     index: model[targetIndexField],
     variantDiagnostics,
+    groupTruncations,
   };
 }
 
