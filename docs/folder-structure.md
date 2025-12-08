@@ -7,7 +7,8 @@ This document outlines a maintainable directory layout tailored to the current c
 ```
 /
 ├── docs/
-│   └── folder-structure.md
+│   ├── folder-structure.md
+│   └── variants-benchmark.md
 ├── public/
 │   ├── index.html
 │   └── style.css
@@ -81,6 +82,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       ├── variant-combinatorics.js
 │   │       ├── variant-constraints.js
 │   │       ├── interactions-index-cache.js
+│   │       ├── variants-benchmark.js
 │   │       └── variants.js
 │   ├── support/
 │   │   └── tests/
@@ -142,6 +144,7 @@ This document outlines a maintainable directory layout tailored to the current c
 
 - Centralize developer-facing documentation so guidance, architectural notes, and ADRs have a consistent home.
 - Start with this folder-structure proposal and move existing planning notes here as they expand.
+- `variants-benchmark.md` records the micro-benchmark harness for interaction variant generation along with usage notes and sample output to track allocation changes over time.
 
 ### `public/`
 
@@ -204,6 +207,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `mutation-runner.js` centralizes layout/render/derived rebuild side effects for core model mutations, exposes a transaction helper so multi-step edits fire those hooks only once, and provides a canonical snapshot utility for history features.
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
 - `variants/` now houses the modifier set pipeline: `variants.js` remains the orchestrator while `mod-state-normalize.js` interprets stored flags, `variant-combinatorics.js` builds eligibility combinations, `variant-constraints.js` evaluates rule requirements, and `interactions-index-cache.js` reuses scoped indexes keyed by include-bypass and base-version metadata.
+- `variants/variants-benchmark.js` stress-tests variant generation across large action/modifier sets so profiling and allocation comparisons stay repeatable.
 - `deletion.js` scrubs modifier groups and constraints after rows are removed so downstream consumers never see dangling references.
 - `mod-state.js` centralizes the modifier-state descriptor (IDs, glyphs, parsing tokens) so column kinds, palette UI, persistence, and tests reuse the same definitions.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
