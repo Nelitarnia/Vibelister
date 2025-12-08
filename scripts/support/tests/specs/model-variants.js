@@ -255,6 +255,45 @@ export function getModelVariantTests() {
       },
     },
     {
+      name: "group truncations surface in build summaries",
+      run(assert) {
+        const { model, addAction, addInput, addModifier } = makeModelFixture();
+        const mods = Array.from({ length: 17 }, (_, i) => addModifier(`M${i}`));
+        const modSet = mods.reduce((acc, mod) => {
+          acc[mod.id] = 1;
+          return acc;
+        }, {});
+        const action = addAction("Overflow", modSet);
+        addInput("Only");
+        model.modifierGroups.push({
+          id: model.nextId++,
+          name: "Big group",
+          mode: "RANGE",
+          kMin: 0,
+          kMax: mods.length,
+          required: false,
+          memberIds: mods.map((m) => m.id),
+        });
+
+        const stats = buildInteractionsPairs(model);
+        assert.strictEqual(stats.capped, true, "group truncation marks build as capped");
+        assert.strictEqual(stats.cappedActions, 1, "only the overflowing action is capped");
+        assert.ok(stats.groupTruncations.length > 0, "surface truncated group metadata");
+        const forAction = stats.groupTruncations.find((g) => g.actionId === action.id);
+        assert.ok(forAction, "associate truncation with its action");
+        assert.strictEqual(
+          forAction.groupName,
+          "Big group",
+          "include group name in truncation diagnostics",
+        );
+        assert.strictEqual(
+          stats.variantDiagnostics.truncatedGroupCount,
+          stats.groupTruncations.length,
+          "variant diagnostics mirror truncation count",
+        );
+      },
+    },
+    {
       name: "variant cap still yields rows",
       run(assert) {
         const { model, addAction, addInput, addModifier } = makeModelFixture();

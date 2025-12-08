@@ -3,6 +3,7 @@ import {
   kCombos,
   rangeCombos,
   groupCombos,
+  MAX_GROUP_COMBOS,
 } from "../../../data/variants/variant-combinatorics.js";
 
 export function getVariantCombinatoricsTests() {
@@ -75,6 +76,28 @@ export function getVariantCombinatoricsTests() {
           viable,
           [[], [1], [3], [1, 3]],
           "at-least groups should emit all eligible subsets",
+        );
+      },
+    },
+    {
+      name: "group combos report truncation when capped",
+      run(assert) {
+        const optionalEligible = new Set(Array.from({ length: 17 }, (_, i) => i + 1));
+        const oversized = groupCombos(
+          {
+            mode: GROUP_MODES.RANGE,
+            kMin: 0,
+            kMax: optionalEligible.size,
+            memberIds: Array.from(optionalEligible),
+            required: false,
+          },
+          { optionalEligible, required: new Set() },
+        );
+        assert.strictEqual(oversized.truncated, true, "flag truncation when hitting the cap");
+        assert.strictEqual(
+          oversized.length,
+          MAX_GROUP_COMBOS,
+          "truncate the list at the max group size",
         );
       },
     },
