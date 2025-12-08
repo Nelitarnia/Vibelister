@@ -198,6 +198,7 @@ export function createApp() {
   const {
     rendererApi,
     selectionListeners,
+    selectionRenderDisposer,
     interactionToolsApi,
     historyApi,
     mutationApi,
@@ -213,6 +214,7 @@ export function createApp() {
       sel,
       onSelectionChanged,
       getActiveView: getActiveViewState,
+      disposeSelectionRender: selectionRenderDisposer,
     },
     gridCellsApi: {
       getCell,
