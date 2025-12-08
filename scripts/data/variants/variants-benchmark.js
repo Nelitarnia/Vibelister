@@ -3,7 +3,7 @@ import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { GROUP_MODES } from "./variant-combinatorics.js";
 import { MOD_STATE_ID } from "../mod-state.js";
-import { buildInteractionsPairs } from "./variants.js";
+import { buildInteractionsPairs, collectVariantsForAction } from "./variants.js";
 
 function makeModifiers(count) {
   return Array.from({ length: count }, (_, idx) => ({
@@ -86,6 +86,7 @@ function runBenchmark({ actionCount = 60, modifierCount = 14, iterations = 50 } 
   const after = process.memoryUsage().heapUsed;
 
   return {
+    benchmark: "interactions",
     actionCount,
     modifierCount,
     iterations,
@@ -95,12 +96,60 @@ function runBenchmark({ actionCount = 60, modifierCount = 14, iterations = 50 } 
   };
 }
 
+function makeDenseVariantModel({ groups = 3, groupSize = 6, pick = 3 } = {}) {
+  const modifiers = makeModifiers(groups * groupSize);
+  const modifierGroups = [];
+  for (let i = 0; i < groups; i++) {
+    const memberIds = modifiers
+      .slice(i * groupSize, (i + 1) * groupSize)
+      .map((m) => m.id);
+    modifierGroups.push({
+      id: i + 1,
+      name: `Dense ${i + 1}`,
+      memberIds,
+      mode: GROUP_MODES.RANGE,
+      kMin: 0,
+      kMax: pick,
+    });
+  }
+
+  const modSet = {};
+  for (const mod of modifiers) modSet[mod.id] = MOD_STATE_ID.ON;
+
+  return {
+    action: { id: 1, name: "Dense variants", modSet },
+    modifiers,
+    modifierGroups,
+  };
+}
+
+function runVariantFanoutBenchmark({ iterations = 150, groups = 3, groupSize = 6, pick = 3 } = {}) {
+  const model = makeDenseVariantModel({ groups, groupSize, pick });
+  const start = performance.now();
+  let variants = 0;
+  for (let i = 0; i < iterations; i++) {
+    const { variants: sigs } = collectVariantsForAction(model.action, model, {
+      normalizeSignatures: false,
+    });
+    variants += sigs.length;
+  }
+  const elapsedMs = performance.now() - start;
+  return {
+    benchmark: "denseVariants",
+    groups,
+    groupSize,
+    iterations,
+    variantsPerRun: variants / iterations,
+    elapsedMs,
+  };
+}
+
 const modulePath = path.resolve(fileURLToPath(import.meta.url));
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : "";
 
 if (modulePath === invokedPath) {
-  const result = runBenchmark();
-  console.table(result);
+  const results = [runBenchmark(), runVariantFanoutBenchmark()];
+  console.table(results);
 }
 
-export { runBenchmark };
+export { runBenchmark, runVariantFanoutBenchmark };
