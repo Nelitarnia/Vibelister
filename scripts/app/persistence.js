@@ -11,8 +11,7 @@ import {
   enumerateModStates,
   MOD_STATE_BOOLEAN_TRUE_NAME,
   MOD_STATE_DEFAULT_VALUE,
-  MOD_STATE_MAX_VALUE,
-  MOD_STATE_MIN_VALUE,
+  normalizeModStateValue,
 } from "../data/mod-state.js";
 import { makeRow } from "../data/rows.js";
 import {
@@ -51,35 +50,12 @@ export function createPersistenceController({
       (state) => state.name === MOD_STATE_BOOLEAN_TRUE_NAME,
     )?.value ?? MOD_STATE_DEFAULT_VALUE;
   const DEFAULT_MOD_FALLBACK = DEFAULT_MOD_RUNTIME.defaultState.value;
-  const DEFAULT_MOD_VALUE_TO_STATE = DEFAULT_MOD_RUNTIME.valueToState;
-
-  function sanitizeModValue(raw) {
-    if (raw === true) return DEFAULT_MOD_TRUE_VALUE;
-    if (raw === false || raw == null) return DEFAULT_MOD_FALLBACK;
-    if (typeof raw === "string") {
-      const trimmed = raw.trim();
-      if (!trimmed) return DEFAULT_MOD_FALLBACK;
-      for (const state of DEFAULT_MOD_RUNTIME.states) {
-        if (state.glyphs.includes(trimmed)) return state.value;
-      }
-      const lower = trimmed.toLowerCase();
-      for (const state of DEFAULT_MOD_RUNTIME.states) {
-        if (state.tokens.includes(lower) || state.keywords.includes(lower))
-          return state.value;
-      }
-      const asNumber = Number(trimmed);
-      if (Number.isFinite(asNumber)) raw = asNumber;
-      else return DEFAULT_MOD_FALLBACK;
-    }
-    if (typeof raw === "number") {
-      const num = Math.trunc(raw);
-      if (num < MOD_STATE_MIN_VALUE || num > MOD_STATE_MAX_VALUE) {
-        return DEFAULT_MOD_FALLBACK;
-      }
-      if (DEFAULT_MOD_VALUE_TO_STATE.has(num)) return num;
-    }
-    return DEFAULT_MOD_FALLBACK;
-  }
+  const sanitizeModValue = (raw) =>
+    normalizeModStateValue(raw, {
+      runtime: DEFAULT_MOD_RUNTIME,
+      fallback: DEFAULT_MOD_FALLBACK,
+      booleanTrueValue: DEFAULT_MOD_TRUE_VALUE,
+    });
 
   function normalizeProjectInfo(value) {
     if (value == null) return "";

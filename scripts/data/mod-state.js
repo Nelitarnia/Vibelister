@@ -194,3 +194,47 @@ export const MOD_STATE_REQUIRED_VALUES = Object.freeze(
 );
 
 /** @typedef {typeof MOD_STATE_ID[keyof typeof MOD_STATE_ID]} ModStateValue */
+
+export function normalizeModStateValue(
+  raw,
+  { runtime = enumerateModStates(), fallback, booleanTrueValue } = {},
+) {
+  const { states, defaultState, valueToState } = runtime;
+  const fallbackValue =
+    fallback ?? defaultState?.value ?? MOD_STATE_DEFAULT_VALUE;
+  const boolTrue =
+    booleanTrueValue ??
+    (states.find((st) => st.name === MOD_STATE_BOOLEAN_TRUE_NAME) ||
+      states.find((st) => st.isActive) ||
+      defaultState)?.value ??
+      fallbackValue;
+
+  if (raw === true) return boolTrue;
+  if (raw === false || raw == null) return fallbackValue;
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return fallbackValue;
+    for (const state of states) {
+      if (state.glyphs.includes(trimmed)) return state.value;
+    }
+    const lower = trimmed.toLowerCase();
+    for (const state of states) {
+      if (state.tokens.includes(lower) || state.keywords.includes(lower))
+        return state.value;
+    }
+    const asNumber = Number(trimmed);
+    if (Number.isFinite(asNumber)) raw = Math.trunc(asNumber);
+    else return fallbackValue;
+  }
+
+  if (typeof raw === "number") {
+    const num = Math.trunc(raw);
+    const minValue = Math.min(...states.map((s) => s.value));
+    const maxValue = Math.max(...states.map((s) => s.value));
+    if (num < minValue || num > maxValue) return fallbackValue;
+    if (valueToState.has(num)) return num;
+  }
+
+  return fallbackValue;
+}
