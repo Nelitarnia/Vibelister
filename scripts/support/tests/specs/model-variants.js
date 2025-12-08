@@ -1,6 +1,7 @@
 import {
   buildInteractionsPairs,
   buildScopedInteractionsPairs,
+  collectVariantsForAction,
 } from "../../../data/variants/variants.js";
 import { MOD } from "../../../data/constants.js";
 import {
@@ -251,6 +252,46 @@ export function getModelVariantTests() {
         assert.ok(
           model.interactionsIndexCache?.[`d:${action.id}`]?.baseVersion,
           "cache entry tracked base version",
+        );
+      },
+    },
+    {
+      name: "required group with no eligible members marks variants invalid",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, groupExact } =
+          makeModelFixture();
+        const ghost = addModifier("Ghost");
+        groupExact(1, [ghost], { name: "Empty required" });
+        const action = addAction("Idle");
+        addInput("Tap");
+
+        const { variants, diagnostics } = collectVariantsForAction(action, model);
+        assert.deepStrictEqual(
+          variants,
+          [],
+          "no variants emitted when required group cannot be satisfied",
+        );
+        assert.strictEqual(
+          diagnostics.truncated,
+          true,
+          "diagnostics mark generation as truncated",
+        );
+        assert.strictEqual(
+          diagnostics.invalid,
+          true,
+          "diagnostics surface invalid generation state",
+        );
+        assert.ok(
+          diagnostics.truncatedGroups.some((g) => g.type === "group-missing"),
+          "missing required group is reported",
+        );
+
+        const stats = buildInteractionsPairs(model);
+        assert.strictEqual(stats.pairsCount, 0, "no rows generated for invalid variants");
+        assert.strictEqual(
+          stats.variantDiagnostics.invalidActions,
+          1,
+          "build summary tallies invalid actions",
         );
       },
     },
