@@ -203,7 +203,8 @@ function computeVariantsForAction(action, model, options = {}) {
     }
     choices.sort((a, b) => a.length - b.length);
 
-    const maps = buildConstraintMaps(model.modifierConstraints);
+    const maps =
+      options.constraintMaps || buildConstraintMaps(model.modifierConstraints);
     const base = requiredIds.slice();
     const seen = new Set();
 
@@ -309,6 +310,9 @@ export function buildInteractionsPairs(model, options = {}) {
   const actionVariantCache = new Map();
   const groupTruncations = [];
   const recordedGroupTruncations = new Set();
+  const constraintMaps = useGroups
+    ? buildConstraintMaps(model.modifierConstraints)
+    : null;
 
   const variantDiagnostics = {
     candidates: 0,
@@ -369,6 +373,7 @@ export function buildInteractionsPairs(model, options = {}) {
     }
     const iterator = computeVariantsForAction(action, model, {
       includeMarked: includeBypass,
+      constraintMaps,
     });
     const variants = [];
     for (const sig of iterator) {
