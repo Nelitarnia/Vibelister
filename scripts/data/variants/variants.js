@@ -266,10 +266,13 @@ function computeVariantsForAction(action, model, options = {}) {
 
 export function collectVariantsForAction(action, model, options = {}) {
   const iterator = computeVariantsForAction(action, model, options);
-  const variants = [];
-  for (const sig of iterator) variants.push(sig);
+  const variants = new Map();
+  for (const sig of iterator) {
+    const canon = canonicalSig(sig);
+    if (!variants.has(canon)) variants.set(canon, sig);
+  }
   const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
-  const uniq = Array.from(new Set(variants));
+  const uniq = Array.from(variants.values());
   uniq.sort((a, b) => compareVariantSig(a, b, model));
   return {
     variants: uniq.length ? uniq : [""],
@@ -333,20 +336,6 @@ export function buildInteractionsPairs(model, options = {}) {
     }
   }
 
-  function insertVariantSorted(list, sig) {
-    let lo = 0;
-    let hi = list.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      const cmp = compareVariantSig(sig, list[mid], model);
-      if (cmp === 0) return false;
-      if (cmp < 0) hi = mid;
-      else lo = mid + 1;
-    }
-    list.splice(lo, 0, sig);
-    return true;
-  }
-
   function getVariantsForAction(action, onVariant) {
     const cacheKey = `${includeBypass ? "b" : "d"}:${action.id}`;
     if (actionVariantCache.has(cacheKey)) {
@@ -375,18 +364,23 @@ export function buildInteractionsPairs(model, options = {}) {
       includeMarked: includeBypass,
       constraintMaps,
     });
-    const variants = [];
+    const variants = new Map();
     for (const sig of iterator) {
-      if (insertVariantSorted(variants, sig) && onVariant) onVariant(sig);
+      const canon = canonicalSig(sig);
+      if (variants.has(canon)) continue;
+      variants.set(canon, sig);
+      if (onVariant) onVariant(sig);
     }
+    const ordered = Array.from(variants.values());
+    ordered.sort((a, b) => compareVariantSig(a, b, model));
     const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
-    const truncated = diagnostics.truncated || variants.length > CAP_PER_ACTION;
+    const truncated = diagnostics.truncated || ordered.length > CAP_PER_ACTION;
     const truncatedGroups = diagnostics.truncatedGroups || [];
     recordGroupTruncations(action, truncatedGroups);
-    const entry = { variants, truncated, diagnostics, truncatedGroups };
-    variantDiagnostics.candidates += diagnostics.candidates ?? variants.length;
-    variantDiagnostics.yielded += diagnostics.yielded ?? variants.length;
-    variantDiagnostics.accepted += variants.length;
+    const entry = { variants: ordered, truncated, diagnostics, truncatedGroups };
+    variantDiagnostics.candidates += diagnostics.candidates ?? ordered.length;
+    variantDiagnostics.yielded += diagnostics.yielded ?? ordered.length;
+    variantDiagnostics.accepted += ordered.length;
     actionVariantCache.set(cacheKey, entry);
     return entry;
   }
