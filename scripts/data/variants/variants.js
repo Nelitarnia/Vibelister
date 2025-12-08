@@ -87,7 +87,7 @@ function computeVariantsForAction(action, model, options = {}) {
     }
     if (isActive && !isRequired) optionalElig.push(id);
   }
-  if (!requiredIds.length && !optionalElig.length) return [""];
+
   const groups = (model.modifierGroups || []).map((g) => ({
     id: g.id,
     name: g.name,
@@ -98,47 +98,119 @@ function computeVariantsForAction(action, model, options = {}) {
     kMax: g.kMax,
     required: !!g.required,
   }));
-  if (!groups.length) return [variantSignature(requiredIds)];
 
-  const choices = [];
-  const optionalEligSet = new Set(optionalElig);
-  for (const g of groups) {
-    const ch = groupCombos(g, {
-      optionalEligible: optionalEligSet,
-      required: requiredSet,
-    });
-    if (ch.length === 0) {
-      if (g.required) return [];
-      continue;
-    }
-    choices.push(ch);
+  let truncated = false;
+  let candidates = 0;
+  let yielded = 0;
+
+  function markTruncated() {
+    truncated = true;
   }
-  choices.sort((a, b) => a.length - b.length);
 
-  const maps = buildConstraintMaps(model.modifierConstraints);
-  const res = [];
-  const base = requiredIds.slice();
-  (function rec(i, acc) {
-    if (res.length >= CAP_PER_ACTION) return; // hard stop
-    if (i === choices.length) {
-      res.push(variantSignature(acc));
+  const iterator = (function* () {
+    if (!requiredIds.length && !optionalElig.length) {
+      candidates++;
+      yielded++;
+      yield "";
       return;
     }
-    const list = choices[i];
-    for (let idx = 0; idx < list.length; idx++) {
-      const ch = list[idx];
-      const next = acc.concat(ch);
-      if (!violatesConstraints(next, maps)) {
-        rec(i + 1, next);
-        if (res.length >= CAP_PER_ACTION) return;
+
+    if (!groups.length) {
+      candidates++;
+      yielded++;
+      yield variantSignature(requiredIds);
+      return;
+    }
+
+    const choices = [];
+    const optionalEligSet = new Set(optionalElig);
+    for (const g of groups) {
+      const ch = groupCombos(g, {
+        optionalEligible: optionalEligSet,
+        required: requiredSet,
+      });
+      if (ch.length === 0) {
+        if (g.required) return;
+        continue;
+      }
+      choices.push(ch);
+    }
+    choices.sort((a, b) => a.length - b.length);
+
+    const maps = buildConstraintMaps(model.modifierConstraints);
+    const base = requiredIds.slice();
+    const seen = new Set();
+
+    function* rec(i, acc) {
+      if (yielded >= CAP_PER_ACTION) {
+        markTruncated();
+        return;
+      }
+      if (i === choices.length) {
+        const sig = variantSignature(acc);
+        candidates++;
+        if (!seen.has(sig)) {
+          seen.add(sig);
+          yielded++;
+          yield sig;
+        }
+        return;
+      }
+      const list = choices[i];
+      for (let idx = 0; idx < list.length; idx++) {
+        const ch = list[idx];
+        const next = acc.concat(ch);
+        if (!violatesConstraints(next, maps)) {
+          yield* rec(i + 1, next);
+          if (yielded >= CAP_PER_ACTION) {
+            markTruncated();
+            return;
+          }
+        }
       }
     }
-  })(0, base);
 
-  // Deduplicate identical signatures (e.g., overlapping groups choosing the same modifier)
-  const uniq = Array.from(new Set(res));
+    let emitted = false;
+    for (const sig of rec(0, base)) {
+      emitted = true;
+      yield sig;
+      if (yielded >= CAP_PER_ACTION) {
+        markTruncated();
+        return;
+      }
+    }
+
+    if (!emitted) {
+      candidates++;
+      yielded++;
+      yield "";
+    }
+  })();
+
+  iterator.getDiagnostics = () => ({
+    candidates,
+    yielded,
+    truncated,
+  });
+
+  return iterator;
+}
+
+export function collectVariantsForAction(action, model, options = {}) {
+  const iterator = computeVariantsForAction(action, model, options);
+  const variants = [];
+  for (const sig of iterator) variants.push(sig);
+  const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
+  const uniq = Array.from(new Set(variants));
   uniq.sort((a, b) => compareVariantSig(a, b, model));
-  return uniq.length ? uniq : [""];
+  return {
+    variants: uniq.length ? uniq : [""],
+    diagnostics: {
+      candidates: diagnostics.candidates ?? uniq.length,
+      yielded: diagnostics.yielded ?? uniq.length,
+      truncated: !!diagnostics.truncated,
+    },
+  };
 }
 
 export function buildInteractionsPairs(model, options = {}) {
@@ -184,15 +256,61 @@ export function buildInteractionsPairs(model, options = {}) {
   const mode = (model.meta && model.meta.interactionsMode) || "AI";
   const actionVariantCache = new Map();
 
-  function getVariantsForAction(action) {
+  const variantDiagnostics = {
+    candidates: 0,
+    yielded: 0,
+    accepted: 0,
+  };
+
+  function insertVariantSorted(list, sig) {
+    let lo = 0;
+    let hi = list.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      const cmp = compareVariantSig(sig, list[mid], model);
+      if (cmp === 0) return false;
+      if (cmp < 0) hi = mid;
+      else lo = mid + 1;
+    }
+    list.splice(lo, 0, sig);
+    return true;
+  }
+
+  function getVariantsForAction(action, onVariant) {
     const cacheKey = `${includeBypass ? "b" : "d"}:${action.id}`;
-    if (actionVariantCache.has(cacheKey)) return actionVariantCache.get(cacheKey);
-    let variants = useG
-      ? computeVariantsForAction(action, model, { includeMarked: includeBypass })
-      : [""];
-    const truncated = variants.length > CAP_PER_ACTION;
-    if (truncated) variants = variants.slice(0, CAP_PER_ACTION);
-    const entry = { variants, truncated };
+    if (actionVariantCache.has(cacheKey)) {
+      const entry = actionVariantCache.get(cacheKey);
+      if (onVariant) {
+        for (const sig of entry.variants) onVariant(sig);
+      }
+      return entry;
+    }
+    if (!useG) {
+      const entry = {
+        variants: [""],
+        truncated: false,
+        diagnostics: { candidates: 1, yielded: 1 },
+      };
+      variantDiagnostics.candidates += 1;
+      variantDiagnostics.yielded += 1;
+      variantDiagnostics.accepted += 1;
+      actionVariantCache.set(cacheKey, entry);
+      if (onVariant) onVariant("");
+      return entry;
+    }
+    const iterator = computeVariantsForAction(action, model, {
+      includeMarked: includeBypass,
+    });
+    const variants = [];
+    for (const sig of iterator) {
+      if (insertVariantSorted(variants, sig) && onVariant) onVariant(sig);
+    }
+    const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
+    const truncated = diagnostics.truncated || variants.length > CAP_PER_ACTION;
+    const entry = { variants, truncated, diagnostics };
+    variantDiagnostics.candidates += diagnostics.candidates ?? variants.length;
+    variantDiagnostics.yielded += diagnostics.yielded ?? variants.length;
+    variantDiagnostics.accepted += variants.length;
     actionVariantCache.set(cacheKey, entry);
     return entry;
   }
@@ -205,7 +323,7 @@ export function buildInteractionsPairs(model, options = {}) {
         capped = true;
         cappedActions++;
       }
-      variantCatalog[a.id] = varsA.slice();
+      variantCatalog[a.id] = varsA;
       const group = { actionId: a.id, variants: [] };
       let groupFirstRow = null;
       let groupTotalRows = 0;
@@ -214,10 +332,8 @@ export function buildInteractionsPairs(model, options = {}) {
         let rowsAdded = 0;
         for (const b of actions) {
           const { variants: varsB } = getVariantsForAction(b);
-          if (!variantCatalog[b.id]) variantCatalog[b.id] = varsB.slice();
-          for (const sigB of varsB) {
-            rowsAdded++;
-          }
+          if (!variantCatalog[b.id]) variantCatalog[b.id] = varsB;
+          rowsAdded += varsB.length;
         }
         totalRows += rowsAdded;
         group.variants.push({
@@ -252,19 +368,14 @@ export function buildInteractionsPairs(model, options = {}) {
       pairsCount: totalRows,
       capped,
       cappedActions,
+      variantDiagnostics,
     };
   } // Default: Actions × Inputs
   for (const a of actions) {
-    const { variants: vars, truncated } = getVariantsForAction(a);
-    if (truncated) {
-      capped = true;
-      cappedActions++;
-    }
-    variantCatalog[a.id] = vars.slice();
     const group = { actionId: a.id, variants: [] };
     let groupFirstRow = null;
     let groupTotalRows = 0;
-    for (const sig of vars) {
+    const { variants: vars, truncated } = getVariantsForAction(a, (sig) => {
       const variantStart = totalRows;
       const rowsAdded = inputs.length;
       totalRows += rowsAdded;
@@ -277,7 +388,12 @@ export function buildInteractionsPairs(model, options = {}) {
         if (groupFirstRow == null) groupFirstRow = variantStart;
         groupTotalRows += rowsAdded;
       }
+    });
+    if (truncated) {
+      capped = true;
+      cappedActions++;
     }
+    variantCatalog[a.id] = vars;
     group.rowIndex = groupFirstRow;
     group.totalRows = groupTotalRows;
     indexGroups.push(group);
@@ -301,6 +417,7 @@ export function buildInteractionsPairs(model, options = {}) {
     capped,
     cappedActions,
     index: model[targetIndexField],
+    variantDiagnostics,
   };
 }
 

@@ -31,6 +31,12 @@ export function getModelVariantTests() {
         assert.strictEqual(stats.actionsCount, 2, "expected 2 actions");
         assert.strictEqual(stats.inputsCount, 3, "expected 3 inputs");
         assert.strictEqual(stats.pairsCount, 6, "2×3 combinations");
+        assert.ok(stats.variantDiagnostics, "variant diagnostics are provided");
+        assert.strictEqual(
+          stats.variantDiagnostics.accepted,
+          stats.actionsCount,
+          "each action contributes its base variant",
+        );
       },
     },
     {
@@ -218,6 +224,11 @@ export function getModelVariantTests() {
         );
         const stats = buildInteractionsPairs(model);
         assert.ok(stats.pairsCount >= 1, "cap path should still emit rows");
+        assert.ok(
+          stats.variantDiagnostics.candidates >=
+            stats.variantDiagnostics.accepted,
+          "diagnostic counters track generator yields",
+        );
       },
     },
   ];
