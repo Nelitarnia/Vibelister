@@ -88,8 +88,6 @@ export function bootstrapInteractionsAndLifecycle({
     getPaletteAPI,
     interactionsOutline,
     interactionActions,
-    commentsUI,
-    tagUI,
     upgradeModelInPlace,
     makeRow,
   } = modelApi;
@@ -119,6 +117,37 @@ export function bootstrapInteractionsAndLifecycle({
     viewsMeta;
 
   const { toggleInteractionsMode } = interactionsApi;
+
+  ({
+    sidePanelHost: state.sidePanelHost,
+    commentsUI: state.commentsUI,
+    tagManager: state.tagManager,
+    tagUI: state.tagUI,
+    interactionTools: state.interactionTools,
+  } = initSidebarControllers({
+    dom: sidebarDom,
+    SelectionCtl,
+    selection,
+    sel,
+    onSelectionChanged,
+    getCellComments,
+    setCellComment,
+    deleteCellComment,
+    getActiveView,
+    setActiveView,
+    viewDef,
+    dataArray,
+    render,
+    statusBar,
+    model,
+    ensureVisible,
+    VIEWS,
+    noteKeyForPair,
+    getInteractionsPair,
+    runModelMutation,
+    makeUndoConfig,
+    interactionActions,
+  }));
 
   const { disposeMouse, disposeDrag, disposeKeys, disposeColumnResize } = setupInputHandlers({
     dom: { cellsLayer, rowHdrs, sheet, editor, dragLine, colHdrs },
@@ -159,10 +188,10 @@ export function bootstrapInteractionsAndLifecycle({
       getCell,
       getPaletteAPI,
       interactionsOutline,
-      commentsUI,
-      tagUI,
       toggleInteractionToolsPane: () => state.toggleInteractionToolsPane?.(),
       interactionActions,
+      commentsUI: state.commentsUI,
+      tagUI: state.tagUI,
     },
     historyApi: { undo, redo },
     persistenceApi: { newProject, openFromDisk, saveToDisk },
@@ -177,37 +206,6 @@ export function bootstrapInteractionsAndLifecycle({
     statusBar,
     toggleInteractionsMode,
   });
-
-  ({
-    sidePanelHost: state.sidePanelHost,
-    commentsUI: state.commentsUI,
-    tagManager: state.tagManager,
-    tagUI: state.tagUI,
-    interactionTools: state.interactionTools,
-  } = initSidebarControllers({
-    dom: sidebarDom,
-    SelectionCtl,
-    selection,
-    sel,
-    onSelectionChanged,
-    getCellComments,
-    setCellComment,
-    deleteCellComment,
-    getActiveView,
-    setActiveView,
-    viewDef,
-    dataArray,
-    render,
-    statusBar,
-    model,
-    ensureVisible,
-    VIEWS,
-    noteKeyForPair,
-    getInteractionsPair,
-    runModelMutation,
-    makeUndoConfig,
-    interactionActions,
-  }));
 
   state.toggleInteractionToolsPane = () => state.interactionTools?.toggle?.();
 
