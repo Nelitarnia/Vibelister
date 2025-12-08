@@ -29,7 +29,7 @@ export function bootstrapGridRuntime({
 
   const { render, layout, ensureVisible, getColGeomFor } = rendererApi;
 
-  selectionApi.onSelectionChanged(() => render());
+  const disposeSelectionRender = selectionApi.onSelectionChanged(() => render());
 
   const { interactionsOutline, createDoGenerate } = setupInteractionTools({
     model: appContext.model,
@@ -76,6 +76,7 @@ export function bootstrapGridRuntime({
   return {
     rendererApi: { render, layout, ensureVisible, getColGeomFor },
     selectionListeners: { onSelectionChanged: selectionApi.onSelectionChanged },
+    selectionRenderDisposer: disposeSelectionRender,
     interactionToolsApi: { interactionsOutline, createDoGenerate },
     historyApi,
     mutationApi: {

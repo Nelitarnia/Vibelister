@@ -37,6 +37,7 @@ export function bootstrapInteractionsAndLifecycle({
     SelectionCtl,
     clearSelection,
     onSelectionChanged,
+    disposeSelectionRender,
   } = selectionApi;
 
   const {
@@ -252,12 +253,21 @@ export function bootstrapInteractionsAndLifecycle({
   const IONS = { openFromDisk, saveToDisk };
   const VariantsNS = { canonicalSig, doGenerate, compareVariantSig, sortIdsByUserOrder, modOrderMap };
 
+  let selectionRenderDisposed = false;
+
+  function disposeSelectionRenderOnce() {
+    if (selectionRenderDisposed) return;
+    disposeSelectionRender?.();
+    selectionRenderDisposed = true;
+  }
+
   function destroyApp() {
     destroyShell?.();
     disposeMouse?.();
     disposeDrag?.();
     disposeKeys?.();
     disposeColumnResize?.();
+    disposeSelectionRenderOnce();
     state.interactionTools?.destroy?.();
     state.commentsUI?.destroy?.();
     state.tagUI?.destroy?.();
