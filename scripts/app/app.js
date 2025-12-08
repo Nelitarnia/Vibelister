@@ -198,6 +198,7 @@ export function createApp() {
   const {
     rendererApi,
     selectionListeners,
+    selectionRenderDisposer,
     interactionToolsApi,
     historyApi,
     mutationApi,
@@ -397,6 +398,7 @@ export function createApp() {
       SelectionCtl,
       clearSelection,
       onSelectionChanged: selectionListeners.onSelectionChanged,
+      disposeSelectionRender: selectionRenderDisposer,
     },
     editingApi: {
       isEditing,
