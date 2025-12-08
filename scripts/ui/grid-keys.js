@@ -208,6 +208,18 @@ export function initGridKeys(deps) {
     );
   }
 
+  function getOutlineFilterInput() {
+    const panel = doc?.getElementById?.("interactionsOutline");
+    if (!panel?.querySelector) return null;
+    return panel.querySelector('[data-role="filter"]') || null;
+  }
+
+  function isOutlineFilterInput(ae) {
+    const filter = getOutlineFilterInput();
+    if (!filter) return false;
+    return !!(ae && (ae === filter || filter.contains?.(ae)));
+  }
+
   function gridIsEditing() {
     try {
       return !!isEditing();
@@ -232,13 +244,21 @@ export function initGridKeys(deps) {
   // is not busy with focused text fields, modals, palette interactions, or
   // in-grid editing (unless explicitly allowed by the caller).
   function shouldHandleGlobalShortcuts(options = {}) {
-    const { allowWhileEditing = false, activeElement = doc?.activeElement || null } = options;
+    const {
+      allowWhileEditing = false,
+      allowWhileOutlineFilter = false,
+      activeElement = doc?.activeElement || null,
+    } = options;
 
     if (doc?.querySelector?.('[aria-modal="true"]')) return false; // respect modals
     if (paletteIsOpen()) return false; // let palette capture its own shortcuts
     if (!allowWhileEditing && gridIsEditing()) return false;
     if (isColorPickerContext(activeElement)) return false;
-    if (isTypingInEditable(activeElement)) return false;
+    if (isOutlineFilterInput(activeElement)) {
+      if (!allowWhileOutlineFilter) return false;
+    } else if (isTypingInEditable(activeElement)) {
+      return false;
+    }
     return true;
   }
 
@@ -497,7 +517,11 @@ export function initGridKeys(deps) {
       const isViewCycleShortcut =
         mod && e.shiftKey && !e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft");
 
-      if (!shouldHandleGlobalShortcuts({ activeElement })) {
+      const outlineFilterFocused = isOutlineFilterInput(activeElement);
+      if (!shouldHandleGlobalShortcuts({
+        activeElement,
+        allowWhileOutlineFilter: outlineFilterFocused,
+      })) {
         if (isViewCycleShortcut && gridIsEditing()) {
           e.preventDefault();
         }
