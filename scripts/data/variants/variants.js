@@ -153,27 +153,32 @@ function computeVariantsForAction(action, model, options = {}) {
   }));
 
   let truncated = false;
+  let invalid = false;
   const truncatedGroups = [];
   let candidates = 0;
   let yielded = 0;
 
   function markTruncated(reason) {
     truncated = true;
-    if (reason?.type === "group" && reason.groupId != null) {
-      const existing = truncatedGroups.find((g) => g.groupId === reason.groupId);
+    if (reason?.invalid) invalid = true;
+    if (reason?.groupId != null || reason?.groupName) {
+      const existing = truncatedGroups.find(
+        (g) =>
+          (reason.groupId != null && g.groupId === reason.groupId) ||
+          (reason.groupName && g.groupName === reason.groupName),
+      );
       if (!existing) truncatedGroups.push(reason);
     }
   }
 
   const iterator = (function* () {
-    if (!requiredIds.length && !optionalElig.length) {
-      candidates++;
-      yielded++;
-      yield "";
-      return;
-    }
-
     if (!groups.length) {
+      if (!requiredIds.length && !optionalElig.length) {
+        candidates++;
+        yielded++;
+        yield "";
+        return;
+      }
       candidates++;
       yielded++;
       yield variantSignature(requiredIds);
@@ -188,7 +193,15 @@ function computeVariantsForAction(action, model, options = {}) {
         required: requiredSet,
       });
       if (ch.length === 0) {
-        if (g.required) return;
+        if (g.required) {
+          markTruncated({
+            type: "group-missing",
+            groupId: g.id,
+            groupName: g.name,
+            invalid: true,
+          });
+          return;
+        }
         continue;
       }
       if (ch.truncated) {
@@ -247,7 +260,7 @@ function computeVariantsForAction(action, model, options = {}) {
       }
     }
 
-    if (!emitted) {
+    if (!emitted && !invalid) {
       candidates++;
       yielded++;
       yield "";
@@ -258,6 +271,7 @@ function computeVariantsForAction(action, model, options = {}) {
     candidates,
     yielded,
     truncated,
+    invalid,
     truncatedGroups,
   });
 
@@ -274,12 +288,14 @@ export function collectVariantsForAction(action, model, options = {}) {
   const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
   const uniq = Array.from(variants.values());
   uniq.sort((a, b) => compareVariantSig(a, b, model));
+  const invalid = !!diagnostics.invalid;
   return {
-    variants: uniq.length ? uniq : [""],
+    variants: uniq.length ? uniq : invalid ? [] : [""],
     diagnostics: {
       candidates: diagnostics.candidates ?? uniq.length,
       yielded: diagnostics.yielded ?? uniq.length,
       truncated: !!diagnostics.truncated,
+      invalid,
       truncatedGroups: diagnostics.truncatedGroups || [],
     },
   };
@@ -321,6 +337,7 @@ export function buildInteractionsPairs(model, options = {}) {
     candidates: 0,
     yielded: 0,
     accepted: 0,
+    invalidActions: 0,
   };
 
   function recordGroupTruncations(action, groups = []) {
@@ -350,7 +367,8 @@ export function buildInteractionsPairs(model, options = {}) {
       const entry = {
         variants: [""],
         truncated: false,
-        diagnostics: { candidates: 1, yielded: 1 },
+        invalid: false,
+        diagnostics: { candidates: 1, yielded: 1, invalid: false },
         truncatedGroups: [],
       };
       variantDiagnostics.candidates += 1;
@@ -375,12 +393,20 @@ export function buildInteractionsPairs(model, options = {}) {
     ordered.sort((a, b) => compareVariantSig(a, b, model));
     const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
     const truncated = diagnostics.truncated || ordered.length > CAP_PER_ACTION;
+    const invalid = !!diagnostics.invalid;
     const truncatedGroups = diagnostics.truncatedGroups || [];
     recordGroupTruncations(action, truncatedGroups);
-    const entry = { variants: ordered, truncated, diagnostics, truncatedGroups };
+    const entry = {
+      variants: ordered,
+      truncated,
+      invalid,
+      diagnostics,
+      truncatedGroups,
+    };
     variantDiagnostics.candidates += diagnostics.candidates ?? ordered.length;
     variantDiagnostics.yielded += diagnostics.yielded ?? ordered.length;
     variantDiagnostics.accepted += ordered.length;
+    if (invalid) variantDiagnostics.invalidActions += 1;
     actionVariantCache.set(cacheKey, entry);
     return entry;
   }
