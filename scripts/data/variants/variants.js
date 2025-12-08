@@ -279,14 +279,22 @@ function computeVariantsForAction(action, model, options = {}) {
 }
 
 export function collectVariantsForAction(action, model, options = {}) {
+  const { normalizeSignatures = false } = options;
   const iterator = computeVariantsForAction(action, model, options);
-  const variants = new Map();
+  const variants = new Set();
   for (const sig of iterator) {
-    const canon = canonicalSig(sig);
-    if (!variants.has(canon)) variants.set(canon, sig);
+    if (!variants.has(sig)) variants.add(sig);
   }
   const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
-  const uniq = Array.from(variants.values());
+  let uniq = Array.from(variants.values());
+  if (normalizeSignatures) {
+    const normalized = new Map();
+    for (const sig of uniq) {
+      const canon = canonicalSig(sig);
+      if (!normalized.has(canon)) normalized.set(canon, sig);
+    }
+    uniq = Array.from(normalized.values());
+  }
   uniq.sort((a, b) => compareVariantSig(a, b, model));
   const invalid = !!diagnostics.invalid;
   return {
@@ -382,11 +390,10 @@ export function buildInteractionsPairs(model, options = {}) {
       includeMarked: includeBypass,
       constraintMaps,
     });
-    const variants = new Map();
+    const variants = new Set();
     for (const sig of iterator) {
-      const canon = canonicalSig(sig);
-      if (variants.has(canon)) continue;
-      variants.set(canon, sig);
+      if (variants.has(sig)) continue;
+      variants.add(sig);
       if (onVariant) onVariant(sig);
     }
     const ordered = Array.from(variants.values());
