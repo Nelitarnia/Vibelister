@@ -4,6 +4,9 @@ import { getInteractionsTests } from "./specs/interactions.js";
 import { getPersistenceTests } from "./specs/persistence.js";
 import { getSelectionTests } from "./specs/selection.js";
 import { getCleanupTests } from "./specs/cleanup.js";
+import { getVariantNormalizationTests } from "./specs/variant-normalization.js";
+import { getVariantCombinatoricsTests } from "./specs/variant-combinatorics.js";
+import { getVariantConstraintTests } from "./specs/variant-constraints.js";
 
 export function runSelfTests() {
   const log = (...args) => console.log("[tests]", ...args);
@@ -11,6 +14,9 @@ export function runSelfTests() {
   const assert = createBrowserAsserts();
   const suites = [
     { name: "Model variants", tests: getModelVariantTests() },
+    { name: "Variant normalization", tests: getVariantNormalizationTests() },
+    { name: "Variant combinatorics", tests: getVariantCombinatoricsTests() },
+    { name: "Variant constraints", tests: getVariantConstraintTests() },
     { name: "Interactions", tests: getInteractionsTests() },
     { name: "Persistence", tests: getPersistenceTests() },
     { name: "Selection", tests: getSelectionTests() },
