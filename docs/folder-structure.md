@@ -80,6 +80,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       ├── mod-state-normalize.js
 │   │       ├── variant-combinatorics.js
 │   │       ├── variant-constraints.js
+│   │       ├── interactions-index-cache.js
 │   │       └── variants.js
 │   ├── support/
 │   │   └── tests/
@@ -202,7 +203,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - Group modules that define data shapes, constants, and persistence helpers.
 - `mutation-runner.js` centralizes layout/render/derived rebuild side effects for core model mutations, exposes a transaction helper so multi-step edits fire those hooks only once, and provides a canonical snapshot utility for history features.
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
-- `variants/` now houses the modifier set pipeline: `variants.js` remains the orchestrator while `mod-state-normalize.js` interprets stored flags, `variant-combinatorics.js` builds eligibility combinations, and `variant-constraints.js` evaluates rule requirements.
+- `variants/` now houses the modifier set pipeline: `variants.js` remains the orchestrator while `mod-state-normalize.js` interprets stored flags, `variant-combinatorics.js` builds eligibility combinations, `variant-constraints.js` evaluates rule requirements, and `interactions-index-cache.js` reuses scoped indexes keyed by include-bypass and base-version metadata.
 - `deletion.js` scrubs modifier groups and constraints after rows are removed so downstream consumers never see dangling references.
 - `mod-state.js` centralizes the modifier-state descriptor (IDs, glyphs, parsing tokens) so column kinds, palette UI, persistence, and tests reuse the same definitions.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.

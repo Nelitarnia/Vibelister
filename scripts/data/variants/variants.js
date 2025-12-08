@@ -7,6 +7,11 @@ import {
 } from "./mod-state-normalize.js";
 import { groupCombos } from "./variant-combinatorics.js";
 import { buildConstraintMaps, violatesConstraints } from "./variant-constraints.js";
+import {
+  makeInteractionsIndexCacheContext,
+  readInteractionsIndexCache,
+  writeInteractionsIndexCache,
+} from "./interactions-index-cache.js";
 
 // helpers for ordering
 export function modOrderMap(model) {
@@ -45,6 +50,54 @@ function variantSignature(ids) {
     .filter(Number.isFinite)
     .sort((x, y) => x - y);
   return a.join("+");
+}
+
+export function normalizeActionsAndInputs(model, options = {}) {
+  const includeBypass = !!options.includeBypass;
+  const targetIndexField = options.targetIndexField || "interactionsIndex";
+  const isBaseIndex = !includeBypass && targetIndexField === "interactionsIndex";
+  const currentBaseVersion = Number(model?.interactionsIndexVersion) || 0;
+  const baseVersion = isBaseIndex ? currentBaseVersion + 1 : currentBaseVersion;
+  const actionSet = options.actionIds
+    ? new Set(
+        options.actionIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id)),
+      )
+    : null;
+  const actionsSource = Array.isArray(options.actions)
+    ? options.actions
+    : model.actions || [];
+  const actions = actionsSource.filter((a) => {
+    if (!a || !(a.name || "").trim().length) return false;
+    if (actionSet && !actionSet.has(a.id)) return false;
+    return true;
+  });
+  const inputs = (model.inputs || []).filter(
+    (i) => i && (i.name || "").trim().length,
+  );
+  const hasActionLevelRequirements = actions.some((action) => {
+    const set = action?.modSet;
+    if (!set || typeof set !== "object") return false;
+    for (const value of Object.values(set)) {
+      if (modStateIsRequired(value)) return true;
+    }
+    return false;
+  });
+  const useG =
+    (model.modifierGroups && model.modifierGroups.length > 0) ||
+    hasActionLevelRequirements;
+
+  return {
+    actions,
+    inputs,
+    includeBypass,
+    targetIndexField,
+    isBaseIndex,
+    baseVersion,
+    currentBaseVersion,
+    useGroups: useG,
+  };
 }
 
 // group modes
@@ -213,41 +266,25 @@ export function collectVariantsForAction(action, model, options = {}) {
   };
 }
 
+/**
+ * Builds the interactions index used to power action/input pair lookups.
+ *
+ * `variantCatalog` maps each action id to a sorted array of variant signatures.
+ * `indexGroups` contains one entry per action with the row offsets for every
+ * variant, shaped as `{ actionId, variants: [{ variantSig, rowIndex, rowCount
+ * }], rowIndex, totalRows }` where `rowIndex` is the starting row in the final
+ * flattened pairs grid.
+ */
 export function buildInteractionsPairs(model, options = {}) {
-  const includeBypass = !!options.includeBypass;
-  const targetIndexField = options.targetIndexField || "interactionsIndex";
-  const isBaseIndex = !includeBypass && targetIndexField === "interactionsIndex";
-  const currentBaseVersion = Number(model?.interactionsIndexVersion) || 0;
-  const baseVersion = isBaseIndex ? currentBaseVersion + 1 : currentBaseVersion;
-  const actionSet = options.actionIds
-    ? new Set(
-        options.actionIds
-          .map((id) => Number(id))
-          .filter((id) => Number.isFinite(id)),
-      )
-    : null;
-  const actionsSource = Array.isArray(options.actions)
-    ? options.actions
-    : model.actions || [];
-  const actions = actionsSource.filter((a) => {
-    if (!a || !(a.name || "").trim().length) return false;
-    if (actionSet && !actionSet.has(a.id)) return false;
-    return true;
-  });
-  const inputs = (model.inputs || []).filter(
-    (i) => i && (i.name || "").trim().length,
-  );
-  const hasActionLevelRequirements = actions.some((action) => {
-    const set = action?.modSet;
-    if (!set || typeof set !== "object") return false;
-    for (const value of Object.values(set)) {
-      if (modStateIsRequired(value)) return true;
-    }
-    return false;
-  });
-  const useG =
-    (model.modifierGroups && model.modifierGroups.length > 0) ||
-    hasActionLevelRequirements;
+  const {
+    actions,
+    inputs,
+    includeBypass,
+    targetIndexField,
+    isBaseIndex,
+    baseVersion,
+    useGroups,
+  } = normalizeActionsAndInputs(model, options);
   const indexGroups = [];
   const variantCatalog = {};
   let totalRows = 0;
@@ -285,7 +322,7 @@ export function buildInteractionsPairs(model, options = {}) {
       }
       return entry;
     }
-    if (!useG) {
+    if (!useGroups) {
       const entry = {
         variants: [""],
         truncated: false,
@@ -422,8 +459,6 @@ export function buildInteractionsPairs(model, options = {}) {
 }
 
 export function buildScopedInteractionsPairs(model, actionIds, options = {}) {
-  const includeBypass = !!options.includeBypass;
-  const baseVersion = Number(model?.interactionsIndexVersion) || 0;
   const normalizedIds = Array.isArray(actionIds)
     ? Array.from(
         new Set(
@@ -434,29 +469,24 @@ export function buildScopedInteractionsPairs(model, actionIds, options = {}) {
       )
         .sort((a, b) => a - b)
     : [];
-  const targetIndexField = options.targetIndexField || "interactionsIndex";
-  const cacheField = options.cacheField || `${targetIndexField}Cache`;
-  const cacheKey = `${includeBypass ? "b" : "d"}:${
-    normalizedIds.length ? normalizedIds.join(",") : "all"
-  }`;
-  const cache = (() => {
-    const existing = model[cacheField];
-    if (existing && typeof existing === "object") return existing;
-    const created = {};
-    model[cacheField] = created;
-    return created;
-  })();
-  if (cache[cacheKey] && cache[cacheKey].baseVersion === baseVersion) {
-    return { index: cache[cacheKey].index, summary: cache[cacheKey].summary };
-  }
-  const summary = buildInteractionsPairs(model, {
+  const normalization = normalizeActionsAndInputs(model, {
     ...options,
-    includeBypass,
-    targetIndexField,
     actionIds: normalizedIds,
   });
-  const index = model[targetIndexField];
-  if (index)
-    cache[cacheKey] = { index, summary, baseVersion: index.baseVersion ?? baseVersion };
-  return { index, summary };
+  const cacheContext = makeInteractionsIndexCacheContext(model, normalizedIds, {
+    ...options,
+    includeBypass: normalization.includeBypass,
+    targetIndexField: normalization.targetIndexField,
+    baseVersion: normalization.currentBaseVersion,
+  });
+  const cached = readInteractionsIndexCache(cacheContext);
+  if (cached) return cached;
+  const summary = buildInteractionsPairs(model, {
+    ...options,
+    includeBypass: normalization.includeBypass,
+    targetIndexField: normalization.targetIndexField,
+    actionIds: normalizedIds,
+  });
+  const index = model[normalization.targetIndexField];
+  return writeInteractionsIndexCache(cacheContext, index, summary);
 }
