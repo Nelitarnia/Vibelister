@@ -2,7 +2,11 @@
 // Minimal, dependency-light; safe to iterate as we add kinds.
 
 import { getEntityColorsFromRow } from "./color-utils.js";
-import { enumerateModStates, MOD_STATE_BOOLEAN_TRUE_NAME } from "./mod-state.js";
+import {
+  enumerateModStates,
+  MOD_STATE_BOOLEAN_TRUE_NAME,
+  normalizeModStateValue,
+} from "./mod-state.js";
 import { getInteractionsPair } from "../app/interactions-data.js";
 
 export const STRUCTURED_SCHEMA_VERSION = 1;
@@ -90,7 +94,7 @@ function parseModColumnId(col) {
 
 function normalizeModState(raw, mod, current, runtime) {
   const rt = runtime || getModRuntime(mod);
-  const { states, defaultState, cycleStates, valueToState } = rt;
+  const { states, defaultState, cycleStates } = rt;
   const fallback = defaultState?.value ?? 0;
   const boolTrueState =
     states.find((st) => st.name === MOD_STATE_BOOLEAN_TRUE_NAME) ||
@@ -108,31 +112,11 @@ function normalizeModState(raw, mod, current, runtime) {
     return fallback;
   }
 
-  if (typeof raw === "boolean") {
-    return raw ? boolTrueState.value : fallback;
-  }
-
-  if (typeof raw === "number") {
-    const num = Number(raw);
-    if (Number.isFinite(num) && valueToState.has(num)) return num;
-    return fallback;
-  }
-
-  if (typeof raw === "string") {
-    const trimmed = raw.trim();
-    if (!trimmed) return fallback;
-    for (const st of states) {
-      if (st.glyphs.includes(trimmed)) return st.value;
-    }
-    const lower = trimmed.toLowerCase();
-    for (const st of states) {
-      if (st.tokens.includes(lower)) return st.value;
-    }
-    const num = Number(trimmed);
-    if (Number.isFinite(num) && valueToState.has(num)) return num;
-  }
-
-  return fallback;
+  return normalizeModStateValue(raw, {
+    runtime: rt,
+    fallback,
+    booleanTrueValue: boolTrueState?.value,
+  });
 }
 
 export const ColumnKinds = {

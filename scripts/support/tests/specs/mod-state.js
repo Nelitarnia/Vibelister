@@ -4,13 +4,55 @@ import {
   clearCellForKind,
 } from "../../../data/column-kinds.js";
 import { MOD } from "../../../data/constants.js";
-import { enumerateModStates } from "../../../data/mod-state.js";
+import {
+  enumerateModStates,
+  normalizeModStateValue,
+} from "../../../data/mod-state.js";
 import { canonicalizePayload } from "../../../app/clipboard-codec.js";
 import { createGridCommands } from "../../../app/grid-commands.js";
 import { initPalette } from "../../../ui/palette.js";
 
 export function getModStateTests() {
   return [
+    {
+      name: "normalizeModStateValue maps glyphs, tokens, and bounds",
+      run(assert) {
+        const runtime = enumerateModStates(MOD);
+        const fallback = runtime.defaultState.value;
+        const normalize = (value) =>
+          normalizeModStateValue(value, { runtime, fallback });
+
+        assert.strictEqual(normalize("✖"), MOD.OFF, "glyph maps to OFF");
+        assert.strictEqual(
+          normalize("optional"),
+          MOD.BYPASS,
+          "token maps to BYPASS",
+        );
+        assert.strictEqual(normalize("ℜ"), MOD.REQUIRES, "glyph maps to requires");
+        assert.strictEqual(normalize(true), MOD.ON, "boolean true maps to ON");
+        assert.strictEqual(
+          normalize(false),
+          fallback,
+          "boolean false returns fallback",
+        );
+        assert.strictEqual(normalize(null), fallback, "null returns fallback");
+        assert.strictEqual(
+          normalize(2.9),
+          MOD.BYPASS,
+          "numeric values truncate within range",
+        );
+        assert.strictEqual(
+          normalize(99),
+          fallback,
+          "out of range numbers return fallback",
+        );
+        assert.strictEqual(
+          normalize("not-a-mod"),
+          fallback,
+          "invalid strings return fallback",
+        );
+      },
+    },
     {
       name: "glyph inputs map to modifier states",
       run(assert) {
