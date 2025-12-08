@@ -254,6 +254,8 @@ export function bootstrapInteractionsAndLifecycle({
   const VariantsNS = { canonicalSig, doGenerate, compareVariantSig, sortIdsByUserOrder, modOrderMap };
 
   let selectionRenderDisposed = false;
+  let resizeObserver;
+  let isDestroyed = false;
 
   function disposeSelectionRenderOnce() {
     if (selectionRenderDisposed) return;
@@ -262,6 +264,9 @@ export function bootstrapInteractionsAndLifecycle({
   }
 
   function destroyApp() {
+    isDestroyed = true;
+    resizeObserver?.disconnect();
+    resizeObserver = null;
     destroyShell?.();
     disposeMouse?.();
     disposeDrag?.();
@@ -277,11 +282,16 @@ export function bootstrapInteractionsAndLifecycle({
   }
 
   function initApp() {
+    isDestroyed = false;
     initShell?.();
     ensureSeedRows();
     layout();
     render();
-    new ResizeObserver(() => render()).observe(sheet);
+    resizeObserver = new ResizeObserver(() => {
+      if (isDestroyed) return;
+      render();
+    });
+    resizeObserver.observe(sheet);
     setActiveView("actions");
     updateProjectNameWidget();
     if (location.hash.includes("test")) runSelfTests();
