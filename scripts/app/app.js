@@ -214,7 +214,6 @@ export function createApp() {
       sel,
       onSelectionChanged,
       getActiveView: getActiveViewState,
-      disposeSelectionRender: selectionRenderDisposer,
     },
     gridCellsApi: {
       getCell,
@@ -399,6 +398,7 @@ export function createApp() {
       SelectionCtl,
       clearSelection,
       onSelectionChanged: selectionListeners.onSelectionChanged,
+      disposeSelectionRender: selectionRenderDisposer,
     },
     editingApi: {
       isEditing,
