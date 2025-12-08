@@ -77,6 +77,9 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── rows.js
 │   │   ├── utils.js
 │   │   └── variants/
+│   │       ├── mod-state-normalize.js
+│   │       ├── variant-combinatorics.js
+│   │       ├── variant-constraints.js
 │   │       └── variants.js
 │   ├── support/
 │   │   └── tests/
@@ -199,7 +202,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - Group modules that define data shapes, constants, and persistence helpers.
 - `mutation-runner.js` centralizes layout/render/derived rebuild side effects for core model mutations, exposes a transaction helper so multi-step edits fire those hooks only once, and provides a canonical snapshot utility for history features.
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
-- `variants.js` merits its own subfolder (`variants/`) because it describes sizable domain data; additional variant files can join it without clutter.
+- `variants/` now houses the modifier set pipeline: `variants.js` remains the orchestrator while `mod-state-normalize.js` interprets stored flags, `variant-combinatorics.js` builds eligibility combinations, and `variant-constraints.js` evaluates rule requirements.
 - `deletion.js` scrubs modifier groups and constraints after rows are removed so downstream consumers never see dangling references.
 - `mod-state.js` centralizes the modifier-state descriptor (IDs, glyphs, parsing tokens) so column kinds, palette UI, persistence, and tests reuse the same definitions.
 - Keep utility helpers (`utils.js`) and structural descriptors (`column-kinds.js`, `constants.js`, `fs.js`) nearby.
@@ -231,6 +234,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
 - `specs/cleanup.js` seeds fixture models with stale notes/comments and verifies the cleanup controller only prunes unreachable entries.
 - `specs/inference-utils.js` covers normalization, keying, and cloning behaviors so inference helpers stay stable across refactors.
+- `specs/variant-normalization.js`, `specs/variant-combinatorics.js`, and `specs/variant-constraints.js` isolate tests for the mod-state normalization, combination builder, and constraint evaluation helpers used by the variant generator.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.
 
 ### `tests/`
