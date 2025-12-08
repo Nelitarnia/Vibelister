@@ -40,6 +40,133 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "Ctrl+Shift+O toggles outline when filter is focused",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex((entry) => entry.cb === cb && entry.capture === !!capture);
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const filterInput = {
+          tagName: "INPUT",
+          contains(node) {
+            return node === this;
+          },
+        };
+        const outlinePanel = {
+          querySelector(selector) {
+            if (selector === '[data-role="filter"]') return filterInput;
+            return null;
+          },
+        };
+        const documentStub = {
+          querySelector: () => null,
+          getElementById(id) {
+            if (id === "interactionsOutline") return outlinePanel;
+            return { getAttribute: () => "false", contains: () => false };
+          },
+          activeElement: filterInput,
+        };
+        const navigatorStub = { platform: "Test" };
+
+        const selection = {
+          rows: new Set(),
+          cols: new Set(),
+          colsAll: false,
+          horizontalMode: false,
+        };
+        const sel = { r: 0, c: 0 };
+
+        let toggles = 0;
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "interactions",
+          selection,
+          sel,
+          editor: { style: { display: "none" } },
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          moveSelectionForTab: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [] }),
+          getRowCount: () => 0,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => null,
+          toggleInteractionsOutline: () => {
+            toggles += 1;
+          },
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const shortcutListener = keyListeners.find((entry) => !entry.capture);
+          assert.ok(shortcutListener, "shortcut listener should be registered");
+
+          const event = {
+            key: "O",
+            keyLower: "o",
+            ctrlKey: true,
+            metaKey: false,
+            shiftKey: true,
+            altKey: false,
+            prevented: false,
+            preventDefault() {
+              this.prevented = true;
+            },
+          };
+
+          shortcutListener.cb(event);
+
+          assert.strictEqual(toggles, 1, "Ctrl+Shift+O should toggle outline from filter");
+          assert.strictEqual(event.prevented, true, "toggle shortcut should prevent default");
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
       name: "computeDestinationIndices falls back when selection is small",
       run(assert) {
         const selection = new Set([5]);
