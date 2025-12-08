@@ -3,6 +3,7 @@ import { setupInteractionTools } from "./setup-interaction-tools.js";
 import { setupHistory } from "./setup-history.js";
 import { setupGridCommands } from "./setup-grid-commands.js";
 import { setupDialogs } from "./setup-dialogs.js";
+import { scheduleRender } from "./schedule-render.js";
 
 export function bootstrapGridRuntime({
   appContext,
@@ -29,7 +30,8 @@ export function bootstrapGridRuntime({
 
   const { render, layout, ensureVisible, getColGeomFor } = rendererApi;
 
-  const disposeSelectionRender = selectionApi.onSelectionChanged(() => render());
+  const { schedule, cancel } = scheduleRender(render);
+  const disposeSelectionRender = selectionApi.onSelectionChanged(schedule);
 
   const { interactionsOutline, createDoGenerate } = setupInteractionTools({
     model: appContext.model,
@@ -76,7 +78,10 @@ export function bootstrapGridRuntime({
   return {
     rendererApi: { render, layout, ensureVisible, getColGeomFor },
     selectionListeners: { onSelectionChanged: selectionApi.onSelectionChanged },
-    selectionRenderDisposer: disposeSelectionRender,
+    selectionRenderDisposer: () => {
+      cancel();
+      disposeSelectionRender?.();
+    },
     interactionToolsApi: { interactionsOutline, createDoGenerate },
     historyApi,
     mutationApi: {

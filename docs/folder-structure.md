@@ -58,6 +58,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── setup-persistence.js
 │   │   ├── project-info-controller.js
 │   │   ├── selection.js
+│   │   ├── schedule-render.js
 │   │   ├── settings-controller.js
 │   │   ├── sidebar-bootstrap.js
 │   │   ├── tabs-bootstrap.js
