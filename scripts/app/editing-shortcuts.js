@@ -376,5 +376,6 @@ export function createEditingController({
     getCellRect,
     isEditing,
     dispose,
+    sel,
   };
 }
