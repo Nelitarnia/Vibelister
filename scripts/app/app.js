@@ -327,14 +327,16 @@ export function createApp() {
   const { runSelfTests } = diagnosticsApi;
   
   // Edit
-  
-  sheet.addEventListener("scroll", () => {
+
+  const handleScroll = () => {
     // Persist scroll per view, then render on next frame
     updateScrollSnapshot(sheet.scrollTop | 0);
     window.requestAnimationFrame(() => {
       render();
     });
-  });
+  };
+
+  sheet.addEventListener("scroll", handleScroll);
   
   // Tabs & views
   ({ setActiveView, cycleView, getActiveView, toggleInteractionsMode } =
@@ -472,6 +474,7 @@ export function createApp() {
       rebuildActionColumnsFromModifiers,
     },
     interactionsApi: { toggleInteractionsMode },
+    handleScroll,
     destroyEditingAndPersistence,
   });
 }
