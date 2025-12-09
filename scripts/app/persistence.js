@@ -27,6 +27,7 @@ import {
   normalizeInteractionConfidence,
   normalizeInteractionSource,
 } from "./interactions.js";
+import { createDefaultMeta } from "./model-init.js";
 
 export function createPersistenceController({
   model,
@@ -180,8 +181,8 @@ export function createPersistenceController({
 
   function upgradeModelInPlace(o) {
     clearBypassIndexArtifacts(o);
-    if (!o.meta)
-      o.meta = { schema: 0, projectName: "", interactionsMode: "AI", columnWidths: {} };
+    const defaultMeta = createDefaultMeta();
+    if (!o.meta) o.meta = createDefaultMeta();
     if (typeof o.meta.projectName !== "string") o.meta.projectName = "";
     o.meta.projectInfo = normalizeProjectInfo(o.meta.projectInfo);
     if (
@@ -229,6 +230,8 @@ export function createPersistenceController({
       if (columns) normalized.columnKeys = columns;
       const colors = normalizeList(cf.colorIds || cf.colors || cf.colorId || cf.color);
       if (colors) normalized.colorIds = colors;
+      if (!normalized.viewKey && defaultMeta.commentFilter?.viewKey)
+        normalized.viewKey = defaultMeta.commentFilter.viewKey;
       o.meta.commentFilter = normalized;
     }
     o.meta.commentColors = normalizeCommentColorPalette(o.meta.commentColors);
@@ -292,15 +295,7 @@ export function createPersistenceController({
   function newProject() {
     clearBypassIndexArtifacts(model);
     Object.assign(model, {
-      meta: {
-        schema: SCHEMA_VERSION,
-        projectName: "",
-        projectInfo: "",
-        interactionsMode: "AI",
-        columnWidths: {},
-        commentFilter: {},
-        commentColors: normalizeCommentColorPalette(),
-      },
+      meta: createDefaultMeta(),
       actions: [],
       inputs: [],
       modifiers: [],
