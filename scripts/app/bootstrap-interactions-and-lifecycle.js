@@ -28,6 +28,7 @@ export function bootstrapInteractionsAndLifecycle({
     wireMenus,
     initShell,
     destroyShell,
+    handleScroll,
   } = shellApi;
 
   const {
@@ -254,6 +255,7 @@ export function bootstrapInteractionsAndLifecycle({
   let selectionRenderDisposed = false;
   let resizeObserver;
   let isDestroyed = false;
+  let scrollListenerRemoved = false;
 
   function disposeSelectionRenderOnce() {
     if (selectionRenderDisposed) return;
@@ -263,6 +265,10 @@ export function bootstrapInteractionsAndLifecycle({
 
   function destroyApp() {
     isDestroyed = true;
+    if (!scrollListenerRemoved) {
+      sheet?.removeEventListener("scroll", handleScroll);
+      scrollListenerRemoved = true;
+    }
     resizeObserver?.disconnect();
     resizeObserver = null;
     destroyShell?.();
