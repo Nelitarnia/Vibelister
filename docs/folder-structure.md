@@ -31,10 +31,8 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── grid-commands.js
 │   │   ├── grid-cells.js
 │   │   ├── grid-renderer.js
+│   │   ├── grid-runtime-coordinator.js
 │   │   ├── history.js
-│   │   ├── interaction-bulk-actions.js
-│   │   ├── interactions.js
-│   │   ├── interactions-data.js
 │   │   ├── inference-application.js
 │   │   ├── inference-controller.js
 │   │   ├── inference-heuristics.js
@@ -42,6 +40,11 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── inference-targets.js
 │   │   ├── inference-profiles.js
 │   │   ├── inference-utils.js
+│   │   ├── interaction-bulk-actions.js
+│   │   ├── interaction-maintenance.js
+│   │   ├── interaction-tags.js
+│   │   ├── interactions-data.js
+│   │   ├── interactions.js
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
 │   │   ├── menus-bootstrap.js
@@ -60,6 +63,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── selection.js
 │   │   ├── schedule-render.js
 │   │   ├── settings-controller.js
+│   │   ├── shell-coordinator.js
 │   │   ├── sidebar-bootstrap.js
 │   │   ├── tabs-bootstrap.js
 │   │   ├── types.js
@@ -89,6 +93,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   └── tests/
 │   │       ├── specs/
 │   │       │   ├── app-harness.js
+│   │       │   ├── app-coordinators.js
 │   │       │   ├── app-init.js
 │   │       │   ├── assertions.js
 │   │       │   ├── cleanup.js
@@ -178,6 +183,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
 - `grid-cells.js` encapsulates cell lookups, mutations, and structured clipboard helpers behind a dependency-injected factory so the grid can read/write values and comments without coupling to global state.
 - `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
+- `grid-runtime-coordinator.js` composes grid cell helpers, modifiers metadata, selection APIs, and runtime wiring so the entry point can bootstrap the grid with one injected factory.
 - `comments.js` exposes undo-friendly helpers for reading and mutating the normalized comment store so the rest of the app can work with stable row IDs and column keys.
 - `comment-events.js` centralizes the DOM event dispatch for comment mutations so grid commands and other controllers can signal UI refreshes without duplicating `CustomEvent` wiring.
 - `cleanup-controller.js` rebuilds variant catalogs, analyzes orphaned notes/comments, and coordinates the cleanup dialog so destructive operations participate in the shared undo history.
@@ -189,6 +195,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `inference-profiles.js` maintains per-modifier and per-input trend profiles, decaying counts, snapshotting them for heuristic runs, and exposing a read-only view that leans suggestions toward recently observed "no change" patterns.
 - `inference-utils.js` centralizes the shared normalization, extraction, keying, and cloning helpers consumed by heuristics, profiles, and inference-aware interactions.
 - `interaction-bulk-actions.js` coordinates toolbar and sidebar bulk actions for interaction cells, applying Uncertain toggles, accepting inferred metadata, and clearing inference flags with undo/status updates.
+- `interaction-maintenance.js` rebuilds interaction pairs and prunes orphaned notes to valid signatures so inference and grid routines consume a consistent catalog.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
 - `interaction-tags.js` provides undo-friendly helpers for renaming and deleting interaction tags across the notes map so UI controllers can reuse consistent mutation wiring.
 - `tag-events.js` centralizes the DOM event dispatch for interaction tag mutations so sidebar controllers can refresh in response to grid or bulk edits without duplicating `CustomEvent` wiring.
@@ -198,6 +205,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `persistence.js` encapsulates project lifecycle actions (new/open/save), migrations, and seeding so `app.js` wires those flows without holding their implementation details.
 - `project-info-controller.js` manages the modal lifecycle and persistence handshake for project notes so the bootstrap sequence only needs to expose the entry point to menus.
 - `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
+- `shell-coordinator.js` wraps shell bootstrap wiring (status, IDs) so the app entry point can inject dependencies without coupling to the implementation details.
 - `user-settings.js` defines the persisted defaults, schema metadata, and sanitizers for color preferences so both the controller and UI can trust incoming payloads.
 - `view-state.js` owns per-view selection snapshots and cached column layouts so `app.js` only orchestrates switching and rendering logic.
 - `view-controller.js` centralizes view switching, tab events, and layout updates so the bootstrap file can delegate cross-panel coordination.
@@ -236,6 +244,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - Offer a home for cross-cutting helpers that are not part of the runtime app bundle, such as lightweight test harnesses.
 - The `tests/` subtree now keeps reusable spec modules (`specs/`) separate from browser runners (`tests.js`, `tests-ui.js`), ensuring Node and in-app harnesses share the same assertions and fixtures.
 - `specs/app-harness.js` builds a stub DOM, Id map, and controller set so bootstrap and view wiring can be exercised without the browser.
+- `specs/app-coordinators.js` covers the shell, grid runtime, and interaction maintenance coordinators so their injected contracts stay stable.
 - `specs/app-init.js` hosts contract tests that assert the staged bootstrap surface keeps exposing render/history/view APIs and tab callbacks.
 - `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
 - `specs/cleanup.js` seeds fixture models with stale notes/comments and verifies the cleanup controller only prunes unreachable entries.
