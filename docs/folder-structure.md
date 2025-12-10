@@ -14,7 +14,9 @@ This document outlines a maintainable directory layout tailored to the current c
 │   └── style.css
 ├── scripts/
 │   ├── dev-server.js
+│   ├── build-entry.js
 │   ├── app/
+│   │   ├── main.js
 │   │   ├── app.js
 │   │   ├── app-root.js
 │   │   ├── bootstrap-editing-and-persistence.js
@@ -164,10 +166,12 @@ This document outlines a maintainable directory layout tailored to the current c
 - Subdivide by responsibility, keeping related modules close together.
 
 - `dev-server.js` spins up the lightweight Node-based static server used by `npm start` to serve the `public/` directory during development.
+- `build-entry.js` bundles and minifies the browser entry module with esbuild so production builds can consume a single optimized asset.
 
 #### `scripts/app/`
 
 - House entry points and cross-cutting application logic.
+- `main.js` is the top-level browser entry imported by `public/index.html`; it loads `createApp` from the main bootstrap and invokes `init()` without exporting additional symbols.
 - `app.js` stays the primary bootstrap file, while `interactions.js`, `outcomes.js`, `selection.js`, `types.js`, and `views.js` remain close by.
 - `dom-elements.js` centralizes DOM lookups so bootstrap wiring can share a consistent set of handles.
 - `menus-bootstrap.js`, `sidebar-bootstrap.js`, and `tabs-bootstrap.js` resolve only the DOM nodes required by menus, sidebars, and tabs so the entry file can pass focused handles into their controllers.

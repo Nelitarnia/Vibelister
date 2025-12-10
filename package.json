@@ -6,7 +6,11 @@
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "start": "node scripts/dev-server.js",
+    "build": "node scripts/build-entry.js",
     "test": "node --test",
     "test:watch": "node --test --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5"
   }
 }
