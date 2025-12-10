@@ -18,6 +18,7 @@ import { getColumnKindTests } from "../scripts/support/tests/specs/column-kinds.
 import { getCommentTests } from "../scripts/support/tests/specs/comments.js";
 import { getClipboardTests } from "../scripts/support/tests/specs/clipboard.js";
 import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
+import { getAppCoordinatorTests } from "../scripts/support/tests/specs/app-coordinators.js";
 import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
 import { getInferenceControllerTests } from "../scripts/support/tests/specs/inference-controller.js";
 import { getAppInitTests } from "../scripts/support/tests/specs/app-init.js";
@@ -117,4 +118,8 @@ for (const spec of getClipboardTests()) {
 
 for (const spec of getCleanupTests()) {
   test(`Cleanup › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getAppCoordinatorTests()) {
+  test(`App coordinators › ${spec.name}`, () => spec.run(sharedAssert));
 }
