@@ -1,20 +1,10 @@
 // App.js - the core of Vibelister, containing imports, wiring and rendering.
 
 // Imports
-import {
-  isCanonicalStructuredPayload,
-  makeGetStructuredCell,
-  makeApplyStructuredCell,
-} from "./clipboard-codec.js";
-import { createGridCells } from "./grid-cells.js";
-import {
-  getCellForKind,
-  setCellForKind,
-  beginEditForKind,
-  applyStructuredForKind,
-  getStructuredForKind,
-} from "../data/column-kinds.js";
-import { MOD_STATE_ID } from "../data/mod-state.js";
+import { createAppContext } from "./app-root.js";
+import { createViewController } from "./view-controller.js";
+import { bootstrapEditingAndPersistence } from "./bootstrap-editing-and-persistence.js";
+import { bootstrapInteractionsAndLifecycle } from "./bootstrap-interactions-and-lifecycle.js";
 import {
   VIEWS,
   rebuildActionColumnsFromModifiers,
@@ -42,26 +32,16 @@ import {
   getInteractionsPair,
   getInteractionsRowCount,
 } from "./interactions.js";
-import { setCommentInactive } from "./comments.js";
+import { beginEditForKind } from "../data/column-kinds.js";
 import { emitCommentChangeEvent } from "./comment-events.js";
-import { ROW_HEIGHT, HEADER_HEIGHT, Ids } from "../data/constants.js";
+import { ROW_HEIGHT, HEADER_HEIGHT } from "../data/constants.js";
 import { makeRow } from "../data/rows.js";
-import {
-  clamp,
-  parsePhasesSpec,
-  visibleCols,
-  visibleRows,
-  colOffsets,
-  colWidths,
-} from "../data/utils.js";
-import { bootstrapEditingAndPersistence } from "./bootstrap-editing-and-persistence.js";
+import { clamp, visibleCols, visibleRows, colOffsets, colWidths } from "../data/utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import { resetInferenceProfiles } from "./inference-profiles.js";
-import { createAppContext } from "./app-root.js";
-import { createViewController } from "./view-controller.js";
-import { bootstrapGridRuntime } from "./bootstrap-grid-runtime.js";
-import { bootstrapShell } from "./bootstrap-shell.js";
-import { bootstrapInteractionsAndLifecycle } from "./bootstrap-interactions-and-lifecycle.js";
+import { createInteractionMaintenance } from "./interaction-maintenance.js";
+import { createShellCoordinator } from "./shell-coordinator.js";
+import { createGridRuntimeCoordinator } from "./grid-runtime-coordinator.js";
 
 export function createApp() {
   // Core model + views
@@ -71,11 +51,8 @@ export function createApp() {
   let cycleView = null;
   let getActiveView = null;
   let toggleInteractionsMode = null;
-  let runModelMutationRef = null;
   let interactionsOutline = null;
   let createDoGenerate = null;
-
-  const callSetActiveView = (...args) => setActiveView?.(...args);
 
   const {
     dom: { core: coreDom, sidebar: sidebarDom, tabs: tabsDom, projectNameEl },
@@ -85,117 +62,23 @@ export function createApp() {
     openSettingsDialog,
     wireMenus,
     lifecycle: { init: initShell, destroy: destroyShell },
-  } = bootstrapShell({ appContext, ids: Ids, statusConfig: { historyLimit: 100 } });
+  } = createShellCoordinator({ appContext });
 
   const getActiveViewState = appContext.getActiveView;
 
-  const {
-    sheet,
-    cellsLayer,
-    spacer,
-    colHdrs,
-    rowHdrs,
-    editor,
-    dragLine,
-  } = coreDom;
-  
-  const {
-    saveCurrentViewState,
-    restoreViewState,
-    resetAllViewState,
-    viewDef,
-    invalidateViewDef,
-    rebuildInteractionPhaseColumns,
-    kindCtx,
-    dataArray,
-    getRowCount,
-    updateSelectionSnapshot,
-    updateScrollSnapshot,
-  } = viewState;
-
-  const {
-    isModColumn,
-    modIdFromKey,
-    getCell,
-    setCell,
-    getStructuredCell,
-    applyStructuredCell,
-    cellValueToPlainText,
-  } = createGridCells({
-    viewDef,
-    dataArray,
-    kindCtx,
-    state,
+  const { rebuildInteractionsInPlace, pruneNotesToValidPairs } = createInteractionMaintenance({
     model,
-    runModelMutation: (...args) => runModelMutationRef?.(...args),
-    setCellForKind,
-    getCellForKind,
-    makeRow,
-    parsePhasesSpec,
-    setCommentInactive,
-    emitCommentChangeEvent,
-    rebuildInteractionsInPlace,
-    getStructuredForKind,
-    applyStructuredForKind,
-    getActiveView: getActiveViewState,
-    makeGetStructuredCell,
-    makeApplyStructuredCell,
-    isCanonicalStructuredPayload,
-    MOD_STATE_ID,
+    buildInteractionsPairs,
+    getInteractionsOutline: () => interactionsOutline,
+    getInteractionsRowCount,
+    getInteractionsPair,
+    noteKeyForPair,
+    canonicalSigImpl: canonicalSig,
   });
 
-  const modHelpers = { isModColumn, modIdFromKey };
-
-  function rebuildInteractionsInPlace() {
-    // Rebuild pairs without changing the active view or selection
-    buildInteractionsPairs(model);
-    interactionsOutline?.refresh?.();
-  }
-
-  function pruneNotesToValidPairs() {
-    // Build the full set of valid base keys using the same composer as Interactions
-    // (phase suffixes are intentionally omitted for pruning)
-    const validBase = new Set();
-    const rowCount = getInteractionsRowCount(model);
-    for (let r = 0; r < rowCount; r++) {
-      const p = getInteractionsPair(model, r);
-      if (!p) continue;
-      try {
-        // Primary (current) scheme
-        const base = noteKeyForPair(p, undefined);
-        if (base) validBase.add(base);
-
-        // Back-compat: earlier keys that may exist in saved projects
-        const sigA = canonicalSig(p.variantSig || "");
-        if (!p.kind || p.kind === "AI") {
-          // Legacy AI base key (pre-kind): aId|iId|sig
-          validBase.add(`${p.aId}|${p.iId}|${sigA}`);
-        } else if (p.kind === "AA") {
-          const sigB = canonicalSig(p.rhsVariantSig || "");
-          // Directed AA (current granular form)
-          validBase.add(`aa|${p.aId}|${p.rhsActionId}|${sigA}|${sigB}`);
-          // Older AA variants that may appear in notes (canonicalized id order, LHS-only sig)
-          const lo = Math.min(Number(p.aId), Number(p.rhsActionId));
-          const hi = Math.max(Number(p.aId), Number(p.rhsActionId));
-          validBase.add(`aa|${lo}|${hi}|${sigA}`);
-        }
-      } catch (_) {
-        /* ignore malformed pairs while pruning */
-      }
-    }
-
-    function baseKeyOf(k) {
-      const s = String(k || "");
-      const i = s.indexOf("|p");
-      return i >= 0 ? s.slice(0, i) : s;
-    }
-
-    for (const k in model.notes) {
-      if (!validBase.has(baseKeyOf(k))) delete model.notes[k];
-    }
-  }
-
   const {
+    gridCellsApi,
+    modHelpers,
     rendererApi,
     selectionListeners,
     selectionRenderDisposer,
@@ -204,45 +87,46 @@ export function createApp() {
     mutationApi,
     dialogApi,
     gridCommandsApi,
-  } = bootstrapGridRuntime({
+    viewStateApi,
+  } = createGridRuntimeCoordinator({
     appContext,
     viewState,
     coreDom,
-    selectionApi: {
-      Selection,
-      SelectionCtl,
-      sel,
-      onSelectionChanged,
-      getActiveView: getActiveViewState,
-    },
-    gridCellsApi: {
-      getCell,
-      setCell,
-      getStructuredCell,
-      applyStructuredCell,
-      cellValueToPlainText,
-    },
-    modHelpers,
     statusBar,
     menuItems,
-    setActiveView: callSetActiveView,
+    selectionApi: { Selection, SelectionCtl, sel, onSelectionChanged },
+    setActiveView: (...args) => setActiveView?.(...args),
+    getActiveViewState,
     rebuildInteractionsInPlace,
     pruneNotesToValidPairs,
   });
 
-  const { render, layout, ensureVisible, getColGeomFor } = rendererApi;
+  const { sheet, cellsLayer, spacer, colHdrs, rowHdrs, editor, dragLine } = coreDom;
+
+  const {
+    viewDef,
+    dataArray,
+    kindCtx,
+    getRowCount,
+    updateSelectionSnapshot,
+    updateScrollSnapshot,
+    invalidateViewDef,
+    rebuildInteractionPhaseColumns,
+    saveCurrentViewState,
+    restoreViewState,
+    resetAllViewState,
+  } = viewStateApi;
+
+  const { getCell, setCell, getStructuredCell, applyStructuredCell, cellValueToPlainText } =
+    gridCellsApi;
+
+  const { render, layout, ensureVisible } = rendererApi;
 
   ({ interactionsOutline, createDoGenerate } = interactionToolsApi);
 
   const { undo, redo, getUndoState } = historyApi;
-  const {
-    runModelMutation,
-    runModelTransaction,
-    beginUndoableTransaction,
-    makeUndoConfig,
-  } = mutationApi;
-
-  runModelMutationRef = runModelMutation;
+  const { runModelMutation, runModelTransaction, beginUndoableTransaction, makeUndoConfig } =
+    mutationApi;
 
   const {
     cloneValueForAssignment,
@@ -260,8 +144,7 @@ export function createApp() {
     applyCellCommentClipboardPayload,
   } = gridCommandsApi;
 
-  const { openProjectInfo, openCleanupDialog, openInferenceDialog, interactionActions } =
-    dialogApi;
+  const { openProjectInfo, openCleanupDialog, openInferenceDialog, interactionActions } = dialogApi;
 
   const onModelReset = () => {
     resetInferenceProfiles();
@@ -298,7 +181,7 @@ export function createApp() {
     onModelReset,
     rebuildActionColumnsFromModifiers,
     VIEWS,
-    setActiveView: callSetActiveView,
+    setActiveView: (...args) => setActiveView?.(...args),
   });
 
   const {
@@ -325,7 +208,7 @@ export function createApp() {
   } = persistenceApi;
 
   const { runSelfTests } = diagnosticsApi;
-  
+
   // Edit
 
   const handleScroll = () => {
@@ -337,36 +220,35 @@ export function createApp() {
   };
 
   sheet.addEventListener("scroll", handleScroll);
-  
+
   // Tabs & views
-  ({ setActiveView, cycleView, getActiveView, toggleInteractionsMode } =
-    createViewController({
-      tabs: tabsDom,
-      sheet,
-      sel,
-      selection,
-      saveCurrentViewState,
-      restoreViewState,
-      clearSelection,
-      endEditIfOpen,
-      VIEWS,
-      interactionsOutline,
-      invalidateViewDef,
-      rebuildActionColumnsFromModifiers,
-      rebuildInteractionsInPlace,
-      rebuildInteractionPhaseColumns,
-      layout,
-      render,
-      statusBar,
-      menusAPIRef: () => state.menusAPI,
-      getRowCount,
-      viewDef,
-      clamp,
-      model,
-      getActiveViewState: () => state.activeView,
-      setActiveViewState: (key) => (state.activeView = key),
-      getCommentsUI: () => state.commentsUI,
-    }));
+  ({ setActiveView, cycleView, getActiveView, toggleInteractionsMode } = createViewController({
+    tabs: tabsDom,
+    sheet,
+    sel,
+    selection,
+    saveCurrentViewState,
+    restoreViewState,
+    clearSelection,
+    endEditIfOpen,
+    VIEWS,
+    interactionsOutline,
+    invalidateViewDef,
+    rebuildActionColumnsFromModifiers,
+    rebuildInteractionsInPlace,
+    rebuildInteractionPhaseColumns,
+    layout,
+    render,
+    statusBar,
+    menusAPIRef: () => state.menusAPI,
+    getRowCount,
+    viewDef,
+    clamp,
+    model,
+    getActiveViewState: () => state.activeView,
+    setActiveViewState: (key) => (state.activeView = key),
+    getCommentsUI: () => state.commentsUI,
+  }));
 
   const doGenerate = createDoGenerate({
     rebuildActionColumnsFromModifiers,
@@ -423,8 +305,8 @@ export function createApp() {
     gridApi: {
       setCell,
       setModForSelection,
-      isModColumn,
-      modIdFromKey,
+      isModColumn: modHelpers.isModColumn,
+      modIdFromKey: modHelpers.modIdFromKey,
       getHorizontalTargetColumns,
       cloneValueForAssignment,
     },
