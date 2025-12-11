@@ -514,15 +514,64 @@ function createGridRenderer({
     return null;
   }
 
+  const entityColorMemo = {
+    map: null,
+    sources: null,
+  };
+
+  function ensureEntityColorMemo(forceRefresh = false) {
+    const entities = ["action", "input", "modifier", "outcome"];
+    const nextSources = {};
+    let needsRefresh = forceRefresh || !entityColorMemo.map || !entityColorMemo.sources;
+
+    for (const entity of entities) {
+      const collection = getEntityCollection(entity);
+      const size = Array.isArray(collection) ? collection.length : 0;
+      nextSources[entity] = { ref: collection, size };
+      const prev = entityColorMemo.sources && entityColorMemo.sources[entity];
+      if (!prev || prev.ref !== collection || prev.size !== size) needsRefresh = true;
+    }
+
+    if (!needsRefresh) return entityColorMemo.map;
+
+    const map = new Map();
+    for (const entity of entities) {
+      const collection = nextSources[entity].ref;
+      if (!collection || !collection.length) continue;
+      for (const entry of collection) {
+        const numId = Number(entry?.id);
+        if (!Number.isFinite(numId)) continue;
+        const memoKey = `${entity}|${numId | 0}`;
+        if (map.has(memoKey)) continue;
+        map.set(memoKey, getEntityColorsFromRow(entry));
+      }
+    }
+
+    entityColorMemo.map = map;
+    entityColorMemo.sources = nextSources;
+    return map;
+  }
+
   function getEntityColors(entity, id) {
     if (id == null) return null;
-    const arr = getEntityCollection(entity);
-    if (!arr || !arr.length) return null;
     const numId = Number(id);
     if (!Number.isFinite(numId)) return null;
-    const row = arr.find((x) => (x?.id | 0) === (numId | 0));
-    if (!row) return null;
-    return getEntityColorsFromRow(row);
+    const entityKey = String(entity || "").toLowerCase();
+    if (!entityKey) return null;
+
+    const memo = ensureEntityColorMemo();
+    const memoKey = `${entityKey}|${numId | 0}`;
+    if (memo.has(memoKey)) return memo.get(memoKey);
+
+    const collection = getEntityCollection(entityKey);
+    if (!collection || !collection.length) {
+      memo.set(memoKey, null);
+      return null;
+    }
+    const row = collection.find((x) => (x?.id | 0) === (numId | 0));
+    const info = row ? getEntityColorsFromRow(row) : null;
+    memo.set(memoKey, info);
+    return info;
   }
 
   function computeCellColors(r, c, col, row) {
@@ -769,6 +818,7 @@ function createGridRenderer({
       if (badge) resetCommentBadge(badge);
     }
 
+    ensureEntityColorMemo(true);
     const rows = activeView === "interactions" ? null : dataArray();
     const commentStoreAvailable = !!(model && model.comments);
     let k = 0;
