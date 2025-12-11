@@ -519,6 +519,45 @@ function createGridRenderer({
     sources: null,
   };
 
+  function entityRevision(entity, collection) {
+    const candidates = [
+      `${entity}sRevision`,
+      `${entity}sUpdatedAt`,
+      `${entity}sUpdated`,
+      `${entity}sTimestamp`,
+      `${entity}Revision`,
+      `${entity}UpdatedAt`,
+      `${entity}Updated`,
+      `${entity}Timestamp`,
+    ];
+    for (const key of candidates) {
+      const metaValue = model?.meta ? model.meta[key] : null;
+      if (metaValue != null) return metaValue;
+    }
+    for (const key of candidates) {
+      const topLevelValue = model ? model[key] : null;
+      if (topLevelValue != null) return topLevelValue;
+    }
+    if (!Array.isArray(collection)) return null;
+    let newest = null;
+    for (const entry of collection) {
+      const raw =
+        entry?.updatedAt ??
+        entry?.updated_at ??
+        entry?.modifiedAt ??
+        entry?.modified_at ??
+        entry?.timestamp;
+      if (raw == null) continue;
+      const asNumber = Number(raw);
+      if (Number.isFinite(asNumber)) {
+        newest = newest == null ? asNumber : Math.max(newest, asNumber);
+      } else if (newest == null) {
+        newest = raw;
+      }
+    }
+    return newest;
+  }
+
   function ensureEntityColorMemo(forceRefresh = false) {
     const entities = ["action", "input", "modifier", "outcome"];
     const nextSources = {};
@@ -527,14 +566,22 @@ function createGridRenderer({
     for (const entity of entities) {
       const collection = getEntityCollection(entity);
       const size = Array.isArray(collection) ? collection.length : 0;
-      nextSources[entity] = { ref: collection, size };
+      const revision = entityRevision(entity, collection);
+      nextSources[entity] = { ref: collection, size, revision };
       const prev = entityColorMemo.sources && entityColorMemo.sources[entity];
-      if (!prev || prev.ref !== collection || prev.size !== size) needsRefresh = true;
+      if (
+        !prev ||
+        prev.ref !== collection ||
+        prev.size !== size ||
+        !Object.is(prev.revision, revision)
+      )
+        needsRefresh = true;
     }
 
     if (!needsRefresh) return entityColorMemo.map;
 
-    const map = new Map();
+    const map = entityColorMemo.map || new Map();
+    if (map.size) map.clear();
     for (const entity of entities) {
       const collection = nextSources[entity].ref;
       if (!collection || !collection.length) continue;
@@ -818,7 +865,7 @@ function createGridRenderer({
       if (badge) resetCommentBadge(badge);
     }
 
-    ensureEntityColorMemo(true);
+    ensureEntityColorMemo();
     const rows = activeView === "interactions" ? null : dataArray();
     const commentStoreAvailable = !!(model && model.comments);
     let k = 0;
