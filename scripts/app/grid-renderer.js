@@ -47,6 +47,17 @@ function createGridRenderer({
   const rowHeaderPool = Array.from(rowHdrs.children || []);
   const commentPaletteCache = { source: null, map: new Map() };
   let paletteRevision = 0;
+  const lastRenderState = {
+    viewKey: null,
+    scrollLeft: null,
+    scrollTop: null,
+    colStamp: null,
+    selectionSignature: "",
+    viewportKey: "",
+    dataVersion: null,
+    visibleCols: { start: 0, end: -1 },
+    visibleRows: { start: 0, end: -1 },
+  };
 
   function getCommentPaletteRevision() {
     return paletteRevision;
@@ -753,6 +764,144 @@ function createGridRenderer({
     }
   }
 
+  function selectionStateSignature() {
+    const rowsKey = selection.rows?.size
+      ? Array.from(selection.rows).sort((a, b) => a - b).join(",")
+      : "";
+    const colsKey = selection.cols?.size
+      ? Array.from(selection.cols).sort((a, b) => a - b).join(",")
+      : "";
+    const anchor = selection.anchor != null ? selection.anchor : "";
+    const colAnchor = selection.colAnchor != null ? selection.colAnchor : "";
+    return [
+      `${sel.r}:${sel.c}`,
+      rowsKey,
+      colsKey,
+      selection.colsAll ? "1" : "0",
+      selection.horizontalMode ? "1" : "0",
+      `${anchor}:${colAnchor}`,
+    ].join("|");
+  }
+
+  function updateCellSelectionState(el, r, c) {
+    const isMultiSelection =
+      (selection.rows && selection.rows.size > 1) ||
+      (selection.cols && selection.cols.size > 1) ||
+      !!selection.colsAll;
+    let inRange = false;
+    if (isMultiSelection) {
+      const inRow = selection.rows && selection.rows.has(r);
+      const inCol = selection.colsAll
+        ? true
+        : selection.cols && selection.cols.size
+          ? selection.cols.has(c)
+          : c === sel.c;
+      inRange = !!(inRow && inCol);
+    }
+    if (inRange) el.classList.add("range-selected");
+    else el.classList.remove("range-selected");
+    if (r === sel.r && c === sel.c) el.classList.add("selected");
+    else el.classList.remove("selected");
+  }
+
+  function updateSelectionHighlights(vr, vc) {
+    const cellPool = window.__cellPool || [];
+    const visibleColsCount = vc.end >= vc.start ? vc.end - vc.start + 1 : 0;
+    const visibleRowsCount = vr.end >= vr.start ? vr.end - vr.start + 1 : 0;
+    const need = visibleColsCount * visibleRowsCount;
+    let rowIndex = 0;
+    for (let r = vr.start; r <= vr.end; r++) {
+      const d = rowHeaderPool[rowIndex++];
+      if (!d) continue;
+      const colsAll =
+        (SelectionNS && SelectionNS.isAllCols && SelectionNS.isAllCols()) ||
+        !!selection.colsAll;
+      const rowKey = [r, isRowSelected(r) ? 1 : 0, colsAll ? 1 : 0].join("|");
+      if (d._rowKey !== rowKey) {
+        const top = r * ROW_HEIGHT;
+        d.style.top = top + "px";
+        d.dataset.r = r;
+        let label = String(r + 1);
+        if (isRowSelected(r) && colsAll) label += " ↔";
+        d.textContent = label;
+        if (isRowSelected(r)) {
+          d.style.background = "#26344d";
+          d.style.color = "#e6eefc";
+        } else {
+          d.style.background = "";
+          d.style.color = "";
+        }
+        d._rowKey = rowKey;
+      }
+    }
+
+    for (let i = 0; i < need; i++) {
+      const d = cellPool[i];
+      if (!d || !d.isConnected) continue;
+      const r = Number(d.dataset.r);
+      const c = Number(d.dataset.c);
+      if (!Number.isFinite(r) || !Number.isFinite(c)) continue;
+      updateCellSelectionState(d, r, c);
+    }
+  }
+
+  function contentSignature(text, segments) {
+    const hasSegments = Array.isArray(segments) && segments.length > 0;
+    const normalizedText =
+      typeof text === "string" ? text : text == null ? "" : String(text);
+    return hasSegments
+      ? segments
+          .map((seg) => {
+            const segText = seg && seg.text != null ? String(seg.text) : "";
+            const segColor =
+              seg && typeof seg.foreground === "string" ? seg.foreground : "";
+            return `${segText}\u0001${segColor}`;
+          })
+          .join("\u0002")
+      : normalizedText;
+  }
+
+  function computeCellDataVersion({
+    displayText,
+    displaySegments,
+    colorInfo,
+    commentEntries,
+    alignValue,
+    inferenceInfo,
+  }) {
+    const contentSig = contentSignature(displayText, displaySegments);
+    const colorSig = colorInfo
+      ? [
+          Object.prototype.hasOwnProperty.call(colorInfo, "background")
+            ? colorInfo.background || ""
+            : "",
+          Object.prototype.hasOwnProperty.call(colorInfo, "foreground")
+            ? colorInfo.foreground || ""
+            : "",
+          colorInfo.textOverride == null ? "" : String(colorInfo.textOverride),
+          colorInfo.title || "",
+        ].join("¶")
+      : "::::";
+    const count = Array.isArray(commentEntries) ? commentEntries.length : 0;
+    const primary = count ? commentEntries[0] || null : null;
+    const commentSig = [
+      count,
+      deriveCommentStatus(primary?.value) || "",
+      deriveCommentColorId(primary?.value) || "",
+      getCommentPaletteRevision(),
+    ].join("¶");
+    const inferenceSig = inferenceInfo
+      ? [
+          inferenceInfo.inferred ? 1 : 0,
+          inferenceInfo.confidence ?? "",
+          inferenceInfo.opacity ?? "",
+        ].join("¶")
+      : `0¶0¶${inferenceInfo?.opacity ?? ""}`;
+    return [contentSig, colorSig, commentSig, alignValue || "", inferenceSig].join(
+      "|¶|",
+    );
+  }
+
   function layout() {
     const cols = viewDef().columns;
     const { widths } = getColGeomFor(cols);
@@ -774,7 +923,7 @@ function createGridRenderer({
 
     const viewDefinition = viewDef();
     const cols = viewDefinition.columns;
-    const { widths, offs } = getColGeomFor(cols);
+    const { widths, offs, stamp: colStamp } = getColGeomFor(cols);
     const vc = visibleCols(offs, sl, vw, cols.length),
       vr = visibleRows(st, vh, ROW_HEIGHT, getRowCount());
 
@@ -787,6 +936,48 @@ function createGridRenderer({
     const visibleRowsCount =
       vr.end >= vr.start ? vr.end - vr.start + 1 : 0;
 
+    const selectionSig = selectionStateSignature();
+    const viewportKey = [
+      activeView,
+      `${vc.start}:${vc.end}`,
+      `${vr.start}:${vr.end}`,
+      `${sl}:${st}`,
+      colStamp,
+    ].join("|");
+    const modelDataVersion =
+      (model &&
+        model.meta &&
+        (model.meta.dataVersion ?? model.meta.version ?? model.meta.revision)) ||
+      model?.version ||
+      null;
+
+    if (
+      viewportKey === lastRenderState.viewportKey &&
+      selectionSig === lastRenderState.selectionSignature &&
+      modelDataVersion === lastRenderState.dataVersion
+    ) {
+      return;
+    }
+
+    const selectionOnly =
+      viewportKey === lastRenderState.viewportKey &&
+      modelDataVersion === lastRenderState.dataVersion &&
+      selectionSig !== lastRenderState.selectionSignature;
+
+    if (selectionOnly) {
+      updateSelectionHighlights(vr, vc);
+      lastRenderState.selectionSignature = selectionSig;
+      lastRenderState.viewportKey = viewportKey;
+      lastRenderState.dataVersion = modelDataVersion;
+      lastRenderState.visibleCols = { ...vc };
+      lastRenderState.visibleRows = { ...vr };
+      lastRenderState.scrollLeft = sl;
+      lastRenderState.scrollTop = st;
+      lastRenderState.colStamp = colStamp;
+      lastRenderState.viewKey = activeView;
+      return;
+    }
+
     ensurePoolSize(colHeaderPool, colHdrs, visibleColsCount, "hdr");
     ensurePoolSize(rowHeaderPool, rowHdrs, visibleRowsCount, "rhdr");
 
@@ -794,56 +985,70 @@ function createGridRenderer({
     for (let c = vc.start; c <= vc.end; c++) {
       const d = colHeaderPool[colIndex++];
       if (!d) continue;
-      d.style.left = offs[c] + "px";
-      d.style.width = widths[c] + "px";
-      d.style.top = "0px";
-      d.dataset.colIndex = c;
-      d.dataset.viewKey = activeView;
       const col = cols[c];
       const alignValue =
         col && typeof col.align === "string" && col.align.trim()
           ? col.align.trim().toLowerCase()
           : "";
-      if (alignValue) d.dataset.align = alignValue;
-      else if (d.dataset.align) delete d.dataset.align;
-      const t = col.title;
-      let tooltip = t;
-      if (activeView === "interactions") {
-        const mode = (model.meta && model.meta.interactionsMode) || "AI";
-        tooltip = `${t} — Interactions Mode: ${mode}`;
+      const headerKey = [
+        c,
+        offs[c],
+        widths[c],
+        activeView,
+        col?.key ?? "",
+        alignValue,
+        col?.title ?? "",
+      ].join("|");
+      if (d._headerKey !== headerKey) {
+        d.style.left = offs[c] + "px";
+        d.style.width = widths[c] + "px";
+        d.style.top = "0px";
+        d.dataset.colIndex = c;
+        d.dataset.viewKey = activeView;
+        if (alignValue) d.dataset.align = alignValue;
+        else if (d.dataset.align) delete d.dataset.align;
+        const t = col.title;
+        let tooltip = t;
+        if (activeView === "interactions") {
+          const mode = (model.meta && model.meta.interactionsMode) || "AI";
+          tooltip = `${t} — Interactions Mode: ${mode}`;
+        }
+        const { label, handle } = ensureHeaderContent(d);
+        if (label) label.textContent = t || "";
+        if (handle) {
+          handle.dataset.colIndex = String(c);
+          handle.dataset.viewKey = activeView;
+          handle.dataset.columnKey = col?.key ?? "";
+        }
+        d.dataset.columnKey = col?.key ?? "";
+        d.title = tooltip;
+        d._headerKey = headerKey;
       }
-      const { label, handle } = ensureHeaderContent(d);
-      if (label) label.textContent = t || "";
-      if (handle) {
-        handle.dataset.colIndex = String(c);
-        handle.dataset.viewKey = activeView;
-        handle.dataset.columnKey = col?.key ?? "";
-      }
-      d.dataset.columnKey = col?.key ?? "";
-      d.title = tooltip;
     }
 
     let rowIndex = 0;
     for (let r = vr.start; r <= vr.end; r++) {
       const d = rowHeaderPool[rowIndex++];
       if (!d) continue;
-      const top = r * ROW_HEIGHT;
-      d.style.top = top + "px";
-      d.dataset.r = r;
-      let label = String(r + 1);
-      {
-        const colsAll =
-          (SelectionNS && SelectionNS.isAllCols && SelectionNS.isAllCols()) ||
-          !!selection.colsAll;
+      const colsAll =
+        (SelectionNS && SelectionNS.isAllCols && SelectionNS.isAllCols()) ||
+        !!selection.colsAll;
+      const rowKey = [r, isRowSelected(r) ? 1 : 0, colsAll ? 1 : 0].join("|");
+      if (d._rowKey !== rowKey) {
+        const top = r * ROW_HEIGHT;
+        d.style.top = top + "px";
+        d.dataset.r = r;
+        let label = String(r + 1);
         if (isRowSelected(r) && colsAll) label += " ↔";
-      }
-      d.textContent = label;
-      if (isRowSelected(r)) {
-        d.style.background = "#26344d";
-        d.style.color = "#e6eefc";
-      } else {
-        d.style.background = "";
-        d.style.color = "";
+        d.textContent = label;
+        if (isRowSelected(r)) {
+          d.style.background = "#26344d";
+          d.style.color = "#e6eefc";
+        } else {
+          d.style.background = "";
+          d.style.color = "";
+        }
+        d._rowKey = rowKey;
       }
     }
 
@@ -876,20 +1081,19 @@ function createGridRenderer({
         const left = offs[c],
           w = widths[c];
         const d = cellPool[k++];
-        const nextRenderKey = `${r}:${c}`;
-        const prevRenderKey = d._renderKey;
-        if (prevRenderKey !== nextRenderKey) {
+        const col = cols[c];
+        const alignValue =
+          col && typeof col.align === "string" && col.align.trim()
+            ? col.align.trim().toLowerCase()
+            : "";
+        const coordKey = `${r}:${c}`;
+        const coordChanged = d._coordKey !== coordKey;
+        if (coordChanged) {
           if (d.dataset.comment !== "false") d.dataset.comment = "false";
           const badge = d._commentBadge;
           if (badge) resetCommentBadge(badge);
+          d._coordKey = coordKey;
         }
-        if (d.style.display !== "") d.style.display = "";
-        d.style.left = left + "px";
-        d.style.top = top + "px";
-        d.style.width = w + "px";
-        d.style.height = ROW_HEIGHT + "px";
-        d.dataset.r = r;
-        d.dataset.c = c;
         const rawValue = getCell(r, c);
         const normalized = normalizeCellValue(rawValue);
         let displayText =
@@ -897,13 +1101,6 @@ function createGridRenderer({
             ? normalized.plainText
             : String(normalized.plainText ?? "");
         let displaySegments = normalized.segments;
-        const col = cols[c];
-        const alignValue =
-          col && typeof col.align === "string" && col.align.trim()
-            ? col.align.trim().toLowerCase()
-            : "";
-        if (alignValue) d.dataset.align = alignValue;
-        else if (d.dataset.align) delete d.dataset.align;
         const commentEntries =
           commentStoreAvailable && col
             ? listCommentsFor(activeView, viewDefinition, row, r, col)
@@ -917,33 +1114,8 @@ function createGridRenderer({
           displayText = override == null ? "" : String(override);
           displaySegments = null;
         }
-        setCellContent(d, displayText, displaySegments);
-        applyCellColors(d, colorInfo);
-        d.title = colorInfo && colorInfo.title ? colorInfo.title : "";
-        updateCommentBadge(d, commentEntries);
         let inferenceInfo = null;
-        if (r % 2 === 1) d.classList.add("alt");
-        else d.classList.remove("alt");
-        const isMultiSelection =
-          (selection.rows && selection.rows.size > 1) ||
-          (selection.cols && selection.cols.size > 1) ||
-          !!selection.colsAll;
-        let inRange = false;
-        if (isMultiSelection) {
-          const inRow = selection.rows && selection.rows.has(r);
-          const inCol = selection.colsAll
-            ? true
-            : selection.cols && selection.cols.size
-            ? selection.cols.has(c)
-            : c === sel.c;
-          inRange = !!(inRow && inCol);
-        }
-        if (inRange) d.classList.add("range-selected");
-        else d.classList.remove("range-selected");
-        if (r === sel.r && c === sel.c) d.classList.add("selected");
-        else d.classList.remove("selected");
-        d.style.opacity = "";
-        d._renderKey = nextRenderKey;
+        let inferredOpacity = "";
         if (activeView === "interactions") {
           const colKey = cols[c] && cols[c].key;
           if (colKey) {
@@ -965,16 +1137,70 @@ function createGridRenderer({
                   const a = model.actions.find((x) => x.id === pair.aId);
                   const ids = a && a.phases && a.phases.ids ? a.phases.ids : [];
                   if (ids.length && ids.indexOf(pNum) === -1) {
-                    d.style.opacity = "0.6";
+                    inferredOpacity = "0.6";
                   }
                 }
               }
             }
           }
         }
-        applyInferenceDecoration(d, inferenceInfo);
+
+        if (inferenceInfo && inferredOpacity) {
+          inferenceInfo = { ...inferenceInfo, opacity: inferredOpacity };
+        } else if (inferredOpacity) {
+          inferenceInfo = { inferred: false, confidence: null, opacity: inferredOpacity };
+        }
+
+        const dataVersion = computeCellDataVersion({
+          displayText,
+          displaySegments,
+          colorInfo,
+          commentEntries,
+          alignValue,
+          inferenceInfo,
+        });
+        const nextRenderKey = [
+          activeView,
+          sl,
+          st,
+          coordKey,
+          dataVersion,
+        ].join("|");
+        const prevRenderKey = d._renderKey;
+        const reuseCell = prevRenderKey === nextRenderKey;
+
+        if (d.style.display !== "") d.style.display = "";
+        if (!reuseCell) {
+          d.style.left = left + "px";
+          d.style.top = top + "px";
+          d.style.width = w + "px";
+          d.style.height = ROW_HEIGHT + "px";
+          d.dataset.r = r;
+          d.dataset.c = c;
+          if (alignValue) d.dataset.align = alignValue;
+          else if (d.dataset.align) delete d.dataset.align;
+          setCellContent(d, displayText, displaySegments);
+          applyCellColors(d, colorInfo);
+          d.title = colorInfo && colorInfo.title ? colorInfo.title : "";
+          updateCommentBadge(d, commentEntries);
+          if (r % 2 === 1) d.classList.add("alt");
+          else d.classList.remove("alt");
+          d.style.opacity = inferredOpacity;
+          applyInferenceDecoration(d, inferenceInfo);
+        }
+        updateCellSelectionState(d, r, c);
+        d._renderKey = nextRenderKey;
       }
     }
+    lastRenderState.selectionSignature = selectionSig;
+    lastRenderState.viewportKey = viewportKey;
+    lastRenderState.dataVersion = modelDataVersion;
+    lastRenderState.visibleCols = { ...vc };
+    lastRenderState.visibleRows = { ...vr };
+    lastRenderState.scrollLeft = sl;
+    lastRenderState.scrollTop = st;
+    lastRenderState.colStamp = colStamp;
+    lastRenderState.viewKey = activeView;
   }
 
   return { render, layout, ensureVisible, getColGeomFor };
