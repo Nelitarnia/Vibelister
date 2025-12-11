@@ -73,6 +73,7 @@ export function bootstrapGridRuntime({
     viewState,
     historyApi,
     statusBar,
+    inferenceProfiles: appContext.inferenceProfiles,
   });
 
   return {

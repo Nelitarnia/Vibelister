@@ -7,7 +7,10 @@ import {
 } from "./interactions.js";
 import { DEFAULT_HEURISTIC_THRESHOLDS } from "./inference-heuristics.js";
 import { extractNoteFieldValue } from "./inference-utils.js";
-import { recordProfileImpact } from "./inference-profiles.js";
+import {
+  createInferenceProfileStore,
+  recordProfileImpact,
+} from "./inference-profiles.js";
 import { applySuggestions, HEURISTIC_LABELS } from "./inference-application.js";
 import { createInferenceIndexAccess } from "./inference-index-access.js";
 import { createInferenceTargetResolver } from "./inference-targets.js";
@@ -68,11 +71,15 @@ export function createInferenceController(options) {
     getInteractionsPair,
     getInteractionsRowCount,
     heuristicThresholds,
+    inferenceProfiles: providedProfiles,
   } = options;
 
   const baseThresholds =
     heuristicThresholds || DEFAULT_HEURISTIC_THRESHOLDS || {};
   let lastThresholdOverrides = { ...baseThresholds };
+  const inferenceProfiles =
+    providedProfiles || model?.inferenceProfiles || createInferenceProfileStore();
+  if (model && !model.inferenceProfiles) model.inferenceProfiles = inferenceProfiles;
   const OUT_OF_VIEW_STATUS = "Inference only applies to the Interactions view.";
   const NO_TARGETS_STATUS =
     "Select Outcome, End, or Tag cells in the Interactions view to run inference.";
@@ -152,6 +159,7 @@ export function createInferenceController(options) {
       setLastThresholdOverrides: (overrides) => {
         lastThresholdOverrides = overrides;
       },
+      inferenceProfiles,
     });
     return result;
   }
@@ -220,6 +228,7 @@ export function createInferenceController(options) {
         result.cleared++;
         const nextValue = extractNoteFieldValue(note, target.field);
         recordProfileImpact({
+          store: inferenceProfiles,
           pair: target.pair,
           field: target.field,
           previousValue,
