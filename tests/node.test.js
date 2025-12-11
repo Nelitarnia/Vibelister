@@ -20,6 +20,7 @@ import { getClipboardTests } from "../scripts/support/tests/specs/clipboard.js";
 import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
 import { getAppCoordinatorTests } from "../scripts/support/tests/specs/app-coordinators.js";
 import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
+import { getInferenceStrategyTests } from "../scripts/support/tests/specs/inference-strategies.js";
 import { getInferenceControllerTests } from "../scripts/support/tests/specs/inference-controller.js";
 import { getAppInitTests } from "../scripts/support/tests/specs/app-init.js";
 import { getVariantNormalizationTests } from "../scripts/support/tests/specs/variant-normalization.js";
@@ -50,6 +51,10 @@ for (const spec of getInteractionsTests()) {
 
 for (const spec of getInferenceUtilsTests()) {
   test(`Inference utils › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInferenceStrategyTests()) {
+  test(`Inference strategies › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getInferenceControllerTests()) {

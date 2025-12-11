@@ -13,6 +13,7 @@ import {
   parseModifierIds,
   valueKey,
 } from "./inference-utils.js";
+import { DEFAULT_INFERENCE_STRATEGIES } from "./inference-strategies/index.js";
 
 function normalizeActionGroup(group) {
   if (group == null) return "";
@@ -306,6 +307,7 @@ export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
 });
 
 function normalizeThresholds(override = {}) {
+  if (!override || typeof override !== "object") override = {};
   const defaults = DEFAULT_HEURISTIC_THRESHOLDS;
   return {
     consensusMinGroupSize: Number.isFinite(override.consensusMinGroupSize)
@@ -475,155 +477,64 @@ function buildProfilePrefs(profiles, thresholds) {
   };
 }
 
-export function proposeInteractionInferences(targets, profiles, thresholdOverrides) {
+export function runInferenceStrategies(
+  targets,
+  profiles,
+  thresholdOverrides,
+  strategies = DEFAULT_INFERENCE_STRATEGIES,
+) {
   const thresholds = normalizeThresholds(thresholdOverrides);
   const prepared = prepareTargets(targets || []);
   const suggestions = new Map();
 
   const profilePrefs = profiles ? buildProfilePrefs(profiles, thresholds) : null;
+  const helperContext = {
+    applyConsensus,
+    applyPhaseAdjacency,
+    cloneValue,
+    computeSuggestionConfidence,
+    eligibleForSuggestion,
+    registerSuggestion,
+    sources: HEURISTIC_SOURCES,
+    valueKey,
+  };
 
-  const byActionInput = new Map();
-  const byActionGroupInput = new Map();
-  const byActionGroupPhase = new Map();
-  const byModifierProfile = new Map();
-  const byInputDefault = new Map();
-  const byPhaseAdjacency = new Map();
+  for (const strategy of strategies) {
+    const strategyThresholds = strategy.thresholds
+      ? strategy.thresholds(thresholds)
+      : thresholds;
+    if (strategyThresholds === false) continue;
+    if (strategyThresholds && strategyThresholds.enabled === false) continue;
+    if (typeof strategy.enabled === "function" && !strategy.enabled(strategyThresholds))
+      continue;
 
-  for (const target of prepared) {
-    const { actionId, inputKey, field, phase, variantSig, actionGroupKey } = target;
-    const actionKey = actionId == null ? "" : String(actionId);
-    const groupKey = `${actionKey}|${inputKey}|${phase}|${field}`;
-    if (!byActionInput.has(groupKey)) byActionInput.set(groupKey, []);
-    byActionInput.get(groupKey).push(target);
+    const state = strategy.prepare({
+      targets: prepared,
+      thresholds: strategyThresholds,
+      profiles,
+      profilePrefs,
+    });
 
-    if (actionGroupKey) {
-      const inputGroupKey = `${actionGroupKey}|${inputKey}|${phase}|${field}`;
-      if (!byActionGroupInput.has(inputGroupKey))
-        byActionGroupInput.set(inputGroupKey, []);
-      byActionGroupInput.get(inputGroupKey).push(target);
-
-      const phaseGroupKey = `${actionGroupKey}|${phase}|${field}`;
-      if (!byActionGroupPhase.has(phaseGroupKey))
-        byActionGroupPhase.set(phaseGroupKey, []);
-      byActionGroupPhase.get(phaseGroupKey).push(target);
-    }
-
-    const profileKey = `${actionKey}|${variantSig}|${phase}|${field}`;
-    if (!byModifierProfile.has(profileKey)) byModifierProfile.set(profileKey, []);
-    byModifierProfile.get(profileKey).push(target);
-
-    if (!byInputDefault.has(groupKey)) byInputDefault.set(groupKey, []);
-    byInputDefault.get(groupKey).push(target);
-
-    if (Number.isFinite(target.phase)) {
-      const adjacencyKey = `${actionKey}|${inputKey}|${field}`;
-      if (!byPhaseAdjacency.has(adjacencyKey)) byPhaseAdjacency.set(adjacencyKey, []);
-      byPhaseAdjacency.get(adjacencyKey).push(target);
-    }
-  }
-
-  applyConsensus(
-    byActionInput,
-    suggestions,
-    HEURISTIC_SOURCES.modifierPropagation,
-    profilePrefs,
-    {
-      minGroupSize: thresholds.consensusMinGroupSize,
-      minExistingRatio: thresholds.consensusMinExistingRatio,
-    },
-  );
-
-  applyConsensus(
-    byActionGroupInput,
-    suggestions,
-    HEURISTIC_SOURCES.actionGroup,
-    profilePrefs,
-    {
-      minGroupSize: thresholds.actionGroupMinGroupSize,
-      minExistingRatio: thresholds.actionGroupMinExistingRatio,
-    },
-  );
-
-  applyConsensus(
-    byActionGroupPhase,
-    suggestions,
-    HEURISTIC_SOURCES.actionGroup,
-    profilePrefs,
-    {
-      minGroupSize: thresholds.actionGroupPhaseMinGroupSize,
-      minExistingRatio: thresholds.actionGroupPhaseMinExistingRatio,
-    },
-  );
-
-  applyConsensus(
-    byModifierProfile,
-    suggestions,
-    HEURISTIC_SOURCES.modifierProfile,
-    profilePrefs,
-    {
-      minGroupSize: thresholds.consensusMinGroupSize,
-      minExistingRatio: thresholds.consensusMinExistingRatio,
-    },
-  );
-
-  applyPhaseAdjacency(byPhaseAdjacency, suggestions, profilePrefs, {
-    maxGapDistance: thresholds.phaseAdjacencyMaxGap,
-    enabled: thresholds.phaseAdjacencyEnabled,
-  });
-
-  for (const list of byInputDefault.values()) {
-    const total = list.length;
-    if (total < thresholds.inputDefaultMinGroupSize) continue;
-    const existing = list.filter((t) => t.currentValue);
-    if (!existing.length) continue;
-    if (existing.length / total < thresholds.inputDefaultMinExistingRatio) continue;
-    const candidate = existing[0];
-    const existingRatio = total > 0 ? existing.length / total : null;
-    const confidence = computeSuggestionConfidence(
-      HEURISTIC_SOURCES.inputDefault,
-      { existingRatio },
-    );
-    for (const target of list) {
-      if (!eligibleForSuggestion(target)) continue;
-      registerSuggestion(
-        suggestions,
-        target,
-        HEURISTIC_SOURCES.inputDefault,
-        confidence,
-        cloneValue(target.field, candidate.currentValue),
-        profilePrefs,
-      );
-    }
-  }
-
-  if (profilePrefs) {
-    for (const target of prepared) {
-      if (!eligibleForSuggestion(target)) continue;
-      if (!profilePrefs.hasSignal(target)) continue;
-      if (profilePrefs.shouldSkip(target)) continue;
-      const preferred = profilePrefs.preferredValue(target);
-      if (!preferred) continue;
-      const summary = profilePrefs.getSummary(target);
-      const total = summary ? summary.change + summary.noEffect : 0;
-      const preferenceRatio = total > 0 ? summary.topCount / total : null;
-      const confidence = computeSuggestionConfidence(
-        HEURISTIC_SOURCES.profileTrend,
-        {
-          preferenceRatio,
-          supportCount: summary?.topCount,
-        },
-      );
-      registerSuggestion(
-        suggestions,
-        target,
-        HEURISTIC_SOURCES.profileTrend,
-        confidence,
-        cloneValue(target.field, preferred),
-        profilePrefs,
-      );
-    }
+    strategy.suggest({
+      targets: prepared,
+      thresholds: strategyThresholds,
+      profiles,
+      profilePrefs,
+      suggestions,
+      state,
+      helpers: helperContext,
+    });
   }
 
   return suggestions;
+}
+
+export function proposeInteractionInferences(targets, profiles, thresholdOverrides) {
+  return runInferenceStrategies(
+    targets,
+    profiles,
+    thresholdOverrides,
+    DEFAULT_INFERENCE_STRATEGIES,
+  );
 }
 
