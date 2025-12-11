@@ -38,7 +38,10 @@ import { ROW_HEIGHT, HEADER_HEIGHT } from "../data/constants.js";
 import { makeRow } from "../data/rows.js";
 import { clamp, visibleCols, visibleRows, colOffsets, colWidths } from "../data/utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
-import { resetInferenceProfiles } from "./inference-profiles.js";
+import {
+  createInferenceProfileStore,
+  resetInferenceProfiles,
+} from "./inference-profiles.js";
 import { createInteractionMaintenance } from "./interaction-maintenance.js";
 import { createShellCoordinator } from "./shell-coordinator.js";
 import { createGridRuntimeCoordinator } from "./grid-runtime-coordinator.js";
@@ -47,6 +50,9 @@ export function createApp() {
   // Core model + views
   const appContext = createAppContext();
   const { model, state } = appContext;
+  const inferenceProfiles = createInferenceProfileStore();
+  model.inferenceProfiles = inferenceProfiles;
+  appContext.inferenceProfiles = inferenceProfiles;
   let setActiveView = null;
   let cycleView = null;
   let getActiveView = null;
@@ -147,7 +153,7 @@ export function createApp() {
   const { openProjectInfo, openCleanupDialog, openInferenceDialog, interactionActions } = dialogApi;
 
   const onModelReset = () => {
-    resetInferenceProfiles();
+    resetInferenceProfiles(inferenceProfiles);
     interactionsOutline?.refresh?.();
     state.tagUI?.refresh?.();
     state.commentsUI?.applyModelMetadata?.(model.meta);

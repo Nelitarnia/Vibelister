@@ -1,5 +1,6 @@
 import { createEmptyCommentMap } from "../../../data/comments.js";
 import { normalizeCommentColorPalette } from "../../../data/comment-colors.js";
+import { createInferenceProfileStore } from "../../../app/inference-profiles.js";
 
 export function makeModelFixture() {
   const model = {
@@ -28,6 +29,7 @@ export function makeModelFixture() {
       variantCatalog: {},
     },
     nextId: 1,
+    inferenceProfiles: createInferenceProfileStore(),
   };
 
   function addAction(name, modSet = {}) {

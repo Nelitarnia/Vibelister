@@ -22,10 +22,7 @@ import {
   HEURISTIC_SOURCES,
   proposeInteractionInferences,
 } from "../../../app/inference-heuristics.js";
-import {
-  captureInferenceProfilesSnapshot,
-  resetInferenceProfiles,
-} from "../../../app/inference-profiles.js";
+import { captureInferenceProfilesSnapshot, resetInferenceProfiles } from "../../../app/inference-profiles.js";
 import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
 import { formatEndActionLabel } from "../../../data/column-kinds.js";
@@ -3274,10 +3271,9 @@ export function getInteractionsTests() {
     {
       name: "profile trends ignore reverted inference edits",
       run(assert) {
-        resetInferenceProfiles();
-
         const { model, addAction, addInput, addModifier, addOutcome } =
           makeModelFixture();
+        resetInferenceProfiles(model.inferenceProfiles);
         const action = addAction("Strike");
         const modifier = addModifier("Swift");
         const outcome = addOutcome("Hit");
@@ -3312,7 +3308,9 @@ export function getInteractionsTests() {
         });
 
         const inputKey = `in:${input.id}`;
-        const manualSnapshot = captureInferenceProfilesSnapshot();
+        const manualSnapshot = captureInferenceProfilesSnapshot(
+          model.inferenceProfiles,
+        );
         const manualChange = manualSnapshot.input[inputKey].outcome.all.change;
         const decayFactor = 0.94;
         assert.ok(
@@ -3359,7 +3357,9 @@ export function getInteractionsTests() {
         const res = controller.runInference({ scope: "project" });
         assert.strictEqual(res.applied, 1, "inference applies propagated value");
 
-        const snapshotAfterInference = captureInferenceProfilesSnapshot();
+        const snapshotAfterInference = captureInferenceProfilesSnapshot(
+          model.inferenceProfiles,
+        );
         const inferenceChange = snapshotAfterInference.input[inputKey].outcome.all.change;
         assert.ok(
           Math.abs(inferenceChange / manualChange - decayFactor * decayFactor) < 1e-9,
@@ -3369,7 +3369,9 @@ export function getInteractionsTests() {
         const undo = undoStack.pop();
         if (undo) undo();
 
-        const snapshotAfterUndo = captureInferenceProfilesSnapshot();
+        const snapshotAfterUndo = captureInferenceProfilesSnapshot(
+          model.inferenceProfiles,
+        );
         const undoChange = snapshotAfterUndo.input[inputKey].outcome.all.change;
         assert.ok(
           Math.abs(undoChange / inferenceChange - decayFactor) < 1e-9,

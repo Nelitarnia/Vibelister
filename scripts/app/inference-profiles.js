@@ -26,9 +26,20 @@ function createProfileRecord() {
   };
 }
 
-const modifierProfiles = new Map();
-const inputProfiles = new Map();
-let decayBudget = 0;
+export function createInferenceProfileStore() {
+  return {
+    modifierProfiles: new Map(),
+    inputProfiles: new Map(),
+    decayBudget: 0,
+  };
+}
+
+function ensureStore(store) {
+  if (!store) return null;
+  const { modifierProfiles, inputProfiles } = store;
+  if (!modifierProfiles || !inputProfiles) return null;
+  return store;
+}
 
 function ensureProfile(map, key) {
   if (!map.has(key)) map.set(key, createProfileRecord());
@@ -92,7 +103,9 @@ function decayFieldBucket(fieldBucket, factor) {
   }
 }
 
-function decayProfiles(factor = 0.94) {
+function decayProfiles(store, factor = 0.94) {
+  if (!store) return;
+  const { modifierProfiles, inputProfiles } = store;
   for (const profile of modifierProfiles.values()) {
     decayFieldBucket(profile.outcome, factor);
     decayFieldBucket(profile.end, factor);
@@ -106,6 +119,7 @@ function decayProfiles(factor = 0.94) {
 }
 
 export function recordProfileImpact({
+  store,
   pair,
   field,
   previousValue,
@@ -116,6 +130,8 @@ export function recordProfileImpact({
   manualOnly = false,
   delta = 1,
 }) {
+  const state = ensureStore(store);
+  if (!state) return;
   if (!field || (field !== "outcome" && field !== "end" && field !== "tag")) {
     return;
   }
@@ -126,18 +142,18 @@ export function recordProfileImpact({
   const inputKey = normalizeInputKey(pair);
 
   for (const modId of modIds) {
-    const profile = ensureProfile(modifierProfiles, modId);
+    const profile = ensureProfile(state.modifierProfiles, modId);
     incrementBucket(profile[field], impactType, nextValue, field, phase, delta);
   }
   if (inputKey) {
-    const profile = ensureProfile(inputProfiles, inputKey);
+    const profile = ensureProfile(state.inputProfiles, inputKey);
     incrementBucket(profile[field], impactType, nextValue, field, phase, delta);
   }
 
-  decayBudget += 1;
-  if (decayBudget >= 50) {
-    decayProfiles();
-    decayBudget = 0;
+  state.decayBudget += 1;
+  if (state.decayBudget >= 50) {
+    decayProfiles(state);
+    state.decayBudget = 0;
   }
 }
 
@@ -185,14 +201,18 @@ function cloneProfile(profile) {
   });
 }
 
-export function captureInferenceProfilesSnapshot() {
-  decayProfiles();
+export function captureInferenceProfilesSnapshot(store) {
+  const state = ensureStore(store);
+  if (!state) {
+    return Object.freeze({ modifier: Object.freeze({}), input: Object.freeze({}) });
+  }
+  decayProfiles(state);
   const modifier = {};
-  for (const [key, profile] of modifierProfiles.entries()) {
+  for (const [key, profile] of state.modifierProfiles.entries()) {
     modifier[key] = cloneProfile(profile);
   }
   const input = {};
-  for (const [key, profile] of inputProfiles.entries()) {
+  for (const [key, profile] of state.inputProfiles.entries()) {
     input[key] = cloneProfile(profile);
   }
   return Object.freeze({
@@ -201,8 +221,10 @@ export function captureInferenceProfilesSnapshot() {
   });
 }
 
-export function resetInferenceProfiles() {
-  modifierProfiles.clear();
-  inputProfiles.clear();
-  decayBudget = 0;
+export function resetInferenceProfiles(store) {
+  const state = ensureStore(store);
+  if (!state) return;
+  state.modifierProfiles.clear();
+  state.inputProfiles.clear();
+  state.decayBudget = 0;
 }

@@ -487,6 +487,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     if (success) {
       const nextValue = extractNoteFieldValue(model.notes[k], pk.field);
       recordProfileImpact({
+        store: model?.inferenceProfiles,
         pair,
         field: pk.field,
         previousValue,

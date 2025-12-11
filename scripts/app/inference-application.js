@@ -39,6 +39,7 @@ export function applySuggestions({
   options,
   baseThresholds,
   setLastThresholdOverrides,
+  inferenceProfiles,
 }) {
   const notes = model?.notes || (model.notes = {});
   const hasExplicitDefaults =
@@ -49,7 +50,7 @@ export function applySuggestions({
         source: options.defaultSource,
       }
     : null;
-  const profileSnapshot = captureInferenceProfilesSnapshot();
+  const profileSnapshot = captureInferenceProfilesSnapshot(inferenceProfiles);
   const thresholdOverrides = { ...baseThresholds };
   const overrides = options.thresholdOverrides || {};
   for (const [key, value] of Object.entries(overrides)) {
@@ -163,6 +164,7 @@ export function applySuggestions({
       result.applied++;
       const nextValue = extractNoteFieldValue(dest, target.field);
       recordProfileImpact({
+        store: inferenceProfiles,
         pair: target.pair,
         field: target.field,
         previousValue,

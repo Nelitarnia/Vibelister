@@ -5,7 +5,13 @@ import { createInferenceController } from "./inference-controller.js";
 import { createInteractionBulkActions } from "./interaction-bulk-actions.js";
 import { getInteractionsPair, getInteractionsRowCount } from "./interactions.js";
 
-export function setupDialogs({ appContext, viewState, historyApi, statusBar }) {
+export function setupDialogs({
+  appContext,
+  viewState,
+  historyApi,
+  statusBar,
+  inferenceProfiles,
+}) {
   const { model } = appContext;
   const { viewDef } = viewState;
   const { runModelMutation, makeUndoConfig } = historyApi;
@@ -35,6 +41,7 @@ export function setupDialogs({ appContext, viewState, historyApi, statusBar }) {
     makeUndoConfig,
     getInteractionsPair,
     getInteractionsRowCount,
+    inferenceProfiles,
   });
 
   const interactionActions = createInteractionBulkActions({
