@@ -477,6 +477,39 @@ export function openRulesDialog(model) {
           },
           [h("div", null, [txt])],
         );
+        const controls = h("div", { style: "display:flex;gap:6px;align-items:center;" }, []);
+        const moveUp = h(
+          "button",
+          {
+            style:
+              "background:#1b2130;border:1px solid #32426a;color:#d6e0ff;border-radius:8px;padding:4px 8px;",
+            disabled: ci === 0 ? "disabled" : null,
+            title: "Move rule up",
+          },
+          ["↑"],
+        );
+        moveUp.onclick = () => {
+          if (ci <= 0) return;
+          const [item] = cons.splice(ci, 1);
+          cons.splice(ci - 1, 0, item);
+          render();
+        };
+        const moveDown = h(
+          "button",
+          {
+            style:
+              "background:#1b2130;border:1px solid #32426a;color:#d6e0ff;border-radius:8px;padding:4px 8px;",
+            disabled: ci === cons.length - 1 ? "disabled" : null,
+            title: "Move rule down",
+          },
+          ["↓"],
+        );
+        moveDown.onclick = () => {
+          if (ci >= cons.length - 1) return;
+          const [item] = cons.splice(ci, 1);
+          cons.splice(ci + 1, 0, item);
+          render();
+        };
         const rm = h(
           "button",
           {
@@ -489,7 +522,10 @@ export function openRulesDialog(model) {
           cons.splice(ci, 1);
           render();
         };
-        row.appendChild(rm);
+        controls.appendChild(moveUp);
+        controls.appendChild(moveDown);
+        controls.appendChild(rm);
+        row.appendChild(controls);
         return row;
       }),
     );
