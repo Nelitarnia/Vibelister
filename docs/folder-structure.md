@@ -100,6 +100,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       │   ├── assertions.js
 │   │       │   ├── cleanup.js
 │   │       │   ├── clipboard.js
+│   │       │   ├── data-version.js
 │   │       │   ├── column-resize.js
 │   │       │   ├── column-kinds.js
 │   │       │   ├── comments.js
