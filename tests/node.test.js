@@ -21,6 +21,7 @@ import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
 import { getAppCoordinatorTests } from "../scripts/support/tests/specs/app-coordinators.js";
 import { getDataUtilsTests } from "../scripts/support/tests/specs/data-utils.js";
 import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
+import { getInferenceIndexAccessTests } from "../scripts/support/tests/specs/inference-index-access.js";
 import { getInferenceStrategyTests } from "../scripts/support/tests/specs/inference-strategies.js";
 import { getInferenceControllerTests } from "../scripts/support/tests/specs/inference-controller.js";
 import { getAppInitTests } from "../scripts/support/tests/specs/app-init.js";
@@ -52,6 +53,10 @@ for (const spec of getInteractionsTests()) {
 
 for (const spec of getInferenceUtilsTests()) {
   test(`Inference utils › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInferenceIndexAccessTests()) {
+  test(`Inference index access › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getInferenceStrategyTests()) {
