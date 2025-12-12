@@ -716,11 +716,11 @@ export function initGridKeys(deps) {
 
   function getSelectedColsList() {
     const cols = (viewDef() && viewDef().columns) || [];
+    if (selection?.horizontalMode || selection?.colsAll) {
+      return cols.map((_, idx) => idx);
+    }
     if (selection && selection.cols && selection.cols.size) {
       return Array.from(selection.cols).sort((a, b) => a - b);
-    }
-    if (selection && selection.colsAll) {
-      return cols.map((_, idx) => idx);
     }
     return [sel.c];
   }
