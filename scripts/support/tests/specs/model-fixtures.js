@@ -9,6 +9,7 @@ export function makeModelFixture() {
       projectName: "",
       projectInfo: "",
       interactionsMode: "AI",
+      dataVersion: 0,
       commentColors: normalizeCommentColorPalette(),
     },
     actions: [],
