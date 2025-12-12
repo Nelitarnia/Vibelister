@@ -19,6 +19,7 @@ import { getCommentTests } from "../scripts/support/tests/specs/comments.js";
 import { getClipboardTests } from "../scripts/support/tests/specs/clipboard.js";
 import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
 import { getAppCoordinatorTests } from "../scripts/support/tests/specs/app-coordinators.js";
+import { getDataUtilsTests } from "../scripts/support/tests/specs/data-utils.js";
 import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
 import { getInferenceStrategyTests } from "../scripts/support/tests/specs/inference-strategies.js";
 import { getInferenceControllerTests } from "../scripts/support/tests/specs/inference-controller.js";
@@ -127,4 +128,8 @@ for (const spec of getCleanupTests()) {
 
 for (const spec of getAppCoordinatorTests()) {
   test(`App coordinators › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getDataUtilsTests()) {
+  test(`Data utils › ${spec.name}`, () => spec.run(sharedAssert));
 }

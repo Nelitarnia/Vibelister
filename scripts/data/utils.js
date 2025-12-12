@@ -12,21 +12,36 @@ export function colOffsets(widths) {
   return o;
 }
 export function visibleCols(offsets, left, width, totalCols) {
+  const o = offsets || [];
+  const availableCols = Math.max(0, o.length - 1);
+  const n = Number.isFinite(totalCols)
+    ? Math.min(totalCols, availableCols)
+    : availableCols;
+  if (n <= 0) return { start: 0, end: -1 };
+  if (width <= 0) return { start: 0, end: -1 };
+
   const right = left + width;
-  const n = Number.isFinite(totalCols) ? totalCols : offsets.length - 1;
-  let start = 0,
-    end = n - 1;
-  for (let i = 0; i < n; i++)
-    if (offsets[i + 1] >= left) {
-      start = i;
-      break;
-    }
-  for (let i = start; i < n; i++)
-    if (offsets[i] > right) {
-      end = i;
-      break;
-    }
-  return { start, end: Math.min(end, n - 1) };
+  const lastEdge = o[Math.min(n, o.length - 1)] ?? 0;
+  if (left >= lastEdge) return { start: n, end: n - 1 };
+
+  let lo = 0;
+  let hi = n - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (o[mid + 1] < left) lo = mid + 1;
+    else hi = mid;
+  }
+  const start = lo;
+
+  lo = start;
+  hi = n;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (o[mid] <= right) lo = mid + 1;
+    else hi = mid;
+  }
+  const end = Math.min(Math.max(lo - 1, start), n - 1);
+  return { start, end };
 }
 export function visibleRows(top, height, rowHeight, rowCount) {
   const rh = rowHeight || 26;
