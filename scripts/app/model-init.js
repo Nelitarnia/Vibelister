@@ -8,6 +8,7 @@ export function createDefaultMeta() {
     projectName: "",
     projectInfo: "",
     interactionsMode: "AI",
+    dataVersion: 0,
     columnWidths: {},
     commentFilter: { viewKey: "actions" },
     commentColors: normalizeCommentColorPalette(),

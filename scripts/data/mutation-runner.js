@@ -264,6 +264,12 @@ export function makeMutationRunner(deps) {
     }
 
     if (effects.render) {
+      if (model?.meta) {
+        const currentVersion = Number.isFinite(model.meta.dataVersion)
+          ? model.meta.dataVersion
+          : 0;
+        model.meta.dataVersion = currentVersion + 1;
+      }
       render?.();
     }
 
