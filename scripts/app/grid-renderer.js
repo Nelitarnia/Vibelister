@@ -941,9 +941,10 @@ function createGridRenderer({
       activeView,
       `${vc.start}:${vc.end}`,
       `${vr.start}:${vr.end}`,
-      `${sl}:${st}`,
       colStamp,
     ].join("|");
+    const scrollChanged =
+      lastRenderState.scrollLeft !== sl || lastRenderState.scrollTop !== st;
     const modelDataVersion =
       (model &&
         model.meta &&
@@ -956,6 +957,8 @@ function createGridRenderer({
       selectionSig === lastRenderState.selectionSignature &&
       modelDataVersion === lastRenderState.dataVersion
     ) {
+      lastRenderState.scrollLeft = sl;
+      lastRenderState.scrollTop = st;
       return;
     }
 
@@ -964,7 +967,27 @@ function createGridRenderer({
       modelDataVersion === lastRenderState.dataVersion &&
       selectionSig !== lastRenderState.selectionSignature;
 
-    if (selectionOnly) {
+    if (!scrollChanged && selectionOnly) {
+      updateSelectionHighlights(vr, vc);
+      lastRenderState.selectionSignature = selectionSig;
+      lastRenderState.viewportKey = viewportKey;
+      lastRenderState.dataVersion = modelDataVersion;
+      lastRenderState.visibleCols = { ...vc };
+      lastRenderState.visibleRows = { ...vr };
+      lastRenderState.scrollLeft = sl;
+      lastRenderState.scrollTop = st;
+      lastRenderState.colStamp = colStamp;
+      lastRenderState.viewKey = activeView;
+      return;
+    }
+
+    if (
+      selectionOnly ||
+      (viewportKey === lastRenderState.viewportKey &&
+        selectionSig === lastRenderState.selectionSignature &&
+        modelDataVersion === lastRenderState.dataVersion &&
+        scrollChanged)
+    ) {
       updateSelectionHighlights(vr, vc);
       lastRenderState.selectionSignature = selectionSig;
       lastRenderState.viewportKey = viewportKey;
@@ -1161,8 +1184,7 @@ function createGridRenderer({
         });
         const nextRenderKey = [
           activeView,
-          sl,
-          st,
+          colStamp,
           coordKey,
           dataVersion,
         ].join("|");
