@@ -106,6 +106,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       │   ├── deletion.js
 │   │       │   ├── grid-keys.js
 │   │       │   ├── inference-utils.js
+│   │       │   ├── inference-index-access.js
 │   │       │   ├── interactions.js
 │   │       │   ├── mod-state.js
 │   │       │   ├── model-fixtures.js

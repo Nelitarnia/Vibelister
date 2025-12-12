@@ -55,7 +55,23 @@ function warnOnBypassScopedCache(
   statusBar?.set?.(message);
 }
 
+const rowLookupCache = new WeakMap();
+
+function getAccessVersion(indexAccess) {
+  if (!indexAccess) return null;
+  if (typeof indexAccess.getVersion === "function") {
+    const version = Number(indexAccess.getVersion());
+    return Number.isFinite(version) ? version : null;
+  }
+  const version = Number(indexAccess.baseVersion ?? indexAccess.version);
+  return Number.isFinite(version) ? version : null;
+}
+
 function buildRowLookup(indexAccess) {
+  const version = getAccessVersion(indexAccess);
+  const cached = rowLookupCache.get(indexAccess);
+  if (cached && cached.version === version) return cached.lookup;
+
   const lookup = new Map();
   const total = indexAccess.getRowCount();
   for (let i = 0; i < total; i++) {
@@ -65,6 +81,8 @@ function buildRowLookup(indexAccess) {
     if (!lookup.has(key)) lookup.set(key, []);
     lookup.get(key).push(i);
   }
+
+  rowLookupCache.set(indexAccess, { version, lookup });
   return lookup;
 }
 
@@ -175,7 +193,8 @@ export function createInferenceIndexAccess(options) {
   function getBaseIndexAccess() {
     const getPair = (rowIndex) => getInteractionsPair?.(model, rowIndex);
     const getRowCount = () => getInteractionsRowCount?.(model) || 0;
-    return { getPair, getRowCount, includeBypass: false };
+    const getVersion = () => Number(model?.interactionsIndexVersion) || 0;
+    return { getPair, getRowCount, getVersion, includeBypass: false };
   }
 
   function getScopedActionIds(scope, baseRows, baseAccess, resolveRows) {
@@ -247,6 +266,8 @@ export function createInferenceIndexAccess(options) {
         }),
       getRowCount: () =>
         getInteractionsRowCount?.(model, { includeBypass: true, index }) || 0,
+      getVersion: () =>
+        Number(index?.baseVersion ?? model?.interactionsIndexVersion) || 0,
     };
     const mappedSelRow = mapRowsToIndex([sel.r], baseAccess, indexAccess)[0];
     if (mappedSelRow != null) indexAccess.activeRow = mappedSelRow;
