@@ -1208,6 +1208,183 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "Row-wide copy and cut include all columns",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: { tagName: "DIV", isContentEditable: false },
+        };
+
+        const navigatorStub = { platform: "Win" };
+
+        const selection = {
+          rows: new Set([0]),
+          cols: new Set([1]),
+          colsAll: true,
+          horizontalMode: true,
+        };
+        const sel = { r: 0, c: 1 };
+
+        const gridData = [["Name A", "42", "Note"]];
+
+        const clipboardStore = {};
+        const clipboardTypes = new Set();
+        const makeClipboardEvent = () => ({
+          clipboardData: {
+            types: clipboardTypes,
+            setData(type, value) {
+              clipboardStore[type] = value;
+              clipboardTypes.add(type);
+            },
+            getData(type) {
+              return clipboardStore[type];
+            },
+          },
+          preventDefault() {
+            this.prevented = true;
+          },
+          stopPropagation() {},
+          stopImmediatePropagation() {},
+          prevented: false,
+        });
+
+        const clearCalls = [];
+        const clearCells = (options) => {
+          clearCalls.push(options);
+          return { cleared: 3, message: null };
+        };
+
+        const statusMessages = [];
+        const status = {
+          set(message) {
+            statusMessages.push(message);
+          },
+        };
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection,
+          sel,
+          editor: { style: { display: "none" } },
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          moveSelectionForTab: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({
+            columns: [{ key: "name" }, { key: "value" }, { key: "note" }],
+          }),
+          getRowCount: () => gridData.length,
+          dataArray: () => gridData,
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells,
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: (r, c) => gridData[r][c],
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => {},
+          status,
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => ({ isOpen: () => false }),
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const copyListeners = listeners.get("copy") || [];
+          const copyListener = copyListeners.find((entry) => entry.capture);
+          assert.ok(copyListener, "copy listener should register in capture phase");
+
+          const copyEvent = makeClipboardEvent();
+          copyListener.cb(copyEvent);
+
+          assert.strictEqual(copyEvent.prevented, true, "copy should prevent default");
+          assert.strictEqual(
+            clipboardStore["text/plain"],
+            "Name A\t42\tNote",
+            "copy should include all columns",
+          );
+
+          const copyRangePayload = JSON.parse(clipboardStore[MIME_RANGE]);
+          assert.strictEqual(copyRangePayload.columns.length, 3);
+          assert.strictEqual(copyRangePayload.cells[0].length, 3);
+
+          const cutListeners = listeners.get("cut") || [];
+          const cutListener = cutListeners.find((entry) => entry.capture);
+          assert.ok(cutListener, "cut listener should register in capture phase");
+
+          clipboardTypes.clear();
+          for (const key of Object.keys(clipboardStore)) delete clipboardStore[key];
+          statusMessages.length = 0;
+
+          const cutEvent = makeClipboardEvent();
+          cutListener.cb(cutEvent);
+
+          assert.strictEqual(cutEvent.prevented, true, "cut should prevent default");
+          assert.strictEqual(
+            clipboardStore["text/plain"],
+            "Name A\t42\tNote",
+            "cut should include all columns",
+          );
+
+          const cutRangePayload = JSON.parse(clipboardStore[MIME_RANGE]);
+          assert.strictEqual(cutRangePayload.columns.length, 3);
+          assert.strictEqual(cutRangePayload.cells[0].length, 3);
+          assert.deepStrictEqual(clearCalls, [{ reason: "cut", skipStatus: true }]);
+          assert.deepStrictEqual(statusMessages, ["Cut 1×3 cells (types: Name, Value, Note)."]);
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
       name: "Cut handler copies selection and clears cells",
       run(assert) {
         const listeners = new Map();
