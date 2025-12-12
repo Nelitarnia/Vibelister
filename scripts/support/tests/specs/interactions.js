@@ -312,6 +312,96 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "cached pair lookup scales across thousands of rows",
+      run(assert) {
+        let accessCount = 0;
+        const makeVariant = (start, count, sig) => {
+          const state = { start, count };
+          return {
+            get rowIndex() {
+              accessCount++;
+              return state.start;
+            },
+            get rowCount() {
+              accessCount++;
+              return state.count;
+            },
+            variantSig: sig,
+          };
+        };
+
+        const groups = [];
+        const groupCount = 50;
+        const variantsPerGroup = 4;
+        const rowsPerVariant = 25;
+        let nextRow = 0;
+        for (let g = 0; g < groupCount; g++) {
+          const variants = [];
+          for (let v = 0; v < variantsPerGroup; v++) {
+            variants.push(makeVariant(nextRow, rowsPerVariant, `g${g}v${v}`));
+            nextRow += rowsPerVariant;
+          }
+          groups.push({ actionId: g + 1, variants });
+        }
+
+        const index = {
+          baseVersion: 1,
+          mode: "AI",
+          totalRows: nextRow,
+          inputsOrder: Array.from({ length: nextRow }, (_, i) => i + 1000),
+          groups,
+        };
+        const model = { interactionsIndex: index, interactionsIndexVersion: 1 };
+
+        const sampledPairs = [];
+        for (let r = 0; r < nextRow; r++) {
+          const pair = getInteractionsPair(model, r);
+          if (r % rowsPerVariant === 0) sampledPairs.push(pair);
+        }
+
+        assert.strictEqual(
+          sampledPairs.length,
+          groupCount * variantsPerGroup,
+          "pair sampling covers all variants",
+        );
+        assert.ok(
+          sampledPairs.every(
+            (p, idx) =>
+              p &&
+              p.kind === "AI" &&
+              p.aId === Math.floor(idx / variantsPerGroup) + 1,
+          ),
+          "pairs retain expected AI shape",
+        );
+
+        const accessesAfterWarmup = accessCount;
+        for (let r = nextRow - 1; r >= 0; r--) {
+          const pair = getInteractionsPair(model, r);
+          assert.ok(pair && pair.kind === "AI", "cached pair available");
+        }
+
+        const extraAccesses = accessCount - accessesAfterWarmup;
+        assert.ok(
+          extraAccesses <= groupCount * variantsPerGroup,
+          "cached lookups avoid rescanning variants",
+        );
+
+        index.groups = groups.map((group, i) =>
+          i === 0 ? { ...group, actionId: 4242 } : group,
+        );
+        index.baseVersion = 2;
+        model.interactionsIndexVersion = 2;
+
+        const updatedPair = getInteractionsPair(model, 0);
+        assert.strictEqual(
+          updatedPair.aId,
+          4242,
+          "cache rebuilds when baseVersion changes",
+        );
+        assert.ok(updatedPair && updatedPair.kind === "AI", "pair shape preserved");
+      },
+    },
+    {
       name: "clearing selection spans multiple columns",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
