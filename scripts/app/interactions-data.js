@@ -28,8 +28,20 @@ export function getInteractionsRowCount(model, options = {}) {
   return 0;
 }
 
-function findVariantEntry(index, rowIndex) {
+const variantCache = new WeakMap();
+
+function normalizeBaseVersion(index) {
+  const base = Number(index?.baseVersion);
+  return Number.isFinite(base) ? base : null;
+}
+
+function getVariantRanges(index) {
   if (!index || !Array.isArray(index.groups)) return null;
+  const baseVersion = normalizeBaseVersion(index);
+  const cached = variantCache.get(index);
+  if (cached && cached.baseVersion === baseVersion) return cached;
+
+  const ranges = [];
   for (const group of index.groups) {
     if (!group || !Array.isArray(group.variants)) continue;
     for (const variant of group.variants) {
@@ -37,10 +49,35 @@ function findVariantEntry(index, rowIndex) {
       const count = Number(variant?.rowCount);
       if (!Number.isFinite(start) || !Number.isFinite(count) || count <= 0)
         continue;
-      if (rowIndex >= start && rowIndex < start + count) {
-        return { group, variant, offset: rowIndex - start };
-      }
+      ranges.push({ start, end: start + count, group, variant });
     }
+  }
+  ranges.sort((a, b) => a.start - b.start);
+
+  const cacheEntry = { baseVersion, ranges };
+  variantCache.set(index, cacheEntry);
+  return cacheEntry;
+}
+
+function findVariantEntry(index, rowIndex) {
+  const cacheEntry = getVariantRanges(index);
+  if (!cacheEntry) return null;
+
+  const { ranges } = cacheEntry;
+  let lo = 0;
+  let hi = ranges.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const range = ranges[mid];
+    if (rowIndex < range.start) {
+      hi = mid - 1;
+      continue;
+    }
+    if (rowIndex >= range.end) {
+      lo = mid + 1;
+      continue;
+    }
+    return { group: range.group, variant: range.variant, offset: rowIndex - range.start };
   }
   return null;
 }
