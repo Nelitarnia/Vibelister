@@ -61,6 +61,9 @@ export function bootstrapEditingAndPersistence({
     dom,
   }));
 
+  // Expose palette API through app state so viewState/kind contexts can access it
+  appContext.state.paletteAPI = paletteAPI;
+
   const diagnosticsApi = createDiagnosticsController({
     model: appContext.model,
     statusBar,
@@ -78,6 +81,7 @@ export function bootstrapEditingAndPersistence({
   function destroy() {
     paletteAPI?.destroy?.();
     colorPickerAPI?.destroy?.();
+    appContext.state.paletteAPI = null;
   }
 
   return {
