@@ -1030,25 +1030,36 @@ export function initGridKeys(deps) {
     }
 
     const fullColumnRange = colDefs.map((_, idx) => idx);
+    const highlightedCols =
+      selection?.cols && selection.cols.size
+        ? Array.from(selection.cols).sort((a, b) => a - b)
+        : null;
     let destCols = computeDestinationIndices({
       sourceCount: sourceWidth,
       selectionSet: selection && selection.cols,
       anchor: colAnchor,
       limit: totalCols > 0 ? totalCols : colAnchor + sourceWidth,
-      allFlag: selection && selection.colsAll,
+      allFlag: selection && selection.colsAll && !highlightedCols,
       fullRange: fullColumnRange,
     });
+    if (selection && selection.colsAll) {
+      if (highlightedCols && highlightedCols.length) {
+        const spanStart = highlightedCols[0];
+        const spanEnd = highlightedCols[highlightedCols.length - 1];
+        const limited = [];
+        for (let c = spanStart; c <= spanEnd && limited.length < sourceWidth; c++) {
+          limited.push(c);
+        }
+        destCols = limited;
+      } else {
+        destCols = destCols.slice(0, sourceWidth);
+      }
+    }
     if (!destCols.length) destCols.push(colAnchor);
     if (totalCols > 0) {
       destCols = destCols.filter((c) => c < totalCols);
       if (!destCols.length)
         destCols.push(Math.max(0, Math.min(colAnchor, totalCols - 1)));
-    }
-    if (selection && selection.colsAll) {
-      destCols = fullColumnRange.slice(
-        0,
-        totalCols > 0 ? totalCols : fullColumnRange.length,
-      );
     }
 
     console.debug(
