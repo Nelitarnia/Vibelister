@@ -1,8 +1,8 @@
+import { dispatchAppEvent } from "./event-dispatcher.js";
+
 export const INTERACTION_TAGS_EVENT = "vibelister:interaction-tags-updated";
 
 export function emitInteractionTagChangeEvent(change, context = {}) {
-  if (typeof document === "undefined" || !document?.dispatchEvent) return;
-
   const detail = {
     change: change ?? null,
     reason: context?.reason ?? null,
@@ -16,21 +16,5 @@ export function emitInteractionTagChangeEvent(change, context = {}) {
     force: context?.force ?? false,
   };
 
-  let eventObject = null;
-  if (typeof CustomEvent === "function") {
-    try {
-      eventObject = new CustomEvent(INTERACTION_TAGS_EVENT, { detail });
-    } catch (_error) {
-      eventObject = null;
-    }
-  }
-  if (!eventObject) {
-    eventObject = { type: INTERACTION_TAGS_EVENT, detail };
-  }
-
-  try {
-    document.dispatchEvent(eventObject);
-  } catch (_error) {
-    /* ignore dispatch errors */
-  }
+  dispatchAppEvent(INTERACTION_TAGS_EVENT, detail);
 }
