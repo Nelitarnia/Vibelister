@@ -1,8 +1,9 @@
 // comment-events.js — shared dispatcher for comment store updates
 
+import { dispatchAppEvent } from "./event-dispatcher.js";
+
 export function emitCommentChangeEvent(change, context = {}) {
   if (!change && !context?.force) return;
-  if (typeof document === "undefined" || !document?.dispatchEvent) return;
   const viewKey =
     context?.viewKey ?? context?.vd?.key ?? change?.viewKey ?? null;
   const detail = {
@@ -11,11 +12,6 @@ export function emitCommentChangeEvent(change, context = {}) {
     rowIdentity: context?.rowIdentity ?? null,
     column: context?.column ?? null,
   };
-  try {
-    document.dispatchEvent(
-      new CustomEvent("vibelister:comments-updated", { detail }),
-    );
-  } catch (_error) {
-    /* silently ignore dispatch failures */
-  }
+
+  dispatchAppEvent("vibelister:comments-updated", detail);
 }

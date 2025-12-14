@@ -28,6 +28,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── column-widths.js
 │   │   ├── comment-events.js
 │   │   ├── comments.js
+│   │   ├── event-dispatcher.js
 │   │   ├── diagnostics.js
 │   │   ├── editing-shortcuts.js
 │   │   ├── grid-commands.js
@@ -230,6 +231,8 @@ This document outlines a maintainable directory layout tailored to the current c
 - `color-utils.js` offers shared normalization and contrast helpers so rendering modules and pickers reuse consistent color logic.
 - `comment-colors.js` centralizes the curated preset palette for comment badges and selectors, exposing helpers so UI code stays
   in sync with the available options.
+- `event-dispatcher.js` provides a guarded helper for emitting DOM events with `CustomEvent` when available so callers can short
+  -circuit safely during non-browser runs.
 - `comments.js` composes stable identifiers for per-row, per-view comment buckets and normalizes persisted maps so app state and
   migrations share the same helpers.
 
