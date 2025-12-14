@@ -46,6 +46,20 @@ function ensureProfile(map, key) {
   return map.get(key);
 }
 
+function forEachProfileGroup(store, callback) {
+  const state = ensureStore(store);
+  if (!state) return;
+  const groups = [
+    ["modifier", state.modifierProfiles],
+    ["input", state.inputProfiles],
+  ];
+  for (const [group, map] of groups) {
+    for (const [key, profile] of map.entries()) {
+      callback(profile, group, key);
+    }
+  }
+}
+
 function incrementCountsBucket(bucket, impact, nextValue, field, delta = 1) {
   if (!bucket) return;
   const deltaValue = Number.isFinite(delta) ? delta : 0;
@@ -105,17 +119,11 @@ function decayFieldBucket(fieldBucket, factor) {
 
 function decayProfiles(store, factor = 0.94) {
   if (!store) return;
-  const { modifierProfiles, inputProfiles } = store;
-  for (const profile of modifierProfiles.values()) {
+  forEachProfileGroup(store, (profile) => {
     decayFieldBucket(profile.outcome, factor);
     decayFieldBucket(profile.end, factor);
     decayFieldBucket(profile.tag, factor);
-  }
-  for (const profile of inputProfiles.values()) {
-    decayFieldBucket(profile.outcome, factor);
-    decayFieldBucket(profile.end, factor);
-    decayFieldBucket(profile.tag, factor);
-  }
+  });
 }
 
 export function recordProfileImpact({
@@ -207,17 +215,13 @@ export function captureInferenceProfilesSnapshot(store) {
     return Object.freeze({ modifier: Object.freeze({}), input: Object.freeze({}) });
   }
   decayProfiles(state);
-  const modifier = {};
-  for (const [key, profile] of state.modifierProfiles.entries()) {
-    modifier[key] = cloneProfile(profile);
-  }
-  const input = {};
-  for (const [key, profile] of state.inputProfiles.entries()) {
-    input[key] = cloneProfile(profile);
-  }
+  const snapshot = { modifier: {}, input: {} };
+  forEachProfileGroup(state, (profile, group, key) => {
+    snapshot[group][key] = cloneProfile(profile);
+  });
   return Object.freeze({
-    modifier: Object.freeze(modifier),
-    input: Object.freeze(input),
+    modifier: Object.freeze(snapshot.modifier),
+    input: Object.freeze(snapshot.input),
   });
 }
 
