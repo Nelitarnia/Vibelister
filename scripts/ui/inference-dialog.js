@@ -437,6 +437,10 @@ export async function openInferenceDialog(options = {}) {
       "Trend preferences",
       "Recent edits and clears teach the heuristic which values you keep applying; weak signals are ignored until they are consistent.",
     );
+    addInfo(
+      "Phase adjacency",
+      "Bridges small gaps between filled phases so nearby rows can inherit the same values even when a few phases are empty.",
+    );
 
     const infoFooter = document.createElement("p");
     infoFooter.style.cssText = "margin:0;color:#b8c4f2;font-size:12px;";
