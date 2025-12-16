@@ -292,6 +292,74 @@ export function getPersistenceTests() {
       },
     },
     {
+      name: "openFromDisk rebuilds inference profiles store",
+      async run(assert) {
+        const { model } = makeModelFixture();
+        const existingStore = model.inferenceProfiles;
+        const loadFsModule = async () => ({
+          openJson: async () => ({
+            name: "project.json",
+            data: {
+              meta: {
+                schema: 0,
+                projectName: "",
+                projectInfo: "",
+                interactionsMode: "AI",
+              },
+              actions: [],
+              inputs: [],
+              modifiers: [],
+              outcomes: [],
+              modifierGroups: [],
+              modifierConstraints: [],
+              notes: {},
+              comments: createEmptyCommentMap(),
+              interactionsPairs: [],
+              interactionsIndex: { mode: "AI", groups: [] },
+              inferenceProfiles: { decayBudget: "bad" },
+              nextId: 1,
+            },
+          }),
+        });
+
+        const controller = createPersistenceController({
+          model,
+          statusBar: null,
+          clearHistory: () => {},
+          resetAllViewState: () => {},
+          setActiveView: () => {},
+          sel: null,
+          updateProjectNameWidget: () => {},
+          setProjectNameFromFile: () => {},
+          getSuggestedName: () => "project.json",
+          closeMenus: () => {},
+          onModelReset: () => {},
+          loadFsModule,
+        });
+
+        await controller.openFromDisk();
+
+        assert.strictEqual(
+          model.inferenceProfiles,
+          existingStore,
+          "runtime inference store should be preserved",
+        );
+        assert.ok(
+          model.inferenceProfiles.modifierProfiles instanceof Map,
+          "modifier profiles should be mapped",
+        );
+        assert.ok(
+          model.inferenceProfiles.inputProfiles instanceof Map,
+          "input profiles should be mapped",
+        );
+        assert.strictEqual(
+          model.inferenceProfiles.decayBudget,
+          0,
+          "decay budget should reset during load",
+        );
+      },
+    },
+    {
       name: "upgradeModelInPlace seeds comments map",
       run(assert) {
         const { model } = makeModelFixture();
