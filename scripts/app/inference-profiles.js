@@ -35,9 +35,14 @@ export function createInferenceProfileStore() {
 }
 
 function ensureStore(store) {
-  if (!store) return null;
-  const { modifierProfiles, inputProfiles } = store;
-  if (!modifierProfiles || !inputProfiles) return null;
+  if (!store || typeof store !== "object") return null;
+  if (!(store.modifierProfiles instanceof Map)) {
+    store.modifierProfiles = new Map();
+  }
+  if (!(store.inputProfiles instanceof Map)) {
+    store.inputProfiles = new Map();
+  }
+  if (!Number.isFinite(store.decayBudget)) store.decayBudget = 0;
   return store;
 }
 

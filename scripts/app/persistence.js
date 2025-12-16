@@ -28,6 +28,10 @@ import {
   normalizeInteractionSource,
 } from "./interactions.js";
 import { createDefaultMeta } from "./model-init.js";
+import {
+  createInferenceProfileStore,
+  resetInferenceProfiles,
+} from "./inference-profiles.js";
 
 export function createPersistenceController({
   model,
@@ -72,6 +76,19 @@ export function createPersistenceController({
     delete target.interactionsIndexBypassScopedCache;
     delete target.interactionsIndexCache;
     delete target.interactionsIndexScopedCache;
+  }
+
+  function normalizeInferenceProfileStore(store) {
+    if (
+      store &&
+      typeof store === "object" &&
+      store.modifierProfiles instanceof Map &&
+      store.inputProfiles instanceof Map
+    ) {
+      if (!Number.isFinite(store.decayBudget)) store.decayBudget = 0;
+      return store;
+    }
+    return createInferenceProfileStore();
   }
 
   function stripDefaultInteractionMetadata(note) {
@@ -289,6 +306,7 @@ export function createPersistenceController({
     }
     if (!Number.isFinite(o.nextId)) o.nextId = maxId + 1;
     else o.nextId = Math.max(o.nextId, maxId + 1);
+    o.inferenceProfiles = normalizeInferenceProfileStore(o.inferenceProfiles);
     o.meta.schema = SCHEMA_VERSION;
   }
 
@@ -326,11 +344,16 @@ export function createPersistenceController({
     closeMenus?.();
     try {
       const m = await getFsModule();
+      const inferenceProfiles = normalizeInferenceProfileStore(
+        model?.inferenceProfiles,
+      );
       const { data, name } = await m.openJson();
       upgradeModelInPlace(data);
+      data.inferenceProfiles = inferenceProfiles;
       clearBypassIndexArtifacts(data);
       clearBypassIndexArtifacts(model);
       Object.assign(model, data);
+      resetInferenceProfiles(inferenceProfiles);
       clearHistory();
       ensureSeedRows();
       buildInteractionsPairs(model);
