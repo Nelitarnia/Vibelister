@@ -137,6 +137,47 @@ export function makeMutationRunner(deps) {
     ? Math.max(0, historyLimitInput | 0)
     : 100;
 
+  let renderEpoch = Number.isFinite(model?.meta?.dataVersion)
+    ? model.meta.dataVersion
+    : Number.isFinite(model?.renderEpoch)
+      ? model.renderEpoch
+      : 0;
+
+  function syncRenderEpoch() {
+    const base = Number.isFinite(model?.meta?.dataVersion)
+      ? model.meta.dataVersion
+      : Number.isFinite(model?.renderEpoch)
+        ? model.renderEpoch
+        : renderEpoch;
+    renderEpoch = Number.isFinite(base) ? base : 0;
+    if (model && typeof model === "object") {
+      model.renderEpoch = renderEpoch;
+      if (model.meta && typeof model.meta === "object") {
+        if (!Number.isFinite(model.meta.dataVersion)) model.meta.dataVersion = renderEpoch;
+      }
+    }
+    return renderEpoch;
+  }
+
+  function bumpRenderEpoch() {
+    const base = Number.isFinite(model?.meta?.dataVersion)
+      ? model.meta.dataVersion
+      : Number.isFinite(renderEpoch)
+        ? renderEpoch
+        : 0;
+    const next = base + 1;
+    renderEpoch = next;
+    if (model && typeof model === "object") {
+      model.renderEpoch = next;
+      if (model.meta && typeof model.meta === "object") {
+        model.meta.dataVersion = next;
+      }
+    }
+    return next;
+  }
+
+  syncRenderEpoch();
+
   function notifyHistoryChange() {
     if (typeof onHistoryChange === "function") {
       try {
@@ -264,12 +305,7 @@ export function makeMutationRunner(deps) {
     }
 
     if (effects.render) {
-      if (model?.meta) {
-        const currentVersion = Number.isFinite(model.meta.dataVersion)
-          ? model.meta.dataVersion
-          : 0;
-        model.meta.dataVersion = currentVersion + 1;
-      }
+      bumpRenderEpoch();
       render?.();
     }
 
@@ -551,8 +587,10 @@ export function makeMutationRunner(deps) {
       }
     }
 
+    syncRenderEpoch();
     invalidateViewDef?.();
     layout?.();
+    bumpRenderEpoch();
     render?.();
 
     try {

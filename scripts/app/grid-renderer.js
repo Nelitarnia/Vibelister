@@ -59,6 +59,16 @@ function createGridRenderer({
     visibleRows: { start: 0, end: -1 },
   };
 
+  function getModelDataVersion() {
+    if (!model) return null;
+    const metaVersion =
+      model.meta &&
+      (model.meta.dataVersion ?? model.meta.version ?? model.meta.revision);
+    if (metaVersion != null) return metaVersion;
+    if (model.renderEpoch != null) return model.renderEpoch;
+    return model.version ?? null;
+  }
+
   function getCommentPaletteRevision() {
     return paletteRevision;
   }
@@ -945,12 +955,7 @@ function createGridRenderer({
     ].join("|");
     const scrollChanged =
       lastRenderState.scrollLeft !== sl || lastRenderState.scrollTop !== st;
-    const modelDataVersion =
-      (model &&
-        model.meta &&
-        (model.meta.dataVersion ?? model.meta.version ?? model.meta.revision)) ||
-      model?.version ||
-      null;
+    const modelDataVersion = getModelDataVersion();
 
     if (
       viewportKey === lastRenderState.viewportKey &&
