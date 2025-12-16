@@ -7,6 +7,7 @@ export const modifierProfileStrategy = {
   key: "modifier-profile",
   thresholds(thresholds) {
     return {
+      enabled: thresholds.modifierProfileEnabled !== false,
       minGroupSize: thresholds.consensusMinGroupSize,
       minExistingRatio: thresholds.consensusMinExistingRatio,
     };

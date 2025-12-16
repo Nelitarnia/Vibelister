@@ -1,3 +1,6 @@
+import { DEFAULT_HEURISTIC_THRESHOLDS } from "../app/inference-heuristics.js";
+import { DEFAULT_INFERENCE_STRATEGIES } from "../app/inference-strategies/index.js";
+
 // inference-dialog.js — Modal for running/clearing interaction inference runs.
 
 function createOverlay() {
@@ -12,21 +15,6 @@ function createOverlay() {
   overlay.appendChild(box);
   return { overlay, box };
 }
-
-const FALLBACK_THRESHOLD_DEFAULTS = Object.freeze({
-  consensusMinGroupSize: 2,
-  consensusMinExistingRatio: 0.5,
-  actionGroupMinGroupSize: 2,
-  actionGroupMinExistingRatio: 0.6,
-  actionGroupPhaseMinGroupSize: 3,
-  actionGroupPhaseMinExistingRatio: 0.72,
-  inputDefaultMinGroupSize: 2,
-  inputDefaultMinExistingRatio: 0.5,
-  profileTrendMinObservations: 5,
-  profileTrendMinPreferenceRatio: 0.65,
-  phaseAdjacencyMaxGap: 4,
-  phaseAdjacencyEnabled: true,
-});
 
 function buttonStyle({ emphasis = false } = {}) {
   return {
@@ -112,9 +100,10 @@ function adjustCount(base, delta = 0, min = 1) {
 }
 
 function derivePresetThresholds(baseThresholds = {}, variant = "default") {
-  const base = { ...FALLBACK_THRESHOLD_DEFAULTS, ...baseThresholds };
+  const base = { ...DEFAULT_HEURISTIC_THRESHOLDS, ...baseThresholds };
   if (variant === "lenient") {
     return {
+      ...base,
       consensusMinGroupSize: adjustCount(base.consensusMinGroupSize, -1),
       consensusMinExistingRatio: clampRatio(base.consensusMinExistingRatio - 0.15),
       actionGroupMinGroupSize: adjustCount(base.actionGroupMinGroupSize, -1),
@@ -134,12 +123,11 @@ function derivePresetThresholds(baseThresholds = {}, variant = "default") {
       profileTrendMinPreferenceRatio: clampRatio(
         base.profileTrendMinPreferenceRatio - 0.1,
       ),
-      phaseAdjacencyMaxGap: base.phaseAdjacencyMaxGap,
-      phaseAdjacencyEnabled: base.phaseAdjacencyEnabled,
     };
   }
   if (variant === "strict") {
     return {
+      ...base,
       consensusMinGroupSize: adjustCount(base.consensusMinGroupSize, 1),
       consensusMinExistingRatio: clampRatio(base.consensusMinExistingRatio + 0.2),
       actionGroupMinGroupSize: adjustCount(base.actionGroupMinGroupSize, 1),
@@ -159,8 +147,6 @@ function derivePresetThresholds(baseThresholds = {}, variant = "default") {
       profileTrendMinPreferenceRatio: clampRatio(
         base.profileTrendMinPreferenceRatio + 0.1,
       ),
-      phaseAdjacencyMaxGap: base.phaseAdjacencyMaxGap,
-      phaseAdjacencyEnabled: base.phaseAdjacencyEnabled,
     };
   }
   return { ...base };
@@ -209,6 +195,164 @@ function buildCheckbox(labelText, defaultValue, title) {
   label.append(input, span);
   return { label, input };
 }
+
+const STRATEGY_LABELS = Object.freeze({
+  consensus: "Modifier propagation",
+  "action-group": "Action groups",
+  "modifier-profile": "Modifier profiles",
+  "input-default": "Input defaults",
+  "profile-trend": "Trend preferences",
+  "phase-adjacency": "Phase adjacency",
+});
+
+const STRATEGY_CONFIG = Object.freeze({
+  consensus: {
+    enabledKey: "consensusEnabled",
+    fields: [
+      {
+        key: "consensusMinGroupSize",
+        label: "Consensus min group size",
+        options: {
+          min: 1,
+          step: 1,
+          title: "Minimum rows needed in scope before consensus suggestions run.",
+        },
+      },
+      {
+        key: "consensusMinExistingRatio",
+        label: "Consensus min existing ratio",
+        options: {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          title: "Fraction of rows that must already be filled to trust consensus suggestions.",
+        },
+      },
+    ],
+  },
+  "action-group": {
+    enabledKey: "actionGroupEnabled",
+    fields: [
+      {
+        key: "actionGroupMinGroupSize",
+        label: "Action group min group size",
+        options: {
+          min: 0,
+          step: 1,
+          title: "Rows per action group required before suggesting group defaults.",
+        },
+      },
+      {
+        key: "actionGroupMinExistingRatio",
+        label: "Action group min existing ratio",
+        options: {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          title: "Filled ratio per action group before defaults or clears propagate.",
+        },
+      },
+      {
+        key: "actionGroupPhaseMinGroupSize",
+        label: "Group phase min group size",
+        options: {
+          min: 0,
+          step: 1,
+          title: "Rows per phase needed before phase defaults apply.",
+        },
+      },
+      {
+        key: "actionGroupPhaseMinExistingRatio",
+        label: "Group phase min existing ratio",
+        options: {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          title: "Filled ratio per phase required before phase-level suggestions kick in.",
+        },
+      },
+    ],
+  },
+  "modifier-profile": {
+    enabledKey: "modifierProfileEnabled",
+    fields: [
+      {
+        key: "consensusMinGroupSize",
+        label: "Consensus min group size",
+        options: {
+          min: 1,
+          step: 1,
+          title: "Minimum rows needed in scope before consensus suggestions run.",
+        },
+      },
+      {
+        key: "consensusMinExistingRatio",
+        label: "Consensus min existing ratio",
+        options: {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          title: "Fraction of rows that must already be filled to trust consensus suggestions.",
+        },
+      },
+    ],
+    hint: "Shares modifier propagation thresholds.",
+  },
+  "input-default": {
+    enabledKey: "inputDefaultEnabled",
+    fields: [
+      {
+        key: "inputDefaultMinGroupSize",
+        label: "Input default min group size",
+        options: { min: 1, step: 1, title: "Rows per input needed before seeding defaults." },
+      },
+      {
+        key: "inputDefaultMinExistingRatio",
+        label: "Input default min existing ratio",
+        options: {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          title: "Filled ratio per input before default suggestions trigger.",
+        },
+      },
+    ],
+  },
+  "profile-trend": {
+    enabledKey: "profileTrendEnabled",
+    fields: [
+      {
+        key: "profileTrendMinObservations",
+        label: "Trend min observations",
+        options: { min: 0, step: 1, title: "Observations needed before applying trend preferences." },
+      },
+      {
+        key: "profileTrendMinPreferenceRatio",
+        label: "Trend min preference ratio",
+        options: {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          title: "Strength threshold before trends override base defaults.",
+        },
+      },
+    ],
+  },
+  "phase-adjacency": {
+    enabledKey: "phaseAdjacencyEnabled",
+    fields: [
+      {
+        key: "phaseAdjacencyMaxGap",
+        label: "Phase adjacency max gap",
+        options: {
+          min: 2,
+          step: 1,
+          title: "Largest phase gap to bridge when suggesting adjacent fills.",
+        },
+      },
+    ],
+  },
+});
 
 export async function openInferenceDialog(options = {}) {
   const { defaults = {}, defaultThresholds, onRun, onClear } = options;
@@ -381,169 +525,50 @@ export async function openInferenceDialog(options = {}) {
 
     const advancedSection = document.createElement("div");
     advancedSection.style.cssText =
-      "display:none;flex-direction:column;gap:10px;";
+      "display:none;flex-direction:column;gap:12px;";
 
-    const baseThresholds = derivePresetThresholds(defaultThresholds, "default");
+    const thresholdDefaults = {
+      ...DEFAULT_HEURISTIC_THRESHOLDS,
+      ...(defaultThresholds || {}),
+    };
+    const baseThresholds = derivePresetThresholds(thresholdDefaults, "default");
     const lenientThresholds = derivePresetThresholds(baseThresholds, "lenient");
     const strictThresholds = derivePresetThresholds(baseThresholds, "strict");
+    const initialThresholds = {
+      ...thresholdDefaults,
+      ...(defaults.thresholdOverrides || {}),
+    };
 
-    const thresholdsGrid = document.createElement("div");
-    thresholdsGrid.style.cssText =
-      "display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;";
+    const thresholdInputs = new Map();
+    const strategyToggles = new Map();
 
-    const { wrapper: consensusMinGroupSizeLabel, input: consensusMinGroupSize } =
-      buildNumberField("Consensus min group size", defaults.thresholdOverrides?.consensusMinGroupSize, {
-        min: 1,
-        step: 1,
-        title: "Minimum rows needed in scope before consensus suggestions run.",
-      });
-    const {
-      wrapper: consensusMinExistingRatioLabel,
-      input: consensusMinExistingRatio,
-    } = buildNumberField(
-      "Consensus min existing ratio",
-      defaults.thresholdOverrides?.consensusMinExistingRatio,
-      {
-        min: 0,
-        max: 1,
-        step: 0.01,
-        title:
-          "Fraction of rows that must already be filled to trust consensus suggestions.",
-      },
-    );
-    const {
-      wrapper: actionGroupMinGroupSizeLabel,
-      input: actionGroupMinGroupSize,
-    } = buildNumberField(
-      "Action group min group size",
-      defaults.thresholdOverrides?.actionGroupMinGroupSize,
-      {
-        min: 0,
-        step: 1,
-        title: "Rows per action group required before suggesting group defaults.",
-      },
-    );
-    const {
-      wrapper: actionGroupMinExistingRatioLabel,
-      input: actionGroupMinExistingRatio,
-    } = buildNumberField(
-      "Action group min existing ratio",
-      defaults.thresholdOverrides?.actionGroupMinExistingRatio,
-      {
-        min: 0,
-        max: 1,
-        step: 0.01,
-        title:
-          "Filled ratio per action group before defaults or clears propagate.",
-      },
-    );
-    const {
-      wrapper: actionGroupPhaseMinGroupSizeLabel,
-      input: actionGroupPhaseMinGroupSize,
-    } = buildNumberField(
-      "Group phase min group size",
-      defaults.thresholdOverrides?.actionGroupPhaseMinGroupSize,
-      { min: 0, step: 1, title: "Rows per phase needed before phase defaults apply." },
-    );
-    const {
-      wrapper: actionGroupPhaseMinExistingRatioLabel,
-      input: actionGroupPhaseMinExistingRatio,
-    } = buildNumberField(
-      "Group phase min existing ratio",
-      defaults.thresholdOverrides?.actionGroupPhaseMinExistingRatio,
-      {
-        min: 0,
-        max: 1,
-        step: 0.01,
-        title:
-          "Filled ratio per phase required before phase-level suggestions kick in.",
-      },
-    );
-    const { wrapper: inputDefaultMinGroupSizeLabel, input: inputDefaultMinGroupSize } =
-      buildNumberField(
-        "Input default min group size",
-        defaults.thresholdOverrides?.inputDefaultMinGroupSize,
-        { min: 1, step: 1, title: "Rows per input needed before seeding defaults." },
-      );
-    const {
-      wrapper: inputDefaultMinExistingRatioLabel,
-      input: inputDefaultMinExistingRatio,
-    } = buildNumberField(
-      "Input default min existing ratio",
-      defaults.thresholdOverrides?.inputDefaultMinExistingRatio,
-      {
-        min: 0,
-        max: 1,
-        step: 0.01,
-        title: "Filled ratio per input before default suggestions trigger.",
-      },
-    );
-    const {
-      wrapper: profileTrendMinObservationsLabel,
-      input: profileTrendMinObservations,
-    } = buildNumberField(
-      "Trend min observations",
-      defaults.thresholdOverrides?.profileTrendMinObservations,
-      { min: 0, step: 1, title: "Observations needed before applying trend preferences." },
-    );
-    const {
-      wrapper: profileTrendMinPreferenceRatioLabel,
-      input: profileTrendMinPreferenceRatio,
-    } = buildNumberField(
-      "Trend min preference ratio",
-      defaults.thresholdOverrides?.profileTrendMinPreferenceRatio,
-      {
-        min: 0,
-        max: 1,
-        step: 0.01,
-        title: "Strength threshold before trends override base defaults.",
-      },
-    );
-    const { wrapper: phaseAdjacencyMaxGapLabel, input: phaseAdjacencyMaxGap } =
-      buildNumberField(
-        "Phase adjacency max gap",
-        defaults.thresholdOverrides?.phaseAdjacencyMaxGap,
-        {
-          min: 2,
-          step: 1,
-          title: "Largest phase gap to bridge when suggesting adjacent fills.",
-        },
-      );
-    const {
-      label: phaseAdjacencyEnabledLabel,
-      input: phaseAdjacencyEnabled,
-    } = buildCheckbox(
-      "Enable phase adjacency",
-      defaults.thresholdOverrides?.phaseAdjacencyEnabled !== false,
-      "Uncheck to disable inference based on surrounding phase anchors.",
-    );
-    phaseAdjacencyEnabled.style.alignSelf = "flex-start";
-    phaseAdjacencyEnabledLabel.style.marginTop = "6px";
-    phaseAdjacencyEnabledLabel.style.gap = "8px";
+    function setThresholdValue(key, value) {
+      const inputs = thresholdInputs.get(key) || [];
+      for (const input of inputs) {
+        input.value = value == null ? "" : value;
+      }
+    }
 
-    function setThresholdInputs(values = {}) {
-      const pairs = {
-        consensusMinGroupSize,
-        consensusMinExistingRatio,
-        actionGroupMinGroupSize,
-        actionGroupMinExistingRatio,
-        actionGroupPhaseMinGroupSize,
-        actionGroupPhaseMinExistingRatio,
-        inputDefaultMinGroupSize,
-        inputDefaultMinExistingRatio,
-        profileTrendMinObservations,
-        profileTrendMinPreferenceRatio,
-        phaseAdjacencyMaxGap,
-        phaseAdjacencyEnabled,
-      };
-      for (const [key, input] of Object.entries(pairs)) {
-        const value = values[key];
-        if (input.type === "checkbox") {
-          input.checked = value == null ? false : !!value;
-        } else {
-          input.value = value == null ? "" : value;
+    function setThresholdInputs(values = {}, { skipToggles = false } = {}) {
+      for (const [key] of thresholdInputs.entries()) {
+        if (!(key in values)) continue;
+        setThresholdValue(key, values[key]);
+      }
+      if (!skipToggles) {
+        for (const [, toggle] of strategyToggles.entries()) {
+          const { checkbox, enabledKey } = toggle;
+          if (!enabledKey || !(enabledKey in values)) continue;
+          checkbox.checked = !!values[enabledKey];
         }
       }
+    }
+
+    function registerThresholdInput(key, input) {
+      if (!thresholdInputs.has(key)) thresholdInputs.set(key, []);
+      thresholdInputs.get(key).push(input);
+      input.addEventListener("input", () =>
+        setThresholdInputs({ [key]: input.value }, { skipToggles: true }),
+      );
     }
 
     const presetRow = document.createElement("div");
@@ -581,32 +606,107 @@ export async function openInferenceDialog(options = {}) {
       button.style.padding = "6px 12px";
       button.addEventListener("click", () => {
         setThresholdInputs(preset.values);
+        for (const [, toggle] of strategyToggles.entries()) {
+          const { checkbox, enabledKey } = toggle;
+          if (enabledKey && enabledKey in preset.values) {
+            checkbox.checked = !!preset.values[enabledKey];
+          }
+        }
         if (summary) summary.textContent = `${preset.label} thresholds applied.`;
       });
       presetRow.appendChild(button);
     });
 
-    thresholdsGrid.append(
-      consensusMinGroupSizeLabel,
-      consensusMinExistingRatioLabel,
-      actionGroupMinGroupSizeLabel,
-      actionGroupMinExistingRatioLabel,
-      actionGroupPhaseMinGroupSizeLabel,
-      actionGroupPhaseMinExistingRatioLabel,
-      inputDefaultMinGroupSizeLabel,
-      inputDefaultMinExistingRatioLabel,
-      profileTrendMinObservationsLabel,
-      profileTrendMinPreferenceRatioLabel,
-      phaseAdjacencyMaxGapLabel,
-      phaseAdjacencyEnabledLabel,
-    );
+    const heuristicGrid = document.createElement("div");
+    heuristicGrid.style.cssText =
+      "display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;";
+
+    DEFAULT_INFERENCE_STRATEGIES.forEach((strategy) => {
+      const config = STRATEGY_CONFIG[strategy.key] || {};
+      const block = document.createElement("section");
+      block.style.cssText =
+        "border:1px solid #1f2740;border-radius:10px;padding:12px 12px;" +
+        "background:#0b1020;display:flex;flex-direction:column;gap:10px;";
+
+      const headerRow = document.createElement("div");
+      headerRow.style.cssText =
+        "display:flex;align-items:center;gap:10px;justify-content:space-between;";
+      const label = document.createElement("span");
+      label.textContent = STRATEGY_LABELS[strategy.key] || strategy.key;
+      label.style.cssText = "color:#e1e8ff;font-weight:700;font-size:14px;";
+
+      const enabledKey = config.enabledKey;
+      const defaultEnabled =
+        typeof initialThresholds[enabledKey] === "boolean"
+          ? initialThresholds[enabledKey]
+          : true;
+      const { label: enabledLabel, input: enabledInput } = buildCheckbox(
+        "Enabled",
+        defaultEnabled,
+        "Toggle this heuristic on or off",
+      );
+      enabledLabel.style.margin = "0";
+      enabledLabel.style.gap = "8px";
+      enabledLabel.style.fontSize = "13px";
+      enabledInput.style.margin = "0";
+
+      strategyToggles.set(strategy.key, {
+        checkbox: enabledInput,
+        enabledKey,
+      });
+
+      headerRow.append(label, enabledLabel);
+      block.appendChild(headerRow);
+
+      if (Array.isArray(config.fields) && config.fields.length) {
+        const fieldGrid = document.createElement("div");
+        fieldGrid.style.cssText =
+          "display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;";
+        config.fields.forEach((field) => {
+          const defaultValue = initialThresholds[field.key];
+          const { wrapper, input } = buildNumberField(
+            field.label,
+            defaultValue == null ? "" : defaultValue,
+            field.options,
+          );
+          registerThresholdInput(field.key, input);
+          fieldGrid.appendChild(wrapper);
+        });
+        block.appendChild(fieldGrid);
+      }
+
+      if (config.hint) {
+        const hint = document.createElement("p");
+        hint.textContent = config.hint;
+        hint.style.cssText = "margin:0;color:#8c98c8;font-size:12px;";
+        block.appendChild(hint);
+      }
+
+      heuristicGrid.appendChild(block);
+    });
+
+    setThresholdInputs(initialThresholds);
 
     const advancedHint = document.createElement("p");
     advancedHint.textContent =
-      "Minimum group sizes and preference ratios trim noisy suggestions. Leave blank to use defaults.";
+      "Tune each heuristic separately. Leave blanks to fall back to defaults.";
     advancedHint.style.cssText = "margin:4px 0 0;color:#8c98c8;font-size:12px;";
 
-    advancedSection.append(presetRow, thresholdsGrid, advancedHint);
+    advancedSection.append(presetRow, heuristicGrid, advancedHint);
+
+    function buildThresholdOverrides() {
+      const overrides = {};
+      thresholdInputs.forEach((inputs, key) => {
+        if (!inputs.length) return;
+        overrides[key] = parseNumber(inputs[0].value);
+      });
+      for (const [, toggle] of strategyToggles.entries()) {
+        if (toggle.enabledKey) {
+          overrides[toggle.enabledKey] = toggle.checkbox.checked;
+        }
+      }
+      return overrides;
+    }
 
     const tabs = document.createElement("div");
     tabs.style.cssText = "display:flex;gap:6px;";
@@ -695,26 +795,7 @@ export async function openInferenceDialog(options = {}) {
         overwriteInferred: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
         skipManualOutcome: skipManualOutcomeInput.checked,
-        thresholdOverrides: {
-          consensusMinGroupSize: parseNumber(consensusMinGroupSize.value),
-          consensusMinExistingRatio: parseNumber(consensusMinExistingRatio.value),
-          actionGroupMinGroupSize: parseNumber(actionGroupMinGroupSize.value),
-          actionGroupMinExistingRatio: parseNumber(actionGroupMinExistingRatio.value),
-          actionGroupPhaseMinGroupSize: parseNumber(actionGroupPhaseMinGroupSize.value),
-          actionGroupPhaseMinExistingRatio: parseNumber(actionGroupPhaseMinExistingRatio.value),
-          inputDefaultMinGroupSize: parseNumber(inputDefaultMinGroupSize.value),
-          inputDefaultMinExistingRatio: parseNumber(
-            inputDefaultMinExistingRatio.value,
-          ),
-          profileTrendMinObservations: parseNumber(
-            profileTrendMinObservations.value,
-          ),
-          profileTrendMinPreferenceRatio: parseNumber(
-            profileTrendMinPreferenceRatio.value,
-          ),
-          phaseAdjacencyMaxGap: parseNumber(phaseAdjacencyMaxGap.value),
-          phaseAdjacencyEnabled: phaseAdjacencyEnabled.checked,
-        },
+        thresholdOverrides: buildThresholdOverrides(),
       };
     }
 

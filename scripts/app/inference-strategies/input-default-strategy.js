@@ -7,6 +7,7 @@ export const inputDefaultStrategy = {
   key: "input-default",
   thresholds(thresholds) {
     return {
+      enabled: thresholds.inputDefaultEnabled !== false,
       minGroupSize: thresholds.inputDefaultMinGroupSize,
       minExistingRatio: thresholds.inputDefaultMinExistingRatio,
     };
