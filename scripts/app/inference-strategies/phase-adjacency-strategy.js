@@ -8,7 +8,7 @@ export const phaseAdjacencyStrategy = {
   thresholds(thresholds) {
     return {
       maxGapDistance: thresholds.phaseAdjacencyMaxGap,
-      enabled: thresholds.phaseAdjacencyEnabled,
+      enabled: thresholds.phaseAdjacencyEnabled !== false,
     };
   },
   prepare({ targets }) {

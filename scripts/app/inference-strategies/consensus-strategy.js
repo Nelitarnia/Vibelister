@@ -7,6 +7,7 @@ export const consensusStrategy = {
   key: "consensus",
   thresholds(thresholds) {
     return {
+      enabled: thresholds.consensusEnabled !== false,
       minGroupSize: thresholds.consensusMinGroupSize,
       minExistingRatio: thresholds.consensusMinExistingRatio,
     };

@@ -10,6 +10,7 @@ export const actionGroupStrategy = {
   key: "action-group",
   thresholds(thresholds) {
     return {
+      enabled: thresholds.actionGroupEnabled !== false,
       input: {
         minGroupSize: thresholds.actionGroupMinGroupSize,
         minExistingRatio: thresholds.actionGroupMinExistingRatio,

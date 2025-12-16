@@ -2,6 +2,7 @@ export const profileTrendStrategy = {
   key: "profile-trend",
   thresholds(thresholds) {
     return {
+      enabled: thresholds.profileTrendEnabled !== false,
       minObservations: thresholds.profileTrendMinObservations,
       minPreferenceRatio: thresholds.profileTrendMinPreferenceRatio,
     };

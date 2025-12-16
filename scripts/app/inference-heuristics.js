@@ -292,61 +292,86 @@ function computeSuggestionConfidence(source, context = {}) {
 }
 
 export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
+  consensusEnabled: true,
   consensusMinGroupSize: 2,
   consensusMinExistingRatio: 0.5,
+  actionGroupEnabled: true,
   actionGroupMinGroupSize: 2,
   actionGroupMinExistingRatio: 0.6,
   actionGroupPhaseMinGroupSize: 3,
   actionGroupPhaseMinExistingRatio: 0.72,
+  modifierProfileEnabled: true,
+  inputDefaultEnabled: true,
   inputDefaultMinGroupSize: 2,
   inputDefaultMinExistingRatio: 0.5,
+  profileTrendEnabled: true,
   profileTrendMinObservations: 5,
   profileTrendMinPreferenceRatio: 0.65,
   phaseAdjacencyMaxGap: DEFAULT_PHASE_ADJACENCY_MAX_GAP,
   phaseAdjacencyEnabled: DEFAULT_PHASE_ADJACENCY_ENABLED,
 });
 
-function normalizeThresholds(override = {}) {
-  if (!override || typeof override !== "object") override = {};
-  const defaults = DEFAULT_HEURISTIC_THRESHOLDS;
-  return {
-    consensusMinGroupSize: Number.isFinite(override.consensusMinGroupSize)
-      ? override.consensusMinGroupSize
-      : defaults.consensusMinGroupSize,
-    consensusMinExistingRatio: Number.isFinite(override.consensusMinExistingRatio)
-      ? override.consensusMinExistingRatio
-      : defaults.consensusMinExistingRatio,
-    actionGroupMinGroupSize: Number.isFinite(override.actionGroupMinGroupSize)
-      ? override.actionGroupMinGroupSize
-      : defaults.actionGroupMinGroupSize,
-    actionGroupMinExistingRatio: Number.isFinite(override.actionGroupMinExistingRatio)
-      ? override.actionGroupMinExistingRatio
-      : defaults.actionGroupMinExistingRatio,
-    actionGroupPhaseMinGroupSize: Number.isFinite(
-      override.actionGroupPhaseMinGroupSize,
-    )
-      ? override.actionGroupPhaseMinGroupSize
-      : defaults.actionGroupPhaseMinGroupSize,
-    actionGroupPhaseMinExistingRatio: Number.isFinite(
-      override.actionGroupPhaseMinExistingRatio,
-    )
-      ? override.actionGroupPhaseMinExistingRatio
-      : defaults.actionGroupPhaseMinExistingRatio,
-    inputDefaultMinGroupSize: Number.isFinite(override.inputDefaultMinGroupSize)
-      ? override.inputDefaultMinGroupSize
-      : defaults.inputDefaultMinGroupSize,
-    inputDefaultMinExistingRatio: Number.isFinite(override.inputDefaultMinExistingRatio)
-      ? override.inputDefaultMinExistingRatio
-      : defaults.inputDefaultMinExistingRatio,
-    profileTrendMinObservations: Number.isFinite(override.profileTrendMinObservations)
-      ? Math.max(override.profileTrendMinObservations, defaults.profileTrendMinObservations)
-      : defaults.profileTrendMinObservations,
-    profileTrendMinPreferenceRatio: Number.isFinite(override.profileTrendMinPreferenceRatio)
-      ? Math.max(
-          override.profileTrendMinPreferenceRatio,
-          defaults.profileTrendMinPreferenceRatio,
-        )
-      : defaults.profileTrendMinPreferenceRatio,
+  function normalizeThresholds(override = {}) {
+    if (!override || typeof override !== "object") override = {};
+    const defaults = DEFAULT_HEURISTIC_THRESHOLDS;
+    return {
+      consensusEnabled:
+        typeof override.consensusEnabled === "boolean"
+          ? override.consensusEnabled
+          : defaults.consensusEnabled,
+      consensusMinGroupSize: Number.isFinite(override.consensusMinGroupSize)
+        ? override.consensusMinGroupSize
+        : defaults.consensusMinGroupSize,
+      consensusMinExistingRatio: Number.isFinite(override.consensusMinExistingRatio)
+        ? override.consensusMinExistingRatio
+        : defaults.consensusMinExistingRatio,
+      actionGroupEnabled:
+        typeof override.actionGroupEnabled === "boolean"
+          ? override.actionGroupEnabled
+          : defaults.actionGroupEnabled,
+      actionGroupMinGroupSize: Number.isFinite(override.actionGroupMinGroupSize)
+        ? override.actionGroupMinGroupSize
+        : defaults.actionGroupMinGroupSize,
+      actionGroupMinExistingRatio: Number.isFinite(override.actionGroupMinExistingRatio)
+        ? override.actionGroupMinExistingRatio
+        : defaults.actionGroupMinExistingRatio,
+      actionGroupPhaseMinGroupSize: Number.isFinite(
+        override.actionGroupPhaseMinGroupSize,
+      )
+        ? override.actionGroupPhaseMinGroupSize
+        : defaults.actionGroupPhaseMinGroupSize,
+      actionGroupPhaseMinExistingRatio: Number.isFinite(
+        override.actionGroupPhaseMinExistingRatio,
+      )
+        ? override.actionGroupPhaseMinExistingRatio
+        : defaults.actionGroupPhaseMinExistingRatio,
+      modifierProfileEnabled:
+        typeof override.modifierProfileEnabled === "boolean"
+          ? override.modifierProfileEnabled
+          : defaults.modifierProfileEnabled,
+      inputDefaultEnabled:
+        typeof override.inputDefaultEnabled === "boolean"
+          ? override.inputDefaultEnabled
+          : defaults.inputDefaultEnabled,
+      inputDefaultMinGroupSize: Number.isFinite(override.inputDefaultMinGroupSize)
+        ? override.inputDefaultMinGroupSize
+        : defaults.inputDefaultMinGroupSize,
+      inputDefaultMinExistingRatio: Number.isFinite(override.inputDefaultMinExistingRatio)
+        ? override.inputDefaultMinExistingRatio
+        : defaults.inputDefaultMinExistingRatio,
+      profileTrendEnabled:
+        typeof override.profileTrendEnabled === "boolean"
+          ? override.profileTrendEnabled
+          : defaults.profileTrendEnabled,
+      profileTrendMinObservations: Number.isFinite(override.profileTrendMinObservations)
+        ? Math.max(override.profileTrendMinObservations, defaults.profileTrendMinObservations)
+        : defaults.profileTrendMinObservations,
+      profileTrendMinPreferenceRatio: Number.isFinite(override.profileTrendMinPreferenceRatio)
+        ? Math.max(
+            override.profileTrendMinPreferenceRatio,
+            defaults.profileTrendMinPreferenceRatio,
+          )
+        : defaults.profileTrendMinPreferenceRatio,
     phaseAdjacencyMaxGap: Number.isFinite(override.phaseAdjacencyMaxGap)
       ? override.phaseAdjacencyMaxGap
       : defaults.phaseAdjacencyMaxGap,
