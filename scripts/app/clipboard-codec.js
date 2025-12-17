@@ -39,6 +39,7 @@ export function sanitizeStructuredPayload(payload) {
     input: ["id"],
     outcome: ["outcomeId", "confidence", "source"],
     end: ["endActionId", "endVariantSig", "confidence", "source"],
+    notes: ["notes"],
     tag: ["tags", "confidence", "source"],
     modifierState: ["value"],
     comment: ["viewKey", "rowId", "columnKey", "cellKey", "value"],
@@ -55,6 +56,13 @@ export function sanitizeStructuredPayload(payload) {
     if (d.rowId != null) out.data.rowId = String(d.rowId);
     if (d.columnKey != null) out.data.columnKey = String(d.columnKey);
     if (d.cellKey != null) out.data.cellKey = String(d.cellKey);
+    return out;
+  }
+
+  if (type === "notes") {
+    if (!Object.prototype.hasOwnProperty.call(d, "notes")) return null;
+    const noteText = d.notes;
+    out.data.notes = noteText == null ? "" : String(noteText);
     return out;
   }
 
