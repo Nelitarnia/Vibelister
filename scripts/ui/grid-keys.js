@@ -1030,8 +1030,9 @@ export function initGridKeys(deps) {
     }
 
     const fullColumnRange = colDefs.map((_, idx) => idx);
+    const allColumnsMode = !!(selection?.horizontalMode || selection?.colsAll);
     const highlightedCols =
-      selection?.cols && selection.cols.size
+      selection?.colsAll && selection?.cols && selection.cols.size
         ? Array.from(selection.cols).sort((a, b) => a - b)
         : null;
     let destCols = computeDestinationIndices({
@@ -1039,10 +1040,10 @@ export function initGridKeys(deps) {
       selectionSet: selection && selection.cols,
       anchor: colAnchor,
       limit: totalCols > 0 ? totalCols : colAnchor + sourceWidth,
-      allFlag: selection && selection.colsAll && !highlightedCols,
+      allFlag: allColumnsMode && !highlightedCols,
       fullRange: fullColumnRange,
     });
-    if (selection && selection.colsAll) {
+    if (allColumnsMode) {
       if (highlightedCols && highlightedCols.length) {
         const spanStart = highlightedCols[0];
         const spanEnd = highlightedCols[highlightedCols.length - 1];
