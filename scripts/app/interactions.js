@@ -468,12 +468,22 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
   if (key === "notes") {
     const k = noteKeyForPair(pair, undefined);
     const note = model.notes[k] || (model.notes[k] = {});
-    if (value == null || value === "") {
+    let noteValue = value;
+    if (noteValue && typeof noteValue === "object") {
+      const nested = noteValue.data;
+      if (nested && typeof nested === "object" && "notes" in nested) {
+        noteValue = nested.notes;
+      } else if ("notes" in noteValue) {
+        noteValue = noteValue.notes;
+      }
+    }
+
+    if (noteValue == null || noteValue === "") {
       if ("notes" in note) delete note.notes;
       if (Object.keys(note).length === 0) delete model.notes[k];
       return true;
     }
-    note.notes = String(value);
+    note.notes = String(noteValue);
     return true;
   }
 
