@@ -742,6 +742,141 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "Horizontal paste respects highlighted span even with single-cell payload",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const documentStub = { querySelector: () => null, activeElement: null };
+
+        const selection = {
+          rows: new Set([0]),
+          cols: new Set([1, 2, 3]),
+          colsAll: true,
+          horizontalMode: true,
+        };
+        const sel = { r: 0, c: 0 };
+
+        const gridData = [["a0", "b0", "c0", "d0"], ["a1", "b1", "c1", "d1"]];
+        const setCalls = [];
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection,
+          sel,
+          editor: { style: { display: "none" } },
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          moveSelectionForTab: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({
+            key: "actions",
+            columns: [
+              { key: "c0" },
+              { key: "c1" },
+              { key: "c2" },
+              { key: "c3" },
+            ],
+          }),
+          getRowCount: () => gridData.length,
+          dataArray: () => gridData,
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: (r, c, value) => {
+            setCalls.push({ r, c, value });
+            gridData[r][c] = value;
+          },
+          runModelTransaction: (_name, fn) => fn(),
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: (r, c) => gridData[r][c],
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => ({ isOpen: () => false }),
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: { platform: "" },
+        });
+
+        try {
+          const pasteListener = (listeners.get("paste") || []).find(
+            (entry) => entry.capture,
+          )?.cb;
+          assert.ok(pasteListener, "paste listener registered");
+
+          const event = {
+            clipboardData: {
+              getData(type) {
+                if (type === "text/plain") return "x0";
+                return "";
+              },
+              types: ["text/plain"],
+            },
+            preventDefault() {
+              this.prevented = true;
+            },
+            prevented: false,
+          };
+
+          pasteListener(event);
+
+          assert.ok(event.prevented, "paste handler should prevent default paste");
+          assert.deepStrictEqual(
+            setCalls.map((call) => call.c),
+            [1, 2, 3],
+            "horizontal paste should cover highlighted span regardless of payload width",
+          );
+          assert.deepStrictEqual(
+            gridData[0].slice(1),
+            ["x0", "x0", "x0"],
+            "pasted value should repeat across highlighted range",
+          );
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
       name: "grid keydown defers Enter when palette is open",
       run(assert) {
         const listeners = new Map();

@@ -1047,13 +1047,13 @@ export function initGridKeys(deps) {
       if (highlightedCols && highlightedCols.length) {
         const spanStart = highlightedCols[0];
         const spanEnd = highlightedCols[highlightedCols.length - 1];
-        const limited = [];
-        for (let c = spanStart; c <= spanEnd && limited.length < sourceWidth; c++) {
-          limited.push(c);
+        const highlightedRange = [];
+        for (let c = spanStart; c <= spanEnd; c++) {
+          highlightedRange.push(c);
         }
-        destCols = limited;
+        destCols = highlightedRange;
       } else {
-        destCols = destCols.slice(0, sourceWidth);
+        destCols = fullColumnRange.slice();
       }
     }
     if (!destCols.length) destCols.push(colAnchor);
