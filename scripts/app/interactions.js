@@ -641,7 +641,34 @@ export function applyStructuredCellInteractions(
   const col = viewDef.columns[c];
   if (!col) return false;
   const pk = parsePhaseKey(col.key);
-  if (!pk) return false;
+  if (!pk) {
+    const key = String(col.key || "");
+    if (key !== "notes") return false;
+
+    let type = payload?.type ? String(payload.type).toLowerCase() : null;
+    let data = payload && typeof payload.data === "object" ? payload.data : null;
+
+    if (!type || !data) {
+      const hasType = !!(payload && payload.type);
+      const hasDataProp =
+        hasType &&
+        payload &&
+        typeof payload === "object" &&
+        Object.prototype.hasOwnProperty.call(payload, "data");
+      const bare = data ?? (hasDataProp ? payload.data : payload);
+      type = "notes";
+      data = bare && typeof bare === "object" ? bare : { notes: bare };
+    }
+
+    if (type !== "notes") return false;
+
+    const model = modelFromCtx;
+    if (!model) return false;
+    const nextNotes = Object.prototype.hasOwnProperty.call(data || {}, "notes")
+      ? data?.notes
+      : data;
+    return !!setInteractionsCell(model, null, viewDef, r, c, nextNotes);
+  }
 
   // Normalize to the destination column.
   // Accept:

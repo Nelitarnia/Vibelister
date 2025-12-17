@@ -1190,7 +1190,7 @@ export function initGridKeys(deps) {
             }
           }
 
-          if (typeRejected) rejectedCount++;
+          if (typeRejected && !cellChanged) rejectedCount++;
           if (cellChanged) appliedCount++;
         }
       }
