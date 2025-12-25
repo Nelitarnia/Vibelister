@@ -43,6 +43,8 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── inference-targets.js
 │   │   ├── inference-profiles.js
 │   │   ├── inference-utils.js
+│   │   ├── inference-strategies/
+│   │   │   └── property-strategy.js
 │   │   ├── interaction-bulk-actions.js
 │   │   ├── interaction-maintenance.js
 │   │   ├── interaction-tags.js
@@ -200,7 +202,8 @@ This document outlines a maintainable directory layout tailored to the current c
 - `inference-index-access.js` encapsulates index construction and selection mapping for regular vs. bypass interactions, including scoped bypass caches and active-row remapping.
 - `inference-targets.js` resolves requested vs. suggestion scopes, gathers eligible cells for inference, and shares scope-plan metadata so the controller can log intent.
 - `inference-heuristics.js` hosts the inference runner that composes discrete strategy modules, normalizes thresholds, and exposes the suggestion entry point.
-- `inference-strategies/` collects table-driven consensus, action-group, modifier-profile, input-default, profile-trend, and phase-adjacency strategies so heuristics can be enabled, disabled, or unit-tested in isolation.
+- `inference-strategies/` collects table-driven consensus, action-group, action-property, modifier-profile, input-default, profile-trend, and phase-adjacency strategies so heuristics can be enabled, disabled, or unit-tested in isolation.
+- `inference-strategies/property-strategy.js` groups inference targets by shared action properties (per input/phase/field) so property similarity can seed suggestions alongside action groups.
 - `inference-profiles.js` maintains per-modifier and per-input trend profiles, decaying counts, snapshotting them for heuristic runs, and exposing a read-only view that leans suggestions toward recently observed "no change" patterns.
 - `inference-utils.js` centralizes the shared normalization, extraction, keying, and cloning helpers consumed by heuristics, profiles, and inference-aware interactions.
 - `interaction-bulk-actions.js` coordinates toolbar and sidebar bulk actions for interaction cells, applying Uncertain toggles, accepting inferred metadata, and clearing inference flags with undo/status updates.

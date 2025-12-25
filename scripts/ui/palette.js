@@ -25,6 +25,7 @@ import {
 //   - 'end'     → for ^p\\d+:end$ (Action + optional variant)
 //   - 'modifierState' → for Actions view modifier compatibility columns
 //   - 'tag'     → for ^p\\d+:tag$ (Interactions phase tags)
+//   - 'properties' → for Actions view properties column
 //
 // You can add more modes later by extending MODE_MAP.
 
@@ -404,6 +405,127 @@ export function initPalette(ctx) {
       },
       recentKeyOf: (it) =>
         it?.data?.clear ? "" : `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
+    },
+    {
+      name: "properties",
+      testKey: (key) => key === "properties",
+      consumeTyping: false,
+      filterFn: () => true,
+      domId: "universalPalette",
+      supportsRecentToggle: true,
+      selectTextOnOpen: false,
+      parseInitial: (s) => String(s || ""),
+      parseQuery: (raw) => {
+        const full = String(raw || "");
+        const parts = full.split(",");
+        const trailingComma = /,\s*$/.test(full);
+        const committed = [];
+        let activeRaw = "";
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i].trim();
+          const isLast = i === parts.length - 1;
+          if (isLast && !trailingComma) activeRaw = part;
+          else if (part) committed.push(part);
+        }
+        const baseNormalized = normalizeActionProperties(committed);
+        const typedSource = trailingComma
+          ? committed
+          : activeRaw
+            ? committed.concat(activeRaw)
+            : committed;
+        const typedNormalized = normalizeActionProperties(typedSource);
+        return {
+          full,
+          committed,
+          activeRaw,
+          trailingComma,
+          baseNormalized,
+          typedNormalized,
+        };
+      },
+      makeItems: (model, parsed) => {
+        const typedNormalized = Array.isArray(parsed.typedNormalized)
+          ? parsed.typedNormalized
+          : [];
+        const baseNormalized = Array.isArray(parsed.baseNormalized)
+          ? parsed.baseNormalized
+          : [];
+        const activeRaw = parsed.activeRaw || "";
+        const arraysEqual = (a = [], b = []) =>
+          a.length === b.length && a.every((value, index) => value === b[index]);
+        const typedDisplay = typedNormalized.length
+          ? typedNormalized.join(", ")
+          : "Clear properties";
+        let typedDescription;
+        if (typedNormalized.length) {
+          if (arraysEqual(typedNormalized, baseNormalized))
+            typedDescription = "Keep current properties";
+          else if (activeRaw && !parsed.trailingComma)
+            typedDescription = `Apply properties, including “${activeRaw}”`;
+          else typedDescription = "Apply properties";
+        } else {
+          typedDescription = baseNormalized.length
+            ? "Remove all properties"
+            : "No properties assigned";
+        }
+
+        const items = [
+          {
+            display: typedDisplay,
+            description: typedDescription,
+            data: { properties: typedNormalized },
+            isCurrent: arraysEqual(typedNormalized, baseNormalized),
+          },
+        ];
+
+        const catalog = (() => {
+          const seen = new Set();
+          const list = [];
+          const fromActions = Array.isArray(model?.actions) ? model.actions : [];
+          for (const aRow of fromActions) {
+            for (const prop of normalizeActionProperties(aRow?.properties)) {
+              const key = prop.toLowerCase();
+              if (seen.has(key)) continue;
+              seen.add(key);
+              list.push(prop);
+            }
+          }
+          if (Array.isArray(model?.interactionsIndex?.propertiesCatalog)) {
+            for (const prop of model.interactionsIndex.propertiesCatalog) {
+              const key = String(prop || "").toLowerCase();
+              if (key && !seen.has(key)) {
+                seen.add(key);
+                list.push(prop);
+              }
+            }
+          }
+          return list.sort((a, b) => a.localeCompare(b));
+        })();
+
+        if (catalog.length) {
+          const skip = new Set(typedNormalized.map((p) => p.toLowerCase()));
+          for (const prop of catalog) {
+            const key = prop.toLowerCase();
+            if (skip.has(key)) continue;
+            items.push({
+              display: prop,
+              data: { properties: typedNormalized.concat(prop) },
+              description: `Add “${prop}”`,
+            });
+          }
+        }
+        return items;
+      },
+      commit: (it) => {
+        if (!it || !it.data) return;
+        setCell(sel.r, sel.c, it.data.properties || []);
+        render();
+      },
+      recentKeyOf: (it) => {
+        if (!it || !it.data) return "";
+        const props = normalizeActionProperties(it.data.properties);
+        return `props:${props.join("|")}`;
+      },
     },
     {
       name: "tag",

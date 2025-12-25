@@ -335,7 +335,17 @@ export const ColumnKinds = {
       if (props.length) row.properties = props;
       else delete row.properties;
     },
-    beginEdit() {
+    beginEdit({ paletteAPI, r, c, row } = {}) {
+      if (paletteAPI?.openForCurrentCell) {
+        const initialText = formatActionProperties(row?.properties);
+        const opened = paletteAPI.openForCurrentCell({
+          r,
+          c,
+          initialText,
+          focusEditor: true,
+        });
+        if (opened) return { handled: true };
+      }
       return { useEditor: true };
     },
     getStructured({ row } = {}) {
