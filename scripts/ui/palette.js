@@ -757,8 +757,9 @@ export function initPalette(ctx) {
     let width = 0;
     let initialText = "";
     let rect = null;
-    const claimEditor = !!targetArg;
-    const focusEditor = targetArg ? targetArg.focusEditor !== false : false;
+    const claimEditor = !!arg1 && typeof arg1 === "object";
+    const focusEditor =
+      targetArg && "focusEditor" in targetArg ? targetArg.focusEditor !== false : claimEditor;
     if (targetArg) {
       initialText =
         typeof targetArg.initialText === "string"
@@ -788,6 +789,12 @@ export function initPalette(ctx) {
       width = Number(arg1.width) || 0;
       top = baseTop + resolveCellHeight(arg1) + marginBelowCell;
       initialText = typeof arg2 === "string" ? arg2 : "";
+      rect = {
+        left,
+        top: baseTop,
+        width,
+        height: resolveCellHeight(arg1),
+      };
     } else {
       left = Number(arg1) || 0;
       top = Number(arg2) || 0;
