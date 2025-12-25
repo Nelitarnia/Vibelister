@@ -572,6 +572,7 @@ export function getPersistenceTests() {
             actionsOrder: [],
             inputsOrder: [],
             variantCatalog: {},
+            propertiesCatalog: [],
           },
           "interactionsIndex should reset to an empty shell",
         );

@@ -74,6 +74,7 @@ export function snapshotModel(model, options = {}) {
       actionsOrder: [],
       inputsOrder: [],
       variantCatalog: {},
+      propertiesCatalog: [],
     };
   }
 

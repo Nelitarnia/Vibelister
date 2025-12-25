@@ -23,6 +23,7 @@
 
 * modSet?: Record<number, ModStateValue>,
 * actionGroup?: string,
+* properties?: string[],
 * phases?: { ids: number[] }
 * }} ActionRow */
 
@@ -125,7 +126,8 @@
 *   totalRows?: number,
 *   actionsOrder?: number[],
 *   inputsOrder?: number[],
-*   variantCatalog?: Record<number, string[]>
+*   variantCatalog?: Record<number, string[]>,
+*   propertiesCatalog?: string[],
 * }} interactionsIndex
 * @property {number} nextId
   */
@@ -156,4 +158,3 @@
 * @property {function():Object} viewDef
 * @property {string=} activeView
   */
-

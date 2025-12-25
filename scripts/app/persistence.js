@@ -21,6 +21,7 @@ import {
 import { normalizeCommentColorPalette } from "../data/comment-colors.js";
 import { snapshotModel } from "../data/mutation-runner.js";
 import { buildInteractionsPairs } from "../data/variants/variants.js";
+import { normalizeActionProperties } from "../data/properties.js";
 import {
   DEFAULT_INTERACTION_CONFIDENCE,
   DEFAULT_INTERACTION_SOURCE,
@@ -180,6 +181,7 @@ export function createPersistenceController({
     if (typeof row.name === "string" && row.name.trim()) return true;
     if (typeof row.color === "string" && row.color.trim()) return true;
     if (typeof row.color2 === "string" && row.color2.trim()) return true;
+    if (Array.isArray(row.properties) && row.properties.length) return true;
     if (typeof row.notes === "string" && row.notes.trim()) return true;
     if (rowHasModStateData(row)) return true;
     return false;
@@ -282,6 +284,12 @@ export function createPersistenceController({
       ) {
         o.interactionsIndex.variantCatalog = {};
       }
+      if (!Array.isArray(o.interactionsIndex.propertiesCatalog)) {
+        o.interactionsIndex.propertiesCatalog = [];
+      } else {
+        o.interactionsIndex.propertiesCatalog =
+          normalizeActionProperties(o.interactionsIndex.propertiesCatalog);
+      }
     }
     let maxId = 0;
     for (const r of o.actions) {
@@ -291,6 +299,9 @@ export function createPersistenceController({
       for (const k in r.modSet) {
         r.modSet[k] = sanitizeModValue(r.modSet[k]);
       }
+      const props = normalizeActionProperties(r.properties);
+      if (props.length) r.properties = props;
+      else delete r.properties;
     }
     for (const r of o.inputs) {
       if (typeof r.id !== "number") r.id = ++maxId;
@@ -323,7 +334,7 @@ export function createPersistenceController({
       notes: {},
       comments: createEmptyCommentMap(),
       interactionsPairs: [],
-      interactionsIndex: { mode: "AI", groups: [] },
+      interactionsIndex: { mode: "AI", groups: [], propertiesCatalog: [] },
       nextId: 1,
     });
     clearHistory();

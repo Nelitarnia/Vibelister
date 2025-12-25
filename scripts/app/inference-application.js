@@ -14,6 +14,7 @@ import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
 export const HEURISTIC_LABELS = Object.freeze({
   [HEURISTIC_SOURCES.actionGroup]: "action group similarity",
+  [HEURISTIC_SOURCES.actionProperty]: "action property similarity",
   [HEURISTIC_SOURCES.modifierPropagation]: "modifier propagation",
   [HEURISTIC_SOURCES.modifierProfile]: "modifier profile",
   [HEURISTIC_SOURCES.inputDefault]: "input default",

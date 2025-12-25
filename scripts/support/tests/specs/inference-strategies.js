@@ -7,9 +7,14 @@ import {
   consensusStrategy,
   inputDefaultStrategy,
   modifierProfileStrategy,
+  propertyStrategy,
   phaseAdjacencyStrategy,
   profileTrendStrategy,
 } from "../../../app/inference-strategies/index.js";
+import {
+  matchesEndActionFilters,
+  parseEndActionQuery,
+} from "../../../ui/palette.js";
 
 function makeNote(value, metadata = {}) {
   if (!value) return null;
@@ -26,6 +31,7 @@ function makeTarget({
   value = null,
   source,
   actionGroup,
+  properties,
 }) {
   const pair = { kind: "AI", aId: actionId, iId: inputId, variantSig };
   const note = makeNote(value, source ? { source, confidence: 0.4 } : {});
@@ -38,6 +44,7 @@ function makeTarget({
     row: actionId,
     actionGroup,
     actionGroupKey: actionGroup,
+    action: properties ? { properties } : null,
   };
 }
 
@@ -110,6 +117,80 @@ export function getInferenceStrategyTests() {
         assert.ok(suggestion, "input default emitted suggestion");
         assert.strictEqual(suggestion.source, HEURISTIC_SOURCES.inputDefault);
         assert.ok(suggestion.confidence > 0, "input default confidence assigned");
+      },
+    },
+    {
+      name: "action properties propagate consistent values",
+      run(assert) {
+        const targets = [
+          makeTarget({
+            actionId: 10,
+            inputId: 7,
+            properties: ["Aerial"],
+            value: { outcomeId: 42 },
+          }),
+          makeTarget({
+            actionId: 11,
+            inputId: 7,
+            properties: ["aerial", "launcher"],
+          }),
+        ];
+        const suggestions = runInferenceStrategies(
+          targets,
+          null,
+          {
+            actionPropertyEnabled: true,
+            actionPropertyMinGroupSize: 1,
+            actionPropertyMinExistingRatio: 0,
+            actionPropertyPhaseMinGroupSize: 1,
+            actionPropertyPhaseMinExistingRatio: 0,
+          },
+          [propertyStrategy],
+        );
+        const suggestion = suggestions.get(targets[1].key)?.outcome;
+        assert.ok(suggestion, "property strategy produced a suggestion");
+        assert.strictEqual(
+          suggestion.source,
+          HEURISTIC_SOURCES.actionProperty,
+          "property heuristic annotated the source",
+        );
+        assert.strictEqual(suggestion.value.outcomeId, 42, "propagated the observed value");
+      },
+    },
+    {
+      name: "end palette query parsing tracks mods and properties",
+      run(assert) {
+        const parsed = parseEndActionQuery("Air +sky +prop:Aerial #launcher");
+        assert.strictEqual(parsed.name, "air", "normalizes name query");
+        assert.deepStrictEqual(parsed.mods, ["sky"], "captures modifier tokens");
+        assert.deepStrictEqual(
+          parsed.properties,
+          ["aerial", "launcher"],
+          "collects property tokens from prefixes",
+        );
+      },
+    },
+    {
+      name: "end palette filters by properties",
+      run(assert) {
+        const matches = matchesEndActionFilters({
+          actionName: "Dive Kick",
+          actionProperties: ["Aerial", "Multi-hit"],
+          nameQuery: "dive",
+          modTokens: [],
+          propertyTokens: ["multi", "aer"],
+          variantModNames: [],
+        });
+        assert.ok(matches, "action matches property tokens");
+        const misses = matchesEndActionFilters({
+          actionName: "Dive Kick",
+          actionProperties: ["Grounded"],
+          nameQuery: "dive",
+          modTokens: [],
+          propertyTokens: ["aerial"],
+          variantModNames: [],
+        });
+        assert.ok(!misses, "action without properties should not pass property filters");
       },
     },
     {

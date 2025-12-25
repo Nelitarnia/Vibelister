@@ -2,6 +2,7 @@ import { formatEndActionLabel } from "../data/column-kinds.js";
 import { MOD } from "../data/constants.js";
 import { enumerateModStates } from "../data/mod-state.js";
 import { sortIdsByUserOrder } from "../data/variants/variants.js";
+import { normalizeActionProperties } from "../data/properties.js";
 import {
   getInteractionsPair,
   getInteractionsRowCount,
@@ -24,8 +25,66 @@ import {
 //   - 'end'     → for ^p\\d+:end$ (Action + optional variant)
 //   - 'modifierState' → for Actions view modifier compatibility columns
 //   - 'tag'     → for ^p\\d+:tag$ (Interactions phase tags)
+//   - 'properties' → for Actions view properties column
 //
 // You can add more modes later by extending MODE_MAP.
+
+export function parseEndActionQuery(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return { name: "", mods: [], properties: [] };
+  const tokens = s.split(/\s+/);
+  const mods = [];
+  const properties = [];
+  const nameParts = [];
+  for (let t of tokens) {
+    if (!t) continue;
+    const lower = t.toLowerCase();
+    if (t.startsWith("#") && t.length > 1) {
+      properties.push(lower.slice(1));
+      continue;
+    }
+    if (t.startsWith("+") && t.length > 1) {
+      const body = lower.slice(1);
+      if (body.startsWith("prop:") || body.startsWith("property:") || body.startsWith("p:")) {
+        properties.push(body.replace(/^(prop|property|p):/, ""));
+      } else {
+        mods.push(body);
+      }
+      continue;
+    }
+    nameParts.push(lower);
+  }
+  return { name: nameParts.join(" "), mods, properties };
+}
+
+export function matchesEndActionFilters({
+  actionName,
+  actionProperties,
+  nameQuery,
+  modTokens,
+  propertyTokens,
+  variantModNames,
+}) {
+  const lowerName = String(actionName || "").toLowerCase();
+  if (nameQuery && !lowerName.startsWith(nameQuery)) return false;
+  const normalizedProperties = normalizeActionProperties(actionProperties).map((p) =>
+    p.toLowerCase(),
+  );
+  if (
+    propertyTokens &&
+    propertyTokens.length &&
+    !propertyTokens.every((tok) =>
+      normalizedProperties.some((prop) => prop.includes(tok)),
+    )
+  )
+    return false;
+  if (modTokens && modTokens.length) {
+    const lowerMods = (variantModNames || []).map((m) => m.toLowerCase());
+    if (!modTokens.every((tok) => lowerMods.some((nm) => nm.includes(tok))))
+      return false;
+  }
+  return true;
+}
 
 export function initPalette(ctx) {
   const {
@@ -245,20 +304,11 @@ export function initPalette(ctx) {
       supportsRecentToggle: true,
       parseInitial: (s) => normalizeCellTextToQuery(s, model),
       parseQuery: (raw) => {
-        const s = String(raw || "").trim();
-        if (!s) return { a: "", mods: [] };
-        const tokens = s.split(/\s+/);
-        const mods = [],
-          a = [];
-        for (let t of tokens) {
-          if (t.startsWith("+") && t.length > 1)
-            mods.push(t.slice(1).toLowerCase());
-          else a.push(t.toLowerCase());
-        }
-        return { a: a.join(" "), mods };
+        const parsed = parseEndActionQuery(raw);
+        return { a: parsed.name, mods: parsed.mods, properties: parsed.properties };
       },
       makeItems: (model, parsed) => {
-        const { a, mods } = parsed;
+        const { a, mods, properties } = parsed;
         const actions = (model.actions || []).filter((x) =>
           (x.name || "").trim(),
         );
@@ -297,13 +347,17 @@ export function initPalette(ctx) {
               .filter(Boolean);
             const variantSig = modIds.length ? modIds.join("+") : "";
 
-            if (mods.length) {
-              const lowerMods = modNames.map((s) => s.toLowerCase());
-              if (
-                !mods.every((tok) => lowerMods.some((nm) => nm.includes(tok)))
-              )
-                continue;
-            }
+            if (
+              !matchesEndActionFilters({
+                actionName,
+                actionProperties: act.properties,
+                nameQuery: a,
+                modTokens: mods,
+                propertyTokens: properties,
+                variantModNames: modNames,
+              })
+            )
+              continue;
             const label = formatEndActionLabel(model, act, variantSig);
             const display = label?.plainText || "";
             out.push({
@@ -321,7 +375,17 @@ export function initPalette(ctx) {
           // Fallback if no interactionsPairs yet
           for (const aRow of actions) {
             const nm = aRow.name || "";
-            if (a && !nm.toLowerCase().startsWith(a)) continue;
+            if (
+              !matchesEndActionFilters({
+                actionName: nm,
+                actionProperties: aRow.properties,
+                nameQuery: a,
+                modTokens: mods,
+                propertyTokens: properties,
+                variantModNames: [],
+              })
+            )
+              continue;
             const label = formatEndActionLabel(model, aRow, "");
             out.push({
               display: label?.plainText || "",
@@ -341,6 +405,127 @@ export function initPalette(ctx) {
       },
       recentKeyOf: (it) =>
         it?.data?.clear ? "" : `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
+    },
+    {
+      name: "properties",
+      testKey: (key) => key === "properties",
+      consumeTyping: false,
+      filterFn: () => true,
+      domId: "universalPalette",
+      supportsRecentToggle: true,
+      selectTextOnOpen: false,
+      parseInitial: (s) => String(s || ""),
+      parseQuery: (raw) => {
+        const full = String(raw || "");
+        const parts = full.split(",");
+        const trailingComma = /,\s*$/.test(full);
+        const committed = [];
+        let activeRaw = "";
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i].trim();
+          const isLast = i === parts.length - 1;
+          if (isLast && !trailingComma) activeRaw = part;
+          else if (part) committed.push(part);
+        }
+        const baseNormalized = normalizeActionProperties(committed);
+        const typedSource = trailingComma
+          ? committed
+          : activeRaw
+            ? committed.concat(activeRaw)
+            : committed;
+        const typedNormalized = normalizeActionProperties(typedSource);
+        return {
+          full,
+          committed,
+          activeRaw,
+          trailingComma,
+          baseNormalized,
+          typedNormalized,
+        };
+      },
+      makeItems: (model, parsed) => {
+        const typedNormalized = Array.isArray(parsed.typedNormalized)
+          ? parsed.typedNormalized
+          : [];
+        const baseNormalized = Array.isArray(parsed.baseNormalized)
+          ? parsed.baseNormalized
+          : [];
+        const activeRaw = parsed.activeRaw || "";
+        const arraysEqual = (a = [], b = []) =>
+          a.length === b.length && a.every((value, index) => value === b[index]);
+        const typedDisplay = typedNormalized.length
+          ? typedNormalized.join(", ")
+          : "Clear properties";
+        let typedDescription;
+        if (typedNormalized.length) {
+          if (arraysEqual(typedNormalized, baseNormalized))
+            typedDescription = "Keep current properties";
+          else if (activeRaw && !parsed.trailingComma)
+            typedDescription = `Apply properties, including “${activeRaw}”`;
+          else typedDescription = "Apply properties";
+        } else {
+          typedDescription = baseNormalized.length
+            ? "Remove all properties"
+            : "No properties assigned";
+        }
+
+        const items = [
+          {
+            display: typedDisplay,
+            description: typedDescription,
+            data: { properties: typedNormalized },
+            isCurrent: arraysEqual(typedNormalized, baseNormalized),
+          },
+        ];
+
+        const catalog = (() => {
+          const seen = new Set();
+          const list = [];
+          const fromActions = Array.isArray(model?.actions) ? model.actions : [];
+          for (const aRow of fromActions) {
+            for (const prop of normalizeActionProperties(aRow?.properties)) {
+              const key = prop.toLowerCase();
+              if (seen.has(key)) continue;
+              seen.add(key);
+              list.push(prop);
+            }
+          }
+          if (Array.isArray(model?.interactionsIndex?.propertiesCatalog)) {
+            for (const prop of model.interactionsIndex.propertiesCatalog) {
+              const key = String(prop || "").toLowerCase();
+              if (key && !seen.has(key)) {
+                seen.add(key);
+                list.push(prop);
+              }
+            }
+          }
+          return list.sort((a, b) => a.localeCompare(b));
+        })();
+
+        if (catalog.length) {
+          const skip = new Set(typedNormalized.map((p) => p.toLowerCase()));
+          for (const prop of catalog) {
+            const key = prop.toLowerCase();
+            if (skip.has(key)) continue;
+            items.push({
+              display: prop,
+              data: { properties: typedNormalized.concat(prop) },
+              description: `Add “${prop}”`,
+            });
+          }
+        }
+        return items;
+      },
+      commit: (it) => {
+        if (!it || !it.data) return;
+        setCell(sel.r, sel.c, it.data.properties || []);
+        render();
+      },
+      recentKeyOf: (it) => {
+        if (!it || !it.data) return "";
+        const props = normalizeActionProperties(it.data.properties);
+        return `props:${props.join("|")}`;
+      },
     },
     {
       name: "tag",
@@ -572,8 +757,9 @@ export function initPalette(ctx) {
     let width = 0;
     let initialText = "";
     let rect = null;
-    const claimEditor = !!targetArg;
-    const focusEditor = targetArg ? targetArg.focusEditor !== false : false;
+    const claimEditor = !!arg1 && typeof arg1 === "object";
+    const focusEditor =
+      targetArg && "focusEditor" in targetArg ? targetArg.focusEditor !== false : claimEditor;
     if (targetArg) {
       initialText =
         typeof targetArg.initialText === "string"
@@ -603,6 +789,12 @@ export function initPalette(ctx) {
       width = Number(arg1.width) || 0;
       top = baseTop + resolveCellHeight(arg1) + marginBelowCell;
       initialText = typeof arg2 === "string" ? arg2 : "";
+      rect = {
+        left,
+        top: baseTop,
+        width,
+        height: resolveCellHeight(arg1),
+      };
     } else {
       left = Number(arg1) || 0;
       top = Number(arg2) || 0;
@@ -1052,11 +1244,13 @@ export function initPalette(ctx) {
   };
   editor.addEventListener("input", onEditorInput);
 
-  // Keyboard
-  const onEditorKeyDown = (e) => {
-    if (!pal.isOpen) return;
+  function handlePaletteKeyDown(e, { fromDocument = false } = {}) {
+    if (!pal.isOpen) return false;
     const mode = pal.mode;
-    if (!mode) return;
+    if (!mode) return false;
+    const targetIsEditor =
+      !fromDocument && (!e.target || e.target === editor || pal.ownsEditor);
+    if (!targetIsEditor && !fromDocument) return false;
 
     const wantsRecentToggle =
       mode.supportsRecentToggle &&
@@ -1068,7 +1262,7 @@ export function initPalette(ctx) {
     if (wantsRecentToggle) {
       e.preventDefault();
       buildRecentItems();
-      return;
+      return true;
     }
 
     const wantsBaseModHotkey =
@@ -1115,11 +1309,11 @@ export function initPalette(ctx) {
             } catch (_) {}
           }, 0);
         }
+        return true;
       }
-      return;
     }
 
-    if (pal.prefillActive) {
+    if (targetIsEditor && pal.prefillActive) {
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === "Backspace" || e.key === "Delete") {
           e.preventDefault();
@@ -1150,11 +1344,13 @@ export function initPalette(ctx) {
               if (!pal.isOpen) return;
               try {
                 const pos = editor.value.length;
-                editor.setSelectionRange(pos, pos);
+                if (typeof editor.setSelectionRange === "function") {
+                  editor.setSelectionRange(pos, pos);
+                }
               } catch (_) {}
             }, 0);
           }
-          return;
+          return true;
         }
       }
       pal.prefillActive = false;
@@ -1166,19 +1362,19 @@ export function initPalette(ctx) {
       e.stopImmediatePropagation?.();
       close();
       endEdit(false);
-      return;
+      return true;
     }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation?.();
       const n = pal.items.length;
-      if (!n) return;
+      if (!n) return true;
       const dir = e.key === "ArrowDown" ? 1 : -1;
       pal.selIndex = ((pal.selIndex < 0 ? 0 : pal.selIndex) + dir + n) % n;
       pal.lockHoverUntil = Date.now() + 120;
       renderList(pal.showRecent);
-      return;
+      return true;
     }
     if (e.key === "Enter") {
       e.preventDefault();
@@ -1187,9 +1383,6 @@ export function initPalette(ctx) {
       const n = pal.items.length;
       if (n) {
         pick(pal.selIndex >= 0 ? pal.selIndex : 0);
-        if (typeof moveSelectionForEnter === "function") {
-          moveSelectionForEnter();
-        }
       } else {
         const wantsClear =
           (mode.name === "end" || mode.name === "outcome") &&
@@ -1201,7 +1394,7 @@ export function initPalette(ctx) {
         close();
         endEdit(false);
       }
-      return;
+      return true;
     }
 
     if (e.key === "Tab") {
@@ -1214,29 +1407,43 @@ export function initPalette(ctx) {
         close();
         endEdit(false);
       }
-      if (typeof moveSelectionForTab === "function") {
-        moveSelectionForTab(e.shiftKey);
-      }
-      return;
+      return true;
     }
 
     // Outcome’s classic behavior: synthesize query from keystrokes even if editor is empty
-    if (mode.consumeTyping) {
+    if (targetIsEditor && mode.consumeTyping) {
       if (e.key === "Backspace") {
         e.preventDefault();
         pal.query = pal.query.slice(0, -1);
         refilter();
-        return;
+        return true;
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         pal.query += e.key;
         refilter();
-        return;
+        return true;
       }
     }
+    return false;
+  }
+
+  // Keyboard
+  const onEditorKeyDown = (e) => {
+    handlePaletteKeyDown(e);
   };
   editor.addEventListener("keydown", onEditorKeyDown, true);
+
+  const onDocKeyDown = (e) => {
+    if (e.target === editor) return;
+    if (!pal.isOpen) return;
+    const handled = handlePaletteKeyDown(e, { fromDocument: true });
+    if (handled) {
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+    }
+  };
+  doc?.addEventListener?.("keydown", onDocKeyDown, true);
 
   const onEditorKeyUp = (e) => {
     if (!pal.isOpen) return;
