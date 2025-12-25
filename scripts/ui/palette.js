@@ -1237,11 +1237,12 @@ export function initPalette(ctx) {
   };
   editor.addEventListener("input", onEditorInput);
 
-  // Keyboard
-  const onEditorKeyDown = (e) => {
-    if (!pal.isOpen) return;
+  function handlePaletteKeyDown(e, { fromDocument = false } = {}) {
+    if (!pal.isOpen) return false;
     const mode = pal.mode;
-    if (!mode) return;
+    if (!mode) return false;
+    const targetIsEditor = !fromDocument && (!e.target || e.target === editor);
+    if (!targetIsEditor && !fromDocument) return false;
 
     const wantsRecentToggle =
       mode.supportsRecentToggle &&
@@ -1253,7 +1254,7 @@ export function initPalette(ctx) {
     if (wantsRecentToggle) {
       e.preventDefault();
       buildRecentItems();
-      return;
+      return true;
     }
 
     const wantsBaseModHotkey =
@@ -1300,11 +1301,11 @@ export function initPalette(ctx) {
             } catch (_) {}
           }, 0);
         }
+        return true;
       }
-      return;
     }
 
-    if (pal.prefillActive) {
+    if (targetIsEditor && pal.prefillActive) {
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === "Backspace" || e.key === "Delete") {
           e.preventDefault();
@@ -1335,11 +1336,13 @@ export function initPalette(ctx) {
               if (!pal.isOpen) return;
               try {
                 const pos = editor.value.length;
-                editor.setSelectionRange(pos, pos);
+                if (typeof editor.setSelectionRange === "function") {
+                  editor.setSelectionRange(pos, pos);
+                }
               } catch (_) {}
             }, 0);
           }
-          return;
+          return true;
         }
       }
       pal.prefillActive = false;
@@ -1351,19 +1354,19 @@ export function initPalette(ctx) {
       e.stopImmediatePropagation?.();
       close();
       endEdit(false);
-      return;
+      return true;
     }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation?.();
       const n = pal.items.length;
-      if (!n) return;
+      if (!n) return true;
       const dir = e.key === "ArrowDown" ? 1 : -1;
       pal.selIndex = ((pal.selIndex < 0 ? 0 : pal.selIndex) + dir + n) % n;
       pal.lockHoverUntil = Date.now() + 120;
       renderList(pal.showRecent);
-      return;
+      return true;
     }
     if (e.key === "Enter") {
       e.preventDefault();
@@ -1386,7 +1389,7 @@ export function initPalette(ctx) {
         close();
         endEdit(false);
       }
-      return;
+      return true;
     }
 
     if (e.key === "Tab") {
@@ -1402,26 +1405,43 @@ export function initPalette(ctx) {
       if (typeof moveSelectionForTab === "function") {
         moveSelectionForTab(e.shiftKey);
       }
-      return;
+      return true;
     }
 
     // Outcome’s classic behavior: synthesize query from keystrokes even if editor is empty
-    if (mode.consumeTyping) {
+    if (targetIsEditor && mode.consumeTyping) {
       if (e.key === "Backspace") {
         e.preventDefault();
         pal.query = pal.query.slice(0, -1);
         refilter();
-        return;
+        return true;
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         pal.query += e.key;
         refilter();
-        return;
+        return true;
       }
     }
+    return false;
+  }
+
+  // Keyboard
+  const onEditorKeyDown = (e) => {
+    handlePaletteKeyDown(e);
   };
   editor.addEventListener("keydown", onEditorKeyDown, true);
+
+  const onDocKeyDown = (e) => {
+    if (e.target === editor) return;
+    if (!pal.isOpen) return;
+    const handled = handlePaletteKeyDown(e, { fromDocument: true });
+    if (handled) {
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+    }
+  };
+  doc?.addEventListener?.("keydown", onDocKeyDown, true);
 
   const onEditorKeyUp = (e) => {
     if (!pal.isOpen) return;
