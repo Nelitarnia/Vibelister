@@ -27,7 +27,7 @@ export function createInitialModel() {
     notes: {},
     comments: createEmptyCommentMap(),
     interactionsPairs: [],
-    interactionsIndex: { mode: "AI", groups: [] },
+    interactionsIndex: { mode: "AI", groups: [], propertiesCatalog: [] },
     nextId: 1,
   };
 }

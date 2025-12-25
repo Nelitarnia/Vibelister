@@ -12,6 +12,7 @@ import {
   readInteractionsIndexCache,
   writeInteractionsIndexCache,
 } from "./interactions-index-cache.js";
+import { normalizeActionProperties } from "../properties.js";
 
 // helpers for ordering
 export function modOrderMap(model) {
@@ -41,6 +42,21 @@ export function compareVariantSig(a, b, model) {
     if (As[i] !== Bs[i]) return As[i] - Bs[i];
   }
   return 0;
+}
+
+function collectPropertiesCatalog(actions) {
+  const catalog = [];
+  const seen = new Set();
+  for (const action of actions || []) {
+    const properties = normalizeActionProperties(action?.properties);
+    for (const prop of properties) {
+      const key = prop.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      catalog.push(prop);
+    }
+  }
+  return catalog;
 }
 
 // canonical signature for storage
@@ -340,6 +356,7 @@ export function buildInteractionsPairs(model, options = {}) {
   const constraintMaps = useGroups
     ? buildConstraintMaps(model.modifierConstraints)
     : null;
+  const propertiesCatalog = collectPropertiesCatalog(actions);
 
   const variantDiagnostics = {
     candidates: 0,
@@ -463,6 +480,7 @@ export function buildInteractionsPairs(model, options = {}) {
       actionsOrder: actions.map((a) => a.id),
       inputsOrder: [],
       variantCatalog,
+      propertiesCatalog,
     };
     if (isBaseIndex) model.interactionsIndexVersion = baseVersion;
     variantDiagnostics.groupTruncations = groupTruncations;
@@ -514,6 +532,7 @@ export function buildInteractionsPairs(model, options = {}) {
     actionsOrder: actions.map((a) => a.id),
     inputsOrder: inputs.map((i) => i.id),
     variantCatalog,
+    propertiesCatalog,
   };
   if (isBaseIndex) model.interactionsIndexVersion = baseVersion;
   variantDiagnostics.groupTruncations = groupTruncations;

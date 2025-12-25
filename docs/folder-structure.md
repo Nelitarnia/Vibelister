@@ -80,6 +80,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── column-kinds.js
 │   │   ├── constants.js
 │   │   ├── mod-state.js
+│   │   ├── properties.js
 │   │   ├── deletion.js
 │   │   ├── fs.js
 │   │   ├── mutation-runner.js
@@ -235,6 +236,7 @@ This document outlines a maintainable directory layout tailored to the current c
   -circuit safely during non-browser runs.
 - `comments.js` composes stable identifiers for per-row, per-view comment buckets and normalizes persisted maps so app state and
   migrations share the same helpers.
+- `properties.js` normalizes and formats the list-valued properties field on actions so the Actions view and persistence share consistent token handling.
 
 #### `scripts/ui/`
 

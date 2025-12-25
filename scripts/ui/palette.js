@@ -2,6 +2,7 @@ import { formatEndActionLabel } from "../data/column-kinds.js";
 import { MOD } from "../data/constants.js";
 import { enumerateModStates } from "../data/mod-state.js";
 import { sortIdsByUserOrder } from "../data/variants/variants.js";
+import { normalizeActionProperties } from "../data/properties.js";
 import {
   getInteractionsPair,
   getInteractionsRowCount,
@@ -26,6 +27,63 @@ import {
 //   - 'tag'     → for ^p\\d+:tag$ (Interactions phase tags)
 //
 // You can add more modes later by extending MODE_MAP.
+
+export function parseEndActionQuery(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return { name: "", mods: [], properties: [] };
+  const tokens = s.split(/\s+/);
+  const mods = [];
+  const properties = [];
+  const nameParts = [];
+  for (let t of tokens) {
+    if (!t) continue;
+    const lower = t.toLowerCase();
+    if (t.startsWith("#") && t.length > 1) {
+      properties.push(lower.slice(1));
+      continue;
+    }
+    if (t.startsWith("+") && t.length > 1) {
+      const body = lower.slice(1);
+      if (body.startsWith("prop:") || body.startsWith("property:") || body.startsWith("p:")) {
+        properties.push(body.replace(/^(prop|property|p):/, ""));
+      } else {
+        mods.push(body);
+      }
+      continue;
+    }
+    nameParts.push(lower);
+  }
+  return { name: nameParts.join(" "), mods, properties };
+}
+
+export function matchesEndActionFilters({
+  actionName,
+  actionProperties,
+  nameQuery,
+  modTokens,
+  propertyTokens,
+  variantModNames,
+}) {
+  const lowerName = String(actionName || "").toLowerCase();
+  if (nameQuery && !lowerName.startsWith(nameQuery)) return false;
+  const normalizedProperties = normalizeActionProperties(actionProperties).map((p) =>
+    p.toLowerCase(),
+  );
+  if (
+    propertyTokens &&
+    propertyTokens.length &&
+    !propertyTokens.every((tok) =>
+      normalizedProperties.some((prop) => prop.includes(tok)),
+    )
+  )
+    return false;
+  if (modTokens && modTokens.length) {
+    const lowerMods = (variantModNames || []).map((m) => m.toLowerCase());
+    if (!modTokens.every((tok) => lowerMods.some((nm) => nm.includes(tok))))
+      return false;
+  }
+  return true;
+}
 
 export function initPalette(ctx) {
   const {
@@ -245,20 +303,11 @@ export function initPalette(ctx) {
       supportsRecentToggle: true,
       parseInitial: (s) => normalizeCellTextToQuery(s, model),
       parseQuery: (raw) => {
-        const s = String(raw || "").trim();
-        if (!s) return { a: "", mods: [] };
-        const tokens = s.split(/\s+/);
-        const mods = [],
-          a = [];
-        for (let t of tokens) {
-          if (t.startsWith("+") && t.length > 1)
-            mods.push(t.slice(1).toLowerCase());
-          else a.push(t.toLowerCase());
-        }
-        return { a: a.join(" "), mods };
+        const parsed = parseEndActionQuery(raw);
+        return { a: parsed.name, mods: parsed.mods, properties: parsed.properties };
       },
       makeItems: (model, parsed) => {
-        const { a, mods } = parsed;
+        const { a, mods, properties } = parsed;
         const actions = (model.actions || []).filter((x) =>
           (x.name || "").trim(),
         );
@@ -297,13 +346,17 @@ export function initPalette(ctx) {
               .filter(Boolean);
             const variantSig = modIds.length ? modIds.join("+") : "";
 
-            if (mods.length) {
-              const lowerMods = modNames.map((s) => s.toLowerCase());
-              if (
-                !mods.every((tok) => lowerMods.some((nm) => nm.includes(tok)))
-              )
-                continue;
-            }
+            if (
+              !matchesEndActionFilters({
+                actionName,
+                actionProperties: act.properties,
+                nameQuery: a,
+                modTokens: mods,
+                propertyTokens: properties,
+                variantModNames: modNames,
+              })
+            )
+              continue;
             const label = formatEndActionLabel(model, act, variantSig);
             const display = label?.plainText || "";
             out.push({
@@ -321,7 +374,17 @@ export function initPalette(ctx) {
           // Fallback if no interactionsPairs yet
           for (const aRow of actions) {
             const nm = aRow.name || "";
-            if (a && !nm.toLowerCase().startsWith(a)) continue;
+            if (
+              !matchesEndActionFilters({
+                actionName: nm,
+                actionProperties: aRow.properties,
+                nameQuery: a,
+                modTokens: mods,
+                propertyTokens: properties,
+                variantModNames: [],
+              })
+            )
+              continue;
             const label = formatEndActionLabel(model, aRow, "");
             out.push({
               display: label?.plainText || "",

@@ -112,6 +112,17 @@ function derivePresetThresholds(baseThresholds = {}, variant = "default") {
       actionGroupPhaseMinExistingRatio: clampRatio(
         base.actionGroupPhaseMinExistingRatio - 0.17,
       ),
+      actionPropertyMinGroupSize: adjustCount(base.actionPropertyMinGroupSize, -1),
+      actionPropertyMinExistingRatio: clampRatio(
+        base.actionPropertyMinExistingRatio - 0.15,
+      ),
+      actionPropertyPhaseMinGroupSize: adjustCount(
+        base.actionPropertyPhaseMinGroupSize,
+        -1,
+      ),
+      actionPropertyPhaseMinExistingRatio: clampRatio(
+        base.actionPropertyPhaseMinExistingRatio - 0.17,
+      ),
       inputDefaultMinGroupSize: adjustCount(base.inputDefaultMinGroupSize, -1),
       inputDefaultMinExistingRatio: clampRatio(
         base.inputDefaultMinExistingRatio - 0.15,
@@ -135,6 +146,17 @@ function derivePresetThresholds(baseThresholds = {}, variant = "default") {
       actionGroupPhaseMinGroupSize: adjustCount(base.actionGroupPhaseMinGroupSize, 1),
       actionGroupPhaseMinExistingRatio: clampRatio(
         base.actionGroupPhaseMinExistingRatio + 0.13,
+      ),
+      actionPropertyMinGroupSize: adjustCount(base.actionPropertyMinGroupSize, 1),
+      actionPropertyMinExistingRatio: clampRatio(
+        base.actionPropertyMinExistingRatio + 0.15,
+      ),
+      actionPropertyPhaseMinGroupSize: adjustCount(
+        base.actionPropertyPhaseMinGroupSize,
+        1,
+      ),
+      actionPropertyPhaseMinExistingRatio: clampRatio(
+        base.actionPropertyPhaseMinExistingRatio + 0.13,
       ),
       inputDefaultMinGroupSize: adjustCount(base.inputDefaultMinGroupSize, 1),
       inputDefaultMinExistingRatio: clampRatio(
@@ -199,6 +221,7 @@ function buildCheckbox(labelText, defaultValue, title) {
 const STRATEGY_LABELS = Object.freeze({
   consensus: "Modifier propagation",
   "action-group": "Action groups",
+  "action-property": "Action properties",
   "modifier-profile": "Modifier profiles",
   "input-default": "Input defaults",
   "profile-trend": "Trend preferences",
@@ -269,6 +292,49 @@ const STRATEGY_CONFIG = Object.freeze({
           max: 1,
           step: 0.01,
           title: "Filled ratio per phase required before phase-level suggestions kick in.",
+        },
+      },
+    ],
+  },
+  "action-property": {
+    enabledKey: "actionPropertyEnabled",
+    fields: [
+      {
+        key: "actionPropertyMinGroupSize",
+        label: "Property min group size",
+        options: {
+          min: 0,
+          step: 1,
+          title: "Rows per property required before suggesting property defaults.",
+        },
+      },
+      {
+        key: "actionPropertyMinExistingRatio",
+        label: "Property min existing ratio",
+        options: {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          title: "Filled ratio per property before defaults or clears propagate.",
+        },
+      },
+      {
+        key: "actionPropertyPhaseMinGroupSize",
+        label: "Property phase min group size",
+        options: {
+          min: 0,
+          step: 1,
+          title: "Rows per phase needed before property defaults apply.",
+        },
+      },
+      {
+        key: "actionPropertyPhaseMinExistingRatio",
+        label: "Property phase min existing ratio",
+        options: {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          title: "Filled ratio per phase required before property-based suggestions.",
         },
       },
     ],
@@ -424,6 +490,10 @@ export async function openInferenceDialog(options = {}) {
     addInfo(
       "Action groups",
       "Spreads consistent outcomes, ends, or tags within the same action group or phase when enough rows agree.",
+    );
+    addInfo(
+      "Action properties",
+      "Shares consistent values across actions that advertise the same properties, even if they belong to different groups.",
     );
     addInfo(
       "Modifier profiles",
