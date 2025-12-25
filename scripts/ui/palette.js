@@ -1248,7 +1248,8 @@ export function initPalette(ctx) {
     if (!pal.isOpen) return false;
     const mode = pal.mode;
     if (!mode) return false;
-    const targetIsEditor = !fromDocument && (!e.target || e.target === editor);
+    const targetIsEditor =
+      !fromDocument && (!e.target || e.target === editor || pal.ownsEditor);
     if (!targetIsEditor && !fromDocument) return false;
 
     const wantsRecentToggle =
@@ -1382,9 +1383,6 @@ export function initPalette(ctx) {
       const n = pal.items.length;
       if (n) {
         pick(pal.selIndex >= 0 ? pal.selIndex : 0);
-        if (typeof moveSelectionForEnter === "function") {
-          moveSelectionForEnter();
-        }
       } else {
         const wantsClear =
           (mode.name === "end" || mode.name === "outcome") &&
@@ -1408,9 +1406,6 @@ export function initPalette(ctx) {
       else {
         close();
         endEdit(false);
-      }
-      if (typeof moveSelectionForTab === "function") {
-        moveSelectionForTab(e.shiftKey);
       }
       return true;
     }
