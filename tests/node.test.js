@@ -21,6 +21,7 @@ import { getCleanupTests } from "../scripts/support/tests/specs/cleanup.js";
 import { getAppCoordinatorTests } from "../scripts/support/tests/specs/app-coordinators.js";
 import { getDataUtilsTests } from "../scripts/support/tests/specs/data-utils.js";
 import { getDataVersionTests } from "../scripts/support/tests/specs/data-version.js";
+import { getPropertiesPaletteTests } from "../scripts/support/tests/specs/properties-palette.js";
 import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
 import { getInferenceIndexAccessTests } from "../scripts/support/tests/specs/inference-index-access.js";
 import { getInferenceStrategyTests } from "../scripts/support/tests/specs/inference-strategies.js";
@@ -70,6 +71,10 @@ for (const spec of getInferenceControllerTests()) {
 
 for (const spec of getAppInitTests()) {
   test(`App init › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getPropertiesPaletteTests()) {
+  test(`Properties palette › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getPersistenceTests()) {
