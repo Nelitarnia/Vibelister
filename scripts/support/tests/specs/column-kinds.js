@@ -1,8 +1,11 @@
 import {
   beginEditForKind,
   setCellForKind,
+  getStructuredForKind,
+  applyStructuredForKind,
   formatEndActionLabel,
 } from "../../../data/column-kinds.js";
+import { sanitizeStructuredPayload } from "../../../app/clipboard-codec.js";
 
 export function getColumnKindTests() {
   return [
@@ -132,6 +135,34 @@ export function getColumnKindTests() {
           result,
           { plainText: "", segments: [] },
           "Deleting an action should leave no modifier suffix behind",
+        );
+      },
+    },
+    {
+      name: "properties structured payload survives copy paste",
+      run(assert) {
+        const source = { properties: ["Aerial", "aerial", " launcher"] };
+        const payload = getStructuredForKind("properties", { row: source });
+        assert.deepStrictEqual(
+          payload,
+          { type: "properties", data: { properties: ["Aerial", "launcher"] } },
+          "getStructuredForKind should normalize properties",
+        );
+
+        const sanitized = sanitizeStructuredPayload(payload);
+        assert.deepStrictEqual(
+          sanitized,
+          payload,
+          "sanitizeStructuredPayload should retain properties entries",
+        );
+
+        const target = {};
+        const applied = applyStructuredForKind("properties", { row: target }, sanitized);
+        assert.ok(applied, "applyStructuredForKind should accept sanitized properties payload");
+        assert.deepStrictEqual(
+          target.properties,
+          ["Aerial", "launcher"],
+          "properties should persist after round trip",
         );
       },
     },

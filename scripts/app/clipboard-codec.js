@@ -9,6 +9,7 @@ import {
   normalizeInteractionSource,
   normalizeInteractionTags,
 } from "./interactions.js";
+import { normalizeActionProperties } from "../data/properties.js";
 
 // --- MIME ---------------------------------------------------------------
 export const MIME_CELL = "application/x-gridcell+json";
@@ -41,6 +42,7 @@ export function sanitizeStructuredPayload(payload) {
     end: ["endActionId", "endVariantSig", "confidence", "source"],
     notes: ["notes"],
     tag: ["tags", "confidence", "source"],
+    properties: ["properties"],
     modifierState: ["value"],
     comment: ["viewKey", "rowId", "columnKey", "cellKey", "value"],
   };
@@ -84,6 +86,11 @@ export function sanitizeStructuredPayload(payload) {
     const normalized = normalizeInteractionTags(out.data.tags);
     out.data.tags = normalized;
   }
+  if (type === "properties") {
+    const props = normalizeActionProperties(out.data.properties);
+    if (!props.length) return null;
+    out.data.properties = props;
+  }
 
   if (type === "outcome" || type === "end" || type === "tag") {
     if ("confidence" in d) {
@@ -107,6 +114,7 @@ export function sanitizeStructuredPayload(payload) {
     out.data.value = value;
   }
   if (type === "tag" && !Array.isArray(out.data.tags)) return null;
+  if (type === "properties" && !Array.isArray(out.data.properties)) return null;
 
   return out;
 }
