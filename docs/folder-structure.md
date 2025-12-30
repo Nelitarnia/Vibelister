@@ -264,6 +264,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
 - `specs/cleanup.js` seeds fixture models with stale notes/comments and verifies the cleanup controller only prunes unreachable entries.
 - `specs/data-utils.js` covers column offset helpers (e.g., `visibleCols`) so scroll-driven grid calculations keep working edge cases such as partial viewports and trailing gaps.
+- `specs/properties-palette.js` boots the app harness and asserts the properties palette opens and closes correctly on the first edit to guard against regression in palette wiring.
 - `specs/inference-utils.js` covers normalization, keying, and cloning behaviors so inference helpers stay stable across refactors.
 - `specs/variant-normalization.js`, `specs/variant-combinatorics.js`, and `specs/variant-constraints.js` isolate tests for the mod-state normalization, combination builder, and constraint evaluation helpers used by the variant generator.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.
