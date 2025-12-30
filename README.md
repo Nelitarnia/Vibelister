@@ -62,6 +62,26 @@ At its simplest, this is how you'd operate Vibelister: list different character 
 
 Every row in the main sheets carries a stable ID behind the scenes. Clearing a cell (Backspace) keeps that ID in place so the row can be renamed or repurposed later, while deleting the row entirely (Delete) retires the ID and scrubs any modifier rules or interaction notes that referenced it. Use row deletion when you truly want to forget an entry; use clear cells when you just need to blank out values.
 
+## Actions
+
+List various Actions here, for example "jump", "roll", "evade". Anything you want to use as a basis for generating the Interactions-view with for more detailed testing.
+
+You can give each Action a group. This is for simple organization, and you can also use inference between action groups to pre-fill Actions.
+
+Properties has a similar functionality as Action groups, except more in-depth: you can list Action properties to sort their use better. For example: "navigation", "attack", "aerial". These traits can also be used for inference.
+
+### Phases
+
+Actions have nuance: their different parts often have different rules. For example, the buffers might work completely differently during start-up and cooldown. To allow examining the "timeline" of an Action in a closer detail, you can give Actions a number which represents their Phases.
+
+Each phase features an Outcome-, End- (the end state of the input test) and Tag- column. The purpose of Tags is to bridge the gap between purely formal note-taking and freeform notes: you should use it to add lesser effects (like UI-only changes) that at least for the time being don't require their own Action or Modifier to keep a track of. The keyboard shortcut for opening the tag panel is Ctrl+Shift+X.
+
+The Phase-column in Actions view allows a list of numbers ("1,2,3"), a range of numbers (1..5) or giving labels to Phases (1:start-up, 2:active, 3:cooldown). These labels will be visible in Interactions view if added, but they're optional.
+
+Interactions-view expands horizontally to fit whatever is the highest Phase count in any Action. (Capped to 12 at the moment.) Furthermore, unused Phases in each Action are grayed out to give a visual guide to the range of the current Action.
+
+Phase 0 signifies simultaneous testing - what happens if you press inputs simultaneously - and it has some special functionality which is not used in other Phases. (Read more below from the "Mirrored and Dual Of" section.)
+
 ## Inputs
 
 List Inputs here. This is mostly self-explanatory, but in many games it is useful to list "external" triggers like hitting a damage wall, ledge or restarting as Inputs as well.
@@ -93,18 +113,6 @@ While adding Actions to the End-column, you can additionally filter through Modi
 Although the default mode in Interactions is comparing Actions vs Inputs (AI), pressing Ctrl+Shift+A lets you switch to Actions vs Actions (AA) comparing in Interactions-view. (It's rather specialized, but could come in handy in some kind of situations.)
 
 Another potentially useful feature is to copy modifiers from the base Action to the search query while placing Actions - this can be done with Ctrl+Shift+>.
-
-## Phases
-
-Actions have nuance: their different parts often have different rules. For example, the buffers might work completely differently during start-up and cooldown. To allow examining the "timeline" of an Action in a closer detail, you can give Actions a number which represents their Phases.
-
-Each phase features an Outcome-, End- (the end state of the input test) and Tag- column. The purpose of Tags is to bridge the gap between purely formal note-taking and freeform notes: you should use it to add lesser effects (like UI-only changes) that at least for the time being don't require their own Action or Modifier to keep a track of. The keyboard shortcut for opening the tag panel is Ctrl+Shift+X.
-
-The Phase-column in Actions view allows a list of numbers ("1,2,3"), a range of numbers (1..5) or giving labels to Phases (1:start-up, 2:active, 3:cooldown). These labels will be visible in Interactions view if added, but they're optional.
-
-Interactions-view expands horizontally to fit whatever is the highest Phase count in any Action. (Capped to 12 at the moment.) Furthermore, unused Phases in each Action are grayed out to give a visual guide to the range of the current Action.
-
-Phase 0 signifies simultaneous testing - what happens if you press inputs simultaneously - and it has some special functionality which is not used in other Phases. (Read more below from the "Mirrored and Dual Of" section.)
 
 ## Outcomes
 
