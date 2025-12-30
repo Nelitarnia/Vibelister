@@ -21,6 +21,7 @@ import {
 import { normalizeCommentColorPalette } from "../data/comment-colors.js";
 import { snapshotModel } from "../data/mutation-runner.js";
 import { buildInteractionsPairs } from "../data/variants/variants.js";
+import { normalizeActionProperties } from "../data/properties.js";
 import {
   DEFAULT_INTERACTION_CONFIDENCE,
   DEFAULT_INTERACTION_SOURCE,
@@ -28,6 +29,10 @@ import {
   normalizeInteractionSource,
 } from "./interactions.js";
 import { createDefaultMeta } from "./model-init.js";
+import {
+  createInferenceProfileStore,
+  resetInferenceProfiles,
+} from "./inference-profiles.js";
 
 export function createPersistenceController({
   model,
@@ -72,6 +77,19 @@ export function createPersistenceController({
     delete target.interactionsIndexBypassScopedCache;
     delete target.interactionsIndexCache;
     delete target.interactionsIndexScopedCache;
+  }
+
+  function normalizeInferenceProfileStore(store) {
+    if (
+      store &&
+      typeof store === "object" &&
+      store.modifierProfiles instanceof Map &&
+      store.inputProfiles instanceof Map
+    ) {
+      if (!Number.isFinite(store.decayBudget)) store.decayBudget = 0;
+      return store;
+    }
+    return createInferenceProfileStore();
   }
 
   function stripDefaultInteractionMetadata(note) {
@@ -163,6 +181,7 @@ export function createPersistenceController({
     if (typeof row.name === "string" && row.name.trim()) return true;
     if (typeof row.color === "string" && row.color.trim()) return true;
     if (typeof row.color2 === "string" && row.color2.trim()) return true;
+    if (Array.isArray(row.properties) && row.properties.length) return true;
     if (typeof row.notes === "string" && row.notes.trim()) return true;
     if (rowHasModStateData(row)) return true;
     return false;
@@ -265,6 +284,12 @@ export function createPersistenceController({
       ) {
         o.interactionsIndex.variantCatalog = {};
       }
+      if (!Array.isArray(o.interactionsIndex.propertiesCatalog)) {
+        o.interactionsIndex.propertiesCatalog = [];
+      } else {
+        o.interactionsIndex.propertiesCatalog =
+          normalizeActionProperties(o.interactionsIndex.propertiesCatalog);
+      }
     }
     let maxId = 0;
     for (const r of o.actions) {
@@ -274,6 +299,9 @@ export function createPersistenceController({
       for (const k in r.modSet) {
         r.modSet[k] = sanitizeModValue(r.modSet[k]);
       }
+      const props = normalizeActionProperties(r.properties);
+      if (props.length) r.properties = props;
+      else delete r.properties;
     }
     for (const r of o.inputs) {
       if (typeof r.id !== "number") r.id = ++maxId;
@@ -289,6 +317,7 @@ export function createPersistenceController({
     }
     if (!Number.isFinite(o.nextId)) o.nextId = maxId + 1;
     else o.nextId = Math.max(o.nextId, maxId + 1);
+    o.inferenceProfiles = normalizeInferenceProfileStore(o.inferenceProfiles);
     o.meta.schema = SCHEMA_VERSION;
   }
 
@@ -305,7 +334,7 @@ export function createPersistenceController({
       notes: {},
       comments: createEmptyCommentMap(),
       interactionsPairs: [],
-      interactionsIndex: { mode: "AI", groups: [] },
+      interactionsIndex: { mode: "AI", groups: [], propertiesCatalog: [] },
       nextId: 1,
     });
     clearHistory();
@@ -326,11 +355,16 @@ export function createPersistenceController({
     closeMenus?.();
     try {
       const m = await getFsModule();
+      const inferenceProfiles = normalizeInferenceProfileStore(
+        model?.inferenceProfiles,
+      );
       const { data, name } = await m.openJson();
       upgradeModelInPlace(data);
+      data.inferenceProfiles = inferenceProfiles;
       clearBypassIndexArtifacts(data);
       clearBypassIndexArtifacts(model);
       Object.assign(model, data);
+      resetInferenceProfiles(inferenceProfiles);
       clearHistory();
       ensureSeedRows();
       buildInteractionsPairs(model);

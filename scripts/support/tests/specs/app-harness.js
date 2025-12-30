@@ -91,6 +91,7 @@ function createStubDocument() {
       onclick: null,
       focus() {},
       blur() {},
+      select() {},
     };
     return element;
   }

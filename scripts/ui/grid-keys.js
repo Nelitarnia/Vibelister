@@ -1030,29 +1030,32 @@ export function initGridKeys(deps) {
     }
 
     const fullColumnRange = colDefs.map((_, idx) => idx);
+    const allColumnsMode = !!(selection?.horizontalMode || selection?.colsAll);
     const highlightedCols =
-      selection?.cols && selection.cols.size
+      allColumnsMode && selection?.cols && selection.cols.size
         ? Array.from(selection.cols).sort((a, b) => a - b)
         : null;
+    const highlightedSpanIsExplicit =
+      highlightedCols && highlightedCols.length > 1;
     let destCols = computeDestinationIndices({
       sourceCount: sourceWidth,
       selectionSet: selection && selection.cols,
       anchor: colAnchor,
       limit: totalCols > 0 ? totalCols : colAnchor + sourceWidth,
-      allFlag: selection && selection.colsAll && !highlightedCols,
+      allFlag: allColumnsMode && !highlightedSpanIsExplicit,
       fullRange: fullColumnRange,
     });
-    if (selection && selection.colsAll) {
-      if (highlightedCols && highlightedCols.length) {
+    if (allColumnsMode) {
+      if (highlightedSpanIsExplicit) {
         const spanStart = highlightedCols[0];
         const spanEnd = highlightedCols[highlightedCols.length - 1];
-        const limited = [];
-        for (let c = spanStart; c <= spanEnd && limited.length < sourceWidth; c++) {
-          limited.push(c);
+        const highlightedRange = [];
+        for (let c = spanStart; c <= spanEnd; c++) {
+          highlightedRange.push(c);
         }
-        destCols = limited;
+        destCols = highlightedRange;
       } else {
-        destCols = destCols.slice(0, sourceWidth);
+        destCols = fullColumnRange.slice();
       }
     }
     if (!destCols.length) destCols.push(colAnchor);
@@ -1190,7 +1193,7 @@ export function initGridKeys(deps) {
             }
           }
 
-          if (typeRejected) rejectedCount++;
+          if (typeRejected && !cellChanged) rejectedCount++;
           if (cellChanged) appliedCount++;
         }
       }

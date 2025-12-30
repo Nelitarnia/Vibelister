@@ -580,6 +580,53 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "structured notes payload keeps note text",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        addAction("Block");
+        addInput("Parry");
+        buildInteractionsPairs(model);
+        const viewDef = makeInteractionsView();
+
+        const noteText = "remember this";
+        setInteractionsCell(model, { set() {} }, viewDef, 0, 4, noteText);
+
+        const payloadNotes = getStructuredCellInteractions(model, viewDef, 0, 4);
+        assert.deepStrictEqual(
+          payloadNotes,
+          { type: "notes", data: { notes: noteText } },
+          "notes payload exported",
+        );
+
+        const sanitized = sanitizeStructuredPayload(payloadNotes);
+        assert.deepStrictEqual(
+          sanitized,
+          payloadNotes,
+          "notes payload survives sanitize",
+        );
+
+        addInput("Kick");
+        buildInteractionsPairs(model);
+
+        const applied = applyStructuredCellInteractions(
+          (r, c, v) => setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
+          viewDef,
+          1,
+          4,
+          payloadNotes,
+          model,
+        );
+        assert.ok(applied, "notes payload applied");
+
+        const pastedNotes = getInteractionsCell(model, viewDef, 1, 4);
+        assert.strictEqual(
+          plainCellText(pastedNotes),
+          noteText,
+          "note text preserved",
+        );
+      },
+    },
+    {
       name: "structured metadata defaults and inference preservation",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();

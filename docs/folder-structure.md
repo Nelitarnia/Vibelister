@@ -43,6 +43,8 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── inference-targets.js
 │   │   ├── inference-profiles.js
 │   │   ├── inference-utils.js
+│   │   ├── inference-strategies/
+│   │   │   └── property-strategy.js
 │   │   ├── interaction-bulk-actions.js
 │   │   ├── interaction-maintenance.js
 │   │   ├── interaction-tags.js
@@ -80,6 +82,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── column-kinds.js
 │   │   ├── constants.js
 │   │   ├── mod-state.js
+│   │   ├── properties.js
 │   │   ├── deletion.js
 │   │   ├── fs.js
 │   │   ├── mutation-runner.js
@@ -199,7 +202,8 @@ This document outlines a maintainable directory layout tailored to the current c
 - `inference-index-access.js` encapsulates index construction and selection mapping for regular vs. bypass interactions, including scoped bypass caches and active-row remapping.
 - `inference-targets.js` resolves requested vs. suggestion scopes, gathers eligible cells for inference, and shares scope-plan metadata so the controller can log intent.
 - `inference-heuristics.js` hosts the inference runner that composes discrete strategy modules, normalizes thresholds, and exposes the suggestion entry point.
-- `inference-strategies/` collects table-driven consensus, action-group, modifier-profile, input-default, profile-trend, and phase-adjacency strategies so heuristics can be enabled, disabled, or unit-tested in isolation.
+- `inference-strategies/` collects table-driven consensus, action-group, action-property, modifier-profile, input-default, profile-trend, and phase-adjacency strategies so heuristics can be enabled, disabled, or unit-tested in isolation.
+- `inference-strategies/property-strategy.js` groups inference targets by shared action properties (per input/phase/field) so property similarity can seed suggestions alongside action groups.
 - `inference-profiles.js` maintains per-modifier and per-input trend profiles, decaying counts, snapshotting them for heuristic runs, and exposing a read-only view that leans suggestions toward recently observed "no change" patterns.
 - `inference-utils.js` centralizes the shared normalization, extraction, keying, and cloning helpers consumed by heuristics, profiles, and inference-aware interactions.
 - `interaction-bulk-actions.js` coordinates toolbar and sidebar bulk actions for interaction cells, applying Uncertain toggles, accepting inferred metadata, and clearing inference flags with undo/status updates.
@@ -235,6 +239,7 @@ This document outlines a maintainable directory layout tailored to the current c
   -circuit safely during non-browser runs.
 - `comments.js` composes stable identifiers for per-row, per-view comment buckets and normalizes persisted maps so app state and
   migrations share the same helpers.
+- `properties.js` normalizes and formats the list-valued properties field on actions so the Actions view and persistence share consistent token handling.
 
 #### `scripts/ui/`
 
@@ -259,6 +264,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `specs/comments.js` exercises serialization and persistence paths for the comment map helpers so both Node and browser runners can reuse the shared expectations.
 - `specs/cleanup.js` seeds fixture models with stale notes/comments and verifies the cleanup controller only prunes unreachable entries.
 - `specs/data-utils.js` covers column offset helpers (e.g., `visibleCols`) so scroll-driven grid calculations keep working edge cases such as partial viewports and trailing gaps.
+- `specs/properties-palette.js` boots the app harness and asserts the properties palette opens and closes correctly on the first edit to guard against regression in palette wiring.
 - `specs/inference-utils.js` covers normalization, keying, and cloning behaviors so inference helpers stay stable across refactors.
 - `specs/variant-normalization.js`, `specs/variant-combinatorics.js`, and `specs/variant-constraints.js` isolate tests for the mod-state normalization, combination builder, and constraint evaluation helpers used by the variant generator.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.

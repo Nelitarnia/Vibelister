@@ -468,12 +468,22 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
   if (key === "notes") {
     const k = noteKeyForPair(pair, undefined);
     const note = model.notes[k] || (model.notes[k] = {});
-    if (value == null || value === "") {
+    let noteValue = value;
+    if (noteValue && typeof noteValue === "object") {
+      const nested = noteValue.data;
+      if (nested && typeof nested === "object" && "notes" in nested) {
+        noteValue = nested.notes;
+      } else if ("notes" in noteValue) {
+        noteValue = noteValue.notes;
+      }
+    }
+
+    if (noteValue == null || noteValue === "") {
       if ("notes" in note) delete note.notes;
       if (Object.keys(note).length === 0) delete model.notes[k];
       return true;
     }
-    note.notes = String(value);
+    note.notes = String(noteValue);
     return true;
   }
 
@@ -641,7 +651,34 @@ export function applyStructuredCellInteractions(
   const col = viewDef.columns[c];
   if (!col) return false;
   const pk = parsePhaseKey(col.key);
-  if (!pk) return false;
+  if (!pk) {
+    const key = String(col.key || "");
+    if (key !== "notes") return false;
+
+    let type = payload?.type ? String(payload.type).toLowerCase() : null;
+    let data = payload && typeof payload.data === "object" ? payload.data : null;
+
+    if (!type || !data) {
+      const hasType = !!(payload && payload.type);
+      const hasDataProp =
+        hasType &&
+        payload &&
+        typeof payload === "object" &&
+        Object.prototype.hasOwnProperty.call(payload, "data");
+      const bare = data ?? (hasDataProp ? payload.data : payload);
+      type = "notes";
+      data = bare && typeof bare === "object" ? bare : { notes: bare };
+    }
+
+    if (type !== "notes") return false;
+
+    const model = modelFromCtx;
+    if (!model) return false;
+    const nextNotes = Object.prototype.hasOwnProperty.call(data || {}, "notes")
+      ? data?.notes
+      : data;
+    return !!setInteractionsCell(model, null, viewDef, r, c, nextNotes);
+  }
 
   // Normalize to the destination column.
   // Accept:
