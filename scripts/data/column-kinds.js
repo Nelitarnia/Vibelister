@@ -7,6 +7,10 @@ import {
   MOD_STATE_BOOLEAN_TRUE_NAME,
   normalizeModStateValue,
 } from "./mod-state.js";
+import {
+  formatActionProperties,
+  normalizeActionProperties,
+} from "./properties.js";
 import { getInteractionsPair } from "../app/interactions-data.js";
 
 export const STRUCTURED_SCHEMA_VERSION = 1;
@@ -318,6 +322,47 @@ export const ColumnKinds = {
       const hadColor = typeof before === "string" && before.trim() !== "";
       if (hadColor || before !== "") row[col.key] = "";
       return hadColor;
+    },
+  },
+
+  properties: {
+    get({ row } = {}) {
+      return formatActionProperties(row?.properties);
+    },
+    set({ row } = {}, v) {
+      if (!row) return;
+      const props = normalizeActionProperties(v);
+      if (props.length) row.properties = props;
+      else delete row.properties;
+    },
+    beginEdit() {
+      return { useEditor: true };
+    },
+    getStructured({ row } = {}) {
+      const props = normalizeActionProperties(row?.properties);
+      if (!props.length) return null;
+      return { type: "properties", data: { properties: props } };
+    },
+    applyStructured({ row } = {}, payload) {
+      if (!row || !payload || typeof payload !== "object") return false;
+      if (payload.type !== "properties") return false;
+      const props = normalizeActionProperties(
+        payload.data && "properties" in payload.data
+          ? payload.data.properties
+          : payload.data,
+      );
+      if (!props.length) {
+        delete row.properties;
+        return true;
+      }
+      row.properties = props;
+      return true;
+    },
+    clear({ row } = {}) {
+      if (!row || !row.properties) return false;
+      const had = Array.isArray(row.properties) && row.properties.length > 0;
+      delete row.properties;
+      return had;
     },
   },
 

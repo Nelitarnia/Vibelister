@@ -14,6 +14,7 @@ import {
   valueKey,
 } from "./inference-utils.js";
 import { DEFAULT_INFERENCE_STRATEGIES } from "./inference-strategies/index.js";
+import { normalizePropertyKeys } from "../data/properties.js";
 
 function normalizeActionGroup(group) {
   if (group == null) return "";
@@ -31,29 +32,31 @@ function prepareTargets(targets) {
     const variantSig = normalizeVariantSig(target.pair);
     const inputKey = normalizeInputKey(target.pair);
     const actionGroupKey = normalizeActionGroup(target.actionGroup);
-    const info = describeInteractionInference(target.note);
-    const source = normalizeInteractionSource(info?.source);
-    const isInferred = !!info?.inferred;
-    const allowInferredExisting = !!target?.allowInferredExisting;
-    const allowInferredTargets = !!target?.allowInferredTargets;
-    const includeValue = !isInferred || allowInferredExisting;
-    const currentValue = includeValue ? extractFieldValue(target) : null;
-    const hasValue = includeValue && !!currentValue;
-    const isManual = hasValue && source === DEFAULT_INTERACTION_SOURCE;
-    return {
+  const info = describeInteractionInference(target.note);
+  const source = normalizeInteractionSource(info?.source);
+  const isInferred = !!info?.inferred;
+  const allowInferredExisting = !!target?.allowInferredExisting;
+  const allowInferredTargets = !!target?.allowInferredTargets;
+  const properties = normalizePropertyKeys(target.action?.properties);
+  const includeValue = !isInferred || allowInferredExisting;
+  const currentValue = includeValue ? extractFieldValue(target) : null;
+  const hasValue = includeValue && !!currentValue;
+  const isManual = hasValue && source === DEFAULT_INTERACTION_SOURCE;
+  return {
       ...target,
       actionId,
       variantSig,
       inputKey,
       actionGroupKey,
-      currentValue,
-      hasValue,
-      isManual,
-      isInferred,
-      allowInferredTargets,
-      source,
-    };
-  });
+    currentValue,
+    hasValue,
+    isManual,
+    isInferred,
+    allowInferredTargets,
+    properties,
+    source,
+  };
+});
 }
 
 function eligibleForSuggestion(target) {
@@ -213,6 +216,7 @@ function applyPhaseAdjacency(
 
 export const HEURISTIC_SOURCES = Object.freeze({
   actionGroup: "action-group",
+  actionProperty: "action-property",
   modifierPropagation: "modifier-propagation",
   modifierProfile: "modifier-profile",
   inputDefault: "input-default",
@@ -300,6 +304,11 @@ export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
   actionGroupMinExistingRatio: 0.6,
   actionGroupPhaseMinGroupSize: 3,
   actionGroupPhaseMinExistingRatio: 0.72,
+  actionPropertyEnabled: true,
+  actionPropertyMinGroupSize: 2,
+  actionPropertyMinExistingRatio: 0.6,
+  actionPropertyPhaseMinGroupSize: 3,
+  actionPropertyPhaseMinExistingRatio: 0.72,
   modifierProfileEnabled: true,
   inputDefaultEnabled: true,
   inputDefaultMinGroupSize: 2,
@@ -345,6 +354,28 @@ export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
       )
         ? override.actionGroupPhaseMinExistingRatio
         : defaults.actionGroupPhaseMinExistingRatio,
+      actionPropertyEnabled:
+        typeof override.actionPropertyEnabled === "boolean"
+          ? override.actionPropertyEnabled
+          : defaults.actionPropertyEnabled,
+      actionPropertyMinGroupSize: Number.isFinite(override.actionPropertyMinGroupSize)
+        ? override.actionPropertyMinGroupSize
+        : defaults.actionPropertyMinGroupSize,
+      actionPropertyMinExistingRatio: Number.isFinite(
+        override.actionPropertyMinExistingRatio,
+      )
+        ? override.actionPropertyMinExistingRatio
+        : defaults.actionPropertyMinExistingRatio,
+      actionPropertyPhaseMinGroupSize: Number.isFinite(
+        override.actionPropertyPhaseMinGroupSize,
+      )
+        ? override.actionPropertyPhaseMinGroupSize
+        : defaults.actionPropertyPhaseMinGroupSize,
+      actionPropertyPhaseMinExistingRatio: Number.isFinite(
+        override.actionPropertyPhaseMinExistingRatio,
+      )
+        ? override.actionPropertyPhaseMinExistingRatio
+        : defaults.actionPropertyPhaseMinExistingRatio,
       modifierProfileEnabled:
         typeof override.modifierProfileEnabled === "boolean"
           ? override.modifierProfileEnabled
@@ -562,4 +593,3 @@ export function proposeInteractionInferences(targets, profiles, thresholdOverrid
     DEFAULT_INFERENCE_STRATEGIES,
   );
 }
-

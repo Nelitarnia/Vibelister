@@ -185,6 +185,7 @@ export function createInferenceTargetResolver({
           note,
           pair,
           row: r,
+          action: getActionRecord(model, pair.aId),
           actionGroup: indexAccess.includeBypass
             ? getActionGroupForAction(actionGroupCache, model, pair.aId) || "__bypass__"
             : getActionGroupForAction(actionGroupCache, model, pair.aId),
