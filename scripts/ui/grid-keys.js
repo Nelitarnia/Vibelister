@@ -113,6 +113,7 @@ export function initGridKeys(deps) {
     jumpToInteractionsVariant,
     toggleCommentsSidebar,
     toggleTagsSidebar,
+    toggleInteractionsMode,
     openInferenceSidebar,
     acceptInferred,
     window: winOverride,
@@ -507,32 +508,31 @@ export function initGridKeys(deps) {
     }
   }
 
-    function onShortcutKeyDown(e) {
-      const activeElement = doc?.activeElement || null;
-      const platform = typeof nav?.platform === "string" ? nav.platform : "";
-      const isMac = platform.includes("Mac");
-      const mod = isMac ? e.metaKey : e.ctrlKey;
-      const keyRaw = e.key;
-      const keyLower = String(keyRaw || "").toLowerCase();
-      const isViewCycleShortcut =
-        mod && e.shiftKey && !e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft");
+  function onShortcutKeyDown(e) {
+    const activeElement = doc?.activeElement || null;
+    const platform = typeof nav?.platform === "string" ? nav.platform : "";
+    const isMac = platform.includes("Mac");
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    const keyRaw = e.key;
+    const keyLower = String(keyRaw || "").toLowerCase();
+    const isViewCycleShortcut =
+      mod && e.shiftKey && !e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft");
 
-      const outlineFilterFocused = isOutlineFilterInput(activeElement);
-      if (!shouldHandleGlobalShortcuts({
+    const outlineFilterFocused = isOutlineFilterInput(activeElement);
+    if (
+      !shouldHandleGlobalShortcuts({
         activeElement,
         allowWhileOutlineFilter: outlineFilterFocused,
-      })) {
-        if (isViewCycleShortcut && gridIsEditing()) {
-          e.preventDefault();
-        }
-        return;
+      })
+    ) {
+      if (isViewCycleShortcut && gridIsEditing()) {
+        e.preventDefault();
       }
+      return;
+    }
 
-      const plusLike =
-        keyRaw === "=" ||
-        keyRaw === "+" ||
-        keyRaw === "Add" ||
-        keyLower === "add";
+    const plusLike =
+      keyRaw === "=" || keyRaw === "+" || keyRaw === "Add" || keyLower === "add";
 
     if (mod && keyLower === "s") {
       e.preventDefault();
@@ -622,10 +622,20 @@ export function initGridKeys(deps) {
       runSelfTests();
       return;
     }
-      if (isViewCycleShortcut) {
-        if (gridIsEditing()) {
-          e.preventDefault();
-          return; // don't cycle while editing
+    if (
+      mod &&
+      e.shiftKey &&
+      keyLower === "a" &&
+      typeof toggleInteractionsMode === "function"
+    ) {
+      e.preventDefault();
+      toggleInteractionsMode();
+      return;
+    }
+    if (isViewCycleShortcut) {
+      if (gridIsEditing()) {
+        e.preventDefault();
+        return; // don't cycle while editing
       }
       e.preventDefault();
       cycleView(e.key === "ArrowRight" ? 1 : -1);
