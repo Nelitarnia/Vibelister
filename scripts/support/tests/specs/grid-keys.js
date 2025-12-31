@@ -167,6 +167,161 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "Ctrl+Shift+A uses global shortcut guard and cleans up listeners",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const colorPickerStub = { getAttribute: () => "false", contains: () => false };
+        const outlinePanel = { querySelector: () => null };
+        const input = { tagName: "INPUT", isContentEditable: false };
+
+        let modalOpen = true;
+        const documentStub = {
+          querySelector(selector) {
+            if (selector === '[aria-modal="true"]') return modalOpen ? {} : null;
+            return null;
+          },
+          getElementById(id) {
+            if (id === "interactionsOutline") return outlinePanel;
+            if (id === "vlColorPicker") return colorPickerStub;
+            return colorPickerStub;
+          },
+          activeElement: input,
+        };
+        const navigatorStub = { platform: "Test" };
+
+        const selection = {
+          rows: new Set(),
+          cols: new Set(),
+          colsAll: false,
+          horizontalMode: false,
+        };
+        const sel = { r: 0, c: 0 };
+
+        let toggles = 0;
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "interactions",
+          selection,
+          sel,
+          editor: { style: { display: "none" } },
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          moveSelectionForTab: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [] }),
+          getRowCount: () => 0,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => ({}),
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => null,
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleInteractionsMode: () => {
+            toggles += 1;
+          },
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        const makeEvent = () => ({
+          key: "A",
+          ctrlKey: true,
+          metaKey: false,
+          shiftKey: true,
+          altKey: false,
+          prevented: false,
+          preventDefault() {
+            this.prevented = true;
+          },
+        });
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const shortcutListener = keyListeners.find((entry) => !entry.capture);
+          assert.ok(shortcutListener, "shortcut listener should be registered");
+
+          const modalEvent = makeEvent();
+          shortcutListener.cb(modalEvent);
+          assert.strictEqual(toggles, 0, "modal presence should block shortcut");
+          assert.strictEqual(
+            modalEvent.prevented,
+            false,
+            "modal should prevent shortcut handler from consuming the event",
+          );
+
+          modalOpen = false;
+          documentStub.activeElement = input;
+          const inputEvent = makeEvent();
+          shortcutListener.cb(inputEvent);
+          assert.strictEqual(toggles, 0, "typing focus should block shortcut");
+
+          documentStub.activeElement = null;
+          const allowedEvent = makeEvent();
+          shortcutListener.cb(allowedEvent);
+          assert.strictEqual(toggles, 1, "shortcut should toggle when allowed");
+          assert.strictEqual(
+            allowedEvent.prevented,
+            true,
+            "handled shortcut should prevent default",
+          );
+        } finally {
+          dispose?.();
+          assert.deepStrictEqual(
+            listeners.get("keydown") || [],
+            [],
+            "shortcut listeners should be removed on dispose",
+          );
+        }
+      },
+    },
+    {
       name: "computeDestinationIndices falls back when selection is small",
       run(assert) {
         const selection = new Set([5]);

@@ -172,17 +172,11 @@ export function setupInputHandlers({
       modelApi.interactionsOutline?.jumpToAction?.(delta),
     jumpToInteractionsVariant: (delta) =>
       modelApi.interactionsOutline?.jumpToVariant?.(delta),
+    toggleInteractionsMode,
     toggleCommentsSidebar: () => modelApi.commentsUI?.toggle?.(),
     toggleTagsSidebar: () => modelApi.tagUI?.toggle?.(),
     openInferenceSidebar: () => modelApi.toggleInteractionToolsPane?.(),
     acceptInferred: () => modelApi.interactionActions?.acceptInferred?.(),
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.shiftKey && (e.key === "A" || e.key === "a")) {
-      e.preventDefault();
-      toggleInteractionsMode?.();
-    }
   });
 
   return {
