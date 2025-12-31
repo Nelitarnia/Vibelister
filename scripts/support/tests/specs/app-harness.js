@@ -73,14 +73,26 @@ function createStubDocument() {
       hasAttribute: (name) => attrs.has(name),
       removeAttribute: (name) => attrs.delete(name),
       addEventListener(type, cb) {
-        listeners.set(type, cb);
+        const list = listeners.get(type) || [];
+        list.push(cb);
+        listeners.set(type, list);
       },
-      removeEventListener(type) {
-        listeners.delete(type);
+      removeEventListener(type, cb) {
+        if (!listeners.has(type)) return;
+        if (!cb) {
+          listeners.delete(type);
+          return;
+        }
+        const remaining = listeners.get(type).filter((fn) => fn !== cb);
+        if (remaining.length > 0) listeners.set(type, remaining);
+        else listeners.delete(type);
       },
       dispatchEvent(ev) {
-        const cb = listeners.get(ev.type);
-        if (typeof cb === "function") cb(ev);
+        const list = listeners.get(ev.type);
+        if (!Array.isArray(list)) return;
+        [...list].forEach((cb) => {
+          if (typeof cb === "function") cb(ev);
+        });
       },
       querySelector() {
         return null;
@@ -118,8 +130,9 @@ function createStubDocument() {
       const el = ensure(`document:${type}`);
       el.addEventListener(type, cb);
     },
-    removeEventListener(type) {
-      elements.delete(`document:${type}`);
+    removeEventListener(type, cb) {
+      const el = elements.get(`document:${type}`);
+      el?.removeEventListener?.(type, cb);
     },
   };
 
@@ -136,10 +149,19 @@ function createStubDocument() {
   globalThis.window = {
     requestAnimationFrame: (cb) => setTimeout(cb, 0),
     addEventListener(type, cb) {
-      winListeners.set(type, cb);
+      const list = winListeners.get(type) || [];
+      list.push(cb);
+      winListeners.set(type, list);
     },
-    removeEventListener(type) {
-      winListeners.delete(type);
+    removeEventListener(type, cb) {
+      if (!winListeners.has(type)) return;
+      if (!cb) {
+        winListeners.delete(type);
+        return;
+      }
+      const remaining = winListeners.get(type).filter((fn) => fn !== cb);
+      if (remaining.length > 0) winListeners.set(type, remaining);
+      else winListeners.delete(type);
     },
   };
   globalThis.location = { hash: "" };
@@ -194,5 +216,7 @@ export function createAppHarness() {
     },
   };
 }
+
+export { createStubDocument };
 
 export default createAppHarness;
