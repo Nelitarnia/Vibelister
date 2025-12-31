@@ -1,4 +1,5 @@
-import { createAppHarness } from "./app-harness.js";
+import { createAppHarness, createStubDocument } from "./app-harness.js";
+import { initMenus } from "../../../ui/menus.js";
 
 export function getAppInitTests() {
   return [
@@ -35,6 +36,53 @@ export function getAppInitTests() {
         assert.strictEqual(typeof menus.undoMenuItem.onclick, "function", "undo wired");
         assert.strictEqual(typeof menus.redoMenuItem.onclick, "function", "redo wired");
         harness.teardown();
+      },
+    },
+    {
+      name: "menus teardown removes global listeners",
+      run(assert) {
+        const { documentStub, elements, restore } = createStubDocument();
+        const popup = documentStub.getElementById("menu:popup");
+        const trigger = documentStub.getElementById("menu:trigger");
+        trigger.getBoundingClientRect = () => ({ left: 0, bottom: 0 });
+        const originalSetAttribute = popup.setAttribute.bind(popup);
+        let closeCalls = 0;
+        popup.setAttribute = (name, value) => {
+          if (name === "data-open") closeCalls++;
+          originalSetAttribute(name, value);
+        };
+        const menus = { file: { popup, trigger } };
+        const menuDeps = {
+          dom: { menus, items: {}, viewRadios: {} },
+          setActiveView() {},
+          newProject() {},
+          openFromDisk() {},
+          saveToDisk() {},
+          doGenerate() {},
+          runSelfTests() {},
+          model: {},
+          openSettings() {},
+          openProjectInfo() {},
+          openCleanup() {},
+          openInference() {},
+          addRowsAbove() {},
+          addRowsBelow() {},
+          clearCells() {},
+          deleteRows() {},
+          undo() {},
+          redo() {},
+          getUndoState() {
+            return {};
+          },
+        };
+        const first = initMenus(menuDeps);
+        first.destroy();
+        const second = initMenus(menuDeps);
+        const docClick = elements.get("document:click");
+        docClick.dispatchEvent({ type: "click" });
+        assert.strictEqual(closeCalls, 1, "only one click listener active after reinit");
+        second.destroy();
+        restore();
       },
     },
   ];

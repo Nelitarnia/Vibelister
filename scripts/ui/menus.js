@@ -27,6 +27,13 @@ export function initMenus(deps) {
   const menus = dom.menus || {};
   const items = dom.items || {};
   const viewRadios = dom.viewRadios || {};
+  const listenerDisposers = [];
+
+  const registerListener = (target, type, handler, options) => {
+    if (!target?.addEventListener) return;
+    target.addEventListener(type, handler, options);
+    listenerDisposers.push(() => target.removeEventListener(type, handler, options));
+  };
 
   function closeAllMenus() {
     for (const k in menus) {
@@ -52,13 +59,13 @@ export function initMenus(deps) {
 
   // Open/close behavior
   ["file", "edit", "sheet", "tools", "view"].forEach((k) => {
-    menus?.[k]?.trigger?.addEventListener("click", (e) => {
+    registerListener(menus?.[k]?.trigger, "click", (e) => {
       e.stopPropagation();
       toggleMenu(k);
     });
   });
-  document.addEventListener("click", () => closeAllMenus());
-  window.addEventListener("keydown", (e) => {
+  registerListener(document, "click", () => closeAllMenus());
+  registerListener(window, "keydown", (e) => {
     if (e.key === "Escape") closeAllMenus();
   });
 
@@ -228,5 +235,12 @@ export function initMenus(deps) {
     setActiveView("interactions");
   });
 
-  return { closeAllMenus, updateViewMenuRadios };
+  function destroy() {
+    while (listenerDisposers.length) {
+      const dispose = listenerDisposers.pop();
+      dispose();
+    }
+  }
+
+  return { closeAllMenus, updateViewMenuRadios, destroy };
 }
