@@ -41,7 +41,7 @@ export function setupInteractionTools({
     return function doGenerate() {
       rebuildActionColumnsFromModifiers(model);
       invalidateViewDef();
-      const { actionsCount, inputsCount, pairsCount, capped, cappedActions } =
+      const { actionsCount, inputsCount, pairsCount, capped, cappedActions, variantCaps } =
         buildInteractionsPairs(model);
       interactionsOutline?.refresh?.();
       setActiveView("interactions");
@@ -49,9 +49,12 @@ export function setupInteractionTools({
       sel.c = 0;
       layout();
       render();
+      const capSummary = `Caps — per-action ${variantCaps.variantCapPerAction}, per-group ${variantCaps.variantCapPerGroup}`;
+      const hitSummary = capped
+        ? ` (Note: ${cappedActions} action(s) hit the cap)`
+        : " (No cap hits)";
       const genSummary =
-        `Generated Interactions: ${actionsCount} actions × ${inputsCount} inputs = ${pairsCount} rows.` +
-        (capped ? ` (Note: ${cappedActions} action(s) hit variant cap)` : "");
+        `Generated Interactions: ${actionsCount} actions × ${inputsCount} inputs = ${pairsCount} rows. ${capSummary}${hitSummary}`;
       statusBar?.set(genSummary);
     };
   }

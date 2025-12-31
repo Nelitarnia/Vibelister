@@ -5,7 +5,7 @@ import {
   modStateIsOn,
   modStateIsRequired,
 } from "./mod-state-normalize.js";
-import { groupCombos, MAX_GROUP_COMBOS } from "./variant-combinatorics.js";
+import { groupCombos } from "./variant-combinatorics.js";
 import { buildConstraintMaps, violatesConstraints } from "./variant-constraints.js";
 import {
   makeInteractionsIndexCacheContext,
@@ -13,6 +13,7 @@ import {
   writeInteractionsIndexCache,
 } from "./interactions-index-cache.js";
 import { normalizeActionProperties } from "../properties.js";
+import { normalizeVariantCaps, DEFAULT_VARIANT_CAPS } from "./variant-settings.js";
 
 // helpers for ordering
 export function modOrderMap(model) {
@@ -136,9 +137,12 @@ export function canonicalSig(sig) {
   return out.join("+");
 }
 
-const CAP_PER_ACTION = 5000; // total variants per action (early stop)
-
 function computeVariantsForAction(action, model, options = {}) {
+  const caps = normalizeVariantCaps(
+    options.variantCaps || model?.meta?.variantCaps,
+    DEFAULT_VARIANT_CAPS,
+  );
+  const capPerAction = caps.variantCapPerAction;
   const includeMarked = !!options.includeMarked;
   const set = action.modSet || {};
   const requiredIds = [];
@@ -204,10 +208,14 @@ function computeVariantsForAction(action, model, options = {}) {
     const choices = [];
     const optionalEligSet = new Set(optionalElig);
     for (const g of groups) {
-      const ch = groupCombos(g, {
-        optionalEligible: optionalEligSet,
-        required: requiredSet,
-      });
+      const ch = groupCombos(
+        g,
+        {
+          optionalEligible: optionalEligSet,
+          required: requiredSet,
+        },
+        caps,
+      );
       if (ch.length === 0) {
         if (g.required) {
           markTruncated({
@@ -225,7 +233,7 @@ function computeVariantsForAction(action, model, options = {}) {
           type: "group",
           groupId: g.id,
           groupName: g.name,
-          limit: MAX_GROUP_COMBOS,
+          limit: ch.truncationLimit || caps.variantCapPerGroup,
         });
       }
       choices.push(ch);
@@ -238,7 +246,7 @@ function computeVariantsForAction(action, model, options = {}) {
     const seen = new Set();
 
     function* rec(i, acc) {
-      if (yielded >= CAP_PER_ACTION) {
+      if (yielded >= capPerAction) {
         markTruncated();
         return;
       }
@@ -258,7 +266,7 @@ function computeVariantsForAction(action, model, options = {}) {
         const next = acc.concat(ch);
         if (!violatesConstraints(next, maps)) {
           yield* rec(i + 1, next);
-          if (yielded >= CAP_PER_ACTION) {
+          if (yielded >= capPerAction) {
             markTruncated();
             return;
           }
@@ -270,7 +278,7 @@ function computeVariantsForAction(action, model, options = {}) {
     for (const sig of rec(0, base)) {
       emitted = true;
       yield sig;
-      if (yielded >= CAP_PER_ACTION) {
+      if (yielded >= capPerAction) {
         markTruncated();
         return;
       }
@@ -357,12 +365,14 @@ export function buildInteractionsPairs(model, options = {}) {
     ? buildConstraintMaps(model.modifierConstraints)
     : null;
   const propertiesCatalog = collectPropertiesCatalog(actions);
+  const variantCaps = normalizeVariantCaps(model?.meta?.variantCaps, DEFAULT_VARIANT_CAPS);
 
   const variantDiagnostics = {
     candidates: 0,
     yielded: 0,
     accepted: 0,
     invalidActions: 0,
+    variantCaps,
   };
 
   function recordGroupTruncations(action, groups = []) {
@@ -406,6 +416,7 @@ export function buildInteractionsPairs(model, options = {}) {
     const iterator = computeVariantsForAction(action, model, {
       includeMarked: includeBypass,
       constraintMaps,
+      variantCaps,
     });
     const variants = new Set();
     for (const sig of iterator) {
@@ -416,7 +427,7 @@ export function buildInteractionsPairs(model, options = {}) {
     const ordered = Array.from(variants.values());
     ordered.sort((a, b) => compareVariantSig(a, b, model));
     const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
-    const truncated = diagnostics.truncated || ordered.length > CAP_PER_ACTION;
+    const truncated = diagnostics.truncated || ordered.length > variantCaps.variantCapPerAction;
     const invalid = !!diagnostics.invalid;
     const truncatedGroups = diagnostics.truncatedGroups || [];
     recordGroupTruncations(action, truncatedGroups);
@@ -493,6 +504,7 @@ export function buildInteractionsPairs(model, options = {}) {
       cappedActions,
       variantDiagnostics,
       groupTruncations,
+      variantCaps,
     };
   } // Default: Actions × Inputs
   for (const a of actions) {
@@ -546,6 +558,7 @@ export function buildInteractionsPairs(model, options = {}) {
     index: model[targetIndexField],
     variantDiagnostics,
     groupTruncations,
+    variantCaps,
   };
 }
 

@@ -1,4 +1,5 @@
 import { SCHEMA_VERSION } from "../data/constants.js";
+import { DEFAULT_VARIANT_CAPS } from "../data/variants/variant-settings.js";
 import { createEmptyCommentMap } from "../data/comments.js";
 import { normalizeCommentColorPalette } from "../data/comment-colors.js";
 
@@ -12,6 +13,7 @@ export function createDefaultMeta() {
     columnWidths: {},
     commentFilter: { viewKey: "actions" },
     commentColors: normalizeCommentColorPalette(),
+    variantCaps: { ...DEFAULT_VARIANT_CAPS },
   };
 }
 

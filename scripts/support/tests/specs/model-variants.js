@@ -361,5 +361,41 @@ export function getModelVariantTests() {
         );
       },
     },
+    {
+      name: "variant caps are configurable via model metadata",
+      run(assert) {
+        const { model, addAction, addInput, addModifier } = makeModelFixture();
+        model.meta.variantCaps = { variantCapPerAction: 2, variantCapPerGroup: 3 };
+        const mods = Array.from({ length: 6 }, (_, i) => addModifier(`Cap${i}`));
+        const action = addAction(
+          "Capped",
+          mods.reduce((acc, mod) => {
+            acc[mod.id] = MOD.ON;
+            return acc;
+          }, {}),
+        );
+        addInput("Btn");
+        model.modifierGroups.push({
+          id: model.nextId++,
+          name: "Configurable cap",
+          mode: "AT_LEAST",
+          k: 0,
+          required: false,
+          memberIds: mods.map((m) => m.id),
+        });
+
+        const stats = buildInteractionsPairs(model);
+        const variants = model.interactionsIndex.variantCatalog[action.id];
+
+        assert.strictEqual(stats.variantCaps.variantCapPerAction, 2, "caps surface in summaries");
+        assert.strictEqual(stats.capped, true, "custom action cap marks build as capped");
+        assert.strictEqual(stats.cappedActions, 1, "only the overflowing action is capped");
+        assert.strictEqual(variants.length, 2, "per-action cap limits emitted variants");
+        assert.ok(
+          stats.groupTruncations.some((g) => g.limit === 3),
+          "group truncation respects configured cap",
+        );
+      },
+    },
   ];
 }

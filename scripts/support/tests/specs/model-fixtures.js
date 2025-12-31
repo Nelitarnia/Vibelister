@@ -11,6 +11,7 @@ export function makeModelFixture() {
       interactionsMode: "AI",
       dataVersion: 0,
       commentColors: normalizeCommentColorPalette(),
+      variantCaps: { variantCapPerAction: 5000, variantCapPerGroup: 50000 },
     },
     actions: [],
     inputs: [],
