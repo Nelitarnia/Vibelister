@@ -9,6 +9,10 @@ const FALLBACK_DEFAULTS = {
     cell: "#11151F",
     cellAlt: "#121826",
   },
+  variantCaps: {
+    variantCapPerAction: 5000,
+    variantCapPerGroup: 50000,
+  },
 };
 
 const COLOR_FIELDS = [
@@ -18,6 +22,11 @@ const COLOR_FIELDS = [
   { key: "accent", label: "Accent color" },
   { key: "cell", label: "Grid cell" },
   { key: "cellAlt", label: "Alternate grid cell" },
+];
+
+const CAP_FIELDS = [
+  { key: "variantCapPerAction", label: "Variant cap per action" },
+  { key: "variantCapPerGroup", label: "Variant cap per group" },
 ];
 
 function clone(obj) {
@@ -43,9 +52,17 @@ function mergeSettings(defaults, overrides) {
   const base = clone(defaults);
   const src = overrides && typeof overrides === "object" ? overrides : {};
   const colors = src.colors && typeof src.colors === "object" ? src.colors : {};
+  const variantCaps =
+    src.variantCaps && typeof src.variantCaps === "object" ? src.variantCaps : {};
   base.colors = base.colors || {};
   COLOR_FIELDS.forEach(({ key }) => {
     base.colors[key] = normalizeColor(colors[key], base.colors[key]);
+  });
+  base.variantCaps = base.variantCaps || {};
+  CAP_FIELDS.forEach(({ key }) => {
+    const n = Number(variantCaps[key]);
+    const fallback = base.variantCaps[key];
+    base.variantCaps[key] = Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
   });
   return base;
 }
@@ -117,6 +134,7 @@ export async function openSettingsDialog(options = {}) {
 
   const colorInputs = new Map();
   const hexInputs = new Map();
+  const capInputs = new Map();
 
   function refreshFields() {
     COLOR_FIELDS.forEach(({ key }) => {
@@ -125,6 +143,11 @@ export async function openSettingsDialog(options = {}) {
       const hexEl = hexInputs.get(key);
       if (colorEl) colorEl.value = value;
       if (hexEl) hexEl.value = value;
+    });
+    CAP_FIELDS.forEach(({ key }) => {
+      const value = working.variantCaps[key] ?? defaults.variantCaps[key];
+      const capEl = capInputs.get(key);
+      if (capEl) capEl.value = value;
     });
   }
 
@@ -147,6 +170,18 @@ export async function openSettingsDialog(options = {}) {
     const normalized = normalizeColor(value, working.colors[key]);
     if (!normalized) return;
     working.colors[key] = normalized;
+    refreshFields();
+    if (typeof options.onApply === "function") {
+      const payload = options.onApply(clone(working));
+      applyResult(payload);
+    }
+  }
+
+  function applyCapChange(key, value) {
+    const n = Number(value);
+    const fallback = working.variantCaps[key];
+    const normalized = Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+    working.variantCaps[key] = normalized;
     refreshFields();
     if (typeof options.onApply === "function") {
       const payload = options.onApply(clone(working));
@@ -232,7 +267,7 @@ export async function openSettingsDialog(options = {}) {
     [
       h("h2", { style: "margin:0;font-size:20px;" }, ["Settings"]),
       h("span", { style: "opacity:0.7;font-size:12px;" }, [
-        "Customize the interface colors.",
+        "Customize interface colors and variant limits.",
       ]),
       h("div", { style: "margin-left:auto;" }, [
         (() => {
@@ -330,6 +365,59 @@ export async function openSettingsDialog(options = {}) {
   });
 
   content.appendChild(colorSection);
+  const capsSection = h(
+    "div",
+    {
+      style:
+        "display:flex;flex-direction:column;gap:12px;background:#111c33;padding:12px;border-radius:10px;border:1px solid #253050;",
+    },
+    [
+      h("h3", { style: "margin:0;font-size:16px;" }, ["Variant caps"]),
+      h("p", { style: "margin:0;font-size:13px;color:#9fb3ff;" }, [
+        "Set safety caps for variant generation. Higher caps explore more combinations but may slow builds.",
+      ]),
+    ],
+  );
+
+  CAP_FIELDS.forEach(({ key, label }) => {
+    const row = h(
+      "div",
+      {
+        style:
+          "display:grid;grid-template-columns:1fr 160px auto;gap:12px;align-items:center;",
+      },
+      [],
+    );
+    row.appendChild(h("label", { style: "font-size:14px;" }, [label]));
+
+    const capInput = h("input", {
+      type: "number",
+      min: 1,
+      step: 1,
+      value: working.variantCaps[key] ?? defaults.variantCaps[key],
+      style:
+        "padding:6px 8px;border-radius:6px;border:1px solid #2d3a58;background:#0b1222;color:#e5ecff;font-family:monospace;",
+    });
+    capInputs.set(key, capInput);
+    capInput.addEventListener("input", () => applyCapChange(key, capInput.value));
+    capInput.addEventListener("blur", () => applyCapChange(key, capInput.value));
+    capInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        applyCapChange(key, capInput.value);
+      }
+    });
+    row.appendChild(capInput);
+
+    const resetBtn = h("button", { type: "button" }, ["Default"]);
+    Object.assign(resetBtn.style, buttonStyle());
+    resetBtn.onclick = () => applyCapChange(key, defaults.variantCaps[key]);
+    row.appendChild(resetBtn);
+
+    capsSection.appendChild(row);
+  });
+
+  content.appendChild(capsSection);
 
   const actions = h(
     "div",
