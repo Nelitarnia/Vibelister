@@ -23,7 +23,10 @@ export function bootstrapShell({ appContext, statusConfig, ids }) {
     statusConfig: resolvedStatusConfig,
   });
 
-  const { openSettingsDialog } = createSettingsController({ statusBar });
+  const { openSettingsDialog } = createSettingsController({
+    statusBar,
+    model: appContext?.model,
+  });
   const viewState = setupViewState({ appContext, statusBar });
 
   function init() {

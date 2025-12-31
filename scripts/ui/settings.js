@@ -135,6 +135,8 @@ export async function openSettingsDialog(options = {}) {
   const colorInputs = new Map();
   const hexInputs = new Map();
   const capInputs = new Map();
+  const tabButtons = new Map();
+  let activeTab = "ui";
 
   function refreshFields() {
     COLOR_FIELDS.forEach(({ key }) => {
@@ -287,6 +289,32 @@ export async function openSettingsDialog(options = {}) {
     ],
   );
 
+  function makeTabButton(key, label) {
+    const btn = h("button", { type: "button", class: "settings-tab" }, [label]);
+    tabButtons.set(key, btn);
+    btn.onclick = () => setActiveTab(key);
+    return btn;
+  }
+
+  function updateTabs() {
+    tabButtons.forEach((btn, key) => {
+      const isActive = key === activeTab;
+      Object.assign(btn.style, buttonStyle({ emphasis: isActive }));
+      btn.style.fontWeight = isActive ? "600" : "500";
+      if (isActive) btn.setAttribute("aria-current", "page");
+      else btn.removeAttribute("aria-current");
+    });
+    if (colorSection) colorSection.style.display = activeTab === "ui" ? "flex" : "none";
+    if (capsSection)
+      capsSection.style.display = activeTab === "variants" ? "flex" : "none";
+  }
+
+  function setActiveTab(key) {
+    if (activeTab === key) return;
+    activeTab = key;
+    updateTabs();
+  }
+
   const tabs = h(
     "div",
     {
@@ -294,18 +322,8 @@ export async function openSettingsDialog(options = {}) {
         "display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid #2c3350;padding-bottom:8px;",
     },
     [
-      (() => {
-        const btn = h("button", { type: "button", class: "settings-tab" }, [
-          "UI",
-        ]);
-        Object.assign(btn.style, buttonStyle({ emphasis: true }));
-        btn.style.fontWeight = "600";
-        btn.setAttribute("aria-current", "page");
-        btn.onclick = () => {
-          btn.setAttribute("aria-current", "page");
-        };
-        return btn;
-      })(),
+      makeTabButton("ui", "UI"),
+      makeTabButton("variants", "Variants"),
     ],
   );
 
@@ -418,6 +436,7 @@ export async function openSettingsDialog(options = {}) {
   });
 
   content.appendChild(capsSection);
+  updateTabs();
 
   const actions = h(
     "div",

@@ -7,7 +7,7 @@ import {
   cloneSettings,
 } from "./user-settings.js";
 
-function applySanitizedSettings(settings) {
+function applySanitizedSettings(settings, model) {
   const root = document.documentElement;
   if (!root) return;
   const colors = (settings && settings.colors) || {};
@@ -17,6 +17,14 @@ function applySanitizedSettings(settings) {
   root.style.setProperty("--vl-color-accent", colors.accent);
   root.style.setProperty("--vl-color-cell", colors.cell);
   root.style.setProperty("--vl-color-cell-alt", colors.cellAlt);
+  if (model && settings?.variantCaps) {
+    const targetMeta =
+      model.meta && typeof model.meta === "object" ? model.meta : (model.meta = {});
+    targetMeta.variantCaps = {
+      variantCapPerAction: settings.variantCaps.variantCapPerAction,
+      variantCapPerGroup: settings.variantCaps.variantCapPerGroup,
+    };
+  }
 }
 
 function persistUserSettings(settings) {
@@ -36,13 +44,13 @@ function loadStoredSettings() {
   return sanitizeUiSettings(DEFAULT_UI_SETTINGS);
 }
 
-export function createSettingsController({ statusBar } = {}) {
+export function createSettingsController({ statusBar, model } = {}) {
   let userSettings = loadStoredSettings();
-  applySanitizedSettings(userSettings);
+  applySanitizedSettings(userSettings, model);
 
   function setUserSettings(next) {
     const sanitized = sanitizeUiSettings(next);
-    applySanitizedSettings(sanitized);
+    applySanitizedSettings(sanitized, model);
     persistUserSettings(sanitized);
     userSettings = sanitized;
     return sanitized;
