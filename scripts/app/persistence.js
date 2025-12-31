@@ -33,6 +33,7 @@ import {
   createInferenceProfileStore,
   resetInferenceProfiles,
 } from "./inference-profiles.js";
+import { DEFAULT_VARIANT_CAPS } from "../data/variants/variant-settings.js";
 
 export function createPersistenceController({
   model,
@@ -116,6 +117,21 @@ export function createPersistenceController({
     for (const note of Object.values(notes)) {
       stripDefaultInteractionMetadata(note);
     }
+  }
+
+  function normalizeVariantCaps(raw) {
+    const caps = raw && typeof raw === "object" ? raw : {};
+    const fallback = DEFAULT_VARIANT_CAPS;
+    const normalizeCap = (value, fallbackValue) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallbackValue;
+      const asInt = Math.floor(n);
+      return asInt > 0 ? asInt : fallbackValue;
+    };
+    return {
+      variantCapPerAction: normalizeCap(caps.variantCapPerAction, fallback.variantCapPerAction),
+      variantCapPerGroup: normalizeCap(caps.variantCapPerGroup, fallback.variantCapPerGroup),
+    };
   }
 
   function getFsModule() {
@@ -254,6 +270,7 @@ export function createPersistenceController({
       o.meta.commentFilter = normalized;
     }
     o.meta.commentColors = normalizeCommentColorPalette(o.meta.commentColors);
+    o.meta.variantCaps = normalizeVariantCaps(o.meta.variantCaps);
     if (!Array.isArray(o.actions)) o.actions = [];
     if (!Array.isArray(o.inputs)) o.inputs = [];
     if (!Array.isArray(o.modifiers)) o.modifiers = [];

@@ -99,6 +99,30 @@ export function getVariantCombinatoricsTests() {
           MAX_GROUP_COMBOS,
           "truncate the list at the max group size",
         );
+
+        const smallerCap = 10;
+        const resized = groupCombos(
+          {
+            mode: GROUP_MODES.RANGE,
+            kMin: 0,
+            kMax: optionalEligible.size,
+            memberIds: Array.from(optionalEligible),
+            required: false,
+          },
+          { optionalEligible, required: new Set() },
+          { variantCapPerGroup: smallerCap },
+        );
+        assert.strictEqual(resized.truncated, true, "custom caps should also trigger truncation");
+        assert.strictEqual(
+          resized.truncationLimit,
+          smallerCap,
+          "truncation metadata reflects the applied cap",
+        );
+        assert.strictEqual(
+          resized.length,
+          smallerCap,
+          "custom caps clamp emitted combinations",
+        );
       },
     },
   ];

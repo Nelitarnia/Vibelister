@@ -1,7 +1,10 @@
+import { DEFAULT_VARIANT_CAPS } from "../data/variants/variant-settings.js";
+
 const SETTINGS_STORAGE_KEY = "vl.userSettings";
 const SETTINGS_FILE_NAME = "vibelister-settings.json";
 const SETTINGS_FILE_KIND = "vibelister.settings";
-const SETTINGS_SCHEMA_VERSION = 1;
+const SETTINGS_SCHEMA_VERSION = 2;
+const SETTINGS_CAP_KEYS = ["variantCapPerAction", "variantCapPerGroup"];
 const SETTINGS_COLOR_KEYS = [
   "background",
   "toolbar",
@@ -20,7 +23,15 @@ const DEFAULT_UI_SETTINGS = {
     cell: "#11151F",
     cellAlt: "#121826",
   },
+  variantCaps: { ...DEFAULT_VARIANT_CAPS },
 };
+
+function normalizeCap(raw, fallback) {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  const asInt = Math.floor(n);
+  return asInt > 0 ? asInt : fallback;
+}
 
 function normalizeHexColor(raw, fallback) {
   if (!raw) return fallback;
@@ -41,7 +52,10 @@ function sanitizeUiSettings(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const colors = src.colors && typeof src.colors === "object" ? src.colors : {};
   const meta = src.meta && typeof src.meta === "object" ? src.meta : {};
+  const variantCaps =
+    src.variantCaps && typeof src.variantCaps === "object" ? src.variantCaps : {};
   const defaults = DEFAULT_UI_SETTINGS.colors;
+  const capDefaults = DEFAULT_UI_SETTINGS.variantCaps;
   return {
     meta: {
       kind: SETTINGS_FILE_KIND,
@@ -57,6 +71,16 @@ function sanitizeUiSettings(raw) {
       cell: normalizeHexColor(colors.cell, defaults.cell),
       cellAlt: normalizeHexColor(colors.cellAlt, defaults.cellAlt),
     },
+    variantCaps: {
+      variantCapPerAction: normalizeCap(
+        variantCaps.variantCapPerAction,
+        capDefaults.variantCapPerAction,
+      ),
+      variantCapPerGroup: normalizeCap(
+        variantCaps.variantCapPerGroup,
+        capDefaults.variantCapPerGroup,
+      ),
+    },
   };
 }
 
@@ -67,8 +91,15 @@ function isLikelySettingsPayload(raw) {
   }
   const colors =
     raw.colors && typeof raw.colors === "object" ? raw.colors : null;
-  if (!colors) return false;
-  return SETTINGS_COLOR_KEYS.some((key) => typeof colors[key] === "string");
+  const variantCaps =
+    raw.variantCaps && typeof raw.variantCaps === "object" ? raw.variantCaps : null;
+  if (!colors && !variantCaps) return false;
+  if (colors && SETTINGS_COLOR_KEYS.some((key) => typeof colors[key] === "string"))
+    return true;
+  if (variantCaps) {
+    return SETTINGS_CAP_KEYS.some((key) => Number.isFinite(variantCaps[key]));
+  }
+  return false;
 }
 
 function cloneSettings(settings) {
@@ -81,6 +112,7 @@ export {
   SETTINGS_FILE_KIND,
   SETTINGS_SCHEMA_VERSION,
   SETTINGS_COLOR_KEYS,
+  SETTINGS_CAP_KEYS,
   DEFAULT_UI_SETTINGS,
   normalizeHexColor,
   sanitizeUiSettings,
