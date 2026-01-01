@@ -250,6 +250,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `side-panel.js` manages the shared right-hand sidebar host so comments and tags can register panes and share toggles without conflicting state.
 - `tags.js` drives the interaction tag sidebar UI, coordinating host toggles, list rendering, and bulk rename/delete actions through the shared tag manager.
 - `interaction-tools.js` wires the Interactions bulk-actions pane and toolbar toggle, gating activation to the Interactions view and dispatching bulk mutations with status feedback.
+- `variant-diagnostics.js` opens a lightweight modal that renders diagnostic summaries for the currently selected action’s variants.
 - `settings.js` renders the modal for customizing palette colors and keeps the dialog in sync with the sanitized `user-settings` payloads.
 - `project-info.js` renders the project notes dialog, providing a textarea host and dispatching change events so controllers can persist updates without duplicating DOM wiring.
 - `cleanup-dialog.js` displays the cleanup overlay, tracks per-action selections, and surfaces analyze/apply results provided by the controller.
