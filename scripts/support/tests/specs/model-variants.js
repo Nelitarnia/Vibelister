@@ -413,7 +413,7 @@ export function getModelVariantTests() {
 
         assert.deepStrictEqual(
           diagnostics.modifierCounts,
-          { required: 0, optional: 2 },
+          { required: 0, optional: 2, bypassed: 0 },
           "diagnostics include modifier counts",
         );
         assert.strictEqual(diagnostics.groupCombos.length, 1, "one group reported");
@@ -455,6 +455,25 @@ export function getModelVariantTests() {
           "constraint prunes are counted",
         );
         assert.strictEqual(diagnostics.variants.length, 3, "invalid combos removed");
+      },
+    },
+    {
+      name: "diagnostics surface bypassed modifier counts",
+      run(assert) {
+        const { model, addAction, addModifier } = makeModelFixture();
+        const bypass = addModifier("Bypass");
+        const on = addModifier("On");
+        const action = addAction("Diag", {
+          [bypass.id]: MOD.BYPASS,
+          [on.id]: MOD.ON,
+        });
+
+        const diagnostics = diagnoseVariantsForAction(action, model);
+        assert.deepStrictEqual(
+          diagnostics.modifierCounts,
+          { required: 0, optional: 1, bypassed: 1 },
+          "bypassed modifiers are tallied separately",
+        );
       },
     },
   ];

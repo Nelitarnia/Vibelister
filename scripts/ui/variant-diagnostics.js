@@ -110,9 +110,10 @@ export function createVariantDiagnosticsViewer({ model } = {}) {
     );
     box.appendChild(summary);
 
-    const modifierRow = buildList("Modifiers", [
+    const modifierRow = buildList("Action mod flags", [
       `Required: ${diagnostics.modifierCounts?.required ?? 0}`,
       `Optional: ${diagnostics.modifierCounts?.optional ?? 0}`,
+      `Bypassed: ${diagnostics.modifierCounts?.bypassed ?? 0}`,
     ]);
     modifierRow.style.marginTop = "4px";
     box.appendChild(modifierRow);

@@ -149,22 +149,29 @@ function computeVariantsForAction(action, model, options = {}) {
   const requiredIds = [];
   const requiredSet = new Set();
   const optionalElig = [];
+  let optionalOnCount = 0;
+  let bypassedCount = 0;
   for (const [key, value] of Object.entries(set)) {
     const id = Number(key);
     if (!Number.isFinite(id)) continue;
     const isRequired = modStateIsRequired(value);
+    const isOn = modStateIsOn(value);
+    const isMarked = modStateActiveish(value);
     const isActive =
-      isRequired || (includeMarked ? modStateActiveish(value) : modStateIsOn(value));
+      isRequired || (includeMarked ? isMarked : isOn);
     if (isRequired) {
       requiredIds.push(id);
       requiredSet.add(id);
     }
     if (isActive && !isRequired) optionalElig.push(id);
+    if (!isRequired && isOn) optionalOnCount++;
+    if (!isRequired && isMarked && !isOn) bypassedCount++;
   }
 
   diagnosticsCollector?.setModifierCounts?.({
     required: requiredIds.length,
-    optional: optionalElig.length,
+    optional: optionalOnCount,
+    bypassed: bypassedCount,
   });
 
   const groups = (model.modifierGroups || []).map((g) => ({
@@ -322,7 +329,7 @@ function computeVariantsForAction(action, model, options = {}) {
 
 function createVariantDiagnosticsCollector(action, caps) {
   const groupCombos = [];
-  let modifierCounts = { required: 0, optional: 0 };
+  let modifierCounts = { required: 0, optional: 0, bypassed: 0 };
   let constraintPruned = 0;
   const actionId = action?.id;
   return {
@@ -330,6 +337,7 @@ function createVariantDiagnosticsCollector(action, caps) {
       modifierCounts = {
         required: Number(counts.required) || 0,
         optional: Number(counts.optional) || 0,
+        bypassed: Number(counts.bypassed) || 0,
       };
     },
     recordGroupCombos(info = {}) {
