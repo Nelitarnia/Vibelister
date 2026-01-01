@@ -41,6 +41,7 @@ export function bootstrapSidebar(Ids) {
     interactionAcceptButton: el(Ids.interactionAccept),
     interactionClearButton: el(Ids.interactionClear),
     interactionUncertainButton: el(Ids.interactionUncertain),
+    interactionDiagnosticsButton: el(Ids.interactionDiagnostics),
     interactionUncertaintyValue: el(Ids.interactionUncertaintyValue),
     interactionSourceValue: el(Ids.interactionSourceValue),
     interactionUncertaintyDefault: el(Ids.interactionUncertaintyDefault),

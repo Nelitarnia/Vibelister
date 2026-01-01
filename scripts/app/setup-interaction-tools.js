@@ -1,15 +1,19 @@
 import { createInteractionsOutline } from "../ui/interactions-outline.js";
+import { diagnoseVariantsForAction } from "../data/variants/variants.js";
+import { createVariantDiagnosticsViewer } from "../ui/variant-diagnostics.js";
 
 export function setupInteractionTools({
   model,
   selectionApi,
   rendererApi,
   layoutApi,
+  getInteractionsPair,
 }) {
   const {
     Selection,
     SelectionCtl,
     sel,
+    selection,
     getActiveView,
     ensureVisible,
     onSelectionChanged,
@@ -30,6 +34,25 @@ export function setupInteractionTools({
     onSelectionChanged,
   });
   interactionsOutline?.refresh?.();
+
+  const diagnosticsViewer = createVariantDiagnosticsViewer({ model });
+
+  function getActionForDiagnostics() {
+    const currentView = typeof getActiveView === "function" ? getActiveView() : null;
+    if (currentView !== "interactions") return null;
+    const selectedRows = selection?.rows?.size
+      ? Array.from(selection.rows).sort((a, b) => a - b)
+      : [];
+    const rowIndex = Number.isFinite(sel?.r) ? sel.r : selectedRows[0];
+    if (!Number.isFinite(rowIndex)) return null;
+    const pair = typeof getInteractionsPair === "function"
+      ? getInteractionsPair(model, rowIndex)
+      : null;
+    if (!pair) return null;
+    const actionId = Number(pair.aId);
+    if (!Number.isFinite(actionId)) return null;
+    return model?.actions?.find((a) => Number(a?.id) === actionId) || null;
+  }
 
   function createDoGenerate({
     rebuildActionColumnsFromModifiers,
@@ -59,5 +82,19 @@ export function setupInteractionTools({
     };
   }
 
-  return { interactionsOutline, createDoGenerate };
+  function createDiagnosticsActions({ statusBar }) {
+    return {
+      openDiagnostics() {
+        const action = getActionForDiagnostics();
+        if (!action) {
+          statusBar?.set?.("Select an Interactions row to run variant diagnostics.");
+          return;
+        }
+        const diagnostics = diagnoseVariantsForAction(action, model);
+        diagnosticsViewer.open({ action, diagnostics });
+      },
+    };
+  }
+
+  return { interactionsOutline, createDoGenerate, createDiagnosticsActions };
 }

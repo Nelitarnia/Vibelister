@@ -2,6 +2,7 @@ import {
   buildInteractionsPairs,
   buildScopedInteractionsPairs,
   collectVariantsForAction,
+  diagnoseVariantsForAction,
 } from "../../../data/variants/variants.js";
 import { MOD } from "../../../data/constants.js";
 import {
@@ -395,6 +396,65 @@ export function getModelVariantTests() {
           stats.groupTruncations.some((g) => g.limit === 3),
           "group truncation respects configured cap",
         );
+      },
+    },
+    {
+      name: "diagnostics capture modifier and combo counts with caps",
+      run(assert) {
+        const { model, addAction, addModifier, groupExact } = makeModelFixture();
+        const m1 = addModifier("Opt 1");
+        const m2 = addModifier("Opt 2");
+        const action = addAction("Diag", { [m1.id]: MOD.ON, [m2.id]: MOD.ON });
+        groupExact(1, [m1, m2], { required: true, name: "PickOne" });
+
+        const diagnostics = diagnoseVariantsForAction(action, model, {
+          variantCaps: { variantCapPerAction: 1, variantCapPerGroup: 5 },
+        });
+
+        assert.deepStrictEqual(
+          diagnostics.modifierCounts,
+          { required: 0, optional: 2 },
+          "diagnostics include modifier counts",
+        );
+        assert.strictEqual(diagnostics.groupCombos.length, 1, "one group reported");
+        assert.strictEqual(
+          diagnostics.groupCombos[0].comboCount,
+          2,
+          "group combo count reflects combinations before caps",
+        );
+        assert.strictEqual(diagnostics.capsHit, true, "per-action cap surfaced");
+        assert.strictEqual(
+          diagnostics.yielded,
+          1,
+          "yield respects configured variant cap",
+        );
+      },
+    },
+    {
+      name: "diagnostics count constraint prunes",
+      run(assert) {
+        const { model, addAction, addModifier, groupExact } = makeModelFixture();
+        const a = addModifier("A");
+        const b = addModifier("B");
+        const c = addModifier("C");
+        const d = addModifier("D");
+        model.modifierConstraints.push({ type: "MUTEX", ids: [a.id, c.id] });
+        const action = addAction("Pruned", {
+          [a.id]: MOD.ON,
+          [b.id]: MOD.ON,
+          [c.id]: MOD.ON,
+          [d.id]: MOD.ON,
+        });
+        groupExact(1, [a, b], { required: true, name: "Left" });
+        groupExact(1, [c, d], { required: true, name: "Right" });
+
+        const diagnostics = diagnoseVariantsForAction(action, model);
+        assert.strictEqual(
+          diagnostics.constraintPruned,
+          1,
+          "constraint prunes are counted",
+        );
+        assert.strictEqual(diagnostics.variants.length, 3, "invalid combos removed");
       },
     },
   ];

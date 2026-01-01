@@ -55,6 +55,7 @@ export const Ids = Object.freeze({
   interactionAccept: "interaction-accept",
   interactionClear: "interaction-clear",
   interactionUncertain: "interaction-uncertain",
+  interactionDiagnostics: "interaction-diagnostics",
   interactionUncertaintyValue: "interaction-uncertainty-value",
   interactionSourceValue: "interaction-source-value",
   interactionUncertaintyDefault: "interaction-uncertainty-default",

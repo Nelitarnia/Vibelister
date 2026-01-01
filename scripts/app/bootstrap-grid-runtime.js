@@ -4,6 +4,7 @@ import { setupHistory } from "./setup-history.js";
 import { setupGridCommands } from "./setup-grid-commands.js";
 import { setupDialogs } from "./setup-dialogs.js";
 import { scheduleRender } from "./schedule-render.js";
+import { getInteractionsPair } from "./interactions.js";
 
 export function bootstrapGridRuntime({
   appContext,
@@ -33,11 +34,12 @@ export function bootstrapGridRuntime({
   const { schedule, cancel } = scheduleRender(render);
   const disposeSelectionRender = selectionApi.onSelectionChanged(schedule);
 
-  const { interactionsOutline, createDoGenerate } = setupInteractionTools({
+  const { interactionsOutline, createDoGenerate, createDiagnosticsActions } = setupInteractionTools({
     model: appContext.model,
     selectionApi: {
       Selection: selectionApi.Selection,
       SelectionCtl: selectionApi.SelectionCtl,
+      selection: selectionApi.selection,
       sel: selectionApi.sel,
       getActiveView: selectionApi.getActiveView,
       ensureVisible,
@@ -45,6 +47,7 @@ export function bootstrapGridRuntime({
     },
     rendererApi: { render, sheet },
     layoutApi: { layout },
+    getInteractionsPair,
   });
 
   const historyApi = setupHistory({
@@ -83,7 +86,7 @@ export function bootstrapGridRuntime({
       cancel();
       disposeSelectionRender?.();
     },
-    interactionToolsApi: { interactionsOutline, createDoGenerate },
+    interactionToolsApi: { interactionsOutline, createDoGenerate, createDiagnosticsActions },
     historyApi,
     mutationApi: {
       makeUndoConfig: historyApi.makeUndoConfig,

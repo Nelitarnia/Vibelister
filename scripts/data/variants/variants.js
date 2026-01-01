@@ -144,6 +144,7 @@ function computeVariantsForAction(action, model, options = {}) {
   );
   const capPerAction = caps.variantCapPerAction;
   const includeMarked = !!options.includeMarked;
+  const diagnosticsCollector = options.diagnosticsCollector;
   const set = action.modSet || {};
   const requiredIds = [];
   const requiredSet = new Set();
@@ -160,6 +161,11 @@ function computeVariantsForAction(action, model, options = {}) {
     }
     if (isActive && !isRequired) optionalElig.push(id);
   }
+
+  diagnosticsCollector?.setModifierCounts?.({
+    required: requiredIds.length,
+    optional: optionalElig.length,
+  });
 
   const groups = (model.modifierGroups || []).map((g) => ({
     id: g.id,
@@ -181,6 +187,7 @@ function computeVariantsForAction(action, model, options = {}) {
   function markTruncated(reason) {
     truncated = true;
     if (reason?.invalid) invalid = true;
+    diagnosticsCollector?.recordTruncation?.(reason);
     if (reason?.groupId != null || reason?.groupName) {
       const existing = truncatedGroups.find(
         (g) =>
@@ -216,6 +223,15 @@ function computeVariantsForAction(action, model, options = {}) {
         },
         caps,
       );
+      diagnosticsCollector?.recordGroupCombos?.({
+        group: g,
+        combos: ch,
+        comboCount: ch.length,
+        truncated: !!ch.truncated,
+        limit: ch.truncationLimit ?? caps.variantCapPerGroup,
+        requiredCount: ch.requiredCount,
+        optionalCount: ch.optionalCount,
+      });
       if (ch.length === 0) {
         if (g.required) {
           markTruncated({
@@ -267,9 +283,11 @@ function computeVariantsForAction(action, model, options = {}) {
         if (!violatesConstraints(next, maps)) {
           yield* rec(i + 1, next);
           if (yielded >= capPerAction) {
-            markTruncated();
+            markTruncated({ type: "action-cap", limit: capPerAction });
             return;
           }
+        } else {
+          diagnosticsCollector?.recordConstraintPrune?.();
         }
       }
     }
@@ -279,7 +297,7 @@ function computeVariantsForAction(action, model, options = {}) {
       emitted = true;
       yield sig;
       if (yielded >= capPerAction) {
-        markTruncated();
+        markTruncated({ type: "action-cap", limit: capPerAction });
         return;
       }
     }
@@ -300,6 +318,57 @@ function computeVariantsForAction(action, model, options = {}) {
   });
 
   return iterator;
+}
+
+function createVariantDiagnosticsCollector(action, caps) {
+  const groupCombos = [];
+  let modifierCounts = { required: 0, optional: 0 };
+  let constraintPruned = 0;
+  const actionId = action?.id;
+  return {
+    setModifierCounts(counts = {}) {
+      modifierCounts = {
+        required: Number(counts.required) || 0,
+        optional: Number(counts.optional) || 0,
+      };
+    },
+    recordGroupCombos(info = {}) {
+      const { group, comboCount, truncated, limit, requiredCount, optionalCount } = info;
+      groupCombos.push({
+        groupId: group?.id,
+        groupName: group?.name,
+        mode: group?.mode,
+        required: !!group?.required,
+        comboCount: Number(comboCount) || 0,
+        truncated: !!truncated,
+        limit: limit ?? caps.variantCapPerGroup,
+        requiredCount: Number(requiredCount) || 0,
+        optionalCount: Number(optionalCount) || 0,
+      });
+    },
+    recordConstraintPrune() {
+      constraintPruned++;
+    },
+    summarize(baseDiagnostics = {}, variants = []) {
+      const capped = !!baseDiagnostics.truncated;
+      const yielded = baseDiagnostics.yielded ?? variants.length;
+      const candidates = baseDiagnostics.candidates ?? variants.length;
+      return {
+        actionId,
+        modifierCounts,
+        groupCombos,
+        constraintPruned,
+        candidates,
+        yielded,
+        variants,
+        truncated: capped,
+        invalid: !!baseDiagnostics.invalid,
+        truncatedGroups: baseDiagnostics.truncatedGroups || [],
+        capsHit: capped || yielded >= caps.variantCapPerAction,
+        caps: caps || DEFAULT_VARIANT_CAPS,
+      };
+    },
+  };
 }
 
 export function collectVariantsForAction(action, model, options = {}) {
@@ -331,6 +400,24 @@ export function collectVariantsForAction(action, model, options = {}) {
       truncatedGroups: diagnostics.truncatedGroups || [],
     },
   };
+}
+
+export function diagnoseVariantsForAction(action, model, options = {}) {
+  const caps = normalizeVariantCaps(
+    options.variantCaps || model?.meta?.variantCaps,
+    DEFAULT_VARIANT_CAPS,
+  );
+  const collector = createVariantDiagnosticsCollector(action, caps);
+  const iterator = computeVariantsForAction(action, model, {
+    ...options,
+    variantCaps: caps,
+    diagnosticsCollector: collector,
+  });
+  const variants = [];
+  for (const sig of iterator) variants.push(sig);
+  variants.sort((a, b) => compareVariantSig(a, b, model));
+  const baseDiagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
+  return collector.summarize(baseDiagnostics, variants);
 }
 
 /**

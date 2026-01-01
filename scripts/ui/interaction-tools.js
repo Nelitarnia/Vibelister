@@ -14,6 +14,8 @@ export function initInteractionTools(options = {}) {
     onSelectionChanged,
     statusBar,
     actions,
+    diagnosticsActions,
+    diagnosticsButton,
   } = options;
 
   if (!panelHost || !pane || !toggleButton || !actions) return null;
@@ -104,6 +106,9 @@ export function initInteractionTools(options = {}) {
     run(actions.clearInferenceMetadata),
   );
   uncertainButton?.addEventListener("click", () => run(actions.toggleUncertain));
+  diagnosticsButton?.addEventListener("click", () =>
+    diagnosticsActions?.openDiagnostics?.(),
+  );
 
   uncertaintyDefaultInput?.addEventListener("input", (e) => {
     const next =
