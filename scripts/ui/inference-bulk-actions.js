@@ -1,4 +1,4 @@
-export function initInteractionTools(options = {}) {
+export function initInferenceBulkActions(options = {}) {
   const {
     panelHost,
     panelId,

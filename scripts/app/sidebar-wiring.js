@@ -2,7 +2,7 @@ import { createSidePanelHost } from "../ui/side-panel.js";
 import { initCommentsUI } from "../ui/comments.js";
 import { initTagSidebar } from "../ui/tags.js";
 import { createInteractionTagManager } from "./interaction-tags.js";
-import { initInteractionTools } from "../ui/interaction-tools.js";
+import { initInferenceBulkActions } from "../ui/inference-bulk-actions.js";
 
 export function initSidebarControllers({
   dom,
@@ -108,7 +108,7 @@ export function initSidebarControllers({
     statusBar,
   });
 
-  const interactionTools = initInteractionTools({
+  const interactionTools = initInferenceBulkActions({
     panelHost: sidePanelHost,
     panelId: "interaction-tools",
     pane: dom.interactionToolsPane,
