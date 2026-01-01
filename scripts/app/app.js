@@ -100,7 +100,7 @@ export function createApp() {
     coreDom,
     statusBar,
     menuItems,
-    selectionApi: { Selection, SelectionCtl, sel, onSelectionChanged },
+    selectionApi: { Selection, SelectionCtl, selection, sel, onSelectionChanged },
     setActiveView: (...args) => setActiveView?.(...args),
     getActiveViewState,
     rebuildInteractionsInPlace,
@@ -129,6 +129,7 @@ export function createApp() {
   const { render, layout, ensureVisible } = rendererApi;
 
   ({ interactionsOutline, createDoGenerate } = interactionToolsApi);
+  const { createDiagnosticsActions } = interactionToolsApi;
 
   const { undo, redo, getUndoState } = historyApi;
   const { runModelMutation, runModelTransaction, beginUndoableTransaction, makeUndoConfig } =
@@ -151,6 +152,9 @@ export function createApp() {
   } = gridCommandsApi;
 
   const { openProjectInfo, openCleanupDialog, openInferenceDialog, interactionActions } = dialogApi;
+  const diagnosticsActions =
+    typeof createDiagnosticsActions === "function" ? createDiagnosticsActions({ statusBar }) : {};
+  const combinedInteractionActions = { ...interactionActions, ...diagnosticsActions };
 
   const onModelReset = () => {
     resetInferenceProfiles(inferenceProfiles);
@@ -334,7 +338,7 @@ export function createApp() {
       getCell,
       getPaletteAPI,
       interactionsOutline,
-      interactionActions,
+      interactionActions: combinedInteractionActions,
       commentsUI: state.commentsUI,
       tagUI: state.tagUI,
       upgradeModelInPlace,

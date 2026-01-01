@@ -116,6 +116,7 @@ export function initSidebarControllers({
     acceptButton: dom.interactionAcceptButton,
     clearButton: dom.interactionClearButton,
     uncertainButton: dom.interactionUncertainButton,
+    diagnosticsButton: dom.interactionDiagnosticsButton,
     uncertaintyValue: dom.interactionUncertaintyValue,
     sourceValue: dom.interactionSourceValue,
     uncertaintyDefaultInput: dom.interactionUncertaintyDefault,
@@ -124,6 +125,7 @@ export function initSidebarControllers({
     onSelectionChanged,
     statusBar,
     actions: interactionActions,
+    diagnosticsActions: interactionActions,
   });
 
   return { sidePanelHost, commentsUI, tagManager, tagUI, interactionTools };

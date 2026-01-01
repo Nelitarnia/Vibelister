@@ -11,7 +11,7 @@ export const GROUP_MODES = {
 
 export const MAX_GROUP_COMBOS = DEFAULT_VARIANT_CAPS.variantCapPerGroup; // safety cap for a single group's choice list
 
-function withTruncationFlag(list, truncated, limit) {
+function withTruncationFlag(list, truncated, limit, meta = {}) {
   Object.defineProperty(list, "truncated", {
     value: !!truncated,
     enumerable: false,
@@ -21,6 +21,9 @@ function withTruncationFlag(list, truncated, limit) {
       value: limit,
       enumerable: false,
     });
+  }
+  for (const [key, value] of Object.entries(meta)) {
+    Object.defineProperty(list, key, { value, enumerable: false });
   }
   return list;
 }
@@ -115,6 +118,15 @@ export function groupCombos(group, eligibility = {}, caps) {
   }
 
   if (!req && !ch.some((a) => a.length === 0)) ch.unshift([]);
-  if (req && ch.length === 0) return withTruncationFlag([], truncated, capSettings.variantCapPerGroup);
-  return withTruncationFlag(ch, truncated, capSettings.variantCapPerGroup);
+  if (req && ch.length === 0)
+    return withTruncationFlag([], truncated, capSettings.variantCapPerGroup, {
+      requiredCount,
+      optionalCount,
+      totalMembers: members.length,
+    });
+  return withTruncationFlag(ch, truncated, capSettings.variantCapPerGroup, {
+    requiredCount,
+    optionalCount,
+    totalMembers: members.length,
+  });
 }
