@@ -161,7 +161,7 @@ export function initMenus(deps) {
   }
 
   // Edit menu
-  items.editPreferences?.addEventListener("click", async () => {
+  items.editSettings?.addEventListener("click", async () => {
     closeAllMenus();
     if (typeof openSettings === "function") {
       await openSettings();

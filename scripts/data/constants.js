@@ -78,7 +78,7 @@ export const Ids = Object.freeze({
   fileExportJson: "file-export-json",
   editUndo: "edit-undo",
   editRedo: "edit-redo",
-  editPreferences: "edit-preferences",
+  editSettings: "edit-settings",
   sheetAddRowsAbove: "sheet-add-rows-above",
   sheetAddRowsBelow: "sheet-add-rows-below",
   sheetClearCells: "sheet-clear-cells",
