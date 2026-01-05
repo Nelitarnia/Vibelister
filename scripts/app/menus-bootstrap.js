@@ -18,7 +18,7 @@ export function bootstrapMenus(Ids) {
     fileSaveAs: el(Ids.fileSaveAs),
     fileProjectInfo: el(Ids.fileProjectInfo),
     fileExportJson: el(Ids.fileExportJson),
-    editPreferences: el(Ids.editPreferences),
+    editSettings: el(Ids.editSettings),
     sheetAddRowsAbove: el(Ids.sheetAddRowsAbove),
     sheetAddRowsBelow: el(Ids.sheetAddRowsBelow),
     sheetClearCells: el(Ids.sheetClearCells),
