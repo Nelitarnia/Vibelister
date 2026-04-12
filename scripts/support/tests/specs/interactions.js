@@ -3902,6 +3902,235 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "clear inference with single selected column clears only matching field",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Strike");
+        const followUp = addAction("Follow");
+        const input = addInput("High");
+        const outcome = addOutcome("Hit");
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+            { key: "p0:end" },
+            { key: "p0:tag" },
+          ],
+        };
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        const noteKey = noteKeyForPair(pair, 0);
+        model.notes[noteKey] = {
+          outcomeId: outcome.id,
+          endActionId: followUp.id,
+          endVariantSig: "",
+          tags: ["Pressure"],
+          source: "auto",
+        };
+
+        const selection = {
+          rows: new Set([0]),
+          cols: new Set([3]),
+          colsAll: false,
+        };
+        const controller = createInferenceController({
+          model,
+          selection,
+          sel: { r: 0, c: 3 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (opts.status) res.status = opts.status(res);
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+
+        const res = controller.runClear({ scope: "selection" });
+
+        assert.strictEqual(res.cleared, 1, "clears only selected column field");
+        assert.deepStrictEqual(
+          model.notes[noteKey],
+          {
+            outcomeId: outcome.id,
+            tags: ["Pressure"],
+          },
+          "single column selection only clears end field",
+        );
+      },
+    },
+    {
+      name: "clear inference with multi-column selection clears exactly selected fields",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Strike");
+        const followUp = addAction("Follow");
+        const input = addInput("High");
+        const outcome = addOutcome("Hit");
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+            { key: "p0:end" },
+            { key: "p0:tag" },
+          ],
+        };
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        const noteKey = noteKeyForPair(pair, 0);
+        model.notes[noteKey] = {
+          outcomeId: outcome.id,
+          endActionId: followUp.id,
+          endVariantSig: "",
+          tags: ["Pressure"],
+          source: "auto",
+        };
+
+        const selection = {
+          rows: new Set([0]),
+          cols: new Set([2, 4]),
+          colsAll: false,
+        };
+        const controller = createInferenceController({
+          model,
+          selection,
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (opts.status) res.status = opts.status(res);
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+
+        const res = controller.runClear({ scope: "selection" });
+
+        assert.strictEqual(res.cleared, 2, "clears selected outcome and tag");
+        assert.deepStrictEqual(
+          model.notes[noteKey],
+          {
+            endActionId: followUp.id,
+            endVariantSig: "",
+          },
+          "multi-column selection preserves unselected end field",
+        );
+      },
+    },
+    {
+      name: "clear inference with colsAll clears all relevant inference fields",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Strike");
+        const followUp = addAction("Follow");
+        const input = addInput("High");
+        const outcome = addOutcome("Hit");
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p0:outcome" },
+            { key: "p0:end" },
+            { key: "p0:tag" },
+          ],
+        };
+
+        model.interactionsIndex = {
+          mode: "AI",
+          groups: [
+            {
+              actionId: action.id,
+              rowIndex: 0,
+              totalRows: 1,
+              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
+            },
+          ],
+          totalRows: 1,
+          actionsOrder: [action.id],
+          inputsOrder: [input.id],
+          variantCatalog: { [action.id]: [""] },
+        };
+
+        const pair = getPair(model, 0);
+        const noteKey = noteKeyForPair(pair, 0);
+        model.notes[noteKey] = {
+          outcomeId: outcome.id,
+          endActionId: followUp.id,
+          endVariantSig: "",
+          tags: ["Pressure"],
+          source: "auto",
+        };
+
+        const selection = {
+          rows: new Set([0]),
+          colsAll: true,
+        };
+        const controller = createInferenceController({
+          model,
+          selection,
+          sel: { r: 0, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate, opts = {}) => {
+            const res = mutate();
+            if (opts.status) res.status = opts.status(res);
+            return res;
+          },
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+
+        const res = controller.runClear({ scope: "selection" });
+
+        assert.strictEqual(res.cleared, 3, "colsAll clears all inference fields");
+        assert.strictEqual(model.notes[noteKey], undefined, "note removed fully");
+      },
+    },
+    {
       name: "inference skips end/tag when manual outcome uses defaults and skip option",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -4012,8 +4241,7 @@ export function getInteractionsTests() {
 
         const selection = {
           rows: new Set([1]),
-          cols: new Set([2]),
-          colsAll: false,
+          colsAll: true,
         };
         const controller = createInferenceController({
           model,
