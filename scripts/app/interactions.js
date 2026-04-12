@@ -379,6 +379,17 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
   return clearMirror();
 }
 
+function finalizeInteractionNoteEdit(note, modelNotes, noteKey, metadata) {
+  if (!note || typeof note !== "object") return false;
+  if (!modelNotes || typeof modelNotes !== "object" || !noteKey) return false;
+  applyInteractionMetadata(note, metadata);
+  if (Object.keys(note).length === 0) {
+    delete modelNotes[noteKey];
+    return false;
+  }
+  return true;
+}
+
 // Write a cell in Interactions (strict stable-ID policy for ouctome/end)
 export function setInteractionsCell(model, status, viewDef, r, c, value) {
   const pair = getPairFromIndex(model, r);
@@ -435,8 +446,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     if (value == null || value === "") {
       if ("outcomeId" in note) delete note.outcomeId;
       if ("result" in note) delete note.result;
-      applyInteractionMetadata(note, null);
-      if (Object.keys(note).length === 0) delete model.notes[k];
+      finalizeInteractionNoteEdit(note, model.notes, k, null);
       mirrorAaPhase0Outcome(model, pair, pk.p);
       return finalize(true);
     }
@@ -447,7 +457,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     if (Number.isFinite(outcomeId)) {
       note.outcomeId = outcomeId;
       if ("result" in note) delete note.result;
-      applyInteractionMetadata(note, metadata);
+      finalizeInteractionNoteEdit(note, model.notes, k, metadata);
       mirrorAaPhase0Outcome(model, pair, pk.p);
       return finalize(true);
     }
@@ -467,8 +477,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     if (value == null || value === "") {
       if ("endActionId" in note) delete note.endActionId;
       if ("endVariantSig" in note) delete note.endVariantSig;
-      applyInteractionMetadata(note, null);
-      if (Object.keys(note).length === 0) delete model.notes[k];
+      finalizeInteractionNoteEdit(note, model.notes, k, null);
       return finalize(true);
     }
     const endActionId =
@@ -480,7 +489,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
       note.endVariantSig = String(
         value && typeof value === "object" ? value.endVariantSig || "" : "",
       );
-      applyInteractionMetadata(note, metadata);
+      finalizeInteractionNoteEdit(note, model.notes, k, metadata);
       return finalize(true);
     }
     // STRICT: reject plain text or malformed objects for End
@@ -506,8 +515,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     ) {
       const hadTags = previousCount > 0;
       if ("tags" in note) delete note.tags;
-      applyInteractionMetadata(note, null);
-      if (Object.keys(note).length === 0) delete model.notes[k];
+      finalizeInteractionNoteEdit(note, model.notes, k, null);
       if (hadTags) {
         emitInteractionTagChangeEvent(null, {
           reason: "clearCell",
@@ -525,8 +533,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     if (!tags.length) {
       const hadTags = previousCount > 0;
       if ("tags" in note) delete note.tags;
-      applyInteractionMetadata(note, null);
-      if (Object.keys(note).length === 0) delete model.notes[k];
+      finalizeInteractionNoteEdit(note, model.notes, k, null);
       if (hadTags) {
         emitInteractionTagChangeEvent(null, {
           reason: "clearCell",
@@ -542,7 +549,7 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
 
     const changed = !areTagListsEqual(previous, tags);
     note.tags = tags;
-    applyInteractionMetadata(note, metadata);
+    finalizeInteractionNoteEdit(note, model.notes, k, metadata);
     if (changed || (!previousCount && tags.length)) {
       emitInteractionTagChangeEvent(
         { type: "set" },
