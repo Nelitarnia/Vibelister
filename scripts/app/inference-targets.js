@@ -14,8 +14,8 @@ function getRelevantColumns(def, options, selection) {
     });
   if (!selection) return matches;
   if (selection.colsAll) return matches;
-  const hasMultiColumnSelection = selection.cols && selection.cols.size > 1;
-  if (hasMultiColumnSelection)
+  const hasExplicitColumnSelection = selection.cols && selection.cols.size > 0;
+  if (hasExplicitColumnSelection)
     return matches.filter(({ idx }) => selection.cols.has(idx));
   return matches;
 }
