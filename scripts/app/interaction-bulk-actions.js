@@ -27,6 +27,34 @@ function hasStructuredValue(note, field) {
   return false;
 }
 
+function noteHasStructuredInteractionValue(note) {
+  return (
+    hasStructuredValue(note, "outcome") ||
+    hasStructuredValue(note, "end") ||
+    hasStructuredValue(note, "tag")
+  );
+}
+
+function groupTargetsByNote(targets = [], notes = {}) {
+  const groupedTargets = new Map();
+  for (const target of targets) {
+    if (!target?.key) continue;
+    let entry = groupedTargets.get(target.key);
+    if (!entry) {
+      entry = {
+        noteKey: target.key,
+        note: notes?.[target.key],
+        pair: target.pair,
+        phase: target.phase,
+        targets: [],
+      };
+      groupedTargets.set(target.key, entry);
+    }
+    entry.targets.push(target);
+  }
+  return groupedTargets;
+}
+
 function normalizeUncertainty(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return 0.5;
@@ -278,29 +306,20 @@ export function createInteractionBulkActions(options = {}) {
       "Accept inferred",
       () => {
         const notes = model?.notes || (model.notes = {});
-        const groupedTargets = new Map();
-        for (const target of targets) {
-          const list = groupedTargets.get(target.key) || [];
-          list.push(target);
-          groupedTargets.set(target.key, list);
-        }
+        const groupedTargets = groupTargetsByNote(targets, notes);
         const result = {
           promoted: 0,
           skippedManual: 0,
           skippedEmpty: 0,
         };
-        for (const [noteKey] of groupedTargets.entries()) {
-          const note = notes[noteKey];
+        for (const group of groupedTargets.values()) {
+          const note = group.note;
           const info = describeInteractionInference(note);
           if (!info?.inferred) {
             result.skippedManual++;
             continue;
           }
-          const hasValue =
-            hasStructuredValue(note, "outcome") ||
-            hasStructuredValue(note, "end") ||
-            hasStructuredValue(note, "tag");
-          if (!hasValue) {
+          if (!noteHasStructuredInteractionValue(note)) {
             result.skippedEmpty++;
             continue;
           }
@@ -328,7 +347,7 @@ export function createInteractionBulkActions(options = {}) {
           const skipped = skippedParts.length
             ? ` (left ${skippedParts.join(", ")} unchanged)`
             : "";
-          return `Promoted ${promoted || "no"} inferred entr${
+          return `Promoted ${promoted || "no"} inferred note${
             promoted === 1 ? "y" : "ies"
           } to manual defaults.${skipped}`;
         },
@@ -359,20 +378,16 @@ export function createInteractionBulkActions(options = {}) {
       "Clear inference metadata",
       () => {
         const notes = model?.notes || (model.notes = {});
-        const groupedTargets = new Map();
-        for (const target of targets) {
-          const list = groupedTargets.get(target.key) || [];
-          list.push(target);
-          groupedTargets.set(target.key, list);
-        }
+        const groupedTargets = groupTargetsByNote(targets, notes);
         const result = {
           cleared: 0,
           removed: 0,
           skippedManual: 0,
           skippedEmpty: 0,
         };
-        for (const [noteKey, noteTargets] of groupedTargets.entries()) {
-          const note = notes[noteKey];
+        for (const group of groupedTargets.values()) {
+          const noteTargets = group.targets;
+          const note = group.note;
           if (!note || typeof note !== "object") {
             result.skippedEmpty += noteTargets.length;
             continue;
@@ -399,9 +414,9 @@ export function createInteractionBulkActions(options = {}) {
               if (previous.length) {
                 emitInteractionTagChangeEvent(null, {
                   reason: "clearInference",
-                  noteKey: target.key,
-                  pair: target.pair,
-                  phase: target.phase,
+                  noteKey: group.noteKey,
+                  pair: group.pair,
+                  phase: group.phase,
                   tags: previous,
                   count: previous.length,
                 });
@@ -415,7 +430,7 @@ export function createInteractionBulkActions(options = {}) {
           }
           applyInteractionMetadata(note, null);
           if (!Object.keys(note).length) {
-            delete notes[noteKey];
+            delete notes[group.noteKey];
             result.removed++;
           }
         }
@@ -441,7 +456,9 @@ export function createInteractionBulkActions(options = {}) {
           const skippedText = skippedParts.length
             ? ` (left ${skippedParts.join(", ")} unchanged)`
             : "";
-          return `Cleared ${cleared || "no"} inferred entr${cleared === 1 ? "y" : "ies"}.${removedNote}${skippedText}`;
+          return `Cleared ${cleared || "no"} inferred note-level value${
+            cleared === 1 ? "" : "s"
+          }.${removedNote}${skippedText}`;
         },
       },
     );
