@@ -1,6 +1,9 @@
 // variant-combinatorics.js - helpers for generating modifier group combinations
 
-import { DEFAULT_VARIANT_CAPS, normalizeVariantCaps } from "./variant-settings.js";
+import {
+  DEFAULT_VARIANT_CAPS,
+  normalizeVariantCaps,
+} from "./variant-settings.js";
 
 export const GROUP_MODES = {
   EXACT: "EXACT",
@@ -50,7 +53,10 @@ export function kCombos(a, k) {
 }
 
 export function rangeCombos(a, min, max, caps) {
-  const { variantCapPerGroup } = normalizeVariantCaps(caps, DEFAULT_VARIANT_CAPS);
+  const { variantCapPerGroup } = normalizeVariantCaps(
+    caps,
+    DEFAULT_VARIANT_CAPS,
+  );
   const out = [];
   let truncated = false;
   const hi = Math.min(a.length, max);
@@ -101,7 +107,10 @@ export function groupCombos(group, eligibility = {}, caps) {
     const maxTotal = group?.k ?? 0;
     if (requiredCount > maxTotal)
       return withTruncationFlag([], truncated, capSettings.variantCapPerGroup);
-    const maxPick = Math.max(0, Math.min(optionalCount, maxTotal - requiredCount));
+    const maxPick = Math.max(
+      0,
+      Math.min(optionalCount, maxTotal - requiredCount),
+    );
     ch = rangeCombos(optionalMembers, 0, maxPick, capSettings);
     truncated ||= !!ch.truncated;
   } else if (mode === GROUP_MODES.RANGE) {
@@ -110,7 +119,10 @@ export function groupCombos(group, eligibility = {}, caps) {
     if (requiredCount > maxTotal)
       return withTruncationFlag([], truncated, capSettings.variantCapPerGroup);
     const minPick = Math.max(0, minTotal - requiredCount);
-    const maxPick = Math.max(minPick, Math.min(optionalCount, maxTotal - requiredCount));
+    const maxPick = Math.max(
+      minPick,
+      Math.min(optionalCount, maxTotal - requiredCount),
+    );
     if (minPick > optionalCount)
       return withTruncationFlag([], truncated, capSettings.variantCapPerGroup);
     ch = rangeCombos(optionalMembers, minPick, maxPick, capSettings);

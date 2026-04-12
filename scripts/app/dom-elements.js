@@ -39,7 +39,9 @@ export function getSidebarDomElements(Ids) {
     interactionToolsToggle: document.getElementById(Ids.interactionToolsToggle),
     interactionAcceptButton: document.getElementById(Ids.interactionAccept),
     interactionClearButton: document.getElementById(Ids.interactionClear),
-    interactionUncertainButton: document.getElementById(Ids.interactionUncertain),
+    interactionUncertainButton: document.getElementById(
+      Ids.interactionUncertain,
+    ),
     interactionDiagnosticsButton: document.getElementById(
       Ids.interactionDiagnostics,
     ),

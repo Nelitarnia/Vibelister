@@ -94,7 +94,6 @@ function createGridRenderer({
     return resolveBadgePresetFromPalette(colorId, getCommentPalette());
   }
 
-
   function ensureCellStructure(el, options = null) {
     if (!el) return { content: null, badge: null };
     let content = el._contentEl;
@@ -120,7 +119,12 @@ function createGridRenderer({
       el.appendChild(badge);
       el._commentBadge = badge;
     }
-    if (content && badge && badge.previousSibling !== content && content.parentNode === el) {
+    if (
+      content &&
+      badge &&
+      badge.previousSibling !== content &&
+      content.parentNode === el
+    ) {
       el.insertBefore(content, badge);
     }
     return { content, badge };
@@ -175,8 +179,7 @@ function createGridRenderer({
     const signature = hasSegments
       ? segments
           .map((seg) => {
-            const segText =
-              seg && seg.text != null ? String(seg.text) : "";
+            const segText = seg && seg.text != null ? String(seg.text) : "";
             const segColor =
               seg && typeof seg.foreground === "string" ? seg.foreground : "";
             return `${segText}\u0001${segColor}`;
@@ -185,7 +188,11 @@ function createGridRenderer({
       : normalizedText;
 
     const prevState = content._contentState;
-    if (prevState && prevState.rich === hasSegments && prevState.signature === signature)
+    if (
+      prevState &&
+      prevState.rich === hasSegments &&
+      prevState.signature === signature
+    )
       return;
 
     if (hasSegments) {
@@ -305,7 +312,8 @@ function createGridRenderer({
       state.visible = nextVisible;
     }
     const cellComment = nextVisible ? "true" : "false";
-    if (cell.dataset.comment !== cellComment) cell.dataset.comment = cellComment;
+    if (cell.dataset.comment !== cellComment)
+      cell.dataset.comment = cellComment;
     const nextCount = hasComments ? list.length : 0;
     if (state.count !== nextCount) {
       if (hasComments) {
@@ -325,9 +333,7 @@ function createGridRenderer({
       badge.dataset.status = nextStatus;
       state.status = nextStatus;
     }
-    const nextColorId = hasComments
-      ? deriveCommentColorId(primary?.value)
-      : "";
+    const nextColorId = hasComments ? deriveCommentColorId(primary?.value) : "";
     applyCommentBadgeColor(badge, nextColorId);
     const value = primary?.value;
     let tooltip = "";
@@ -416,11 +422,7 @@ function createGridRenderer({
 
   function getColGeomFor(columns) {
     const key = columns || null;
-    if (
-      colGeomCache.key === key &&
-      colGeomCache.widths &&
-      colGeomCache.offs
-    )
+    if (colGeomCache.key === key && colGeomCache.widths && colGeomCache.offs)
       return colGeomCache;
     const widths = colWidths(columns || []);
     const offs = colOffsets(widths);
@@ -437,7 +439,9 @@ function createGridRenderer({
       ct = r * ROW_HEIGHT,
       cb = ct + ROW_HEIGHT;
     const align =
-      options && typeof options === "object" && typeof options.align === "string"
+      options &&
+      typeof options === "object" &&
+      typeof options.align === "string"
         ? options.align
         : null;
     if (cl < sheet.scrollLeft) sheet.scrollLeft = cl;
@@ -452,10 +456,7 @@ function createGridRenderer({
       sheet.scrollTop = targetTop;
     }
     if (cb > sheet.scrollTop + vh) {
-      const targetTop =
-        align && align.toLowerCase() === "top"
-          ? ct
-          : cb - vh;
+      const targetTop = align && align.toLowerCase() === "top" ? ct : cb - vh;
       sheet.scrollTop = Math.max(0, Math.min(targetTop, maxScrollTop));
     }
   }
@@ -516,7 +517,8 @@ function createGridRenderer({
   function ensureEntityColorMemo(forceRefresh = false) {
     const entities = ["action", "input", "modifier", "outcome"];
     const nextSources = {};
-    let needsRefresh = forceRefresh || !entityColorMemo.map || !entityColorMemo.sources;
+    let needsRefresh =
+      forceRefresh || !entityColorMemo.map || !entityColorMemo.sources;
 
     for (const entity of entities) {
       const collection = getEntityCollection(entity);
@@ -710,10 +712,14 @@ function createGridRenderer({
 
   function selectionStateSignature() {
     const rowsKey = selection.rows?.size
-      ? Array.from(selection.rows).sort((a, b) => a - b).join(",")
+      ? Array.from(selection.rows)
+          .sort((a, b) => a - b)
+          .join(",")
       : "";
     const colsKey = selection.cols?.size
-      ? Array.from(selection.cols).sort((a, b) => a - b).join(",")
+      ? Array.from(selection.cols)
+          .sort((a, b) => a - b)
+          .join(",")
       : "";
     const anchor = selection.anchor != null ? selection.anchor : "";
     const colAnchor = selection.colAnchor != null ? selection.colAnchor : "";
@@ -841,9 +847,13 @@ function createGridRenderer({
           inferenceInfo.opacity ?? "",
         ].join("¶")
       : `0¶0¶${inferenceInfo?.opacity ?? ""}`;
-    return [contentSig, colorSig, commentSig, alignValue || "", inferenceSig].join(
-      "|¶|",
-    );
+    return [
+      contentSig,
+      colorSig,
+      commentSig,
+      alignValue || "",
+      inferenceSig,
+    ].join("|¶|");
   }
 
   function layout() {
@@ -875,10 +885,8 @@ function createGridRenderer({
     rowHdrs.style.transform = `translateY(${-st}px)`;
 
     const activeView = String(getActiveView() || "");
-    const visibleColsCount =
-      vc.end >= vc.start ? vc.end - vc.start + 1 : 0;
-    const visibleRowsCount =
-      vr.end >= vr.start ? vr.end - vr.start + 1 : 0;
+    const visibleColsCount = vc.end >= vc.start ? vc.end - vc.start + 1 : 0;
+    const visibleRowsCount = vr.end >= vr.start ? vr.end - vr.start + 1 : 0;
 
     const selectionSig = selectionStateSignature();
     const viewportKey = [
@@ -1110,7 +1118,11 @@ function createGridRenderer({
         if (inferenceInfo && inferredOpacity) {
           inferenceInfo = { ...inferenceInfo, opacity: inferredOpacity };
         } else if (inferredOpacity) {
-          inferenceInfo = { inferred: false, confidence: null, opacity: inferredOpacity };
+          inferenceInfo = {
+            inferred: false,
+            confidence: null,
+            opacity: inferredOpacity,
+          };
         }
 
         const dataVersion = computeCellDataVersion({

@@ -53,7 +53,9 @@ function sanitizeUiSettings(raw) {
   const colors = src.colors && typeof src.colors === "object" ? src.colors : {};
   const meta = src.meta && typeof src.meta === "object" ? src.meta : {};
   const variantCaps =
-    src.variantCaps && typeof src.variantCaps === "object" ? src.variantCaps : {};
+    src.variantCaps && typeof src.variantCaps === "object"
+      ? src.variantCaps
+      : {};
   const defaults = DEFAULT_UI_SETTINGS.colors;
   const capDefaults = DEFAULT_UI_SETTINGS.variantCaps;
   return {
@@ -92,9 +94,14 @@ function isLikelySettingsPayload(raw) {
   const colors =
     raw.colors && typeof raw.colors === "object" ? raw.colors : null;
   const variantCaps =
-    raw.variantCaps && typeof raw.variantCaps === "object" ? raw.variantCaps : null;
+    raw.variantCaps && typeof raw.variantCaps === "object"
+      ? raw.variantCaps
+      : null;
   if (!colors && !variantCaps) return false;
-  if (colors && SETTINGS_COLOR_KEYS.some((key) => typeof colors[key] === "string"))
+  if (
+    colors &&
+    SETTINGS_COLOR_KEYS.some((key) => typeof colors[key] === "string")
+  )
     return true;
   if (variantCaps) {
     return SETTINGS_CAP_KEYS.some((key) => Number.isFinite(variantCaps[key]));

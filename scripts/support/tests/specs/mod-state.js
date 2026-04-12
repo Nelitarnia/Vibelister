@@ -28,7 +28,11 @@ export function getModStateTests() {
           MOD.BYPASS,
           "token maps to BYPASS",
         );
-        assert.strictEqual(normalize("ℜ"), MOD.REQUIRES, "glyph maps to requires");
+        assert.strictEqual(
+          normalize("ℜ"),
+          MOD.REQUIRES,
+          "glyph maps to requires",
+        );
         assert.strictEqual(normalize(true), MOD.ON, "boolean true maps to ON");
         assert.strictEqual(
           normalize(false),
@@ -220,7 +224,11 @@ export function getModStateTests() {
             const row = rows[r];
             const col = view.columns[c];
             if (col?.kind) {
-              setCellForKind(col.kind, kindCtx({ r, c, col, row, v: value }), value);
+              setCellForKind(
+                col.kind,
+                kindCtx({ r, c, col, row, v: value }),
+                value,
+              );
             } else if (col?.key) {
               row[col.key] = value;
             }
@@ -309,7 +317,11 @@ export function getModStateTests() {
             const row = rows[r];
             const col = view.columns[c];
             if (col?.kind) {
-              setCellForKind(col.kind, kindCtx({ r, c, col, row, v: value }), value);
+              setCellForKind(
+                col.kind,
+                kindCtx({ r, c, col, row, v: value }),
+                value,
+              );
             } else if (col?.key) {
               row[col.key] = value;
             }
@@ -332,7 +344,11 @@ export function getModStateTests() {
       run(assert) {
         const col = { key: "mod:5", kind: "modState" };
         const source = { modSet: { 5: MOD.ON } };
-        const payload = ColumnKinds.modState.getStructured({ row: source, col, MOD });
+        const payload = ColumnKinds.modState.getStructured({
+          row: source,
+          col,
+          MOD,
+        });
         assert.deepStrictEqual(
           payload,
           { type: "modifierState", data: { value: MOD.ON } },
@@ -354,7 +370,11 @@ export function getModStateTests() {
           { row: target, col, MOD },
           clean,
         );
-        assert.strictEqual(applied, true, "structured payload should apply to row");
+        assert.strictEqual(
+          applied,
+          true,
+          "structured payload should apply to row",
+        );
         assert.strictEqual(
           target.modSet[5],
           MOD.BYPASS,
@@ -514,10 +534,15 @@ export function getModStateTests() {
           document: doc,
         });
 
-        assert.ok(palette.wantsToHandleCell(), "modifier column should be handled");
+        assert.ok(
+          palette.wantsToHandleCell(),
+          "modifier column should be handled",
+        );
         palette.openForCurrentCell({ r: 0, c: 1, focusEditor: false });
 
-        const root = editor.parentElement.children.find((node) => node.id === "universalPalette");
+        const root = editor.parentElement.children.find(
+          (node) => node.id === "universalPalette",
+        );
         assert.ok(root, "palette root should be attached to editor parent");
         const list = root?.children?.[0];
         assert.ok(list, "palette list container should exist");

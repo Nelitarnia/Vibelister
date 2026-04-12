@@ -198,7 +198,10 @@ export function getDataVersionTests() {
         let lastSeenVersion = model.meta.dataVersion;
         const runner = createRunner(model, () => {
           if (model.meta.dataVersion === lastSeenVersion) {
-            renderObservations.push({ skipped: true, version: model.meta.dataVersion });
+            renderObservations.push({
+              skipped: true,
+              version: model.meta.dataVersion,
+            });
             return;
           }
           lastSeenVersion = model.meta.dataVersion;
@@ -208,13 +211,23 @@ export function getDataVersionTests() {
         runner.runModelMutation(
           "add action name",
           () => {
-            model.actions.push({ id: model.nextId++, name: "Hero", color: "", color2: "", notes: "" });
+            model.actions.push({
+              id: model.nextId++,
+              name: "Hero",
+              color: "",
+              color2: "",
+              notes: "",
+            });
             return { changed: true };
           },
           { render: true },
         );
 
-        assert.strictEqual(model.meta.dataVersion, 1, "dataVersion increments for grid redraw");
+        assert.strictEqual(
+          model.meta.dataVersion,
+          1,
+          "dataVersion increments for grid redraw",
+        );
         assert.deepStrictEqual(
           renderObservations,
           [{ skipped: false, version: 1 }],
@@ -263,8 +276,15 @@ export function getDataVersionTests() {
             (child) => child?.dataset?.r === 0 && child?.dataset?.c === 0,
           );
           assert.ok(cell, "cell should exist");
-          assert.strictEqual(cell._contentEl.textContent, "New", "cell re-rendered after palette commit");
-          assert.ok(Number.isFinite(model.renderEpoch), "renderEpoch should track renders without meta");
+          assert.strictEqual(
+            cell._contentEl.textContent,
+            "New",
+            "cell re-rendered after palette commit",
+          );
+          assert.ok(
+            Number.isFinite(model.renderEpoch),
+            "renderEpoch should track renders without meta",
+          );
         });
       },
     },
@@ -305,8 +325,15 @@ export function getDataVersionTests() {
             (child) => child?.dataset?.r === 0 && child?.dataset?.c === 0,
           );
           assert.ok(cell, "outcome cell should exist");
-          assert.strictEqual(cell._contentEl.textContent, "Pasted", "structured paste repaint should apply immediately");
-          assert.ok(Number.isFinite(model.renderEpoch), "renderEpoch advances after structured paste");
+          assert.strictEqual(
+            cell._contentEl.textContent,
+            "Pasted",
+            "structured paste repaint should apply immediately",
+          );
+          assert.ok(
+            Number.isFinite(model.renderEpoch),
+            "renderEpoch advances after structured paste",
+          );
         });
       },
     },

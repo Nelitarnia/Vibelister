@@ -364,7 +364,9 @@ body {
   text-align: left;
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .sheet-sidebar__item--variant .sheet-sidebar__button {
@@ -416,7 +418,9 @@ body {
   color: #dde4ff;
   cursor: pointer;
   font-size: 12px;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .sheet-sidebar-toggle:hover,
@@ -499,7 +503,10 @@ body {
   padding: 4px 10px;
   font-size: 11px;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .comment-sidebar__close:hover,
@@ -545,7 +552,10 @@ body {
   font-size: 12px;
   text-align: center;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
     transform 0.15s ease;
 }
 
@@ -577,7 +587,10 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
     transform 0.15s ease;
 }
 
@@ -677,7 +690,10 @@ body {
   font-size: 12px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .comment-sidebar__save {
@@ -829,7 +845,10 @@ body {
   border-radius: 8px;
   padding: 6px 10px;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .comment-customize__move:hover,
@@ -871,7 +890,10 @@ body {
   font-size: 12px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .comment-customize__reset {
@@ -926,7 +948,9 @@ body {
   background: #111726;
   border: 1px solid #2a3244;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .comment-sidebar__item--inactive {
@@ -999,7 +1023,9 @@ body {
   padding: 8px 10px;
   color: #e1e6ff;
   font-size: 13px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .tag-sidebar__input:focus-visible {
@@ -1030,7 +1056,9 @@ body {
   padding: 7px 10px;
   font-size: 12px;
   line-height: 1.4;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .tag-sidebar__select:focus-visible {
@@ -1055,7 +1083,10 @@ body {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tag-sidebar__rename:hover,
@@ -1132,7 +1163,10 @@ body {
   padding: 8px 10px;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tag-sidebar__tag:hover,
@@ -1508,7 +1542,9 @@ body {
   inset-inline-end: 0;
   width: 1px;
   background: rgba(170, 179, 197, 0.45);
-  transition: background 120ms ease, opacity 120ms ease;
+  transition:
+    background 120ms ease,
+    opacity 120ms ease;
   opacity: 0.6;
 }
 

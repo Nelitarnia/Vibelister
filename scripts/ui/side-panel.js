@@ -147,7 +147,8 @@ export function createSidePanelHost(options = {}) {
       isOpen: () => isOpen && activeId === paneId,
       isActive: () => isOpen && activeId === paneId,
       setTitle: (value) => {
-        if (entry) entry.title = typeof value === "string" ? value : entry.title;
+        if (entry)
+          entry.title = typeof value === "string" ? value : entry.title;
         if (isOpen && activeId === paneId) setTitle(entry.title);
       },
     };

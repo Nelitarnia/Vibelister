@@ -154,7 +154,8 @@ export function makeMutationRunner(deps) {
     if (model && typeof model === "object") {
       model.renderEpoch = renderEpoch;
       if (model.meta && typeof model.meta === "object") {
-        if (!Number.isFinite(model.meta.dataVersion)) model.meta.dataVersion = renderEpoch;
+        if (!Number.isFinite(model.meta.dataVersion))
+          model.meta.dataVersion = renderEpoch;
       }
     }
     return renderEpoch;
@@ -458,7 +459,8 @@ export function makeMutationRunner(deps) {
 
   function finalizeUndoContext(context, result) {
     if (!context) return;
-    const { config, beforeSnapshot, beforeAttachments, fallbackLabel } = context;
+    const { config, beforeSnapshot, beforeAttachments, fallbackLabel } =
+      context;
     if (!beforeSnapshot || typeof config?.shouldRecord !== "function") return;
 
     let afterSnapshot = null;
@@ -480,7 +482,7 @@ export function makeMutationRunner(deps) {
     try {
       afterSnapshot = captureModelSnapshot(config.snapshotOptions);
       if (config.captureAttachments)
-      afterAttachments = config.captureAttachments("after", ctx);
+        afterAttachments = config.captureAttachments("after", ctx);
     } catch (_) {
       afterSnapshot = null;
     }
@@ -570,7 +572,8 @@ export function makeMutationRunner(deps) {
 
   function performUndoLike(entry, direction) {
     if (!entry) return false;
-    const snapshot = direction === "undo" ? entry.beforeSnapshot : entry.afterSnapshot;
+    const snapshot =
+      direction === "undo" ? entry.beforeSnapshot : entry.afterSnapshot;
     const restored = restoreModelSnapshot(model, snapshot);
     if (!restored) return false;
 
@@ -578,9 +581,8 @@ export function makeMutationRunner(deps) {
     else history.push(entry);
 
     if (typeof entry.applyAttachments === "function") {
-      const attachments = direction === "undo"
-        ? entry.beforeAttachments
-        : entry.afterAttachments;
+      const attachments =
+        direction === "undo" ? entry.beforeAttachments : entry.afterAttachments;
       try {
         entry.applyAttachments(attachments, direction, entry.context);
       } catch (_) {

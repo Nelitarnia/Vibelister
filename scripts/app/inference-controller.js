@@ -78,8 +78,11 @@ export function createInferenceController(options) {
     heuristicThresholds || DEFAULT_HEURISTIC_THRESHOLDS || {};
   let lastThresholdOverrides = { ...baseThresholds };
   const inferenceProfiles =
-    providedProfiles || model?.inferenceProfiles || createInferenceProfileStore();
-  if (model && !model.inferenceProfiles) model.inferenceProfiles = inferenceProfiles;
+    providedProfiles ||
+    model?.inferenceProfiles ||
+    createInferenceProfileStore();
+  if (model && !model.inferenceProfiles)
+    model.inferenceProfiles = inferenceProfiles;
   const OUT_OF_VIEW_STATUS = "Inference only applies to the Interactions view.";
   const NO_TARGETS_STATUS =
     "Select Outcome, End, or Tag cells in the Interactions view to run inference.";

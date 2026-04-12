@@ -87,6 +87,7 @@ Adding Phases for each Action is not strictly necessary, but they do offer a few
 Phase 0 is special in that it signifies simultaneous testing - what happens if you press two inputs simultaneously - and it has some special functionality which is not used in other Phases. (Read more below from the "Mirrored and Dual Of" section.)
 
 Inside the Interactions-view, each Phase for each Action features three columns: "Outcome", "End" and "Tag".
+
 - Outcome is a simple enumerated category for what happened as a result of the interaction; whether it was cancelled, did nothing, etc. The program comes with a set of default Outcomes which should work quite well for a variety of use cases, but they can also be managed in the Outcomes-view.
 - End is a column which links to another Action, indicating the end state of the interaction.
 - Tag-column allows you to bridge the gap between purely formal note-taking and freeform notes. You should use it to add lesser effects (like UI-only changes) that at least for the time being don't warrant their own Action or Modifier to keep a track of. The keyboard shortcut for opening the tag panel is Ctrl+Shift+X.
@@ -157,6 +158,7 @@ Inferred cells are marked with a border inside the Interactions-view. The color 
 Inference deduces results from similarity between Actions (through both modified Actions and user-set Action Groups), commonly seen Input or Modifier patterns as well as a trend of recently set Actions.
 
 Explanation of the various options:
+
 - Include End-Column / Include Tag-Column: Basically, this means whether you want the Inference to target other Phase-columns than just Outcome. Both of these options are on by default.
 - Infer from/to Bypassed Modifiers: Whether modifiers that are set to "Bypassed" in Action view influence or receive inference. These options are off by default.
 - Overwrite existing inferred values: Whether inference will update any existing inferred values during a new inference pass. It makes sense to have this on if you want your previously inferred predictions to improve as you add data to the project. This option is on by default.
@@ -171,6 +173,7 @@ Explanation of the various options:
 Besides that, there's also an Inference sub-panel which can be opened with Ctrl+Shift+U. It contains some tools for manually adjusting uncertainty, promoting notes to manual or simply deleting inferred notes and their metadata. These are contextual actions which work on the currently selected Phase(s) in the Interactions view.
 
 Explanation:
+
 - Promote inferred notes: This button turns the current Phase's inferred data into verified data by setting its uncertainty to 0% and giving it the source "Manual". Please use this button on an Outcome cell. This button also has a keyboard shortcut "Ctrl+."
 - Clear inference metadata: This button clears the guessed data ...
 - Apply default uncertainty: You can manually make the selected Phase uncertain and adding it an uncertainty value from the "Default Uncertainty" slider.
@@ -195,11 +198,13 @@ You can clean up your project file using a dialog in Tools -> Clean Up...
 ## Best conventions for use
 
 ### Be careful of data loss
+
 Detailed mechanics glitching is a slow, complex, repetitive iterative process, and ideally, a program like Movelister should be designed around this fact. It accepts that the user's "schema" may be fallible or incomplete at any given time - for example, adding new Actions and Inputs is possible to do at any time, and this updates the shape of the Interactions-view automatically.
 
 However - there are a lot of actions which are at the current time "destructive", i.e. they may cause you to lose existing notes data in Interactions-view. For example, deleting Modifiers or changing Modifier rules can cause existing data in Interactions-view to vanish or become unreachable. In this respect, it might be the best to try to figure out as much of the underlying logic as possible before committing to making detailed notes to any more complex modified Actions.
 
 ### Practical tips
+
 Create a coherent scheme for naming things so that your project file is easy to browse. This also helps when filling columns in Interactions - for example, filtering available Actions in the End-column works better when the Actions are named in a predictable way and you always have a grasp on what to search for.
 
 To save time without sacrificing formality, you could create placeholder Actions which are not meant to be tested in detail. For example, if a game has some kind of a "grab" function which can lead to a variety of different results depending on context, you could create an Action like "(Grab)" and use it in End-columns until adding more detail becomes relevant. In any case, it's good to give placeholder Actions some kind of a special name (like giving the name parentheses) so that they're not mistaken for normal Actions.
@@ -209,9 +214,11 @@ To save time without sacrificing formality, you could create placeholder Actions
 # To do
 
 ## Known Bugs
+
 - In certain projects, the Inference settings "infer to bypassed" and "infer from bypassed" don't work properly. (Exact reason is unknown.)
 
 ## Ideas for later
+
 - Warning dialogue when opening or loading a project if data is about to get lost.
 - Make program load a setting file automatically when starting.
 - Make it possible to "refactor" Actions or modified Actions to move data in a non-destructive way between stable IDs.

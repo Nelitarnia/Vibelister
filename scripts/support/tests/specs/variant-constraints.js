@@ -17,8 +17,14 @@ export function getVariantConstraintTests() {
         assert.ok(Object.isFrozen(maps), "descriptor should be frozen");
         assert.ok(Object.isFrozen(maps.mut), "mutex set should be frozen");
         assert.ok(Object.isFrozen(maps.req), "requires map should be frozen");
-        assert.ok(Object.isFrozen(maps.req.get(1)), "requires entry should be frozen");
-        assert.ok(Object.isFrozen(maps.forb.get(2)), "forbid entry should be frozen");
+        assert.ok(
+          Object.isFrozen(maps.req.get(1)),
+          "requires entry should be frozen",
+        );
+        assert.ok(
+          Object.isFrozen(maps.forb.get(2)),
+          "forbid entry should be frozen",
+        );
       },
     },
     {

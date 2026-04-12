@@ -23,7 +23,15 @@ export function bootstrapInteractionsAndLifecycle({
 }) {
   const { state, model } = appContext;
   const {
-    dom: { cellsLayer, rowHdrs, sheet, editor, dragLine, colHdrs, sidebar: sidebarDom },
+    dom: {
+      cellsLayer,
+      rowHdrs,
+      sheet,
+      editor,
+      dragLine,
+      colHdrs,
+      sidebar: sidebarDom,
+    },
     statusBar,
     wireMenus,
     initShell,
@@ -95,7 +103,8 @@ export function bootstrapInteractionsAndLifecycle({
 
   const { undo, redo, getUndoState } = historyApi;
 
-  const { newProject, openFromDisk, saveToDisk, updateProjectNameWidget } = persistenceApi;
+  const { newProject, openFromDisk, saveToDisk, updateProjectNameWidget } =
+    persistenceApi;
 
   const { doGenerate, runSelfTests } = generationApi;
 
@@ -107,15 +116,32 @@ export function bootstrapInteractionsAndLifecycle({
     cellValueToPlainText,
   } = clipboardApi;
 
-  const { openSettingsDialog, openProjectInfo, openCleanupDialog, openInferenceDialog } = menuApi;
+  const {
+    openSettingsDialog,
+    openProjectInfo,
+    openCleanupDialog,
+    openInferenceDialog,
+  } = menuApi;
 
-  const { getCellComments, setCellComment, deleteCellComment, noteKeyForPair, getInteractionsPair } =
-    sidebarApi;
+  const {
+    getCellComments,
+    setCellComment,
+    deleteCellComment,
+    noteKeyForPair,
+    getInteractionsPair,
+  } = sidebarApi;
 
-  const { canonicalSig, compareVariantSig, sortIdsByUserOrder, modOrderMap } = variantApi;
+  const { canonicalSig, compareVariantSig, sortIdsByUserOrder, modOrderMap } =
+    variantApi;
 
-  const { VIEWS, visibleCols, visibleRows, colOffsets, colWidths, rebuildActionColumnsFromModifiers } =
-    viewsMeta;
+  const {
+    VIEWS,
+    visibleCols,
+    visibleRows,
+    colOffsets,
+    colWidths,
+    rebuildActionColumnsFromModifiers,
+  } = viewsMeta;
 
   const { toggleInteractionsMode } = interactionsApi;
 
@@ -150,63 +176,76 @@ export function bootstrapInteractionsAndLifecycle({
     interactionActions,
   }));
 
-  const { disposeMouse, disposeDrag, disposeKeys, disposeColumnResize } = setupInputHandlers({
-    dom: { cellsLayer, rowHdrs, sheet, editor, dragLine, colHdrs },
-    selectionApi: { selection, sel, SelectionNS, SelectionCtl, clearSelection },
-    editingApi: { isEditing, beginEdit, endEdit, moveSel, moveSelectionForTab },
-    viewApi: {
-      viewDef,
-      getRowCount,
-      dataArray,
-      getActiveView,
-      setActiveView,
-      cycleView,
-      invalidateViewDef,
-    },
-    rendererApi: { render, layout, ensureVisible },
-    gridApi: {
-      setCell,
-      setModForSelection,
-      isModColumn,
-      modIdFromKey,
-      getHorizontalTargetColumns,
-      cloneValueForAssignment,
-    },
-    modelApi: {
-      model,
-      runModelMutation,
-      runModelTransaction,
-      beginUndoableTransaction,
-      makeUndoConfig,
-      ensureMinRows,
-      ROW_HEIGHT,
-      HEADER_HEIGHT,
-      clamp,
-      deleteSelectedRows,
-      clearSelectedCells,
-      addRowsAbove,
-      addRowsBelow,
-      getCell,
-      getPaletteAPI,
-      interactionsOutline,
-      toggleInteractionToolsPane: () => state.toggleInteractionToolsPane?.(),
-      interactionActions,
-      commentsUI: state.commentsUI,
-      tagUI: state.tagUI,
-    },
-    historyApi: { undo, redo },
-    persistenceApi: { newProject, openFromDisk, saveToDisk },
-    generationApi: { doGenerate, runSelfTests },
-    clipboardApi: {
-      getStructuredCell,
-      applyStructuredCell,
-      getCellCommentClipboardPayload,
-      applyCellCommentClipboardPayload,
-      cellValueToPlainText,
-    },
-    statusBar,
-    toggleInteractionsMode,
-  });
+  const { disposeMouse, disposeDrag, disposeKeys, disposeColumnResize } =
+    setupInputHandlers({
+      dom: { cellsLayer, rowHdrs, sheet, editor, dragLine, colHdrs },
+      selectionApi: {
+        selection,
+        sel,
+        SelectionNS,
+        SelectionCtl,
+        clearSelection,
+      },
+      editingApi: {
+        isEditing,
+        beginEdit,
+        endEdit,
+        moveSel,
+        moveSelectionForTab,
+      },
+      viewApi: {
+        viewDef,
+        getRowCount,
+        dataArray,
+        getActiveView,
+        setActiveView,
+        cycleView,
+        invalidateViewDef,
+      },
+      rendererApi: { render, layout, ensureVisible },
+      gridApi: {
+        setCell,
+        setModForSelection,
+        isModColumn,
+        modIdFromKey,
+        getHorizontalTargetColumns,
+        cloneValueForAssignment,
+      },
+      modelApi: {
+        model,
+        runModelMutation,
+        runModelTransaction,
+        beginUndoableTransaction,
+        makeUndoConfig,
+        ensureMinRows,
+        ROW_HEIGHT,
+        HEADER_HEIGHT,
+        clamp,
+        deleteSelectedRows,
+        clearSelectedCells,
+        addRowsAbove,
+        addRowsBelow,
+        getCell,
+        getPaletteAPI,
+        interactionsOutline,
+        toggleInteractionToolsPane: () => state.toggleInteractionToolsPane?.(),
+        interactionActions,
+        commentsUI: state.commentsUI,
+        tagUI: state.tagUI,
+      },
+      historyApi: { undo, redo },
+      persistenceApi: { newProject, openFromDisk, saveToDisk },
+      generationApi: { doGenerate, runSelfTests },
+      clipboardApi: {
+        getStructuredCell,
+        applyStructuredCell,
+        getCellCommentClipboardPayload,
+        applyCellCommentClipboardPayload,
+        cellValueToPlainText,
+      },
+      statusBar,
+      toggleInteractionsMode,
+    });
 
   state.toggleInteractionToolsPane = () => state.interactionTools?.toggle?.();
 
@@ -231,7 +270,12 @@ export function bootstrapInteractionsAndLifecycle({
     getUndoState,
   });
 
-  const ModelNS = { upgradeModelInPlace, ensureSeedRows, ensureMinRows, makeRow };
+  const ModelNS = {
+    upgradeModelInPlace,
+    ensureSeedRows,
+    ensureMinRows,
+    makeRow,
+  };
   const ViewsNS = {
     setActiveView,
     rebuildActionColumnsFromModifiers,
@@ -243,14 +287,28 @@ export function bootstrapInteractionsAndLifecycle({
     colOffsets,
     colWidths,
   };
-  const GridNS = { layout, render, ensureVisible, beginEdit, endEdit, endEditIfOpen, moveSel };
+  const GridNS = {
+    layout,
+    render,
+    ensureVisible,
+    beginEdit,
+    endEdit,
+    endEditIfOpen,
+    moveSel,
+  };
   const MenusNS = {
     closeAllMenus: state.menusAPI.closeAllMenus,
     updateViewMenuRadios: state.menusAPI.updateViewMenuRadios,
   };
   const SelectionNSExport = SelectionNS;
   const IONS = { openFromDisk, saveToDisk };
-  const VariantsNS = { canonicalSig, doGenerate, compareVariantSig, sortIdsByUserOrder, modOrderMap };
+  const VariantsNS = {
+    canonicalSig,
+    doGenerate,
+    compareVariantSig,
+    sortIdsByUserOrder,
+    modOrderMap,
+  };
 
   let selectionRenderDisposed = false;
   let resizeObserver;

@@ -216,7 +216,12 @@ export const ColumnKinds = {
       const raw = modSet[id];
       const value =
         typeof raw === "number"
-          ? normalizeModState(raw, runtime.map, runtime.defaultState.value, runtime)
+          ? normalizeModState(
+              raw,
+              runtime.map,
+              runtime.defaultState.value,
+              runtime,
+            )
           : runtime.defaultState.value;
       return { type: "modifierState", data: { value } };
     },
@@ -228,7 +233,8 @@ export const ColumnKinds = {
       if (!Number.isFinite(id)) return false;
       if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
       const hasValue =
-        payload.data && Object.prototype.hasOwnProperty.call(payload.data, "value");
+        payload.data &&
+        Object.prototype.hasOwnProperty.call(payload.data, "value");
       if (!hasValue) return false;
       const current = Number(row.modSet[id] ?? runtime.defaultState.value);
       const next = normalizeModState(
@@ -399,8 +405,9 @@ export const ColumnKinds = {
         const numId = Number(id);
         if (Number.isFinite(numId)) {
           entityRow =
-            entityRows.find((candidate) => (candidate?.id | 0) === (numId | 0)) ||
-            null;
+            entityRows.find(
+              (candidate) => (candidate?.id | 0) === (numId | 0),
+            ) || null;
         }
       }
       const base = entityRow?.name || nameOf(col.entity, model, id);
@@ -493,7 +500,10 @@ export const ColumnKinds = {
         const pool = resolveEntity(col?.entity, model) || [];
         const target = trimmed.toLowerCase();
         const found = pool.find(
-          (it) => String(it?.name || "").trim().toLowerCase() === target,
+          (it) =>
+            String(it?.name || "")
+              .trim()
+              .toLowerCase() === target,
         );
         row[col.key] = found ? found.id | 0 : null;
       }

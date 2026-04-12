@@ -33,14 +33,16 @@ export function initColumnResize(options = {}) {
   } = options;
 
   const win = winOverride || globalThis.window;
-  const raf = win?.requestAnimationFrame?.bind(win) ??
+  const raf =
+    win?.requestAnimationFrame?.bind(win) ??
     globalThis.requestAnimationFrame?.bind(globalThis);
-  const cancelRaf = win?.cancelAnimationFrame?.bind(win) ??
+  const cancelRaf =
+    win?.cancelAnimationFrame?.bind(win) ??
     globalThis.cancelAnimationFrame?.bind(globalThis);
-  const setIntervalFn = win?.setInterval?.bind(win) ??
-    globalThis.setInterval?.bind(globalThis);
-  const clearIntervalFn = win?.clearInterval?.bind(win) ??
-    globalThis.clearInterval?.bind(globalThis);
+  const setIntervalFn =
+    win?.setInterval?.bind(win) ?? globalThis.setInterval?.bind(globalThis);
+  const clearIntervalFn =
+    win?.clearInterval?.bind(win) ?? globalThis.clearInterval?.bind(globalThis);
 
   const AUTO_SCROLL_ACTIVATION_MARGIN = 12;
   const AUTO_SCROLL_STOP_MARGIN = 4;
@@ -74,7 +76,8 @@ export function initColumnResize(options = {}) {
 
   function getAutoScrollRect() {
     const readRect = (node) => {
-      if (!node || typeof node.getBoundingClientRect !== "function") return null;
+      if (!node || typeof node.getBoundingClientRect !== "function")
+        return null;
       const rect = node.getBoundingClientRect();
       if (!rect) return null;
       const { left, right } = rect;
@@ -212,7 +215,11 @@ export function initColumnResize(options = {}) {
 
       if (autoScrollDirection < 0 && next <= 0) {
         stopAutoScroll();
-      } else if (autoScrollDirection > 0 && next >= maxScroll && !stillBeyondRight) {
+      } else if (
+        autoScrollDirection > 0 &&
+        next >= maxScroll &&
+        !stillBeyondRight
+      ) {
         stopAutoScroll();
       }
     };
@@ -256,7 +263,10 @@ export function initColumnResize(options = {}) {
       return;
     }
 
-    const activationBounds = makeEdgeBounds(rect, AUTO_SCROLL_ACTIVATION_MARGIN);
+    const activationBounds = makeEdgeBounds(
+      rect,
+      AUTO_SCROLL_ACTIVATION_MARGIN,
+    );
 
     let wantLeft = pointerX <= activationBounds.left;
     let wantRight = pointerX >= activationBounds.right;
@@ -306,7 +316,11 @@ export function initColumnResize(options = {}) {
         if (!meta.columnWidths || typeof meta.columnWidths !== "object") {
           meta.columnWidths = {};
         }
-        const { overrides, changed, width: appliedWidth } = setColumnWidthOverride(
+        const {
+          overrides,
+          changed,
+          width: appliedWidth,
+        } = setColumnWidthOverride(
           meta.columnWidths,
           viewKey,
           columnKey,

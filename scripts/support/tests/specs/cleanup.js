@@ -1,4 +1,7 @@
-import { createCleanupController, CLEANUP_ACTION_IDS } from "../../../app/cleanup-controller.js";
+import {
+  createCleanupController,
+  CLEANUP_ACTION_IDS,
+} from "../../../app/cleanup-controller.js";
 import { MOD_STATE_ID } from "../../../data/mod-state.js";
 import { INTERACTION_COMMENT_META_KEY } from "../../../data/comments.js";
 import { makeModelFixture } from "./model-fixtures.js";
@@ -24,7 +27,11 @@ export function getCleanupTests() {
           actionIds: [CLEANUP_ACTION_IDS.orphanNotes],
           apply: true,
         });
-        assert.strictEqual(result.totalRemoved, 1, "should remove a single note");
+        assert.strictEqual(
+          result.totalRemoved,
+          1,
+          "should remove a single note",
+        );
         assert.ok(model.notes[validKey], "valid note should remain");
         assert.ok(!model.notes[invalidKey], "invalid note removed");
       },
@@ -40,7 +47,7 @@ export function getCleanupTests() {
         const phaseKey = `${baseKey}|p0`;
         model.notes[baseKey] = { notes: "keep" };
         model.notes[phaseKey] = {
-          notes: "phase", 
+          notes: "phase",
           endActionId: finish.id,
           endVariantSig: `${finish.id + 100}`,
         };
@@ -56,7 +63,11 @@ export function getCleanupTests() {
           ],
           apply: true,
         });
-        assert.strictEqual(result.totalRemoved, 1, "only the invalid phase note removed");
+        assert.strictEqual(
+          result.totalRemoved,
+          1,
+          "only the invalid phase note removed",
+        );
         assert.ok(model.notes[baseKey], "base note remains");
         assert.ok(!model.notes[phaseKey], "phase note deleted");
       },
@@ -79,15 +90,29 @@ export function getCleanupTests() {
           actionIds: [CLEANUP_ACTION_IDS.orphanNotes],
           apply: true,
         });
-        assert.strictEqual(defaultRun.totalRemoved, 0, "bypass note should be preserved");
-        assert.ok(model.notes[bypassKey], "note remains when bypass is excluded");
+        assert.strictEqual(
+          defaultRun.totalRemoved,
+          0,
+          "bypass note should be preserved",
+        );
+        assert.ok(
+          model.notes[bypassKey],
+          "note remains when bypass is excluded",
+        );
         const forcedRun = controller.runCleanup({
           actionIds: [CLEANUP_ACTION_IDS.orphanNotes],
           apply: true,
           includeBypassed: true,
         });
-        assert.strictEqual(forcedRun.totalRemoved, 1, "note removed when bypass is included");
-        assert.ok(!model.notes[bypassKey], "note deleted when opt-in flag is set");
+        assert.strictEqual(
+          forcedRun.totalRemoved,
+          1,
+          "note removed when bypass is included",
+        );
+        assert.ok(
+          !model.notes[bypassKey],
+          "note deleted when opt-in flag is set",
+        );
       },
     },
     {
@@ -96,7 +121,9 @@ export function getCleanupTests() {
         const { model, addAction, addInput, addModifier } = makeModelFixture();
         const finishMod = addModifier("Finish Bypass");
         const start = addAction("Start");
-        const finish = addAction("Finish", { [finishMod.id]: MOD_STATE_ID.BYPASS });
+        const finish = addAction("Finish", {
+          [finishMod.id]: MOD_STATE_ID.BYPASS,
+        });
         const input = addInput("Button");
         const baseKey = `ai|${start.id}|${input.id}|`;
         model.notes[baseKey] = {
@@ -113,14 +140,22 @@ export function getCleanupTests() {
           actionIds: [CLEANUP_ACTION_IDS.orphanEndVariants],
           apply: true,
         });
-        assert.strictEqual(defaultRun.totalRemoved, 0, "end variant note preserved by default");
+        assert.strictEqual(
+          defaultRun.totalRemoved,
+          0,
+          "end variant note preserved by default",
+        );
         assert.ok(model.notes[baseKey], "note remains when bypass flag is off");
         const forcedRun = controller.runCleanup({
           actionIds: [CLEANUP_ACTION_IDS.orphanEndVariants],
           apply: true,
           includeBypassed: true,
         });
-        assert.strictEqual(forcedRun.totalRemoved, 1, "end variant removed when bypass opt-in");
+        assert.strictEqual(
+          forcedRun.totalRemoved,
+          1,
+          "end variant removed when bypass opt-in",
+        );
         assert.ok(!model.notes[baseKey], "note deleted after bypass cleanup");
       },
     },
@@ -164,8 +199,15 @@ export function getCleanupTests() {
           apply: true,
           includeBypassed: true,
         });
-        assert.strictEqual(forcedRun.totalRemoved, 1, "comment removed when bypass included");
-        assert.ok(!model.comments.interactions[rowId], "comment deleted after opt-in run");
+        assert.strictEqual(
+          forcedRun.totalRemoved,
+          1,
+          "comment removed when bypass included",
+        );
+        assert.ok(
+          !model.comments.interactions[rowId],
+          "comment deleted after opt-in run",
+        );
       },
     },
     {
@@ -205,7 +247,10 @@ export function getCleanupTests() {
           0,
           "phase overflow ignored when action is not selected",
         );
-        assert.ok(model.notes[blockedKey], "inactive phase note remains by default");
+        assert.ok(
+          model.notes[blockedKey],
+          "inactive phase note remains by default",
+        );
         assert.ok(
           model.comments.interactions[blockedKey],
           "inactive phase comment remains by default",
@@ -221,7 +266,10 @@ export function getCleanupTests() {
         );
         assert.ok(model.notes[allowedKey], "allowed phase note is preserved");
         assert.ok(!model.notes[blockedKey], "disallowed phase note removed");
-        assert.ok(!model.comments.interactions[blockedKey], "phase comment removed");
+        assert.ok(
+          !model.comments.interactions[blockedKey],
+          "phase comment removed",
+        );
       },
     },
     {
@@ -251,8 +299,15 @@ export function getCleanupTests() {
           actionIds: [CLEANUP_ACTION_IDS.phaseOverflowNotes],
           apply: true,
         });
-        assert.strictEqual(phaseCleanup.totalRemoved, 1, "removes the comment row");
-        assert.ok(!model.comments.interactions[blockedKey], "phase comment removed");
+        assert.strictEqual(
+          phaseCleanup.totalRemoved,
+          1,
+          "removes the comment row",
+        );
+        assert.ok(
+          !model.comments.interactions[blockedKey],
+          "phase comment removed",
+        );
       },
     },
     {
@@ -276,14 +331,21 @@ export function getCleanupTests() {
           actionIds: [CLEANUP_ACTION_IDS.phaseOverflowNotes],
           apply: true,
         });
-        assert.strictEqual(result.totalRemoved, 1, "only the disallowed phase comment is removed");
+        assert.strictEqual(
+          result.totalRemoved,
+          1,
+          "only the disallowed phase comment is removed",
+        );
         const row = model.comments.interactions[baseKey];
         assert.ok(row, "row remains when a valid column exists");
         assert.ok(
           !Object.prototype.hasOwnProperty.call(row, "p0:outcome"),
           "out-of-range phase column cleared",
         );
-        assert.ok(Object.prototype.hasOwnProperty.call(row, "p1:outcome"), "valid phase kept");
+        assert.ok(
+          Object.prototype.hasOwnProperty.call(row, "p1:outcome"),
+          "valid phase kept",
+        );
       },
     },
     {
@@ -307,7 +369,11 @@ export function getCleanupTests() {
           actionIds: [CLEANUP_ACTION_IDS.phaseOverflowNotes],
           apply: true,
         });
-        assert.strictEqual(result.totalRemoved, 1, "removes the out-of-range phase comment");
+        assert.strictEqual(
+          result.totalRemoved,
+          1,
+          "removes the out-of-range phase comment",
+        );
         const row = model.comments.interactions[baseKey];
         assert.ok(row, "row preserved due to remaining columns");
         assert.ok(row.default, "non-phase column left intact");

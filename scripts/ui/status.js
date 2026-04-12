@@ -202,7 +202,9 @@ export function initStatusBar(element, opts = {}) {
 
   function shouldIgnoreShortcutTarget(target) {
     if (!(target instanceof HTMLElement)) return false;
-    const focusableFormField = target.closest("input, textarea, select, button");
+    const focusableFormField = target.closest(
+      "input, textarea, select, button",
+    );
     if (focusableFormField) return true;
     return target.isContentEditable;
   }
@@ -230,7 +232,8 @@ export function initStatusBar(element, opts = {}) {
 
     if (messageEl && messageEl.parentNode !== element && element)
       element.insertBefore(messageEl, element.firstChild);
-    if (messageEl && messageEl.parentNode === element) messageEl.textContent = visible;
+    if (messageEl && messageEl.parentNode === element)
+      messageEl.textContent = visible;
     else if (messageEl) messageEl.textContent = visible;
     else if (element) element.textContent = visible;
 

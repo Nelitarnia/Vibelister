@@ -51,7 +51,11 @@ export function getInferenceIndexAccessTests() {
         );
 
         targetVersion = 2;
-        const afterVersionBump = mapRowsToIndex([0, 1], sourceAccess, targetAccess);
+        const afterVersionBump = mapRowsToIndex(
+          [0, 1],
+          sourceAccess,
+          targetAccess,
+        );
         assert.deepStrictEqual(afterVersionBump, [1, 2]);
         assert.strictEqual(
           targetPairReads,

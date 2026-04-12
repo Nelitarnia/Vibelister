@@ -25,9 +25,12 @@ export const propertyStrategy = {
     const byInput = new Map();
     const byPhase = new Map();
     for (const target of targets) {
-      if (!Array.isArray(target.properties) || !target.properties.length) continue;
+      if (!Array.isArray(target.properties) || !target.properties.length)
+        continue;
       for (const prop of target.properties) {
-        const propertyKey = String(prop || "").trim().toLowerCase();
+        const propertyKey = String(prop || "")
+          .trim()
+          .toLowerCase();
         if (!propertyKey) continue;
         const inputKey = buildInputGroupKey(target, propertyKey);
         if (!byInput.has(inputKey)) byInput.set(inputKey, []);

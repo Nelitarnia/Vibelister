@@ -1,7 +1,10 @@
 // cleanup-controller.js
 // Provides analysis + mutation helpers for removing unreachable notes/comments.
 
-import { buildInteractionsPairs, canonicalSig } from "../data/variants/variants.js";
+import {
+  buildInteractionsPairs,
+  canonicalSig,
+} from "../data/variants/variants.js";
 import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
   INTERACTION_COMMENT_META_KEY,
@@ -26,7 +29,8 @@ const CLEANUP_ACTIONS = [
   {
     id: CLEANUP_ACTION_IDS.orphanNotes,
     label: "Remove unreachable notes",
-    description: "Delete notes for interactions or variants that no longer exist.",
+    description:
+      "Delete notes for interactions or variants that no longer exist.",
     kind: "notes",
     defaultSelected: true,
     collect: collectOrphanNotes,
@@ -34,7 +38,8 @@ const CLEANUP_ACTIONS = [
   {
     id: CLEANUP_ACTION_IDS.orphanEndVariants,
     label: "Remove invalid end references",
-    description: "Drop notes whose end-action variant references are no longer valid.",
+    description:
+      "Drop notes whose end-action variant references are no longer valid.",
     kind: "notes",
     defaultSelected: true,
     collect: collectOrphanEndVariants,
@@ -42,7 +47,8 @@ const CLEANUP_ACTIONS = [
   {
     id: CLEANUP_ACTION_IDS.orphanComments,
     label: "Prune orphaned interaction comments",
-    description: "Remove comments that target interactions which no longer exist.",
+    description:
+      "Remove comments that target interactions which no longer exist.",
     kind: "comments",
     defaultSelected: true,
     collect: collectOrphanComments,
@@ -176,7 +182,10 @@ function readInteractionCommentMeta(rowId, rowValue) {
   if (!rowValue || typeof rowValue !== "object") {
     return normalizeInteractionCommentMetadata(rowId, null);
   }
-  return normalizeInteractionCommentMetadata(rowId, rowValue[INTERACTION_COMMENT_META_KEY]);
+  return normalizeInteractionCommentMetadata(
+    rowId,
+    rowValue[INTERACTION_COMMENT_META_KEY],
+  );
 }
 
 function isInteractionMetaKey(columnKey) {
@@ -187,7 +196,8 @@ function baseKeyFromInteractionMeta(meta) {
   if (!meta || !meta.kind) return null;
   const kind = String(meta.kind || "").toUpperCase();
   if (kind === "AA") {
-    if (!Number.isFinite(meta.actionId) || !Number.isFinite(meta.rhsActionId)) return null;
+    if (!Number.isFinite(meta.actionId) || !Number.isFinite(meta.rhsActionId))
+      return null;
     return `aa|${meta.actionId}|${meta.rhsActionId}|${canonicalSig(meta.variantSig || "")}|${canonicalSig(meta.rhsVariantSig || "")}`;
   }
   const actionId = Number(meta.actionId);
@@ -277,24 +287,46 @@ function noteReferencesBypassedVariant(parsed, ctx) {
   const { bypassLookup, actionIdSet, inputIdSet } = ctx;
   if (!actionIdSet?.has(String(parsed.actionId))) return false;
   if (parsed.kind === "AI") {
-    if (!Number.isFinite(parsed.inputId) || !inputIdSet?.has(String(parsed.inputId))) {
+    if (
+      !Number.isFinite(parsed.inputId) ||
+      !inputIdSet?.has(String(parsed.inputId))
+    ) {
       return false;
     }
-    return isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
+    return isBypassedVariantSig(
+      bypassLookup,
+      parsed.actionId,
+      parsed.variantSig,
+    );
   }
   if (parsed.kind === "LEGACY_AI") {
-    if (Number.isFinite(parsed.inputId) && !inputIdSet?.has(String(parsed.inputId))) {
+    if (
+      Number.isFinite(parsed.inputId) &&
+      !inputIdSet?.has(String(parsed.inputId))
+    ) {
       return false;
     }
-    return isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
+    return isBypassedVariantSig(
+      bypassLookup,
+      parsed.actionId,
+      parsed.variantSig,
+    );
   }
   if (parsed.kind === "AA") {
-    const lhs = isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
+    const lhs = isBypassedVariantSig(
+      bypassLookup,
+      parsed.actionId,
+      parsed.variantSig,
+    );
     const rhsExists = Number.isFinite(parsed.rhsActionId)
       ? actionIdSet?.has(String(parsed.rhsActionId))
       : false;
     const rhs = rhsExists
-      ? isBypassedVariantSig(bypassLookup, parsed.rhsActionId, parsed.rhsVariantSig)
+      ? isBypassedVariantSig(
+          bypassLookup,
+          parsed.rhsActionId,
+          parsed.rhsVariantSig,
+        )
       : false;
     return lhs || rhs;
   }
@@ -305,15 +337,21 @@ function noteHasBypassedMismatch(parsed, validity, bypassLookup) {
   if (!parsed) return false;
   if (parsed.kind === "AI" || parsed.kind === "LEGACY_AI") {
     return (
-      !validity.left && isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig)
+      !validity.left &&
+      isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig)
     );
   }
   if (parsed.kind === "AA") {
     const leftBypassed =
-      !validity.left && isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
+      !validity.left &&
+      isBypassedVariantSig(bypassLookup, parsed.actionId, parsed.variantSig);
     const rightBypassed =
       !validity.right &&
-      isBypassedVariantSig(bypassLookup, parsed.rhsActionId, parsed.rhsVariantSig);
+      isBypassedVariantSig(
+        bypassLookup,
+        parsed.rhsActionId,
+        parsed.rhsVariantSig,
+      );
     return leftBypassed || rightBypassed;
   }
   return false;
@@ -338,7 +376,11 @@ function collectOrphanNotes(ctx) {
     if (!baseKey || !validBases.has(baseKey)) {
       if (
         skipBypass &&
-        noteReferencesBypassedVariant(parsed, { bypassLookup, actionIdSet, inputIdSet })
+        noteReferencesBypassedVariant(parsed, {
+          bypassLookup,
+          actionIdSet,
+          inputIdSet,
+        })
       ) {
         continue;
       }
@@ -350,15 +392,30 @@ function collectOrphanNotes(ctx) {
     let isValid = true;
     let validity = { left: true, right: true };
     if (parsed.kind === "AI" || parsed.kind === "LEGACY_AI") {
-      validity.left = hasVariant(variantCatalog, parsed.actionId, parsed.variantSig);
+      validity.left = hasVariant(
+        variantCatalog,
+        parsed.actionId,
+        parsed.variantSig,
+      );
       isValid = validity.left;
     } else if (parsed.kind === "AA") {
-      validity.left = hasVariant(variantCatalog, parsed.actionId, parsed.variantSig);
-      validity.right = hasVariant(variantCatalog, parsed.rhsActionId, parsed.rhsVariantSig);
+      validity.left = hasVariant(
+        variantCatalog,
+        parsed.actionId,
+        parsed.variantSig,
+      );
+      validity.right = hasVariant(
+        variantCatalog,
+        parsed.rhsActionId,
+        parsed.rhsVariantSig,
+      );
       isValid = validity.left && validity.right;
     }
     if (!isValid) {
-      if (skipBypass && noteHasBypassedMismatch(parsed, validity, bypassLookup)) {
+      if (
+        skipBypass &&
+        noteHasBypassedMismatch(parsed, validity, bypassLookup)
+      ) {
         continue;
       }
       targets.push(key);
@@ -416,7 +473,8 @@ function collectOrphanComments(ctx) {
   for (const [rowId, rowValue] of Object.entries(store)) {
     const meta = readInteractionCommentMeta(rowId, rowValue);
     const parsed = parsedNoteFromInteractionMeta(meta);
-    const baseKey = baseKeyFromInteractionMeta(meta) || baseKeyOf(String(rowId));
+    const baseKey =
+      baseKeyFromInteractionMeta(meta) || baseKeyOf(String(rowId));
     if (baseKey && validBases.has(baseKey)) {
       continue;
     }
@@ -459,7 +517,13 @@ function isPhaseAllowedForNote(model, parsed, phase, lookup) {
   if (!Number.isInteger(rowIndex)) return false;
   const column = { key: `p${phase}:outcome` };
   const viewDef = { columns: [column] };
-  return isInteractionPhaseColumnActiveForRow(model, viewDef, rowIndex, 0, column);
+  return isInteractionPhaseColumnActiveForRow(
+    model,
+    viewDef,
+    rowIndex,
+    0,
+    column,
+  );
 }
 
 function collectPhaseOverflowNotes(ctx) {
@@ -512,7 +576,8 @@ function collectPhaseOverflowNotes(ctx) {
       if (!rowValue || typeof rowValue !== "object") continue;
       const meta = readInteractionCommentMeta(rowId, rowValue);
       const parsed =
-        parsedNoteFromInteractionMeta(meta) || parseNoteKey(baseKeyOf(String(rowId)));
+        parsedNoteFromInteractionMeta(meta) ||
+        parseNoteKey(baseKeyOf(String(rowId)));
       const columnEntries = Object.entries(rowValue).filter(
         ([key]) => !isInteractionMetaKey(key),
       );
@@ -525,17 +590,24 @@ function collectPhaseOverflowNotes(ctx) {
           pk && Number.isFinite(pk.p)
             ? pk.p
             : meta && Number.isFinite(meta.phase)
-            ? meta.phase
-            : null;
+              ? meta.phase
+              : null;
         if (!Number.isFinite(phase)) continue;
         if (
           skipBypass &&
           parsed &&
-          noteReferencesBypassedVariant(parsed, { bypassLookup, actionIdSet, inputIdSet })
+          noteReferencesBypassedVariant(parsed, {
+            bypassLookup,
+            actionIdSet,
+            inputIdSet,
+          })
         ) {
           continue;
         }
-        if (!parsed || !isPhaseAllowedForNote(model, parsed, phase, phaseRowLookup)) {
+        if (
+          !parsed ||
+          !isPhaseAllowedForNote(model, parsed, phase, phaseRowLookup)
+        ) {
           invalidColumns.push(String(columnKey));
         }
       }
@@ -564,8 +636,8 @@ function deleteCommentTarget(rows, target) {
   if (!rows || typeof rows !== "object") return 0;
   const isObject = target && typeof target === "object";
   const rowId = isObject
-    ? target.rowId ?? target.id ?? target.commentRowId ?? null
-    : target ?? null;
+    ? (target.rowId ?? target.id ?? target.commentRowId ?? null)
+    : (target ?? null);
   if (rowId == null) return 0;
   const rowKey = String(rowId);
   if (isObject && Object.prototype.hasOwnProperty.call(target, "columnKey")) {
@@ -586,7 +658,8 @@ function applyTargets(model, analysis) {
   const removedById = new Map();
   let removedNotes = 0;
   let removedComments = 0;
-  const notes = model?.notes && typeof model.notes === "object" ? model.notes : null;
+  const notes =
+    model?.notes && typeof model.notes === "object" ? model.notes : null;
   const commentStore =
     model?.comments && typeof model.comments === "object"
       ? model.comments
@@ -681,8 +754,8 @@ function formatRunResult(analysis, applyResult, { apply } = {}) {
   const message = apply
     ? formatStatusMessage(applyResult)
     : totalCandidates
-    ? `Found ${formatCount(totalCandidates, "issue", "issues")} to clean up.`
-    : "No cleanup issues detected.";
+      ? `Found ${formatCount(totalCandidates, "issue", "issues")} to clean up.`
+      : "No cleanup issues detected.";
   return {
     applied: !!apply,
     totalCandidates,
@@ -697,7 +770,8 @@ function collectTargets(model, selectedActions, options = {}) {
   buildInteractionsPairs(model);
   const variantCatalog = buildVariantCatalogMap(model);
   const validBases = collectValidBaseKeys(model);
-  const notes = model?.notes && typeof model.notes === "object" ? model.notes : {};
+  const notes =
+    model?.notes && typeof model.notes === "object" ? model.notes : {};
   const noteEntries = Object.entries(notes);
   const bypassLookup = buildBypassLookup(model);
   const actionIdSet = buildIdSet(model?.actions);
@@ -723,7 +797,8 @@ function collectTargets(model, selectedActions, options = {}) {
     const result = collector(ctx) || { targets: [] };
     const normalizeTarget = (value) => {
       if (value == null) return value;
-      if (typeof value === "string" || typeof value === "number") return String(value);
+      if (typeof value === "string" || typeof value === "number")
+        return String(value);
       return value;
     };
     const rawTargets = Array.isArray(result.targets)
@@ -755,15 +830,25 @@ export function createCleanupController(options = {}) {
     }));
   }
 
-  function runCleanup({ actionIds = [], apply = false, includeBypassed = false } = {}) {
+  function runCleanup({
+    actionIds = [],
+    apply = false,
+    includeBypassed = false,
+  } = {}) {
     const ids = Array.isArray(actionIds)
       ? new Set(actionIds.filter((id) => typeof id === "string"))
       : new Set();
-    const selectedActions = CLEANUP_ACTIONS.filter((action) => ids.has(action.id));
+    const selectedActions = CLEANUP_ACTIONS.filter((action) =>
+      ids.has(action.id),
+    );
     if (!selectedActions.length) {
-      return formatRunResult({ actions: [], totalCandidates: 0 }, null, { apply });
+      return formatRunResult({ actions: [], totalCandidates: 0 }, null, {
+        apply,
+      });
     }
-    const analysis = collectTargets(model, selectedActions, { includeBypassed });
+    const analysis = collectTargets(model, selectedActions, {
+      includeBypassed,
+    });
     if (!apply) {
       return formatRunResult(analysis, null, { apply: false });
     }
@@ -783,11 +868,15 @@ export function createCleanupController(options = {}) {
         };
 
     if (typeof runModelMutation === "function") {
-      const mutationResult = runModelMutation("Cleanup", () => applyTargets(model, analysis), {
-        undo: undoOptions,
-        shouldRecord: (res) => (res?.removedTotal || 0) > 0,
-        status: formatStatusMessage,
-      });
+      const mutationResult = runModelMutation(
+        "Cleanup",
+        () => applyTargets(model, analysis),
+        {
+          undo: undoOptions,
+          shouldRecord: (res) => (res?.removedTotal || 0) > 0,
+          status: formatStatusMessage,
+        },
+      );
       return formatRunResult(analysis, mutationResult, { apply: true });
     }
 

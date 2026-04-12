@@ -33,7 +33,8 @@ export function createDiagnosticsController({
           getInteractionsCell: inter.getInteractionsCell,
           setInteractionsCell: inter.setInteractionsCell,
           getStructuredCellInteractions: inter.getStructuredCellInteractions,
-          applyStructuredCellInteractions: inter.applyStructuredCellInteractions,
+          applyStructuredCellInteractions:
+            inter.applyStructuredCellInteractions,
         };
 
         // Run model-level tests

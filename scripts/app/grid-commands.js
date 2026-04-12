@@ -62,7 +62,8 @@ export function createGridCommands(deps = {}) {
 
   function resolveCommentTarget(r, c, options = {}) {
     const activeView = options?.view || currentView();
-    const vd = options?.viewDef || viewDef?.() || { key: activeView, columns: [] };
+    const vd = options?.viewDef ||
+      viewDef?.() || { key: activeView, columns: [] };
     const columns = Array.isArray(vd.columns) ? vd.columns : [];
     const column = options?.column || columns[c];
     if (!column) return null;
@@ -87,7 +88,11 @@ export function createGridCommands(deps = {}) {
     return { activeView, vd, column, rowIdentity };
   }
 
-  function formatCommentUndoStatus(direction, context, defaultLabel = "comment edit") {
+  function formatCommentUndoStatus(
+    direction,
+    context,
+    defaultLabel = "comment edit",
+  ) {
     const change = context?.result?.change;
     let label = defaultLabel;
     if (change) {
@@ -284,10 +289,12 @@ export function createGridCommands(deps = {}) {
     const { mode: requestedMode, reason, skipStatus = false } = options || {};
     if (currentView() === "interactions") {
       const isAllCols = SelectionNS?.isAllCols?.() || false;
-      const mode = requestedMode || (isAllCols ? "clearAllEditable" : "clearActiveCell");
+      const mode =
+        requestedMode || (isAllCols ? "clearAllEditable" : "clearActiveCell");
       const extras = {};
       if (reason === "deleteAttempt" || reason === "menu") {
-        extras.statusHint = "Interactions are generated; rows can't be deleted.";
+        extras.statusHint =
+          "Interactions are generated; rows can't be deleted.";
       }
       if (reason) extras.reason = reason;
       if (skipStatus) extras.skipStatus = true;
@@ -376,7 +383,10 @@ export function createGridCommands(deps = {}) {
               continue;
             let cellChanged = false;
             if (col.kind) {
-              const changed = clearCellForKind?.(col.kind, kindCtx?.({ r, c, col, row }));
+              const changed = clearCellForKind?.(
+                col.kind,
+                kindCtx?.({ r, c, col, row }),
+              );
               if (changed) cellChanged = true;
             } else if (col.key) {
               const before = row[col.key];
@@ -434,7 +444,9 @@ export function createGridCommands(deps = {}) {
       for (const change of result.removedComments) {
         if (!change) continue;
         const target =
-          change.viewKey && change.viewKey !== vd?.key ? { viewKey: change.viewKey } : { vd };
+          change.viewKey && change.viewKey !== vd?.key
+            ? { viewKey: change.viewKey }
+            : { vd };
         emitCommentChange(change, target);
       }
     }
@@ -445,11 +457,12 @@ export function createGridCommands(deps = {}) {
       result?.message != null
         ? result.message
         : cleared > 0
-        ? `Cleared ${cleared} ${noun}.`
-        : "Nothing to clear.";
+          ? `Cleared ${cleared} ${noun}.`
+          : "Nothing to clear.";
 
     const summary = { cleared, message };
-    if (result?.removedComments?.length) summary.removedComments = result.removedComments;
+    if (result?.removedComments?.length)
+      summary.removedComments = result.removedComments;
     return summary;
   }
 
@@ -464,7 +477,8 @@ export function createGridCommands(deps = {}) {
     const arr = dataArray?.();
     if (!arr || !arr.length) return;
 
-    const rows = selection?.rows?.size > 0 ? Array.from(selection.rows) : [sel?.r];
+    const rows =
+      selection?.rows?.size > 0 ? Array.from(selection.rows) : [sel?.r];
     rows.sort((a, b) => b - a);
 
     const vd = viewDef?.() || { key: currentView(), columns: [] };
@@ -491,7 +505,8 @@ export function createGridCommands(deps = {}) {
           }
         }
 
-        const needsModifierRebuild = currentView() === "modifiers" && deletedIds.length > 0;
+        const needsModifierRebuild =
+          currentView() === "modifiers" && deletedIds.length > 0;
         if (needsModifierRebuild) {
           for (const a of model.actions) {
             if (!a.modSet) continue;
@@ -499,7 +514,10 @@ export function createGridCommands(deps = {}) {
           }
         }
 
-        const last = Math.max(0, Math.min(arr.length - 1, rows[rows.length - 1] ?? 0));
+        const last = Math.max(
+          0,
+          Math.min(arr.length - 1, rows[rows.length - 1] ?? 0),
+        );
 
         return { deletedIds, needsModifierRebuild, last, removedComments };
       },
@@ -553,7 +571,9 @@ export function createGridCommands(deps = {}) {
       for (const change of result.removedComments) {
         if (!change) continue;
         const target =
-          change.viewKey && change.viewKey !== vd?.key ? { viewKey: change.viewKey } : { vd };
+          change.viewKey && change.viewKey !== vd?.key
+            ? { viewKey: change.viewKey }
+            : { vd };
         emitCommentChange(change, target);
       }
     }
@@ -566,7 +586,8 @@ export function createGridCommands(deps = {}) {
     const col = vd?.columns?.[c];
     const activeView = currentView();
     const isColorColumn = String(col?.kind || "").toLowerCase() === "color";
-    const isModColumnKind = typeof isModColumn === "function" ? isModColumn(col) : false;
+    const isModColumnKind =
+      typeof isModColumn === "function" ? isModColumn(col) : false;
     const shouldSpreadDown =
       hasMultiSelection &&
       ((activeView === "interactions" && c === sel?.c) ||
@@ -726,7 +747,12 @@ export function createGridCommands(deps = {}) {
   function getCellComments(r, c, options = {}) {
     const target = resolveCommentTarget(r, c, options);
     if (!target) return [];
-    return listCommentsForCell(model, target.vd, target.rowIdentity, target.column);
+    return listCommentsForCell(
+      model,
+      target.vd,
+      target.rowIdentity,
+      target.column,
+    );
   }
 
   function getCellCommentClipboardPayload(r, c, options = {}) {

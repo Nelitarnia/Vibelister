@@ -19,7 +19,9 @@ function applySanitizedSettings(settings, model) {
   root.style.setProperty("--vl-color-cell-alt", colors.cellAlt);
   if (model && settings?.variantCaps) {
     const targetMeta =
-      model.meta && typeof model.meta === "object" ? model.meta : (model.meta = {});
+      model.meta && typeof model.meta === "object"
+        ? model.meta
+        : (model.meta = {});
     targetMeta.variantCaps = {
       variantCapPerAction: settings.variantCaps.variantCapPerAction,
       variantCapPerGroup: settings.variantCaps.variantCapPerGroup,
@@ -29,7 +31,10 @@ function applySanitizedSettings(settings, model) {
 
 function persistUserSettings(settings) {
   try {
-    window.localStorage?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    window.localStorage?.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify(settings),
+    );
   } catch (_) {}
 }
 
@@ -65,7 +70,9 @@ export function createSettingsController({ statusBar, model } = {}) {
         suggestedName: SETTINGS_FILE_NAME,
         handleKey: "settings",
       });
-      statusBar?.set(as ? `Settings saved as: ${name}` : `Settings saved: ${name}`);
+      statusBar?.set(
+        as ? `Settings saved as: ${name}` : `Settings saved: ${name}`,
+      );
       return { name, data };
     } catch (e) {
       if (e?.name === "AbortError") {

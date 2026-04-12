@@ -42,7 +42,8 @@ function formatTagList(value) {
 }
 
 function areTagListsEqual(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b)) return Array.isArray(a) === Array.isArray(b);
+  if (!Array.isArray(a) || !Array.isArray(b))
+    return Array.isArray(a) === Array.isArray(b);
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) return false;
@@ -543,14 +544,17 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     note.tags = tags;
     applyInteractionMetadata(note, metadata);
     if (changed || (!previousCount && tags.length)) {
-      emitInteractionTagChangeEvent({ type: "set" }, {
-        reason: "setCell",
-        noteKey: k,
-        phase: pk.p,
-        pair,
-        tags,
-        count: tags.length,
-      });
+      emitInteractionTagChangeEvent(
+        { type: "set" },
+        {
+          reason: "setCell",
+          noteKey: k,
+          phase: pk.p,
+          pair,
+          tags,
+          count: tags.length,
+        },
+      );
     }
     return finalize(true);
   }
@@ -576,7 +580,8 @@ export function applyStructuredCellInteractions(
     if (key !== "notes") return false;
 
     let type = payload?.type ? String(payload.type).toLowerCase() : null;
-    let data = payload && typeof payload.data === "object" ? payload.data : null;
+    let data =
+      payload && typeof payload.data === "object" ? payload.data : null;
 
     if (!type || !data) {
       const hasType = !!(payload && payload.type);
@@ -669,7 +674,11 @@ export function applyStructuredCellInteractions(
     };
   }
 
-  if (field === "tag" && type === "tag" && (data == null || data === undefined)) {
+  if (
+    field === "tag" &&
+    type === "tag" &&
+    (data == null || data === undefined)
+  ) {
     data = { tags: [] };
   }
 
@@ -947,18 +956,30 @@ export function clearInteractionsSelection(
         if (
           !(
             key === "notes" ||
-            (pk && (pk.field === "outcome" || pk.field === "end" || pk.field === "tag"))
+            (pk &&
+              (pk.field === "outcome" ||
+                pk.field === "end" ||
+                pk.field === "tag"))
           )
         )
           continue;
         const k = noteKeyForPair(pair, pk ? pk.p : undefined);
         const note = model.notes[k] || (model.notes[k] = {});
-        clearField(note, key, pk, { noteKey: k, pair, phase: pk ? pk.p : undefined });
+        clearField(note, key, pk, {
+          noteKey: k,
+          pair,
+          phase: pk ? pk.p : undefined,
+        });
         if (Object.keys(note).length === 0) delete model.notes[k];
         if (pk && pk.field === "outcome") {
           mirrorAaPhase0Outcome(model, pair, pk.p);
         }
-        const commentChange = deleteComment(model, viewDef, commentIdentity, column);
+        const commentChange = deleteComment(
+          model,
+          viewDef,
+          commentIdentity,
+          column,
+        );
         if (commentChange) cleared++;
       }
     }
@@ -981,7 +1002,10 @@ export function clearInteractionsSelection(
         const pk = parsePhaseKey(key);
         const editable =
           key === "notes" ||
-          (pk && (pk.field === "outcome" || pk.field === "end" || pk.field === "tag"));
+          (pk &&
+            (pk.field === "outcome" ||
+              pk.field === "end" ||
+              pk.field === "tag"));
         return editable ? { key, pk, column } : null;
       })
       .filter(Boolean);
@@ -1005,7 +1029,12 @@ export function clearInteractionsSelection(
         const phase = pk ? pk.p : undefined;
         const noteKey = noteKeyForPair(pair, phase);
         const note = model.notes[noteKey];
-        const commentChange = deleteComment(model, viewDef, commentIdentity, column);
+        const commentChange = deleteComment(
+          model,
+          viewDef,
+          commentIdentity,
+          column,
+        );
         if (commentChange) cleared++;
         if (!note) continue;
         const clearedBefore = cleared;
@@ -1041,7 +1070,12 @@ export function clearInteractionsSelection(
       ? extras.statusHint.trim()
       : "";
   let hint = rawHint;
-  if (!hint && extras && extras.reason === "cut" && mode === "clearAllEditable") {
+  if (
+    !hint &&
+    extras &&
+    extras.reason === "cut" &&
+    mode === "clearAllEditable"
+  ) {
     hint = "Interactions are generated; rows can't be deleted.";
   }
   const message = hint ? `${hint} ${clearedMsg}` : clearedMsg;
@@ -1056,6 +1090,7 @@ export function isInteractionsCellEditable(viewDef, r, c) {
   if (key === "notes") return true;
   const pk = parsePhaseKey(key);
   return !!(
-    pk && (pk.field === "outcome" || pk.field === "end" || pk.field === "tag")
+    pk &&
+    (pk.field === "outcome" || pk.field === "end" || pk.field === "tag")
   );
 }

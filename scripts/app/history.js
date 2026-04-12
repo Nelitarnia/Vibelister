@@ -22,9 +22,7 @@ function captureUndoAttachment({
 }) {
   const vd = typeof viewDef === "function" ? viewDef() : null;
   const cols = vd?.columns || [];
-  const colIndex = Number.isFinite(selectionCursor?.c)
-    ? selectionCursor.c
-    : 0;
+  const colIndex = Number.isFinite(selectionCursor?.c) ? selectionCursor.c : 0;
   const col = cols[colIndex] || null;
   const activeView =
     typeof getActiveView === "function" ? getActiveView() : undefined;
@@ -40,7 +38,10 @@ function captureUndoAttachment({
   };
 }
 
-function applyUndoAttachment(att, { setActiveView, SelectionCtl, ensureVisible }) {
+function applyUndoAttachment(
+  att,
+  { setActiveView, SelectionCtl, ensureVisible },
+) {
   if (!att) return;
   if (att.view && typeof setActiveView === "function") {
     setActiveView(att.view);
@@ -108,7 +109,8 @@ export function createHistoryController(deps = {}) {
       label,
       snapshotOptions,
       shouldRecord: (result, ctx) => {
-        if (typeof shouldRecord === "function") return !!shouldRecord(result, ctx);
+        if (typeof shouldRecord === "function")
+          return !!shouldRecord(result, ctx);
         return true;
       },
       captureAttachments: captureFn

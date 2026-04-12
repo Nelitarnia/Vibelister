@@ -16,7 +16,8 @@ function namesForVariant(model, sig) {
   for (const mod of model.modifiers || []) {
     const id = Number(mod?.id);
     if (!Number.isFinite(id)) continue;
-    if (typeof mod?.name === "string" && mod.name.trim()) nameById.set(id, mod.name);
+    if (typeof mod?.name === "string" && mod.name.trim())
+      nameById.set(id, mod.name);
   }
   const out = [];
   for (const id of sorted) {
@@ -49,7 +50,9 @@ function buildEntries(model, filter, showVariants) {
     if (Number.isFinite(id)) actionsById.set(id, action);
   }
 
-  const query = String(filter || "").trim().toLowerCase();
+  const query = String(filter || "")
+    .trim()
+    .toLowerCase();
   const results = [];
 
   for (const group of groups) {
@@ -69,7 +72,8 @@ function buildEntries(model, filter, showVariants) {
       const rowCount = Math.max(0, ensureNumber(variant?.rowCount, 0));
       if (!Number.isFinite(rowIndex) || rowCount <= 0) continue;
       totalRows += rowCount;
-      const variantSig = typeof variant?.variantSig === "string" ? variant.variantSig : "";
+      const variantSig =
+        typeof variant?.variantSig === "string" ? variant.variantSig : "";
       const fullLabel =
         formatEndActionLabel(model, action, variantSig, {
           style: "parentheses",
@@ -78,7 +82,8 @@ function buildEntries(model, filter, showVariants) {
       const displayLabel = modifierNames.length
         ? modifierNames.map((name) => `+${name}`).join(" ")
         : "No modifiers";
-      const searchSpace = `${actionName} ${fullLabel} ${displayLabel}`.toLowerCase();
+      const searchSpace =
+        `${actionName} ${fullLabel} ${displayLabel}`.toLowerCase();
       const matches = !query || searchSpace.includes(query);
       if (matches) variantMatches = true;
       variantEntries.push({
@@ -99,13 +104,15 @@ function buildEntries(model, filter, showVariants) {
     const combinedVariantLabels = variantEntries
       .map((entry) => entry.fullLabel.toLowerCase())
       .join(" ");
-    const actionMatches = !query || `${actionName.toLowerCase()} ${combinedVariantLabels}`.includes(query);
+    const actionMatches =
+      !query ||
+      `${actionName.toLowerCase()} ${combinedVariantLabels}`.includes(query);
     if (!actionMatches && !variantMatches) continue;
 
     const firstVariant = variantEntries[0];
     const actionRowIndex = Number.isFinite(group?.rowIndex)
       ? Number(group.rowIndex)
-      : firstVariant?.rowIndex ?? 0;
+      : (firstVariant?.rowIndex ?? 0);
 
     results.push({
       key: `action:${actionId}`,
@@ -131,7 +138,9 @@ function buildEntries(model, filter, showVariants) {
 
 function resolveActiveKey(model, selectionState, showVariants) {
   const cellState =
-    selectionState && typeof selectionState === "object" && "cell" in selectionState
+    selectionState &&
+    typeof selectionState === "object" &&
+    "cell" in selectionState
       ? selectionState.cell
       : selectionState;
   const row = Number(cellState?.r);
@@ -148,7 +157,8 @@ function resolveActiveKey(model, selectionState, showVariants) {
       if (!Number.isFinite(start) || count <= 0) continue;
       if (row >= start && row < start + count) {
         if (showVariants) {
-          const sig = typeof variant?.variantSig === "string" ? variant.variantSig : "";
+          const sig =
+            typeof variant?.variantSig === "string" ? variant.variantSig : "";
           return `variant:${actionId}:${sig || "_"}`;
         }
         return `action:${actionId}`;
@@ -258,7 +268,9 @@ export function createInteractionsOutline(options = {}) {
       return;
     }
     const key = resolveActiveKey(model, Selection, showVariants);
-    const buttons = Array.from(listEl.querySelectorAll(".sheet-sidebar__button"));
+    const buttons = Array.from(
+      listEl.querySelectorAll(".sheet-sidebar__button"),
+    );
     let target = null;
     for (const btn of buttons) {
       const matches = key && btn.dataset.entryKey === key;
@@ -287,7 +299,8 @@ export function createInteractionsOutline(options = {}) {
     for (const entry of entries) {
       const wrapper = document.createElement("div");
       wrapper.className = "sheet-sidebar__item";
-      if (entry.type === "variant") wrapper.classList.add("sheet-sidebar__item--variant");
+      if (entry.type === "variant")
+        wrapper.classList.add("sheet-sidebar__item--variant");
       wrapper.setAttribute("role", "listitem");
       const btn = document.createElement("button");
       btn.type = "button";
@@ -398,14 +411,17 @@ export function createInteractionsOutline(options = {}) {
     if (!actionEntries.length) return false;
 
     const actionKey = resolveActiveKey(model, Selection, false);
-    let currentIdx = actionEntries.findIndex((entry) => entry.key === actionKey);
+    let currentIdx = actionEntries.findIndex(
+      (entry) => entry.key === actionKey,
+    );
 
     if (currentIdx < 0 && Number.isFinite(sel?.r)) {
       const row = Number(sel.r);
       currentIdx = actionEntries.findIndex((entry) => {
         const start = Number(entry?.rowIndex);
         const count = Number(entry?.rowCount);
-        if (!Number.isFinite(start) || !Number.isFinite(count) || count <= 0) return false;
+        if (!Number.isFinite(start) || !Number.isFinite(count) || count <= 0)
+          return false;
         return row >= start && row < start + count;
       });
     }
@@ -429,8 +445,9 @@ export function createInteractionsOutline(options = {}) {
       ? entries
       : buildEntries(model, filter, true);
     const navEntries = Array.isArray(sourceEntries)
-      ? sourceEntries.filter((entry) =>
-          entry && (entry.type === "action" || entry.type === "variant"),
+      ? sourceEntries.filter(
+          (entry) =>
+            entry && (entry.type === "action" || entry.type === "variant"),
         )
       : [];
     if (!navEntries.length) return false;
@@ -537,12 +554,13 @@ export function createInteractionsOutline(options = {}) {
     activateButton(btn);
   });
 
-  const disposeSelection = typeof onSelectionChanged === "function"
-    ? onSelectionChanged(() => {
-        if (!active) return;
-        updateActiveFromSelection({ scrollIntoView: false });
-      })
-    : null;
+  const disposeSelection =
+    typeof onSelectionChanged === "function"
+      ? onSelectionChanged(() => {
+          if (!active) return;
+          updateActiveFromSelection({ scrollIntoView: false });
+        })
+      : null;
 
   function setActiveState(nextActive) {
     const prev = active;

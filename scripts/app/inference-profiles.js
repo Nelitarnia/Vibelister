@@ -78,7 +78,8 @@ function incrementCountsBucket(bucket, impact, nextValue, field, delta = 1) {
   if (nextValue) {
     const key = valueKey(field, nextValue);
     if (!key) return;
-    if (!bucket.values.has(key)) bucket.values.set(key, { count: 0, value: cloneValue(field, nextValue) });
+    if (!bucket.values.has(key))
+      bucket.values.set(key, { count: 0, value: cloneValue(field, nextValue) });
     const entry = bucket.values.get(key);
     entry.count += deltaValue;
     if (entry.count <= 0) bucket.values.delete(key);
@@ -90,8 +91,15 @@ function incrementBucket(bucket, impact, nextValue, field, phase, delta = 1) {
   incrementCountsBucket(bucket.all, impact, nextValue, field, delta);
   const phaseKey = normalizePhaseKey(phase);
   if (phaseKey == null) return;
-  if (!bucket.phases.has(phaseKey)) bucket.phases.set(phaseKey, createCountsBucket());
-  incrementCountsBucket(bucket.phases.get(phaseKey), impact, nextValue, field, delta);
+  if (!bucket.phases.has(phaseKey))
+    bucket.phases.set(phaseKey, createCountsBucket());
+  incrementCountsBucket(
+    bucket.phases.get(phaseKey),
+    impact,
+    nextValue,
+    field,
+    delta,
+  );
 }
 
 function computeImpact(field, previousValue, nextValue) {
@@ -194,7 +202,10 @@ function cloneBucket(bucket, field) {
 
 function cloneFieldBucket(fieldBucket, field) {
   if (!fieldBucket) {
-    return Object.freeze({ all: cloneBucket(null, field), phases: Object.freeze({}) });
+    return Object.freeze({
+      all: cloneBucket(null, field),
+      phases: Object.freeze({}),
+    });
   }
   const phases = {};
   for (const [key, bucket] of fieldBucket.phases.entries()) {
@@ -217,7 +228,10 @@ function cloneProfile(profile) {
 export function captureInferenceProfilesSnapshot(store) {
   const state = ensureStore(store);
   if (!state) {
-    return Object.freeze({ modifier: Object.freeze({}), input: Object.freeze({}) });
+    return Object.freeze({
+      modifier: Object.freeze({}),
+      input: Object.freeze({}),
+    });
   }
   decayProfiles(state);
   const snapshot = { modifier: {}, input: {} };

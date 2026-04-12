@@ -733,9 +733,7 @@ export function getPersistenceTests() {
           "reseeded action rows should remain blank placeholders",
         );
         assert.ok(
-          model.inputs
-            .slice(savedData.inputs.length)
-            .some((row) => !row.name),
+          model.inputs.slice(savedData.inputs.length).some((row) => !row.name),
           "reseeded input rows should remain blank placeholders",
         );
         assert.ok(

@@ -16,7 +16,13 @@ const FIXTURES = [
         interactionsMode: "legacy",
         columnWidths: { a: 120, b: -1, c: "w" },
       },
-      actions: [{ id: 1, modSet: { 1: true, 2: 99, 3: "requires" }, properties: [" a ", "", "a"] }],
+      actions: [
+        {
+          id: 1,
+          modSet: { 1: true, 2: 99, 3: "requires" },
+          properties: [" a ", "", "a"],
+        },
+      ],
       inputs: [{ name: "Input" }],
       modifiers: [{ name: "Mod" }],
       outcomes: [{ name: "Outcome" }],

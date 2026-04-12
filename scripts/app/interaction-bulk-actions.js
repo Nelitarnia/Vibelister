@@ -11,7 +11,8 @@ import {
 import { parsePhaseKey } from "../data/utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
-const OUT_OF_VIEW_STATUS = "Inference tools only work in the Interactions view.";
+const OUT_OF_VIEW_STATUS =
+  "Inference tools only work in the Interactions view.";
 const NO_TARGETS_STATUS =
   "Select Outcome, End, or Tag cells in the Interactions view to use inference tools.";
 
@@ -34,18 +35,21 @@ function normalizeUncertainty(value) {
   return num;
 }
 
-  function collectSelectionTargets({
-    model,
-    selection,
-    sel,
-    getActiveView,
+function collectSelectionTargets({
+  model,
+  selection,
+  sel,
+  getActiveView,
   viewDef,
-    getInteractionsPair,
-    filterField,
-  }) {
-    if (typeof getActiveView === "function" && getActiveView() !== "interactions") {
-      return { targets: [], allowed: false, reason: OUT_OF_VIEW_STATUS };
-    }
+  getInteractionsPair,
+  filterField,
+}) {
+  if (
+    typeof getActiveView === "function" &&
+    getActiveView() !== "interactions"
+  ) {
+    return { targets: [], allowed: false, reason: OUT_OF_VIEW_STATUS };
+  }
   const vd = typeof viewDef === "function" ? viewDef() : viewDef;
   const cols = Array.isArray(vd?.columns) ? vd.columns : [];
   const colSet = selection?.colsAll
@@ -109,7 +113,12 @@ export function createInteractionBulkActions(options = {}) {
   }
 
   function toggleUncertain() {
-    const { targets, allowed, viewDef: vd, reason } = collectSelectionTargets({
+    const {
+      targets,
+      allowed,
+      viewDef: vd,
+      reason,
+    } = collectSelectionTargets({
       model,
       selection,
       sel,
@@ -119,7 +128,8 @@ export function createInteractionBulkActions(options = {}) {
     });
     if (!allowed) {
       const status =
-        reason || "Default uncertainty can only be applied in the Interactions view.";
+        reason ||
+        "Default uncertainty can only be applied in the Interactions view.";
       statusBar?.set?.(status);
       return { status };
     }
@@ -134,7 +144,12 @@ export function createInteractionBulkActions(options = {}) {
       "Set inferred uncertainty",
       () => {
         const notes = model?.notes || (model.notes = {});
-        const result = { updated: 0, skippedInactive: 0, unchanged: 0, inspected: 0 };
+        const result = {
+          updated: 0,
+          skippedInactive: 0,
+          unchanged: 0,
+          inspected: 0,
+        };
         for (const target of targets) {
           const active = isInteractionPhaseColumnActiveForRow(
             model,
@@ -191,7 +206,12 @@ export function createInteractionBulkActions(options = {}) {
   }
 
   function summarizeSelectionInference() {
-    const { targets, allowed, viewDef: vd, reason } = collectSelectionTargets({
+    const {
+      targets,
+      allowed,
+      viewDef: vd,
+      reason,
+    } = collectSelectionTargets({
       model,
       selection,
       sel,
@@ -199,7 +219,8 @@ export function createInteractionBulkActions(options = {}) {
       viewDef,
       getInteractionsPair,
     });
-    if (!allowed) return { allowed: false, status: reason || OUT_OF_VIEW_STATUS };
+    if (!allowed)
+      return { allowed: false, status: reason || OUT_OF_VIEW_STATUS };
     if (!targets.length) return { allowed: true, count: 0 };
 
     const summary = {
@@ -224,7 +245,8 @@ export function createInteractionBulkActions(options = {}) {
       const confidence = normalizeInteractionConfidence(info?.confidence);
       const source = normalizeInteractionSource(info?.source);
       if (summary.confidence == null) summary.confidence = confidence;
-      else if (summary.confidence !== confidence) summary.confidenceMixed = true;
+      else if (summary.confidence !== confidence)
+        summary.confidenceMixed = true;
       if (summary.source == null) summary.source = source;
       else if (summary.source !== source) summary.sourceMixed = true;
       summary.count++;
@@ -243,7 +265,8 @@ export function createInteractionBulkActions(options = {}) {
       getInteractionsPair,
     });
     if (!allowed) {
-      const status = reason || "Accepting inferred values only works in Interactions.";
+      const status =
+        reason || "Accepting inferred values only works in Interactions.";
       statusBar?.set?.(status);
       return { status };
     }
@@ -314,7 +337,8 @@ export function createInteractionBulkActions(options = {}) {
       getInteractionsPair,
     });
     if (!allowed) {
-      const status = reason || "Clearing inferred metadata only works in Interactions.";
+      const status =
+        reason || "Clearing inferred metadata only works in Interactions.";
       statusBar?.set?.(status);
       return { status };
     }
@@ -359,7 +383,9 @@ export function createInteractionBulkActions(options = {}) {
               delete note.endVariantSig;
               delete note.endFree;
             } else if (target.field === "tag") {
-              const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
+              const previous = Array.isArray(note.tags)
+                ? note.tags.slice()
+                : [];
               delete note.tags;
               if (previous.length) {
                 emitInteractionTagChangeEvent(null, {
@@ -400,7 +426,9 @@ export function createInteractionBulkActions(options = {}) {
           const skippedParts = [];
           if (manual) skippedParts.push(`${manual} manual`);
           if (empty) skippedParts.push(`${empty} empty`);
-          const removedNote = removed ? ` Removed ${removed} empty entr${removed === 1 ? "y" : "ies"}.` : "";
+          const removedNote = removed
+            ? ` Removed ${removed} empty entr${removed === 1 ? "y" : "ies"}.`
+            : "";
           const skippedText = skippedParts.length
             ? ` (left ${skippedParts.join(", ")} unchanged)`
             : "";

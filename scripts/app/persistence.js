@@ -128,7 +128,9 @@ export function createPersistenceController({
       for (const row of seededRows) {
         const dualName = DEFAULT_OUTCOME_DUAL_OF[row.name];
         if (!dualName) continue;
-        const target = seededRows.find((candidate) => candidate.name === dualName);
+        const target = seededRows.find(
+          (candidate) => candidate.name === dualName,
+        );
         if (target) row.dualof = target.id;
       }
     }
@@ -164,7 +166,8 @@ export function createPersistenceController({
   }
 
   function countNamedRows(rows) {
-    return (rows || []).filter((row) => row && (row.name || "").trim().length).length;
+    return (rows || []).filter((row) => row && (row.name || "").trim().length)
+      .length;
   }
 
   function upgradeModelInPlace(o) {

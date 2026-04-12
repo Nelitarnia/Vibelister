@@ -22,7 +22,10 @@ import {
   HEURISTIC_SOURCES,
   proposeInteractionInferences,
 } from "../../../app/inference-heuristics.js";
-import { captureInferenceProfilesSnapshot, resetInferenceProfiles } from "../../../app/inference-profiles.js";
+import {
+  captureInferenceProfilesSnapshot,
+  resetInferenceProfiles,
+} from "../../../app/inference-profiles.js";
 import { setComment } from "../../../app/comments.js";
 import { initPalette } from "../../../ui/palette.js";
 import { formatEndActionLabel } from "../../../data/column-kinds.js";
@@ -32,7 +35,11 @@ import { MOD_STATE_ID } from "../../../data/mod-state.js";
 import { makeModelFixture } from "./model-fixtures.js";
 
 function plainCellText(value) {
-  if (value && typeof value === "object" && typeof value.plainText === "string") {
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof value.plainText === "string"
+  ) {
     return value.plainText;
   }
   if (value == null) return "";
@@ -180,7 +187,10 @@ function stubGlobalValue(name, replacement) {
     };
   }
 
-  if (Object.prototype.hasOwnProperty.call(descriptor, "value") && descriptor.writable) {
+  if (
+    Object.prototype.hasOwnProperty.call(descriptor, "value") &&
+    descriptor.writable
+  ) {
     globalThis[name] = replacement;
     return () => {
       globalThis[name] = previous;
@@ -398,7 +408,10 @@ export function getInteractionsTests() {
           4242,
           "cache rebuilds when baseVersion changes",
         );
-        assert.ok(updatedPair && updatedPair.kind === "AI", "pair shape preserved");
+        assert.ok(
+          updatedPair && updatedPair.kind === "AI",
+          "pair shape preserved",
+        );
       },
     },
     {
@@ -418,12 +431,26 @@ export function getInteractionsTests() {
         );
         assert.ok(rowIndex >= 0, "pair for action/input present");
 
-        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 2, outcome.id);
+        setInteractionsCell(
+          model,
+          { set() {} },
+          viewDef,
+          rowIndex,
+          2,
+          outcome.id,
+        );
         setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 3, {
           endActionId: followUp.id,
           endVariantSig: "",
         });
-        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 4, "combo notes");
+        setInteractionsCell(
+          model,
+          { set() {} },
+          viewDef,
+          rowIndex,
+          4,
+          "combo notes",
+        );
 
         const selection = {
           rows: new Set([rowIndex]),
@@ -443,7 +470,11 @@ export function getInteractionsTests() {
           () => {},
         );
 
-        assert.strictEqual(result?.cleared, 4, "clears outcome, end, and notes fields");
+        assert.strictEqual(
+          result?.cleared,
+          4,
+          "clears outcome, end, and notes fields",
+        );
 
         const pair = getPair(model, rowIndex);
         const phaseKey = noteKeyForPair(pair, 1);
@@ -469,12 +500,26 @@ export function getInteractionsTests() {
         );
         assert.ok(rowIndex >= 0, "pair for action/input present");
 
-        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 2, outcome.id);
+        setInteractionsCell(
+          model,
+          { set() {} },
+          viewDef,
+          rowIndex,
+          2,
+          outcome.id,
+        );
         setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 3, {
           endActionId: followUp.id,
           endVariantSig: "",
         });
-        setInteractionsCell(model, { set() {} }, viewDef, rowIndex, 4, "combo notes");
+        setInteractionsCell(
+          model,
+          { set() {} },
+          viewDef,
+          rowIndex,
+          4,
+          "combo notes",
+        );
 
         const selection = {
           rows: new Set([rowIndex]),
@@ -591,7 +636,12 @@ export function getInteractionsTests() {
         const noteText = "remember this";
         setInteractionsCell(model, { set() {} }, viewDef, 0, 4, noteText);
 
-        const payloadNotes = getStructuredCellInteractions(model, viewDef, 0, 4);
+        const payloadNotes = getStructuredCellInteractions(
+          model,
+          viewDef,
+          0,
+          4,
+        );
         assert.deepStrictEqual(
           payloadNotes,
           { type: "notes", data: { notes: noteText } },
@@ -609,7 +659,8 @@ export function getInteractionsTests() {
         buildInteractionsPairs(model);
 
         const applied = applyStructuredCellInteractions(
-          (r, c, v) => setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
+          (r, c, v) =>
+            setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
           viewDef,
           1,
           4,
@@ -682,7 +733,8 @@ export function getInteractionsTests() {
         addInput("Kick");
         buildInteractionsPairs(model);
         const applied = applyStructuredCellInteractions(
-          (r, c, v) => setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
+          (r, c, v) =>
+            setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
           viewDef,
           1,
           2,
@@ -825,7 +877,14 @@ export function getInteractionsTests() {
             "set event carries tag payload",
           );
 
-          const clearResult = setInteractionsCell(model, status, tagView, 0, 0, []);
+          const clearResult = setInteractionsCell(
+            model,
+            status,
+            tagView,
+            0,
+            0,
+            [],
+          );
           assert.ok(clearResult, "clearing tags via setInteractionsCell works");
           assert.strictEqual(events.length, 1, "clearing emits an event");
           const clearEvent = events.pop();
@@ -853,7 +912,11 @@ export function getInteractionsTests() {
 
           setInteractionsCell(model, status, tagView, 0, 0, ["again"]);
           events.length = 0;
-          const selection = { rows: new Set([0]), cols: new Set([0]), colsAll: false };
+          const selection = {
+            rows: new Set([0]),
+            cols: new Set([0]),
+            colsAll: false,
+          };
           const sel = { r: 0, c: 0 };
           const selectionClear = clearInteractionsSelection(
             model,
@@ -864,7 +927,10 @@ export function getInteractionsTests() {
             status,
             () => {},
           );
-          assert.ok(selectionClear?.cleared > 0, "selection clear removes tags");
+          assert.ok(
+            selectionClear?.cleared > 0,
+            "selection clear removes tags",
+          );
           assert.ok(events.length >= 1, "selection clear dispatches event");
           const selectionEvent = events[events.length - 1];
           assert.strictEqual(
@@ -931,8 +997,16 @@ export function getInteractionsTests() {
           );
 
           const renameUndo = undoConfigs[0];
-          assert.strictEqual(renameUndo.includeLocation, false, "rename undo omits location");
-          assert.strictEqual(renameUndo.includeColumn, false, "rename undo omits column");
+          assert.strictEqual(
+            renameUndo.includeLocation,
+            false,
+            "rename undo omits location",
+          );
+          assert.strictEqual(
+            renameUndo.includeColumn,
+            false,
+            "rename undo omits column",
+          );
           assert.strictEqual(
             typeof renameUndo.applyAttachments,
             "function",
@@ -953,7 +1027,11 @@ export function getInteractionsTests() {
           events.length = 0;
 
           const deleteResult = manager.deleteTag("setup");
-          assert.strictEqual(deleteResult.removals, 1, "delete removes matching tags");
+          assert.strictEqual(
+            deleteResult.removals,
+            1,
+            "delete removes matching tags",
+          );
           assert.deepStrictEqual(
             collectInteractionTags(model),
             ["momentum"],
@@ -965,8 +1043,16 @@ export function getInteractionsTests() {
           );
 
           const deleteUndo = undoConfigs[1];
-          assert.strictEqual(deleteUndo.includeLocation, false, "delete undo omits location");
-          assert.strictEqual(deleteUndo.includeColumn, false, "delete undo omits column");
+          assert.strictEqual(
+            deleteUndo.includeLocation,
+            false,
+            "delete undo omits location",
+          );
+          assert.strictEqual(
+            deleteUndo.includeColumn,
+            false,
+            "delete undo omits column",
+          );
           assert.strictEqual(
             typeof deleteUndo.applyAttachments,
             "function",
@@ -1178,7 +1264,10 @@ export function getInteractionsTests() {
           statusClear,
           () => {},
         );
-        assert.ok(result?.cleared > 0, "selection clear reports entries cleared");
+        assert.ok(
+          result?.cleared > 0,
+          "selection clear reports entries cleared",
+        );
         const sourceAfterSelectionClear = getInteractionsCell(
           model,
           viewDef,
@@ -1212,15 +1301,15 @@ export function getInteractionsTests() {
         const pair = getPair(model, rowIndex);
         const column = viewDef.columns[2];
         const commentRowId = noteKeyForPair(pair, undefined);
-        setComment(
-          model,
-          viewDef,
-          { commentRowId },
-          column,
-          { text: "annotate" },
-        );
+        setComment(model, viewDef, { commentRowId }, column, {
+          text: "annotate",
+        });
 
-        const selection = { rows: new Set([rowIndex]), cols: new Set([2]), colsAll: false };
+        const selection = {
+          rows: new Set([rowIndex]),
+          cols: new Set([2]),
+          colsAll: false,
+        };
         const sel = { r: rowIndex, c: 2 };
         const status = { set() {} };
         const result = clearInteractionsSelection(
@@ -1243,7 +1332,8 @@ export function getInteractionsTests() {
     {
       name: "AA variant pairs cover all modifier combinations",
       run(assert) {
-        const { model, addAction, addModifier, groupExact } = makeModelFixture();
+        const { model, addAction, addModifier, groupExact } =
+          makeModelFixture();
         model.meta.interactionsMode = "AA";
         const boost = addModifier("Boost");
         const guard = addModifier("Guard");
@@ -1262,7 +1352,11 @@ export function getInteractionsTests() {
 
         const result = buildInteractionsPairs(model);
 
-        assert.strictEqual(result.capped, false, "AA combinations remain within cap");
+        assert.strictEqual(
+          result.capped,
+          false,
+          "AA combinations remain within cap",
+        );
         assert.strictEqual(result.cappedActions, 0, "no AA actions truncated");
         assert.strictEqual(
           result.pairsCount,
@@ -1275,7 +1369,12 @@ export function getInteractionsTests() {
           [boost.id, cancel.id],
           [guard.id, feint.id],
           [guard.id, cancel.id],
-        ].map((combo) => combo.slice().sort((a, b) => a - b).join("+"));
+        ].map((combo) =>
+          combo
+            .slice()
+            .sort((a, b) => a - b)
+            .join("+"),
+        );
 
         const leftGroup = model.interactionsIndex.groups.find(
           (group) => group.actionId === left.id,
@@ -1286,8 +1385,14 @@ export function getInteractionsTests() {
         assert.ok(leftGroup, "left action group present");
         assert.ok(rightGroup, "right action group present");
 
-        const leftVariants = leftGroup.variants.map((v) => v.variantSig).slice().sort();
-        const rightVariants = rightGroup.variants.map((v) => v.variantSig).slice().sort();
+        const leftVariants = leftGroup.variants
+          .map((v) => v.variantSig)
+          .slice()
+          .sort();
+        const rightVariants = rightGroup.variants
+          .map((v) => v.variantSig)
+          .slice()
+          .sort();
         assert.deepStrictEqual(
           leftVariants,
           expectedVariants.slice().sort(),
@@ -1307,7 +1412,8 @@ export function getInteractionsTests() {
             leftRightPairs.push(pair);
           }
         }
-        const expectedPairCount = expectedVariants.length * expectedVariants.length;
+        const expectedPairCount =
+          expectedVariants.length * expectedVariants.length;
         assert.strictEqual(
           leftRightPairs.length,
           expectedPairCount,
@@ -1394,14 +1500,28 @@ export function getInteractionsTests() {
           "end column shows canonical modifier order",
         );
         const segments = cellSegments(cell);
-        assert.ok(Array.isArray(segments) && segments.length >= 5, "segments emitted");
+        assert.ok(
+          Array.isArray(segments) && segments.length >= 5,
+          "segments emitted",
+        );
         const riseSegment = segments.find((seg) => seg.text === "Rise");
         const fallSegment = segments.find((seg) => seg.text === "Fall");
-        assert.strictEqual(riseSegment?.foreground, "#ff0000", "Rise uses color2 foreground");
-        assert.strictEqual(fallSegment?.foreground, "#00ff00", "Fall uses color2 foreground");
+        assert.strictEqual(
+          riseSegment?.foreground,
+          "#ff0000",
+          "Rise uses color2 foreground",
+        );
+        assert.strictEqual(
+          fallSegment?.foreground,
+          "#00ff00",
+          "Fall uses color2 foreground",
+        );
         const riseIndex = segments.indexOf(riseSegment);
         const fallIndex = segments.indexOf(fallSegment);
-        assert.ok(riseIndex >= 0 && fallIndex > riseIndex, "modifier segments preserve canonical order");
+        assert.ok(
+          riseIndex >= 0 && fallIndex > riseIndex,
+          "modifier segments preserve canonical order",
+        );
       },
     },
     {
@@ -1415,7 +1535,10 @@ export function getInteractionsTests() {
         const action = addAction("Lift");
         addInput("Up");
         buildInteractionsPairs(model);
-        assert.ok(getInteractionsRowCount(model) > 0, "pairs built for AI mode");
+        assert.ok(
+          getInteractionsRowCount(model) > 0,
+          "pairs built for AI mode",
+        );
         const actionGroup = model.interactionsIndex.groups.find(
           (group) => group.actionId === action.id,
         );
@@ -1432,11 +1555,22 @@ export function getInteractionsTests() {
           "action column plain text matches legacy format",
         );
         const segments = cellSegments(cell);
-        assert.ok(Array.isArray(segments) && segments.length >= 5, "action column emits segments");
+        assert.ok(
+          Array.isArray(segments) && segments.length >= 5,
+          "action column emits segments",
+        );
         const riseSegment = segments.find((seg) => seg.text === "Rise");
         const fallSegment = segments.find((seg) => seg.text === "Fall");
-        assert.strictEqual(riseSegment?.foreground, "#ff0000", "Rise segment uses color2 foreground");
-        assert.strictEqual(fallSegment?.foreground, "#00ff00", "Fall segment uses color2 foreground");
+        assert.strictEqual(
+          riseSegment?.foreground,
+          "#ff0000",
+          "Rise segment uses color2 foreground",
+        );
+        assert.strictEqual(
+          fallSegment?.foreground,
+          "#00ff00",
+          "Fall segment uses color2 foreground",
+        );
       },
     },
     {
@@ -1502,9 +1636,13 @@ export function getInteractionsTests() {
           "rhs action emits segments",
         );
 
-        const boostLeftSegment = leftSegments.find((seg) => seg.text === "Boost");
+        const boostLeftSegment = leftSegments.find(
+          (seg) => seg.text === "Boost",
+        );
         const guardSegment = leftSegments.find((seg) => seg.text === "Guard");
-        const boostRightSegment = rightSegments.find((seg) => seg.text === "Boost");
+        const boostRightSegment = rightSegments.find(
+          (seg) => seg.text === "Boost",
+        );
         assert.strictEqual(
           boostLeftSegment?.foreground,
           "#aa0000",
@@ -1593,13 +1731,17 @@ export function getInteractionsTests() {
           (child) => child.className === "pal-item",
         );
         assert.ok(paletteItems.length >= 1, "palette should render items");
-        const item = paletteItems.find((child) =>
-          Array.isArray(child.children) &&
-          child.children.some((grand) => grand.tag === "span"),
+        const item = paletteItems.find(
+          (child) =>
+            Array.isArray(child.children) &&
+            child.children.some((grand) => grand.tag === "span"),
         );
         assert.ok(item, "palette item created for action variant");
         const spans = item.children.filter((child) => child.tag === "span");
-        assert.ok(spans.length >= 5, "rich text spans rendered for palette item");
+        assert.ok(
+          spans.length >= 5,
+          "rich text spans rendered for palette item",
+        );
 
         const riseSpan = spans.find((child) => child.textContent === "Rise");
         const fallSpan = spans.find((child) => child.textContent === "Fall");
@@ -1684,7 +1826,9 @@ export function getInteractionsTests() {
         const listEl = paletteRoot?.children?.[0];
         assert.ok(listEl, "palette rendered item list");
         const items = Array.isArray(listEl?.children) ? listEl.children : [];
-        const firstItem = items.find((child) => child && child.className === "pal-item");
+        const firstItem = items.find(
+          (child) => child && child.className === "pal-item",
+        );
         assert.ok(firstItem, "palette rendered at least one variant item");
         const spanTexts = Array.isArray(firstItem?.children)
           ? firstItem.children.map((child) => child?.textContent || "")
@@ -1775,14 +1919,24 @@ export function getInteractionsTests() {
         const listEl = paletteRoot?.children?.[0];
         assert.ok(listEl, "palette list rendered");
 
-        const items = listEl.children.filter((child) => child.className === "pal-item");
-        assert.ok(items.length >= 2, "palette lists typed entry and suggestion");
+        const items = listEl.children.filter(
+          (child) => child.className === "pal-item",
+        );
+        assert.ok(
+          items.length >= 2,
+          "palette lists typed entry and suggestion",
+        );
 
         const firstItem = items[0];
-        const firstLabel = firstItem.children?.[0]?.textContent || firstItem.textContent;
+        const firstLabel =
+          firstItem.children?.[0]?.textContent || firstItem.textContent;
         assert.strictEqual(firstLabel, "rush", "typed tags appear first");
         const firstDesc = firstItem.children?.[1]?.textContent || "";
-        assert.strictEqual(firstDesc, "Keep current tags", "typed entry describes current state");
+        assert.strictEqual(
+          firstDesc,
+          "Keep current tags",
+          "typed entry describes current state",
+        );
 
         const suggestion = items.find(
           (child) => child.children?.[0]?.textContent === "setup",
@@ -1806,7 +1960,11 @@ export function getInteractionsTests() {
           confidence: 0.4,
           sourceMetadata: { sources: ["phase-adjacency"] },
         });
-        assert.strictEqual(inferred.inferred, true, "non-manual source inferred");
+        assert.strictEqual(
+          inferred.inferred,
+          true,
+          "non-manual source inferred",
+        );
         assert.strictEqual(inferred.source, "model");
         assert.strictEqual(inferred.confidence, 0.4);
         assert.deepStrictEqual(
@@ -1816,7 +1974,11 @@ export function getInteractionsTests() {
         );
 
         const confOnly = describeInteractionInference({ confidence: 0.25 });
-        assert.strictEqual(confOnly.inferred, true, "low confidence still inferred");
+        assert.strictEqual(
+          confOnly.inferred,
+          true,
+          "low confidence still inferred",
+        );
       },
     },
     {
@@ -1869,7 +2031,9 @@ export function getInteractionsTests() {
 
         const suggestions = proposeInteractionInferences(targets);
         const modPair = getPair(model, 2);
-        const modSuggestion = suggestions.get(noteKeyForPair(modPair, 1))?.outcome;
+        const modSuggestion = suggestions.get(
+          noteKeyForPair(modPair, 1),
+        )?.outcome;
         assert.ok(modSuggestion, "modifier row received suggestion");
         assert.strictEqual(
           modSuggestion.source,
@@ -1886,7 +2050,8 @@ export function getInteractionsTests() {
     {
       name: "higher-confidence suggestions replace earlier heuristics",
       run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome } = makeModelFixture();
+        const { model, addAction, addInput, addModifier, addOutcome } =
+          makeModelFixture();
         const action = addAction("Blend");
         const modifier = addModifier("Charged");
         const outcome = addOutcome("Stun");
@@ -1957,7 +2122,9 @@ export function getInteractionsTests() {
           profileTrendMinPreferenceRatio: 0,
         });
         const inferredPair = getPair(model, 1);
-        const suggestion = suggestions.get(noteKeyForPair(inferredPair, 1))?.outcome;
+        const suggestion = suggestions.get(
+          noteKeyForPair(inferredPair, 1),
+        )?.outcome;
 
         assert.ok(suggestion, "modifier row receives a suggestion");
         assert.strictEqual(
@@ -1971,7 +2138,8 @@ export function getInteractionsTests() {
     {
       name: "consensus ignores inferred anchors unless opted in",
       run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome } = makeModelFixture();
+        const { model, addAction, addInput, addModifier, addOutcome } =
+          makeModelFixture();
         const action = addAction("Resin");
         const modifierA = addModifier("Twist");
         const modifierB = addModifier("Jab");
@@ -2058,7 +2226,8 @@ export function getInteractionsTests() {
     {
       name: "lower-confidence suggestions cannot displace existing ones",
       run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome } = makeModelFixture();
+        const { model, addAction, addInput, addModifier, addOutcome } =
+          makeModelFixture();
         const action = addAction("Crash");
         const modifier = addModifier("Brutal");
         const outcome = addOutcome("Knockdown");
@@ -2103,7 +2272,9 @@ export function getInteractionsTests() {
 
         const suggestions = proposeInteractionInferences(targets);
         const inferredPair = getPair(model, 1);
-        const suggestion = suggestions.get(noteKeyForPair(inferredPair, 1))?.outcome;
+        const suggestion = suggestions.get(
+          noteKeyForPair(inferredPair, 1),
+        )?.outcome;
 
         assert.ok(suggestion, "modifier row receives a suggestion");
         assert.strictEqual(
@@ -2223,8 +2394,12 @@ export function getInteractionsTests() {
           return { model, outcome, pair, targets };
         };
 
-        const { model: divergentModel, outcome: divergentOutcome, pair: divergentPair, targets: divergentTargets } =
-          setupGapTargets([0, 1, 2]);
+        const {
+          model: divergentModel,
+          outcome: divergentOutcome,
+          pair: divergentPair,
+          targets: divergentTargets,
+        } = setupGapTargets([0, 1, 2]);
         const startKey = noteKeyForPair(divergentPair, 0);
         const endKey = noteKeyForPair(divergentPair, 2);
         divergentModel.notes[startKey] = {
@@ -2239,9 +2414,15 @@ export function getInteractionsTests() {
           target.note = divergentModel.notes[target.key];
         }
 
-        const divergentSuggestions = proposeInteractionInferences(divergentTargets);
-        const divergentGap = divergentSuggestions.get(noteKeyForPair(divergentPair, 1))?.outcome;
-        assert.ok(!divergentGap, "no suggestion when anchors disagree on source");
+        const divergentSuggestions =
+          proposeInteractionInferences(divergentTargets);
+        const divergentGap = divergentSuggestions.get(
+          noteKeyForPair(divergentPair, 1),
+        )?.outcome;
+        assert.ok(
+          !divergentGap,
+          "no suggestion when anchors disagree on source",
+        );
       },
     },
     {
@@ -2373,7 +2554,9 @@ export function getInteractionsTests() {
                     change: 0,
                     noop: 5,
                     clear: 0,
-                    values: { "o:999": { count: 5, value: { outcomeId: 999 } } },
+                    values: {
+                      "o:999": { count: 5, value: { outcomeId: 999 } },
+                    },
                   },
                 },
               },
@@ -2467,7 +2650,9 @@ export function getInteractionsTests() {
         }
 
         const suggestions = proposeInteractionInferences(targets);
-        const interiorSuggestion = suggestions.get(noteKeyForPair(pair, 2))?.outcome;
+        const interiorSuggestion = suggestions.get(
+          noteKeyForPair(pair, 2),
+        )?.outcome;
         assert.ok(
           !interiorSuggestion,
           "intervening differing values prevent spanning the gap",
@@ -2526,7 +2711,11 @@ export function getInteractionsTests() {
           phaseAdjacencyEnabled: false,
         };
 
-        const suggestions = proposeInteractionInferences(targets, null, overrides);
+        const suggestions = proposeInteractionInferences(
+          targets,
+          null,
+          overrides,
+        );
         const gap = suggestions.get(noteKeyForPair(pair, 1))?.outcome;
 
         assert.ok(!gap, "disabling phase adjacency suppresses gap suggestions");
@@ -2585,12 +2774,19 @@ export function getInteractionsTests() {
           phaseAdjacencyEnabled: true,
         };
 
-        const suggestions = proposeInteractionInferences(targets, null, overrides);
+        const suggestions = proposeInteractionInferences(
+          targets,
+          null,
+          overrides,
+        );
         const gapOne = suggestions.get(noteKeyForPair(pair, 1))?.outcome;
         const gapTwo = suggestions.get(noteKeyForPair(pair, 2))?.outcome;
 
         assert.ok(!gapOne, "gaps beyond the tightened max gap are ignored");
-        assert.ok(!gapTwo, "interior gaps remain empty when max gap is too small");
+        assert.ok(
+          !gapTwo,
+          "interior gaps remain empty when max gap is too small",
+        );
       },
     },
     {
@@ -2652,7 +2848,10 @@ export function getInteractionsTests() {
         const inferredKey = noteKeyForPair(inferredPair, 1);
         const inferredNote = model.notes[inferredKey];
 
-        assert.strictEqual(res.sources[HEURISTIC_SOURCES.modifierPropagation], 1);
+        assert.strictEqual(
+          res.sources[HEURISTIC_SOURCES.modifierPropagation],
+          1,
+        );
         assert.strictEqual(inferredNote.outcomeId, outcome.id);
         assert.strictEqual(
           inferredNote.source,
@@ -2679,11 +2878,7 @@ export function getInteractionsTests() {
         addOutcome("Hit");
         buildInteractionsPairs(model);
         const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-          ],
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
         };
 
         const statusBar = {
@@ -2725,8 +2920,14 @@ export function getInteractionsTests() {
     {
       name: "bypass inference respects selection rows from base index",
       run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
-          makeModelFixture();
+        const {
+          model,
+          addAction,
+          addInput,
+          addModifier,
+          addOutcome,
+          groupExact,
+        } = makeModelFixture();
         const modifier = addModifier("Bypassable");
         addAction("Base", { [modifier.id]: MOD_STATE_ID.BYPASS });
         const target = addAction("Target");
@@ -2754,11 +2955,7 @@ export function getInteractionsTests() {
         assert.ok(!model.notes[targetKey], "target row starts empty");
 
         const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-          ],
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
         };
         const includeBypassCalls = [];
         const controller = createInferenceController({
@@ -2819,10 +3016,18 @@ export function getInteractionsTests() {
     {
       name: "rebuilds bypass indexes after cleanup before inference",
       run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
-          makeModelFixture();
+        const {
+          model,
+          addAction,
+          addInput,
+          addModifier,
+          addOutcome,
+          groupExact,
+        } = makeModelFixture();
         const modifier = addModifier("Bypassable");
-        const source = addAction("Base", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        const source = addAction("Base", {
+          [modifier.id]: MOD_STATE_ID.BYPASS,
+        });
         const target = addAction("Target");
         const input = addInput("High");
         const outcome = addOutcome("Hit");
@@ -2851,11 +3056,7 @@ export function getInteractionsTests() {
         const targetRow = findPairIndex(model, (p) => p.aId === target.id);
         assert.ok(targetRow >= 0, "target row found in base index");
         const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-          ],
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
         };
         const controller = createInferenceController({
           model,
@@ -2867,7 +3068,8 @@ export function getInteractionsTests() {
           runModelMutation: (label, mutate) => mutate(),
           makeUndoConfig: () => ({}),
           getInteractionsPair: (m, r, opts) => getInteractionsPair(m, r, opts),
-          getInteractionsRowCount: (m, opts) => getInteractionsRowCount(m, opts),
+          getInteractionsRowCount: (m, opts) =>
+            getInteractionsRowCount(m, opts),
         });
 
         const res = controller.runInference({
@@ -2892,7 +3094,10 @@ export function getInteractionsTests() {
               includeBypass: true,
               index: bypassIndex,
             });
-            if (pair?.aId === source.id && pair?.variantSig === String(modifier.id))
+            if (
+              pair?.aId === source.id &&
+              pair?.variantSig === String(modifier.id)
+            )
               return pair;
           }
           return null;
@@ -2913,10 +3118,18 @@ export function getInteractionsTests() {
     {
       name: "bypass cache invalidates after base index rebuild",
       run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
-          makeModelFixture();
+        const {
+          model,
+          addAction,
+          addInput,
+          addModifier,
+          addOutcome,
+          groupExact,
+        } = makeModelFixture();
         const modifier = addModifier("Bypassable");
-        const source = addAction("Bypassed", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        const source = addAction("Bypassed", {
+          [modifier.id]: MOD_STATE_ID.BYPASS,
+        });
         addAction("Other");
         const input = addInput("High");
         const outcome = addOutcome("Hit");
@@ -2951,11 +3164,7 @@ export function getInteractionsTests() {
         const targetKey = noteKeyForPair(targetPair, 0);
 
         const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-          ],
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
         };
         const controller = createInferenceController({
           model,
@@ -2995,10 +3204,18 @@ export function getInteractionsTests() {
     {
       name: "inference can source bypass variants when opted in",
       run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
-          makeModelFixture();
+        const {
+          model,
+          addAction,
+          addInput,
+          addModifier,
+          addOutcome,
+          groupExact,
+        } = makeModelFixture();
         const modifier = addModifier("Bypassable");
-        const action = addAction("Strike", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        const action = addAction("Strike", {
+          [modifier.id]: MOD_STATE_ID.BYPASS,
+        });
         const input = addInput("High");
         const outcome = addOutcome("Hit");
 
@@ -3010,8 +3227,13 @@ export function getInteractionsTests() {
           targetIndexField: "interactionsIndexBypass",
         });
 
-        const bypassPair = getInteractionsPair(model, 1, { includeBypass: true });
-        assert.ok(bypassPair, "bypass pair available when opt-in index is built");
+        const bypassPair = getInteractionsPair(model, 1, {
+          includeBypass: true,
+        });
+        assert.ok(
+          bypassPair,
+          "bypass pair available when opt-in index is built",
+        );
         const bypassKey = noteKeyForPair(bypassPair, 0);
         model.notes[bypassKey] = {
           outcomeId: outcome.id,
@@ -3022,11 +3244,7 @@ export function getInteractionsTests() {
         const baseKey = noteKeyForPair(basePair, 0);
 
         const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-          ],
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
         };
         const includeBypassCalls = [];
         const controller = createInferenceController({
@@ -3053,7 +3271,10 @@ export function getInteractionsTests() {
         });
 
         controller.runInference({ scope: "project" });
-        assert.ok(!model.notes[baseKey], "legacy path ignores bypass-only sources");
+        assert.ok(
+          !model.notes[baseKey],
+          "legacy path ignores bypass-only sources",
+        );
 
         const res = controller.runInference({
           scope: "project",
@@ -3078,16 +3299,27 @@ export function getInteractionsTests() {
           includeBypassCalls.some(Boolean),
           "inference passes bypass-inclusive flag to accessors",
         );
-        assert.ok((res?.applied || 0) >= 1, "inference applied at least one change");
+        assert.ok(
+          (res?.applied || 0) >= 1,
+          "inference applied at least one change",
+        );
       },
     },
     {
       name: "clear inference targets bypass rows when opted in",
       run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
-          makeModelFixture();
+        const {
+          model,
+          addAction,
+          addInput,
+          addModifier,
+          addOutcome,
+          groupExact,
+        } = makeModelFixture();
         const modifier = addModifier("Bypassable");
-        const action = addAction("Sweep", { [modifier.id]: MOD_STATE_ID.BYPASS });
+        const action = addAction("Sweep", {
+          [modifier.id]: MOD_STATE_ID.BYPASS,
+        });
         addInput("Light");
         const outcome = addOutcome("Graze");
 
@@ -3099,8 +3331,13 @@ export function getInteractionsTests() {
           targetIndexField: "interactionsIndexBypass",
         });
 
-        const bypassPair = getInteractionsPair(model, 1, { includeBypass: true });
-        assert.ok(bypassPair, "bypass row present when index includes marked modifiers");
+        const bypassPair = getInteractionsPair(model, 1, {
+          includeBypass: true,
+        });
+        assert.ok(
+          bypassPair,
+          "bypass row present when index includes marked modifiers",
+        );
         const bypassKey = noteKeyForPair(bypassPair, 0);
         model.notes[bypassKey] = {
           outcomeId: outcome.id,
@@ -3108,11 +3345,7 @@ export function getInteractionsTests() {
         };
 
         const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-          ],
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
         };
         const includeBypassCalls = [];
         const controller = createInferenceController({
@@ -3132,8 +3365,15 @@ export function getInteractionsTests() {
         });
 
         const baseClear = controller.runClear({ scope: "project" });
-        assert.strictEqual(baseClear.cleared, 0, "legacy clear ignores bypass rows");
-        assert.ok(!includeBypassCalls.some(Boolean), "bypass flag stays off by default");
+        assert.strictEqual(
+          baseClear.cleared,
+          0,
+          "legacy clear ignores bypass rows",
+        );
+        assert.ok(
+          !includeBypassCalls.some(Boolean),
+          "bypass flag stays off by default",
+        );
 
         const bypassClear = controller.runClear({
           scope: "project",
@@ -3150,7 +3390,10 @@ export function getInteractionsTests() {
           includeBypassCalls.some(Boolean),
           "bypass-inclusive flag forwarded to row counter",
         );
-        assert.ok(!model.notes[bypassKey], "bypass note cleared after opt-in run");
+        assert.ok(
+          !model.notes[bypassKey],
+          "bypass note cleared after opt-in run",
+        );
       },
     },
     {
@@ -3172,7 +3415,8 @@ export function getInteractionsTests() {
           Array.from({ length: 4 }, (_, idx) => addInput(`Input ${idx + 1}`));
           const bypassActionIds = new Set();
           Array.from({ length: 24 }, (_, idx) => {
-            const modSet = idx % 2 ? { [modifier.id]: MOD_STATE_ID.BYPASS } : {};
+            const modSet =
+              idx % 2 ? { [modifier.id]: MOD_STATE_ID.BYPASS } : {};
             const action = addAction(`Action ${idx + 1}`, modSet);
             if (modSet[modifier.id] === MOD_STATE_ID.BYPASS)
               bypassActionIds.add(action.id);
@@ -3195,7 +3439,10 @@ export function getInteractionsTests() {
           }
 
           const selectionRows = new Set(
-            Array.from({ length: Math.min(baseRowCount, 120) }, (_, idx) => idx),
+            Array.from(
+              { length: Math.min(baseRowCount, 120) },
+              (_, idx) => idx,
+            ),
           );
           const bypassRow = findPairIndex(
             model,
@@ -3220,7 +3467,8 @@ export function getInteractionsTests() {
             statusBar: { set() {} },
             runModelMutation: (label, mutate) => mutate(),
             makeUndoConfig: () => ({}),
-            getInteractionsPair: (m, r, opts) => getInteractionsPair(m, r, opts),
+            getInteractionsPair: (m, r, opts) =>
+              getInteractionsPair(m, r, opts),
             getInteractionsRowCount: (m, opts = {}) => {
               const count = getInteractionsRowCount(m, opts);
               calls.push({
@@ -3251,14 +3499,27 @@ export function getInteractionsTests() {
             return pair?.aId && bypassActionIds.has(pair.aId);
           });
 
-          return { res, elapsed, model, calls, selectionSize: selectionRows.size, bypassSelected };
+          return {
+            res,
+            elapsed,
+            model,
+            calls,
+            selectionSize: selectionRows.size,
+            bypassSelected,
+          };
         }
 
         const baseRun = buildRun();
-        const bypassRun = buildRun({ inferFromBypassed: true, inferToBypassed: true });
+        const bypassRun = buildRun({
+          inferFromBypassed: true,
+          inferToBypassed: true,
+        });
 
         assert.ok(baseRun.selectionSize > 30, "covers large selection set");
-        assert.ok(baseRun.bypassSelected, "selection includes bypassed actions");
+        assert.ok(
+          baseRun.bypassSelected,
+          "selection includes bypassed actions",
+        );
         assert.strictEqual(
           baseRun.res?.applied || 0,
           bypassRun.res?.applied || 0,
@@ -3270,12 +3531,16 @@ export function getInteractionsTests() {
           "bypass inference counts empties same as baseline",
         );
 
-        const bypassIndexSize = bypassRun.model.interactionsIndexBypass?.totalRows;
+        const bypassIndexSize =
+          bypassRun.model.interactionsIndexBypass?.totalRows;
         const bypassCounts = bypassRun.calls
-          .filter((call) => call.includeBypass && Number.isFinite(call.indexTotal))
+          .filter(
+            (call) => call.includeBypass && Number.isFinite(call.indexTotal),
+          )
           .map((call) => call.indexTotal);
         assert.ok(
-          bypassCounts.length && bypassCounts.every((count) => count === bypassIndexSize),
+          bypassCounts.length &&
+            bypassCounts.every((count) => count === bypassIndexSize),
           "full bypass index used for inference run",
         );
 
@@ -3290,8 +3555,14 @@ export function getInteractionsTests() {
       name: "bypass inference honors scoped selection suggestions",
       run(assert) {
         function buildRun(enableBypass = false) {
-          const { model, addAction, addInput, addModifier, addOutcome, groupExact } =
-            makeModelFixture();
+          const {
+            model,
+            addAction,
+            addInput,
+            addModifier,
+            addOutcome,
+            groupExact,
+          } = makeModelFixture();
 
           const modifier = addModifier("Bypassable");
           const outcome = addOutcome("Hit");
@@ -3308,7 +3579,8 @@ export function getInteractionsTests() {
           });
 
           Array.from({ length: 24 }, (_, idx) => {
-            const modSet = idx % 3 === 0 ? { [modifier.id]: MOD_STATE_ID.BYPASS } : {};
+            const modSet =
+              idx % 3 === 0 ? { [modifier.id]: MOD_STATE_ID.BYPASS } : {};
             const action = addAction(`Action ${idx + 1}`, modSet);
           });
 
@@ -3319,12 +3591,17 @@ export function getInteractionsTests() {
           });
 
           const viewDef = {
-            columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
+            columns: [
+              { key: "action" },
+              { key: "input" },
+              { key: "p0:outcome" },
+            ],
           };
 
           const sourceRow = findPairIndex(
             model,
-            (pair) => pair?.aId === sharedActions[0].id && pair?.iId === inputs[0].id,
+            (pair) =>
+              pair?.aId === sharedActions[0].id && pair?.iId === inputs[0].id,
           );
           const sourcePair = getInteractionsPair(model, sourceRow, {
             includeBypass: enableBypass,
@@ -3337,10 +3614,14 @@ export function getInteractionsTests() {
 
           const targetRow = findPairIndex(
             model,
-            (pair) => pair?.aId === sharedActions[1].id && pair?.iId === inputs[0].id,
+            (pair) =>
+              pair?.aId === sharedActions[1].id && pair?.iId === inputs[0].id,
           );
           const selectionRows = new Set();
-          const selectedActions = new Set([sharedActions[0].id, sharedActions[1].id]);
+          const selectedActions = new Set([
+            sharedActions[0].id,
+            sharedActions[1].id,
+          ]);
           const baseRowCount = getInteractionsRowCount(model);
           for (let r = 0; r < baseRowCount; r++) {
             const pair = getInteractionsPair(model, r);
@@ -3362,10 +3643,13 @@ export function getInteractionsTests() {
               pairCalls++;
               return getInteractionsPair(m, r, opts);
             },
-            getInteractionsRowCount: (m, opts) => getInteractionsRowCount(m, opts),
+            getInteractionsRowCount: (m, opts) =>
+              getInteractionsRowCount(m, opts),
           });
 
-          const totalRows = getInteractionsRowCount(model, { includeBypass: enableBypass });
+          const totalRows = getInteractionsRowCount(model, {
+            includeBypass: enableBypass,
+          });
 
           const res = controller.runInference({
             scope: "selection",
@@ -3492,14 +3776,20 @@ export function getInteractionsTests() {
         });
 
         const res = controller.runInference({ scope: "project" });
-        assert.strictEqual(res.applied, 1, "inference applies propagated value");
+        assert.strictEqual(
+          res.applied,
+          1,
+          "inference applies propagated value",
+        );
 
         const snapshotAfterInference = captureInferenceProfilesSnapshot(
           model.inferenceProfiles,
         );
-        const inferenceChange = snapshotAfterInference.input[inputKey].outcome.all.change;
+        const inferenceChange =
+          snapshotAfterInference.input[inputKey].outcome.all.change;
         assert.ok(
-          Math.abs(inferenceChange / manualChange - decayFactor * decayFactor) < 1e-9,
+          Math.abs(inferenceChange / manualChange - decayFactor * decayFactor) <
+            1e-9,
           "inferred edits do not inflate profile counts",
         );
 
@@ -3527,13 +3817,18 @@ export function getInteractionsTests() {
             actionGroup: "",
           },
         ];
-        const suggestions = proposeInteractionInferences(targets, snapshotAfterUndo, {
-          profileTrendMinObservations: 2,
-          profileTrendMinPreferenceRatio: 0,
-        });
+        const suggestions = proposeInteractionInferences(
+          targets,
+          snapshotAfterUndo,
+          {
+            profileTrendMinObservations: 2,
+            profileTrendMinPreferenceRatio: 0,
+          },
+        );
         const suggestion = suggestions.get(inferredKey)?.outcome;
         assert.ok(
-          suggestion == null || suggestion.source !== HEURISTIC_SOURCES.profileTrend,
+          suggestion == null ||
+            suggestion.source !== HEURISTIC_SOURCES.profileTrend,
           "profile trend is gated without additional manual observations",
         );
       },
@@ -3651,7 +3946,11 @@ export function getInteractionsTests() {
           skipManualOutcome: true,
         });
 
-        assert.strictEqual(res.applied, 0, "no inference applied to manual phase");
+        assert.strictEqual(
+          res.applied,
+          0,
+          "no inference applied to manual phase",
+        );
         assert.strictEqual(res.skippedManual, 1, "manual outcome skipped");
         assert.strictEqual(
           res.skippedManualOutcome,
@@ -3711,7 +4010,11 @@ export function getInteractionsTests() {
           tags: ["Stun"],
         };
 
-        const selection = { rows: new Set([1]), cols: new Set([2]), colsAll: false };
+        const selection = {
+          rows: new Set([1]),
+          cols: new Set([2]),
+          colsAll: false,
+        };
         const controller = createInferenceController({
           model,
           selection,
@@ -3736,7 +4039,11 @@ export function getInteractionsTests() {
         const targetNote = model.notes[targetKey];
 
         assert.strictEqual(res.applied, 2, "applies end and tag suggestions");
-        assert.strictEqual(res.empty, 1, "counts missing outcome suggestions as empty");
+        assert.strictEqual(
+          res.empty,
+          1,
+          "counts missing outcome suggestions as empty",
+        );
         assert.strictEqual(
           res.sources[HEURISTIC_SOURCES.modifierPropagation],
           2,
@@ -3745,7 +4052,10 @@ export function getInteractionsTests() {
         assert.strictEqual(targetNote.endActionId, followUp.id);
         assert.strictEqual(targetNote.endVariantSig, "");
         assert.deepStrictEqual(targetNote.tags, ["Stun"]);
-        assert.strictEqual(targetNote.source, HEURISTIC_SOURCES.modifierPropagation);
+        assert.strictEqual(
+          targetNote.source,
+          HEURISTIC_SOURCES.modifierPropagation,
+        );
       },
     },
     {

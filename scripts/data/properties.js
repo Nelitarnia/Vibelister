@@ -1,9 +1,11 @@
 // properties.js — Helpers for normalizing and formatting action properties
 
 function expandPropertyCandidates(value) {
-  if (Array.isArray(value)) return value.flatMap((v) => expandPropertyCandidates(v));
+  if (Array.isArray(value))
+    return value.flatMap((v) => expandPropertyCandidates(v));
   if (value && typeof value === "object") {
-    if ("properties" in value) return expandPropertyCandidates(value.properties);
+    if ("properties" in value)
+      return expandPropertyCandidates(value.properties);
   }
   if (value == null) return [];
   const text = typeof value === "string" ? value : String(value);

@@ -37,7 +37,13 @@ export const VIEWS = {
         defaultWidth: 200,
         kind: "properties",
       },
-      { key: "color", title: "Color 1", width: 75, defaultWidth: 75, kind: "color" },
+      {
+        key: "color",
+        title: "Color 1",
+        width: 75,
+        defaultWidth: 75,
+        kind: "color",
+      },
       {
         key: "color2",
         title: "Color 2",
@@ -66,7 +72,13 @@ export const VIEWS = {
         defaultWidth: 240,
         kind: "text",
       },
-      { key: "color", title: "Color 1", width: 75, defaultWidth: 75, kind: "color" },
+      {
+        key: "color",
+        title: "Color 1",
+        width: 75,
+        defaultWidth: 75,
+        kind: "color",
+      },
       {
         key: "color2",
         title: "Color 2",
@@ -95,7 +107,13 @@ export const VIEWS = {
         defaultWidth: 240,
         kind: "text",
       },
-      { key: "color", title: "Color 1", width: 75, defaultWidth: 75, kind: "color" },
+      {
+        key: "color",
+        title: "Color 1",
+        width: 75,
+        defaultWidth: 75,
+        kind: "color",
+      },
       {
         key: "color2",
         title: "Color 2",
@@ -104,7 +122,13 @@ export const VIEWS = {
         kind: "color",
         align: "center",
       },
-      { key: "notes", title: "Notes", width: 520, defaultWidth: 520, kind: "text" },
+      {
+        key: "notes",
+        title: "Notes",
+        width: 520,
+        defaultWidth: 520,
+        kind: "text",
+      },
     ],
   },
   outcomes: {
@@ -118,7 +142,13 @@ export const VIEWS = {
         defaultWidth: 240,
         kind: "text",
       },
-      { key: "color", title: "Color 1", width: 75, defaultWidth: 75, kind: "color" },
+      {
+        key: "color",
+        title: "Color 1",
+        width: 75,
+        defaultWidth: 75,
+        kind: "color",
+      },
       {
         key: "color2",
         title: "Color 2",
@@ -211,20 +241,26 @@ export function rebuildActionColumnsFromModifiers(model) {
       kind: "phases",
     },
     {
-        key: "actionGroup",
-        title: "Action Group",
-        width: 180,
-        defaultWidth: 180,
-        kind: "text",
-      },
-      {
-        key: "properties",
-        title: "Properties",
-        width: 200,
-        defaultWidth: 200,
-        kind: "properties",
-      },
-      { key: "color", title: "Color 1", width: 75, defaultWidth: 75, kind: "color" },
+      key: "actionGroup",
+      title: "Action Group",
+      width: 180,
+      defaultWidth: 180,
+      kind: "text",
+    },
+    {
+      key: "properties",
+      title: "Properties",
+      width: 200,
+      defaultWidth: 200,
+      kind: "properties",
+    },
+    {
+      key: "color",
+      title: "Color 1",
+      width: 75,
+      defaultWidth: 75,
+      kind: "color",
+    },
     {
       key: "color2",
       title: "Color 2",
@@ -314,7 +350,7 @@ export function buildInteractionPhaseColumns(model, selectedRowIndex = 0) {
       width: 95,
       defaultWidth: 95,
       kind: "interactions",
-	  align: "center",
+      align: "center",
     });
     let endTitle = `P${p}: End`;
     const lbl = getPhaseLabel(selAction, p);

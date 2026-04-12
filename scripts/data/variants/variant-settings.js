@@ -10,11 +10,20 @@ function sanitizeCap(value, fallback) {
   return Number.isFinite(v) ? v : fallback;
 }
 
-export function normalizeVariantCaps(source = {}, defaults = DEFAULT_VARIANT_CAPS) {
+export function normalizeVariantCaps(
+  source = {},
+  defaults = DEFAULT_VARIANT_CAPS,
+) {
   const caps = source && typeof source === "object" ? source : {};
   const fallback = defaults || DEFAULT_VARIANT_CAPS;
   return {
-    variantCapPerAction: sanitizeCap(caps.variantCapPerAction, fallback.variantCapPerAction),
-    variantCapPerGroup: sanitizeCap(caps.variantCapPerGroup, fallback.variantCapPerGroup),
+    variantCapPerAction: sanitizeCap(
+      caps.variantCapPerAction,
+      fallback.variantCapPerAction,
+    ),
+    variantCapPerGroup: sanitizeCap(
+      caps.variantCapPerGroup,
+      fallback.variantCapPerGroup,
+    ),
   };
 }

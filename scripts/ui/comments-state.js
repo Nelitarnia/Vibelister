@@ -1,5 +1,8 @@
 import { autoTextColor, parseHexColor } from "../data/color-utils.js";
-import { normalizeCommentColorId, normalizeCommentColorPalette } from "../data/comment-colors.js";
+import {
+  normalizeCommentColorId,
+  normalizeCommentColorPalette,
+} from "../data/comment-colors.js";
 
 export function getEntryText(entry) {
   if (!entry) return "";
@@ -34,17 +37,21 @@ export function getEntryColorId(entry) {
 }
 
 function rgbToHex(r, g, b) {
-  const clamp = (n) => Math.max(0, Math.min(255, Math.round(Number(n))))
-    .toString(16)
-    .padStart(2, "0");
+  const clamp = (n) =>
+    Math.max(0, Math.min(255, Math.round(Number(n))))
+      .toString(16)
+      .padStart(2, "0");
   return `#${clamp(r)}${clamp(g)}${clamp(b)}`.toUpperCase();
 }
 
 export function normalizeHexColor(value, fallback = "#3B82F6") {
   if (typeof value === "string") {
     const trimmed = value.trim();
-    const parsed = parseHexColor(trimmed.startsWith("#") ? trimmed : `#${trimmed}`);
-    if (parsed && parsed.length === 3) return rgbToHex(parsed[0], parsed[1], parsed[2]);
+    const parsed = parseHexColor(
+      trimmed.startsWith("#") ? trimmed : `#${trimmed}`,
+    );
+    if (parsed && parsed.length === 3)
+      return rgbToHex(parsed[0], parsed[1], parsed[2]);
     const rgbaMatch = trimmed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
     if (rgbaMatch) return rgbToHex(rgbaMatch[1], rgbaMatch[2], rgbaMatch[3]);
   }
@@ -53,7 +60,8 @@ export function normalizeHexColor(value, fallback = "#3B82F6") {
 
 export function deriveBadgeColorsFromHex(hex) {
   const parsed = parseHexColor(hex);
-  if (!parsed) return { swatch: hex, badgeBackground: "", badgeBorder: "", badgeText: "" };
+  if (!parsed)
+    return { swatch: hex, badgeBackground: "", badgeBorder: "", badgeText: "" };
   const [r, g, b] = parsed;
   const rgba = (alpha) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
   return {
@@ -66,12 +74,15 @@ export function deriveBadgeColorsFromHex(hex) {
 
 export function buildPayload(existingEntry, text, color) {
   const base =
-    existingEntry && existingEntry.value && typeof existingEntry.value === "object"
+    existingEntry &&
+    existingEntry.value &&
+    typeof existingEntry.value === "object"
       ? { ...existingEntry.value }
       : {};
   base.text = text;
   if (color) base.color = color;
-  else if (Object.prototype.hasOwnProperty.call(base, "color")) delete base.color;
+  else if (Object.prototype.hasOwnProperty.call(base, "color"))
+    delete base.color;
   return base;
 }
 
@@ -86,7 +97,9 @@ export function buildColorMap(palette) {
     const id = normalizedId || idCandidate;
     if (!id || map.has(id)) continue;
     const label =
-      typeof preset.label === "string" && preset.label.trim() ? preset.label.trim() : id;
+      typeof preset.label === "string" && preset.label.trim()
+        ? preset.label.trim()
+        : id;
     const swatch = normalizeHexColor(
       typeof preset.swatch === "string" && preset.swatch.trim()
         ? preset.swatch.trim()
@@ -97,7 +110,8 @@ export function buildColorMap(palette) {
     );
     const derived = deriveBadgeColorsFromHex(swatch);
     const badgeBackground =
-      typeof preset.badgeBackground === "string" && preset.badgeBackground.trim()
+      typeof preset.badgeBackground === "string" &&
+      preset.badgeBackground.trim()
         ? preset.badgeBackground.trim()
         : derived.badgeBackground;
     const badgeBorder =

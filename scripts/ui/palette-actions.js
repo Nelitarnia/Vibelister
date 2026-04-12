@@ -16,7 +16,11 @@ export function parseEndActionQuery(raw) {
     }
     if (t.startsWith("+") && t.length > 1) {
       const body = lower.slice(1);
-      if (body.startsWith("prop:") || body.startsWith("property:") || body.startsWith("p:")) {
+      if (
+        body.startsWith("prop:") ||
+        body.startsWith("property:") ||
+        body.startsWith("p:")
+      ) {
         properties.push(body.replace(/^(prop|property|p):/, ""));
       } else {
         mods.push(body);
@@ -38,18 +42,21 @@ export function matchesEndActionFilters({
 }) {
   const lowerName = String(actionName || "").toLowerCase();
   if (nameQuery && !lowerName.startsWith(nameQuery)) return false;
-  const normalizedProperties = normalizeActionProperties(actionProperties).map((p) =>
-    p.toLowerCase(),
+  const normalizedProperties = normalizeActionProperties(actionProperties).map(
+    (p) => p.toLowerCase(),
   );
   if (
     propertyTokens &&
     propertyTokens.length &&
-    !propertyTokens.every((tok) => normalizedProperties.some((prop) => prop.includes(tok)))
+    !propertyTokens.every((tok) =>
+      normalizedProperties.some((prop) => prop.includes(tok)),
+    )
   )
     return false;
   if (modTokens && modTokens.length) {
     const lowerMods = (variantModNames || []).map((m) => m.toLowerCase());
-    if (!modTokens.every((tok) => lowerMods.some((nm) => nm.includes(tok)))) return false;
+    if (!modTokens.every((tok) => lowerMods.some((nm) => nm.includes(tok))))
+      return false;
   }
   return true;
 }

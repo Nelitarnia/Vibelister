@@ -36,7 +36,10 @@ export function getColumnKindTests() {
           paletteAPI: { wantsToHandleCell: () => true },
           col: { entity: "outcome" },
         });
-        assert.ok(res?.useEditor, "palette-aware refPick should keep editor flow");
+        assert.ok(
+          res?.useEditor,
+          "palette-aware refPick should keep editor flow",
+        );
       },
     },
     {
@@ -59,14 +62,23 @@ export function getColumnKindTests() {
           model,
           col: { entity: "outcome", key: "dualof" },
         });
-        assert.ok(invoked, "openReference should be invoked when inline mode missing");
-        assert.ok(receivedTarget, "openReference should receive a target payload");
+        assert.ok(
+          invoked,
+          "openReference should be invoked when inline mode missing",
+        );
+        assert.ok(
+          receivedTarget,
+          "openReference should receive a target payload",
+        );
         assert.strictEqual(
           receivedTarget.initialText,
           "Final Victory",
           "fallback should provide a display label for the current value",
         );
-        assert.ok(res?.handled, "successful openReference should consume beginEdit");
+        assert.ok(
+          res?.handled,
+          "successful openReference should consume beginEdit",
+        );
       },
     },
     {
@@ -103,7 +115,10 @@ export function getColumnKindTests() {
           invoked,
           "openForCurrentCell should be invoked when openReference is unavailable",
         );
-        assert.ok(res?.handled, "successful openForCurrentCell fallback should consume beginEdit");
+        assert.ok(
+          res?.handled,
+          "successful openForCurrentCell fallback should consume beginEdit",
+        );
       },
     },
     {
@@ -157,8 +172,15 @@ export function getColumnKindTests() {
         );
 
         const target = {};
-        const applied = applyStructuredForKind("properties", { row: target }, sanitized);
-        assert.ok(applied, "applyStructuredForKind should accept sanitized properties payload");
+        const applied = applyStructuredForKind(
+          "properties",
+          { row: target },
+          sanitized,
+        );
+        assert.ok(
+          applied,
+          "applyStructuredForKind should accept sanitized properties payload",
+        );
         assert.deepStrictEqual(
           target.properties,
           ["Aerial", "launcher"],

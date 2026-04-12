@@ -41,7 +41,11 @@ export function getUndoTests() {
             const current = findRow();
             const before = current?.name;
             if (current) current.name = "Villain";
-            return { before, after: current?.name, changed: before !== current?.name };
+            return {
+              before,
+              after: current?.name,
+              changed: before !== current?.name,
+            };
           },
           {
             undo: {
@@ -59,12 +63,24 @@ export function getUndoTests() {
 
         assert.strictEqual(runner.undo(), true, "undo succeeds");
         assert.strictEqual(findRow()?.name, "Hero", "name reverted after undo");
-        assert.strictEqual(log.at(-1), "undid", "status message for undo emitted");
+        assert.strictEqual(
+          log.at(-1),
+          "undid",
+          "status message for undo emitted",
+        );
         assert.ok(runner.getUndoState().canRedo, "redo available after undo");
 
         assert.strictEqual(runner.redo(), true, "redo succeeds");
-        assert.strictEqual(findRow()?.name, "Villain", "name restored after redo");
-        assert.strictEqual(log.at(-1), "redid", "status message for redo emitted");
+        assert.strictEqual(
+          findRow()?.name,
+          "Villain",
+          "name restored after redo",
+        );
+        assert.strictEqual(
+          log.at(-1),
+          "redid",
+          "status message for redo emitted",
+        );
       },
     },
     {
@@ -124,31 +140,63 @@ export function getUndoTests() {
         );
 
         assert.strictEqual(findRow(rowA)?.name, "Edited", "row A retains edit");
-        assert.strictEqual(findRow(rowB)?.name, "Pasted", "row B reflects paste");
+        assert.strictEqual(
+          findRow(rowB)?.name,
+          "Pasted",
+          "row B reflects paste",
+        );
 
         const stateAfterPaste = runner.getUndoState();
         assert.ok(stateAfterPaste.canUndo, "undo available after paste");
-        assert.strictEqual(stateAfterPaste.undoLabel, "paste", "paste at top of history");
+        assert.strictEqual(
+          stateAfterPaste.undoLabel,
+          "paste",
+          "paste at top of history",
+        );
 
         assert.strictEqual(runner.undo(), true, "undo succeeds");
-        assert.strictEqual(findRow(rowB)?.name, "Two", "row B reverted after undo");
+        assert.strictEqual(
+          findRow(rowB)?.name,
+          "Two",
+          "row B reverted after undo",
+        );
         assert.strictEqual(
           findRow(rowA)?.name,
           "Edited",
           "row A edit preserved after undoing paste",
         );
-        assert.strictEqual(log.at(-1), "undo:1", "status message indicates undo");
+        assert.strictEqual(
+          log.at(-1),
+          "undo:1",
+          "status message indicates undo",
+        );
 
         const stateAfterUndo = runner.getUndoState();
-        assert.strictEqual(stateAfterUndo.undoLabel, "cell edit", "prior entry exposed");
+        assert.strictEqual(
+          stateAfterUndo.undoLabel,
+          "cell edit",
+          "prior entry exposed",
+        );
         assert.ok(stateAfterUndo.canRedo, "redo available after undo");
 
         assert.strictEqual(runner.redo(), true, "redo succeeds");
-        assert.strictEqual(findRow(rowB)?.name, "Pasted", "row B restored after redo");
-        assert.strictEqual(log.at(-1), "redo:1", "status message indicates redo");
+        assert.strictEqual(
+          findRow(rowB)?.name,
+          "Pasted",
+          "row B restored after redo",
+        );
+        assert.strictEqual(
+          log.at(-1),
+          "redo:1",
+          "status message indicates redo",
+        );
 
         const stateAfterRedo = runner.getUndoState();
-        assert.strictEqual(stateAfterRedo.undoLabel, "paste", "paste restored to top");
+        assert.strictEqual(
+          stateAfterRedo.undoLabel,
+          "paste",
+          "paste restored to top",
+        );
       },
     },
     {
@@ -196,15 +244,31 @@ export function getUndoTests() {
         assert.strictEqual(findRow()?.name, "Palette", "cell edit applied");
         const stateAfterEdit = runner.getUndoState();
         assert.ok(stateAfterEdit.canUndo, "undo recorded for palette edit");
-        assert.strictEqual(stateAfterEdit.undoLabel, "cell edit", "labeled as cell edit");
+        assert.strictEqual(
+          stateAfterEdit.undoLabel,
+          "cell edit",
+          "labeled as cell edit",
+        );
 
         assert.strictEqual(runner.undo(), true, "undo succeeds");
         assert.strictEqual(findRow()?.name, "One", "name restored after undo");
-        assert.strictEqual(log.at(-1), "undo:1", "status reflects undo direction");
+        assert.strictEqual(
+          log.at(-1),
+          "undo:1",
+          "status reflects undo direction",
+        );
 
         assert.strictEqual(runner.redo(), true, "redo succeeds");
-        assert.strictEqual(findRow()?.name, "Palette", "name restored after redo");
-        assert.strictEqual(log.at(-1), "redo:1", "status reflects redo direction");
+        assert.strictEqual(
+          findRow()?.name,
+          "Palette",
+          "name restored after redo",
+        );
+        assert.strictEqual(
+          log.at(-1),
+          "redo:1",
+          "status reflects redo direction",
+        );
       },
     },
     {
@@ -222,7 +286,11 @@ export function getUndoTests() {
             const current = findRow();
             const before = current?.name;
             if (current) current.name = "Beta";
-            return { before, after: current?.name, changed: before !== current?.name };
+            return {
+              before,
+              after: current?.name,
+              changed: before !== current?.name,
+            };
           },
           {
             undo: {
@@ -234,7 +302,10 @@ export function getUndoTests() {
         );
 
         runner.undo();
-        assert.ok(runner.getUndoState().canRedo, "redo available before new change");
+        assert.ok(
+          runner.getUndoState().canRedo,
+          "redo available before new change",
+        );
 
         runner.runModelMutation(
           "editNameAgain",
@@ -288,7 +359,11 @@ export function getUndoTests() {
         const state = runner.getUndoState();
         assert.ok(!state.canUndo, "undo cleared after reset");
         assert.ok(!state.canRedo, "redo cleared after reset");
-        assert.strictEqual(runner.undo(), false, "undo returns false when empty");
+        assert.strictEqual(
+          runner.undo(),
+          false,
+          "undo returns false when empty",
+        );
       },
     },
     {
@@ -303,7 +378,13 @@ export function getUndoTests() {
         runner.runModelMutation(
           "insertRow",
           () => {
-            const row = { id: model.nextId++, name: "Two", color: "", color2: "", notes: "" };
+            const row = {
+              id: model.nextId++,
+              name: "Two",
+              color: "",
+              color2: "",
+              notes: "",
+            };
             model.actions.splice(0, 0, row);
             insertedId = row.id;
             return { insertedId: row.id };
@@ -317,15 +398,27 @@ export function getUndoTests() {
           },
         );
 
-        assert.strictEqual(model.actions[0].id, insertedId, "row inserted at start");
+        assert.strictEqual(
+          model.actions[0].id,
+          insertedId,
+          "row inserted at start",
+        );
         runner.undo();
         assert.ok(
           model.actions[0]?.id !== insertedId,
           "row removed after undo",
         );
         runner.redo();
-        assert.strictEqual(model.actions[0]?.id, insertedId, "row restored after redo");
-        assert.strictEqual(findRowById(base.id)?.id, base.id, "existing row preserved");
+        assert.strictEqual(
+          model.actions[0]?.id,
+          insertedId,
+          "row restored after redo",
+        );
+        assert.strictEqual(
+          findRowById(base.id)?.id,
+          base.id,
+          "existing row preserved",
+        );
       },
     },
     {
@@ -346,7 +439,8 @@ export function getUndoTests() {
           {
             undo: {
               label: "delete rows",
-              shouldRecord: (res) => Array.isArray(res?.removedIds) && res.removedIds.length > 0,
+              shouldRecord: (res) =>
+                Array.isArray(res?.removedIds) && res.removedIds.length > 0,
               captureAttachments: () => null,
             },
           },
@@ -442,14 +536,21 @@ export function getUndoTests() {
           variantCatalog: { [action.id]: [""] },
         };
         model.interactionsPairs = [];
-        const noteKey = noteKeyForPair(getInteractionsPair(model, 0), undefined);
+        const noteKey = noteKeyForPair(
+          getInteractionsPair(model, 0),
+          undefined,
+        );
         model.notes[noteKey] = { notes: "Keep me" };
         const runner = createRunner(model, statusLog);
 
         const selection = { rows: new Set([0]) };
         const sel = { r: 0, c: 0 };
         const viewDef = { columns: [{ key: "notes" }] };
-        const status = { set(message) { statusLog.push(message); } };
+        const status = {
+          set(message) {
+            statusLog.push(message);
+          },
+        };
 
         runner.runModelMutation(
           "clearInteractions",
@@ -472,7 +573,11 @@ export function getUndoTests() {
           },
         );
 
-        assert.strictEqual(model.notes[noteKey], undefined, "note cleared by mutation");
+        assert.strictEqual(
+          model.notes[noteKey],
+          undefined,
+          "note cleared by mutation",
+        );
 
         runner.undo();
         assert.strictEqual(
@@ -482,7 +587,11 @@ export function getUndoTests() {
         );
 
         runner.redo();
-        assert.strictEqual(model.notes[noteKey], undefined, "redo clears note again");
+        assert.strictEqual(
+          model.notes[noteKey],
+          undefined,
+          "redo clears note again",
+        );
       },
     },
   ];

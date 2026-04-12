@@ -51,15 +51,24 @@ export function createViewController({
     }
     if (tabs.tabModifiers) {
       tabs.tabModifiers.classList.toggle("active", key === "modifiers");
-      tabs.tabModifiers.setAttribute("aria-selected", String(key === "modifiers"));
+      tabs.tabModifiers.setAttribute(
+        "aria-selected",
+        String(key === "modifiers"),
+      );
     }
     if (tabs.tabOutcomes) {
       tabs.tabOutcomes.classList.toggle("active", key === "outcomes");
-      tabs.tabOutcomes.setAttribute("aria-selected", String(key === "outcomes"));
+      tabs.tabOutcomes.setAttribute(
+        "aria-selected",
+        String(key === "outcomes"),
+      );
     }
     if (tabs.tabInteractions) {
       tabs.tabInteractions.classList.toggle("active", key === "interactions");
-      tabs.tabInteractions.setAttribute("aria-selected", String(key === "interactions"));
+      tabs.tabInteractions.setAttribute(
+        "aria-selected",
+        String(key === "interactions"),
+      );
     }
     const st = restoreViewState(key);
     sel.r = clamp(st.row ?? sel.r, 0, Math.max(0, getRowCount() - 1));
@@ -77,15 +86,19 @@ export function createViewController({
     render();
     getCommentsUI?.()?.refresh?.();
     const modeLabel =
-      key === "interactions" ? ` [${model.meta?.interactionsMode || "AI"}]` : "";
+      key === "interactions"
+        ? ` [${model.meta?.interactionsMode || "AI"}]`
+        : "";
     statusBar?.set(`View: ${viewDef().title}${modeLabel}`);
     menusAPIRef()?.updateViewMenuRadios?.(key);
   }
 
   if (tabs.tabActions) tabs.tabActions.onclick = () => setActiveView("actions");
   if (tabs.tabInputs) tabs.tabInputs.onclick = () => setActiveView("inputs");
-  if (tabs.tabModifiers) tabs.tabModifiers.onclick = () => setActiveView("modifiers");
-  if (tabs.tabOutcomes) tabs.tabOutcomes.onclick = () => setActiveView("outcomes");
+  if (tabs.tabModifiers)
+    tabs.tabModifiers.onclick = () => setActiveView("modifiers");
+  if (tabs.tabOutcomes)
+    tabs.tabOutcomes.onclick = () => setActiveView("outcomes");
   if (tabs.tabInteractions)
     tabs.tabInteractions.onclick = () => setActiveView("interactions");
 

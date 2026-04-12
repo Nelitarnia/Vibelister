@@ -46,10 +46,12 @@ function buildList(title, items = []) {
   wrapper.style.cssText = "display:flex;flex-direction:column;gap:6px;";
   const heading = document.createElement("div");
   heading.textContent = title;
-  heading.style.cssText = "font-weight:700;font-size:13px;letter-spacing:0.01em;";
+  heading.style.cssText =
+    "font-weight:700;font-size:13px;letter-spacing:0.01em;";
   wrapper.appendChild(heading);
   const list = document.createElement("ul");
-  list.style.cssText = "margin:0;padding-left:18px;line-height:1.45;color:#c9d4ff;";
+  list.style.cssText =
+    "margin:0;padding-left:18px;line-height:1.45;color:#c9d4ff;";
   if (!items.length) {
     const li = document.createElement("li");
     li.textContent = "—";
@@ -101,11 +103,15 @@ export function createVariantDiagnosticsViewer({ model } = {}) {
     box.appendChild(title);
 
     const summary = document.createElement("div");
-    summary.style.cssText = "display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;";
+    summary.style.cssText =
+      "display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;";
     summary.append(
       buildKeyValue("Candidates", String(diagnostics.candidates ?? "—")),
       buildKeyValue("Yielded", String(diagnostics.yielded ?? "—")),
-      buildKeyValue("Constraint pruned", String(diagnostics.constraintPruned ?? 0)),
+      buildKeyValue(
+        "Constraint pruned",
+        String(diagnostics.constraintPruned ?? 0),
+      ),
       buildKeyValue("Cap hit", diagnostics.capsHit ? "Yes" : "No"),
     );
     box.appendChild(summary);

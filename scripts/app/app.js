@@ -36,7 +36,13 @@ import { beginEditForKind } from "../data/column-kinds.js";
 import { emitCommentChangeEvent } from "./comment-events.js";
 import { ROW_HEIGHT, HEADER_HEIGHT } from "../data/constants.js";
 import { makeRow } from "../data/rows.js";
-import { clamp, visibleCols, visibleRows, colOffsets, colWidths } from "../data/utils.js";
+import {
+  clamp,
+  visibleCols,
+  visibleRows,
+  colOffsets,
+  colWidths,
+} from "../data/utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 import {
   createInferenceProfileStore,
@@ -72,15 +78,16 @@ export function createApp() {
 
   const getActiveViewState = appContext.getActiveView;
 
-  const { rebuildInteractionsInPlace, pruneNotesToValidPairs } = createInteractionMaintenance({
-    model,
-    buildInteractionsPairs,
-    getInteractionsOutline: () => interactionsOutline,
-    getInteractionsRowCount,
-    getInteractionsPair,
-    noteKeyForPair,
-    canonicalSigImpl: canonicalSig,
-  });
+  const { rebuildInteractionsInPlace, pruneNotesToValidPairs } =
+    createInteractionMaintenance({
+      model,
+      buildInteractionsPairs,
+      getInteractionsOutline: () => interactionsOutline,
+      getInteractionsRowCount,
+      getInteractionsPair,
+      noteKeyForPair,
+      canonicalSigImpl: canonicalSig,
+    });
 
   const {
     gridCellsApi,
@@ -100,14 +107,21 @@ export function createApp() {
     coreDom,
     statusBar,
     menuItems,
-    selectionApi: { Selection, SelectionCtl, selection, sel, onSelectionChanged },
+    selectionApi: {
+      Selection,
+      SelectionCtl,
+      selection,
+      sel,
+      onSelectionChanged,
+    },
     setActiveView: (...args) => setActiveView?.(...args),
     getActiveViewState,
     rebuildInteractionsInPlace,
     pruneNotesToValidPairs,
   });
 
-  const { sheet, cellsLayer, spacer, colHdrs, rowHdrs, editor, dragLine } = coreDom;
+  const { sheet, cellsLayer, spacer, colHdrs, rowHdrs, editor, dragLine } =
+    coreDom;
 
   const {
     viewDef,
@@ -123,8 +137,13 @@ export function createApp() {
     resetAllViewState,
   } = viewStateApi;
 
-  const { getCell, setCell, getStructuredCell, applyStructuredCell, cellValueToPlainText } =
-    gridCellsApi;
+  const {
+    getCell,
+    setCell,
+    getStructuredCell,
+    applyStructuredCell,
+    cellValueToPlainText,
+  } = gridCellsApi;
 
   const { render, layout, ensureVisible } = rendererApi;
 
@@ -132,8 +151,12 @@ export function createApp() {
   const { createDiagnosticsActions } = interactionToolsApi;
 
   const { undo, redo, getUndoState } = historyApi;
-  const { runModelMutation, runModelTransaction, beginUndoableTransaction, makeUndoConfig } =
-    mutationApi;
+  const {
+    runModelMutation,
+    runModelTransaction,
+    beginUndoableTransaction,
+    makeUndoConfig,
+  } = mutationApi;
 
   const {
     cloneValueForAssignment,
@@ -151,10 +174,20 @@ export function createApp() {
     applyCellCommentClipboardPayload,
   } = gridCommandsApi;
 
-  const { openProjectInfo, openCleanupDialog, openInferenceDialog, interactionActions } = dialogApi;
+  const {
+    openProjectInfo,
+    openCleanupDialog,
+    openInferenceDialog,
+    interactionActions,
+  } = dialogApi;
   const diagnosticsActions =
-    typeof createDiagnosticsActions === "function" ? createDiagnosticsActions({ statusBar }) : {};
-  const combinedInteractionActions = { ...interactionActions, ...diagnosticsActions };
+    typeof createDiagnosticsActions === "function"
+      ? createDiagnosticsActions({ statusBar })
+      : {};
+  const combinedInteractionActions = {
+    ...interactionActions,
+    ...diagnosticsActions,
+  };
 
   const onModelReset = () => {
     resetInferenceProfiles(inferenceProfiles);
@@ -232,33 +265,34 @@ export function createApp() {
   sheet.addEventListener("scroll", handleScroll);
 
   // Tabs & views
-  ({ setActiveView, cycleView, getActiveView, toggleInteractionsMode } = createViewController({
-    tabs: tabsDom,
-    sheet,
-    sel,
-    selection,
-    saveCurrentViewState,
-    restoreViewState,
-    clearSelection,
-    endEditIfOpen,
-    VIEWS,
-    interactionsOutline,
-    invalidateViewDef,
-    rebuildActionColumnsFromModifiers,
-    rebuildInteractionsInPlace,
-    rebuildInteractionPhaseColumns,
-    layout,
-    render,
-    statusBar,
-    menusAPIRef: () => state.menusAPI,
-    getRowCount,
-    viewDef,
-    clamp,
-    model,
-    getActiveViewState: () => state.activeView,
-    setActiveViewState: (key) => (state.activeView = key),
-    getCommentsUI: () => state.commentsUI,
-  }));
+  ({ setActiveView, cycleView, getActiveView, toggleInteractionsMode } =
+    createViewController({
+      tabs: tabsDom,
+      sheet,
+      sel,
+      selection,
+      saveCurrentViewState,
+      restoreViewState,
+      clearSelection,
+      endEditIfOpen,
+      VIEWS,
+      interactionsOutline,
+      invalidateViewDef,
+      rebuildActionColumnsFromModifiers,
+      rebuildInteractionsInPlace,
+      rebuildInteractionPhaseColumns,
+      layout,
+      render,
+      statusBar,
+      menusAPIRef: () => state.menusAPI,
+      getRowCount,
+      viewDef,
+      clamp,
+      model,
+      getActiveViewState: () => state.activeView,
+      setActiveViewState: (key) => (state.activeView = key),
+      getCommentsUI: () => state.commentsUI,
+    }));
 
   const doGenerate = createDoGenerate({
     rebuildActionColumnsFromModifiers,
@@ -345,7 +379,12 @@ export function createApp() {
       makeRow,
     },
     historyApi: { undo, redo, getUndoState },
-    persistenceApi: { newProject, openFromDisk, saveToDisk, updateProjectNameWidget },
+    persistenceApi: {
+      newProject,
+      openFromDisk,
+      saveToDisk,
+      updateProjectNameWidget,
+    },
     generationApi: { doGenerate, runSelfTests },
     clipboardApi: {
       getStructuredCell,
@@ -354,9 +393,25 @@ export function createApp() {
       applyCellCommentClipboardPayload,
       cellValueToPlainText,
     },
-    menuApi: { openSettingsDialog, openProjectInfo, openCleanupDialog, openInferenceDialog },
-    sidebarApi: { getCellComments, setCellComment, deleteCellComment, noteKeyForPair, getInteractionsPair },
-    variantApi: { canonicalSig, compareVariantSig, sortIdsByUserOrder, modOrderMap },
+    menuApi: {
+      openSettingsDialog,
+      openProjectInfo,
+      openCleanupDialog,
+      openInferenceDialog,
+    },
+    sidebarApi: {
+      getCellComments,
+      setCellComment,
+      deleteCellComment,
+      noteKeyForPair,
+      getInteractionsPair,
+    },
+    variantApi: {
+      canonicalSig,
+      compareVariantSig,
+      sortIdsByUserOrder,
+      modOrderMap,
+    },
     viewsMeta: {
       VIEWS,
       visibleCols,

@@ -477,7 +477,11 @@ export function openRulesDialog(model) {
           },
           [h("div", null, [txt])],
         );
-        const controls = h("div", { style: "display:flex;gap:6px;align-items:center;" }, []);
+        const controls = h(
+          "div",
+          { style: "display:flex;gap:6px;align-items:center;" },
+          [],
+        );
         const moveUp = h(
           "button",
           {

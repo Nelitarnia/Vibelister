@@ -16,7 +16,10 @@ export function getInferenceUtilsTests() {
         assert.strictEqual(normalizeVariantSig({ variantSig: 7 }), "7");
         assert.strictEqual(normalizeVariantSig({ variantSig: "7+9" }), "7+9");
         assert.strictEqual(normalizeActionId({ aId: "12" }), 12);
-        assert.strictEqual(normalizeInputKey({ kind: "AA", rhsActionId: 4 }), "rhs:4");
+        assert.strictEqual(
+          normalizeInputKey({ kind: "AA", rhsActionId: 4 }),
+          "rhs:4",
+        );
         assert.strictEqual(normalizeInputKey({ kind: "ai", iId: 3 }), "in:3");
       },
     },

@@ -38,16 +38,18 @@ export function setupInteractionTools({
   const diagnosticsViewer = createVariantDiagnosticsViewer({ model });
 
   function getActionForDiagnostics() {
-    const currentView = typeof getActiveView === "function" ? getActiveView() : null;
+    const currentView =
+      typeof getActiveView === "function" ? getActiveView() : null;
     if (currentView !== "interactions") return null;
     const selectedRows = selection?.rows?.size
       ? Array.from(selection.rows).sort((a, b) => a - b)
       : [];
     const rowIndex = Number.isFinite(sel?.r) ? sel.r : selectedRows[0];
     if (!Number.isFinite(rowIndex)) return null;
-    const pair = typeof getInteractionsPair === "function"
-      ? getInteractionsPair(model, rowIndex)
-      : null;
+    const pair =
+      typeof getInteractionsPair === "function"
+        ? getInteractionsPair(model, rowIndex)
+        : null;
     if (!pair) return null;
     const actionId = Number(pair.aId);
     if (!Number.isFinite(actionId)) return null;
@@ -64,8 +66,14 @@ export function setupInteractionTools({
     return function doGenerate() {
       rebuildActionColumnsFromModifiers(model);
       invalidateViewDef();
-      const { actionsCount, inputsCount, pairsCount, capped, cappedActions, variantCaps } =
-        buildInteractionsPairs(model);
+      const {
+        actionsCount,
+        inputsCount,
+        pairsCount,
+        capped,
+        cappedActions,
+        variantCaps,
+      } = buildInteractionsPairs(model);
       interactionsOutline?.refresh?.();
       setActiveView("interactions");
       sel.r = 0;
@@ -76,8 +84,7 @@ export function setupInteractionTools({
       const hitSummary = capped
         ? ` (Note: ${cappedActions} action(s) hit the cap)`
         : " (No cap hits)";
-      const genSummary =
-        `Generated Interactions: ${actionsCount} actions × ${inputsCount} inputs = ${pairsCount} rows. ${capSummary}${hitSummary}`;
+      const genSummary = `Generated Interactions: ${actionsCount} actions × ${inputsCount} inputs = ${pairsCount} rows. ${capSummary}${hitSummary}`;
       statusBar?.set(genSummary);
     };
   }
@@ -87,7 +94,9 @@ export function setupInteractionTools({
       openDiagnostics() {
         const action = getActionForDiagnostics();
         if (!action) {
-          statusBar?.set?.("Select an Interactions row to run variant diagnostics.");
+          statusBar?.set?.(
+            "Select an Interactions row to run variant diagnostics.",
+          );
           return;
         }
         const diagnostics = diagnoseVariantsForAction(action, model);

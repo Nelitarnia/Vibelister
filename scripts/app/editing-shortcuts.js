@@ -3,7 +3,8 @@ import { clamp } from "../data/utils.js";
 function toPlainText(value) {
   if (value == null) return "";
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   if (typeof value === "object") {
     if (typeof value.plainText === "string") return value.plainText;
     if (Array.isArray(value.segments)) {
@@ -96,7 +97,10 @@ export function createEditingController({
     if (activeView === "interactions") {
       const kind = String(col?.kind || "");
       const kindToUse = kind || "interactions";
-      const res = beginEditForKind(kindToUse, kindCtx({ r, c, col, row: null }));
+      const res = beginEditForKind(
+        kindToUse,
+        kindCtx({ r, c, col, row: null }),
+      );
       if (res?.handled) {
         render();
         return;
@@ -176,7 +180,12 @@ export function createEditingController({
             if (
               selection.colsAll &&
               activeView === "interactions" &&
-              !isInteractionPhaseColumnActiveForRow(model, vd, rowIndex, colIndex)
+              !isInteractionPhaseColumnActiveForRow(
+                model,
+                vd,
+                rowIndex,
+                colIndex,
+              )
             ) {
               continue;
             }
@@ -309,7 +318,10 @@ export function createEditingController({
   function handleDocumentMouseDown(e) {
     if (!editing) return;
     if (!doc || !editor) return;
-    const inSheet = !!(sheet && (e.target === sheet || sheet.contains(e.target)));
+    const inSheet = !!(
+      sheet &&
+      (e.target === sheet || sheet.contains(e.target))
+    );
     if (inSheet) return;
     const palette = getPalette();
     try {

@@ -70,7 +70,8 @@ function extractNoteFieldValue(note, field) {
     if (Number.isFinite(note.endActionId)) {
       return {
         endActionId: note.endActionId,
-        endVariantSig: typeof note.endVariantSig === "string" ? note.endVariantSig : "",
+        endVariantSig:
+          typeof note.endVariantSig === "string" ? note.endVariantSig : "",
       };
     }
     if (typeof note.endFree === "string" && note.endFree.trim()) {
@@ -93,7 +94,8 @@ function valueKey(field, value) {
   }
   if (field === "end") {
     if (Number.isFinite(value.endActionId)) {
-      const sig = typeof value.endVariantSig === "string" ? value.endVariantSig : "";
+      const sig =
+        typeof value.endVariantSig === "string" ? value.endVariantSig : "";
       return `e:${value.endActionId}|${sig}`;
     }
     if (typeof value.endFree === "string") return `f:${value.endFree}`;
@@ -116,7 +118,8 @@ function cloneValue(field, value) {
     if (Number.isFinite(value.endActionId)) {
       return {
         endActionId: value.endActionId,
-        endVariantSig: typeof value.endVariantSig === "string" ? value.endVariantSig : "",
+        endVariantSig:
+          typeof value.endVariantSig === "string" ? value.endVariantSig : "",
       };
     }
     if (typeof value.endFree === "string") return { endFree: value.endFree };

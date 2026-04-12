@@ -16,7 +16,8 @@ export function normalizeModStateValue(v) {
   const num = Number(v);
   if (!Number.isFinite(num)) return null;
   const truncated = Math.trunc(num);
-  if (truncated < MOD_STATE_MIN_VALUE || truncated > MOD_STATE_MAX_VALUE) return null;
+  if (truncated < MOD_STATE_MIN_VALUE || truncated > MOD_STATE_MAX_VALUE)
+    return null;
   return truncated;
 }
 

@@ -42,20 +42,26 @@ export function setupPersistence({
     return (n ? n : "project") + ".json";
   }
 
-  const { newProject, openFromDisk, saveToDisk, ensureMinRows, ensureSeedRows, upgradeModelInPlace } =
-    createPersistenceController({
-      model,
-      statusBar,
-      clearHistory,
-      resetAllViewState,
-      sel,
-      setActiveView: appContext.setActiveView,
-      updateProjectNameWidget,
-      setProjectNameFromFile,
-      getSuggestedName,
-      closeMenus,
-      onModelReset,
-    });
+  const {
+    newProject,
+    openFromDisk,
+    saveToDisk,
+    ensureMinRows,
+    ensureSeedRows,
+    upgradeModelInPlace,
+  } = createPersistenceController({
+    model,
+    statusBar,
+    clearHistory,
+    resetAllViewState,
+    sel,
+    setActiveView: appContext.setActiveView,
+    updateProjectNameWidget,
+    setProjectNameFromFile,
+    getSuggestedName,
+    closeMenus,
+    onModelReset,
+  });
 
   return {
     newProject,

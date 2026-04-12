@@ -40,10 +40,10 @@
 * * AI: left Action (aId) × Input (iId), with a left variant signature.
 * * AA: left Action (aId) × right Action (rhsActionId), with signatures for both sides.
     */
-    /** @typedef {(
-* { kind: 'AI', aId: number, iId: number, variantSig?: string }
-* | { kind: 'AA', aId: number, rhsActionId: number, variantSig?: string, rhsVariantSig?: string }
-* )} InteractionPair */
+/** @typedef {(
+ * { kind: 'AI', aId: number, iId: number, variantSig?: string }
+ * | { kind: 'AA', aId: number, rhsActionId: number, variantSig?: string, rhsVariantSig?: string }
+ * )} InteractionPair */
 
 /**
 
@@ -60,15 +60,15 @@
 * pruning/migration utilities preserve back-compat.
   */
 /** @typedef {Object} NoteRecord
-* @property {number=} outcomeId        // formal outcome (stable id)
-* @property {number=} endActionId      // formal end target action id
-* @property {string=} endVariantSig    // variant signature for end action
-* @property {number=} confidence       // optional confidence for structured cells
-* @property {string=} source           // optional source marker (e.g., 'manual' | 'model')
-* @property {string=} result           // legacy free-text outcome (read-only)
-* @property {string=} endFree          // legacy free-text end (read-only)
-* @property {string=} notes            // free-form user notes
-  */
+ * @property {number=} outcomeId        // formal outcome (stable id)
+ * @property {number=} endActionId      // formal end target action id
+ * @property {string=} endVariantSig    // variant signature for end action
+ * @property {number=} confidence       // optional confidence for structured cells
+ * @property {string=} source           // optional source marker (e.g., 'manual' | 'model')
+ * @property {string=} result           // legacy free-text outcome (read-only)
+ * @property {string=} endFree          // legacy free-text end (read-only)
+ * @property {string=} notes            // free-form user notes
+ */
 
 /**
 
@@ -81,56 +81,56 @@
 * * commentFilter: persisted sidebar filter state
 * * commentColors: palette of comment color presets (id + optional label/swatch styling)
     */
-    /**
-     * @typedef {{
-     *   schema: number,
-     *   projectName: string,
-     *   projectInfo: string,
-     *   interactionsMode: InteractionsMode,
-     *   columnWidths: Record<string, number>,
-     *   commentFilter?: {
-     *     viewKey?: string,
-     *     rowIds?: string[],
-     *     columnKeys?: string[],
-     *     colorIds?: string[],
-     *   },
-     *   commentColors?: Array<{
-     *     id: string,
-     *     label?: string,
-     *     swatch?: string,
-     *     badgeBackground?: string,
-     *     badgeBorder?: string,
-     *     badgeText?: string,
-     *   }>,
-     * }} Meta
-     */
+/**
+ * @typedef {{
+ *   schema: number,
+ *   projectName: string,
+ *   projectInfo: string,
+ *   interactionsMode: InteractionsMode,
+ *   columnWidths: Record<string, number>,
+ *   commentFilter?: {
+ *     viewKey?: string,
+ *     rowIds?: string[],
+ *     columnKeys?: string[],
+ *     colorIds?: string[],
+ *   },
+ *   commentColors?: Array<{
+ *     id: string,
+ *     label?: string,
+ *     swatch?: string,
+ *     badgeBackground?: string,
+ *     badgeBorder?: string,
+ *     badgeText?: string,
+ *   }>,
+ * }} Meta
+ */
 
 /**
 
 * The full model persisted to disk.
   */
-  /** @typedef {Object} Model
-* @property {Meta} meta
-* @property {ActionRow[]} actions
-* @property {InputRow[]} inputs
-* @property {ModifierRow[]} modifiers
-* @property {OutcomeRow[]} outcomes
-* @property {Array<Object>} modifierGroups      // group definitions; see rules.js
-* @property {Array<Object>} modifierConstraints // rule constraints; see rules.js
-* @property {Record<string, NoteRecord>} notes  // flat map from noteKey → note
-* @property {Record<string, Record<string, unknown>>} comments // view+row → comment payloads
-* @property {InteractionPair[]} interactionsPairs
-* @property {{
-*   mode: string,
-*   groups: Array<Object>,
-*   totalRows?: number,
-*   actionsOrder?: number[],
-*   inputsOrder?: number[],
-*   variantCatalog?: Record<number, string[]>,
-*   propertiesCatalog?: string[],
-* }} interactionsIndex
-* @property {number} nextId
-  */
+/** @typedef {Object} Model
+ * @property {Meta} meta
+ * @property {ActionRow[]} actions
+ * @property {InputRow[]} inputs
+ * @property {ModifierRow[]} modifiers
+ * @property {OutcomeRow[]} outcomes
+ * @property {Array<Object>} modifierGroups      // group definitions; see rules.js
+ * @property {Array<Object>} modifierConstraints // rule constraints; see rules.js
+ * @property {Record<string, NoteRecord>} notes  // flat map from noteKey → note
+ * @property {Record<string, Record<string, unknown>>} comments // view+row → comment payloads
+ * @property {InteractionPair[]} interactionsPairs
+ * @property {{
+ *   mode: string,
+ *   groups: Array<Object>,
+ *   totalRows?: number,
+ *   actionsOrder?: number[],
+ *   inputsOrder?: number[],
+ *   variantCatalog?: Record<number, string[]>,
+ *   propertiesCatalog?: string[],
+ * }} interactionsIndex
+ * @property {number} nextId
+ */
 
 /**
 
@@ -149,12 +149,12 @@
 * Column kind context object passed to kind handlers.
 * Only the commonly used fields are documented here for IntelliSense.
   */
-  /** @typedef {Object} KindCtx
-* @property {number=} r
-* @property {number=} c
-* @property {Object=} col
-* @property {ActionRow|InputRow|ModifierRow|OutcomeRow=} row
-* @property {Model=} model
-* @property {function():Object} viewDef
-* @property {string=} activeView
-  */
+/** @typedef {Object} KindCtx
+ * @property {number=} r
+ * @property {number=} c
+ * @property {Object=} col
+ * @property {ActionRow|InputRow|ModifierRow|OutcomeRow=} row
+ * @property {Model=} model
+ * @property {function():Object} viewDef
+ * @property {string=} activeView
+ */

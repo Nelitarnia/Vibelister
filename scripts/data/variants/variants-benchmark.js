@@ -3,7 +3,10 @@ import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { GROUP_MODES } from "./variant-combinatorics.js";
 import { MOD_STATE_ID } from "../mod-state.js";
-import { buildInteractionsPairs, collectVariantsForAction } from "./variants.js";
+import {
+  buildInteractionsPairs,
+  collectVariantsForAction,
+} from "./variants.js";
 
 function makeModifiers(count) {
   return Array.from({ length: count }, (_, idx) => ({
@@ -54,13 +57,18 @@ function makeActions(count, modifiers) {
   return Array.from({ length: count }, (_, idx) => {
     const modSet = {};
     for (let i = 0; i < modifiers.length; i++) {
-      if (i % 3 === idx % 3) modSet[modifiers[i].id] = states[i % states.length];
+      if (i % 3 === idx % 3)
+        modSet[modifiers[i].id] = states[i % states.length];
     }
     return { id: idx + 1, name: `Action ${idx + 1}`, modSet };
   });
 }
 
-function runBenchmark({ actionCount = 60, modifierCount = 14, iterations = 50 } = {}) {
+function runBenchmark({
+  actionCount = 60,
+  modifierCount = 14,
+  iterations = 50,
+} = {}) {
   const modifiers = makeModifiers(modifierCount);
   const modifierGroups = makeGroups(modifiers);
   const modifierConstraints = makeConstraints(modifiers);
@@ -123,7 +131,12 @@ function makeDenseVariantModel({ groups = 3, groupSize = 6, pick = 3 } = {}) {
   };
 }
 
-function runVariantFanoutBenchmark({ iterations = 150, groups = 3, groupSize = 6, pick = 3 } = {}) {
+function runVariantFanoutBenchmark({
+  iterations = 150,
+  groups = 3,
+  groupSize = 6,
+  pick = 3,
+} = {}) {
   const model = makeDenseVariantModel({ groups, groupSize, pick });
   const start = performance.now();
   let variants = 0;

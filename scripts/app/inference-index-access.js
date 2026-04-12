@@ -1,4 +1,7 @@
-import { buildInteractionsPairs, buildScopedInteractionsPairs } from "../data/variants/variants.js";
+import {
+  buildInteractionsPairs,
+  buildScopedInteractionsPairs,
+} from "../data/variants/variants.js";
 import { noteKeyForPair } from "./interactions.js";
 import { getInteractionsIndex } from "./interactions-data.js";
 
@@ -146,8 +149,7 @@ export function createInferenceIndexAccess(options) {
               .map((id) => Number(id))
               .filter((id) => Number.isFinite(id)),
           ),
-        )
-          .sort((a, b) => a - b)
+        ).sort((a, b) => a - b)
       : [];
     const useFullIndex = normalizedIds.length === 0;
     if (useFullIndex) {
@@ -255,7 +257,8 @@ export function createInferenceIndexAccess(options) {
       }
       return combined.size ? Array.from(combined) : null;
     })();
-    const useFullBypassIndex = options.inferToBypassed || options.inferFromBypassed;
+    const useFullBypassIndex =
+      options.inferToBypassed || options.inferFromBypassed;
     const index = ensureBypassIndex(useFullBypassIndex ? null : actionIds);
     const indexAccess = {
       includeBypass,
@@ -288,7 +291,10 @@ export function createInferenceIndexAccess(options) {
           preferred.set(key, { row, isBypass: isBypassVariant });
         }
       }
-      const merged = [...fallback, ...Array.from(preferred.values(), (v) => v.row)];
+      const merged = [
+        ...fallback,
+        ...Array.from(preferred.values(), (v) => v.row),
+      ];
       return Array.from(new Set(merged)).sort((a, b) => a - b);
     };
     const rows = (() => {
@@ -321,7 +327,9 @@ export function createInferenceIndexAccess(options) {
         for (let i = 0; i < totalRows; i++) merged.add(i);
       }
       const mergedRows = Array.from(merged).sort((a, b) => a - b);
-      return options.inferToBypassed ? preferBypassRows(mergedRows) : mergedRows;
+      return options.inferToBypassed
+        ? preferBypassRows(mergedRows)
+        : mergedRows;
     })();
     return { indexAccess, rows };
   }

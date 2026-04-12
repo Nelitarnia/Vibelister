@@ -337,7 +337,9 @@
         aria-hidden="true"
       >
         <div class="comment-sidebar__header side-panel__header">
-          <span class="comment-sidebar__title side-panel__title" id="side-panel-title"
+          <span
+            class="comment-sidebar__title side-panel__title"
+            id="side-panel-title"
             >Comments</span
           >
           <button
@@ -391,7 +393,9 @@
                   id="comment-prev"
                   aria-label="Go to previous comment"
                 >
-                  <span class="comment-sidebar__nav-icon" aria-hidden="true">←</span>
+                  <span class="comment-sidebar__nav-icon" aria-hidden="true"
+                    >←</span
+                  >
                 </button>
                 <button
                   type="button"
@@ -399,27 +403,48 @@
                   id="comment-next"
                   aria-label="Go to next comment"
                 >
-                  <span class="comment-sidebar__nav-icon" aria-hidden="true">→</span>
+                  <span class="comment-sidebar__nav-icon" aria-hidden="true"
+                    >→</span
+                  >
                 </button>
               </div>
               <form class="comment-sidebar__editor" id="comment-editor" hidden>
-                <label class="comment-sidebar__label" for="comment-text">Comment</label>
+                <label class="comment-sidebar__label" for="comment-text"
+                  >Comment</label
+                >
                 <textarea
                   class="comment-sidebar__textarea"
                   id="comment-text"
                   rows="4"
                   placeholder="Write a note for collaborators"
                 ></textarea>
-                <label class="comment-sidebar__label" for="comment-color">Color</label>
-                <select class="comment-sidebar__select" id="comment-color"></select>
+                <label class="comment-sidebar__label" for="comment-color"
+                  >Color</label
+                >
+                <select
+                  class="comment-sidebar__select"
+                  id="comment-color"
+                ></select>
                 <div class="comment-sidebar__editor-actions">
-                  <button type="submit" class="comment-sidebar__save" id="comment-save">
+                  <button
+                    type="submit"
+                    class="comment-sidebar__save"
+                    id="comment-save"
+                  >
                     Save
                   </button>
-                  <button type="button" class="comment-sidebar__delete" id="comment-delete">
+                  <button
+                    type="button"
+                    class="comment-sidebar__delete"
+                    id="comment-delete"
+                  >
                     Delete
                   </button>
-                  <button type="button" class="comment-sidebar__cancel" id="comment-cancel">
+                  <button
+                    type="button"
+                    class="comment-sidebar__cancel"
+                    id="comment-cancel"
+                  >
                     Cancel
                   </button>
                 </div>
@@ -436,13 +461,15 @@
               hidden
             >
               <p class="comment-customize__intro">
-                Adjust the default names and colors for comment groups. Changes are saved
-                with this project and update existing comment swatches.
+                Adjust the default names and colors for comment groups. Changes
+                are saved with this project and update existing comment
+                swatches.
               </p>
               <div class="comment-customize__list" id="comment-palette"></div>
               <div class="comment-customize__footer">
                 <div class="comment-customize__hint">
-                  The first color in the list becomes the default for new comments.
+                  The first color in the list becomes the default for new
+                  comments.
                 </div>
                 <div class="comment-customize__actions">
                   <button
@@ -520,17 +547,28 @@
             <div class="interaction-tools__state">
               <div class="interaction-tools__field">
                 <div class="interaction-tools__label">Uncertainty</div>
-                <div class="interaction-tools__value" id="interaction-uncertainty-value">
+                <div
+                  class="interaction-tools__value"
+                  id="interaction-uncertainty-value"
+                >
                   —
                 </div>
               </div>
               <div class="interaction-tools__field">
                 <div class="interaction-tools__label">Source</div>
-                <div class="interaction-tools__value" id="interaction-source-value">—</div>
+                <div
+                  class="interaction-tools__value"
+                  id="interaction-source-value"
+                >
+                  —
+                </div>
               </div>
             </div>
             <div class="interaction-tools__default">
-              <label class="interaction-tools__label" for="interaction-uncertainty-default">
+              <label
+                class="interaction-tools__label"
+                for="interaction-uncertainty-default"
+              >
                 Default uncertainty
               </label>
               <div class="interaction-tools__slider-row">
@@ -550,12 +588,14 @@
                 </div>
               </div>
               <p class="interaction-tools__hint">
-                Used when applying manual inference from this panel. Toggle it anytime with Ctrl+Shift+U.
+                Used when applying manual inference from this panel. Toggle it
+                anytime with Ctrl+Shift+U.
               </p>
             </div>
             <div class="interaction-tools__intro">
-              Bulk inference tools target the current Interactions selection. Review inferred metadata
-              above or adjust the default uncertainty used when applying manual inference.
+              Bulk inference tools target the current Interactions selection.
+              Review inferred metadata above or adjust the default uncertainty
+              used when applying manual inference.
             </div>
             <div class="interaction-tools__actions">
               <button
@@ -566,21 +606,36 @@
               >
                 Promote inferred notes
               </button>
-              <button type="button" class="interaction-tools__button" id="interaction-clear">
+              <button
+                type="button"
+                class="interaction-tools__button"
+                id="interaction-clear"
+              >
                 Clear inference metadata
               </button>
-              <button type="button" class="interaction-tools__button" id="interaction-uncertain">
+              <button
+                type="button"
+                class="interaction-tools__button"
+                id="interaction-uncertain"
+              >
                 Apply default uncertainty
               </button>
-              <button type="button" class="interaction-tools__button" id="interaction-diagnostics">
+              <button
+                type="button"
+                class="interaction-tools__button"
+                id="interaction-diagnostics"
+              >
                 Variant diagnostics
               </button>
             </div>
             <p class="interaction-tools__hint">
-              Works on Outcome, End, and Tag columns in the Interactions view—actions only run when one of those columns is
-              selected. Selecting other columns shows the “Select Outcome, End, or Tag cells…” status message. You can open
-              this panel from any view; manual uncertainty applies inference metadata without changing cell contents, and
-              actions still respect row and column selections while updating inferred styling immediately.
+              Works on Outcome, End, and Tag columns in the Interactions
+              view—actions only run when one of those columns is selected.
+              Selecting other columns shows the “Select Outcome, End, or Tag
+              cells…” status message. You can open this panel from any view;
+              manual uncertainty applies inference metadata without changing
+              cell contents, and actions still respect row and column selections
+              while updating inferred styling immediately.
             </p>
           </section>
         </div>

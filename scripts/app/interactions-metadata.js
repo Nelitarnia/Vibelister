@@ -16,7 +16,8 @@ export function normalizeInteractionSource(value) {
 }
 
 export function readInteractionMetadata(note) {
-  const hasConfidence = note && typeof note === "object" && "confidence" in note;
+  const hasConfidence =
+    note && typeof note === "object" && "confidence" in note;
   const hasSource = note && typeof note === "object" && "source" in note;
   const sourceMetadata =
     note && typeof note === "object" && typeof note.sourceMetadata === "object"
@@ -30,7 +31,8 @@ export function readInteractionMetadata(note) {
   );
   const inferred =
     (hasConfidence || hasSource) &&
-    (confidence !== DEFAULT_INTERACTION_CONFIDENCE || source !== DEFAULT_INTERACTION_SOURCE);
+    (confidence !== DEFAULT_INTERACTION_CONFIDENCE ||
+      source !== DEFAULT_INTERACTION_SOURCE);
   return { confidence, source, inferred, sourceMetadata };
 }
 
@@ -43,9 +45,12 @@ export function applyInteractionMetadata(note, metadata) {
     ? normalizeInteractionSource(metadata.source)
     : DEFAULT_INTERACTION_SOURCE;
   const hasSourceMetadataField =
-    !metadata || Object.prototype.hasOwnProperty.call(metadata, "sourceMetadata");
+    !metadata ||
+    Object.prototype.hasOwnProperty.call(metadata, "sourceMetadata");
   const nextSourceMetadata =
-    metadata && typeof metadata.sourceMetadata === "object" ? metadata.sourceMetadata : null;
+    metadata && typeof metadata.sourceMetadata === "object"
+      ? metadata.sourceMetadata
+      : null;
   if (nextConfidence !== DEFAULT_INTERACTION_CONFIDENCE) {
     note.confidence = nextConfidence;
   } else if ("confidence" in note) {
@@ -67,15 +72,23 @@ export function applyInteractionMetadata(note, metadata) {
 
 export function extractInteractionMetadata(value) {
   if (!value || typeof value !== "object") return null;
-  const hasConfidence = Object.prototype.hasOwnProperty.call(value, "confidence");
+  const hasConfidence = Object.prototype.hasOwnProperty.call(
+    value,
+    "confidence",
+  );
   const hasSource = Object.prototype.hasOwnProperty.call(value, "source");
-  const hasSourceMetadata = Object.prototype.hasOwnProperty.call(value, "sourceMetadata");
+  const hasSourceMetadata = Object.prototype.hasOwnProperty.call(
+    value,
+    "sourceMetadata",
+  );
   if (!hasConfidence && !hasSource && !hasSourceMetadata) return null;
   return {
     confidence: hasConfidence
       ? normalizeInteractionConfidence(value.confidence)
       : DEFAULT_INTERACTION_CONFIDENCE,
-    source: hasSource ? normalizeInteractionSource(value.source) : DEFAULT_INTERACTION_SOURCE,
+    source: hasSource
+      ? normalizeInteractionSource(value.source)
+      : DEFAULT_INTERACTION_SOURCE,
     sourceMetadata:
       hasSourceMetadata && typeof value.sourceMetadata === "object"
         ? value.sourceMetadata

@@ -45,6 +45,8 @@ export function bootstrapSidebar(Ids) {
     interactionUncertaintyValue: el(Ids.interactionUncertaintyValue),
     interactionSourceValue: el(Ids.interactionSourceValue),
     interactionUncertaintyDefault: el(Ids.interactionUncertaintyDefault),
-    interactionUncertaintyDefaultValue: el(Ids.interactionUncertaintyDefaultValue),
+    interactionUncertaintyDefaultValue: el(
+      Ids.interactionUncertaintyDefaultValue,
+    ),
   };
 }

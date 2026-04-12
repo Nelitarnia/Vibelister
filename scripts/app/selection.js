@@ -103,7 +103,8 @@ export const SelectionCtl = {
   extendBoxTo(r, c) {
     if (!Number.isFinite(r) || !Number.isFinite(c)) return;
     if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
-    else if (!selection.horizontalMode && selection.colsAll) selection.colsAll = false;
+    else if (!selection.horizontalMode && selection.colsAll)
+      selection.colsAll = false;
 
     const rowAnchor = selection.anchor != null ? selection.anchor : sel.r;
     selection.rows.clear();

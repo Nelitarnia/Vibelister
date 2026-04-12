@@ -176,7 +176,11 @@ export function getModelVariantTests() {
         addInput("Btn");
 
         const stats = buildInteractionsPairs(model);
-        assert.strictEqual(stats.pairsCount, 1, "only one variant should remain");
+        assert.strictEqual(
+          stats.pairsCount,
+          1,
+          "only one variant should remain",
+        );
 
         const sigs = collectPairs(model).map((pair) => pair.variantSig);
         assert.deepStrictEqual(
@@ -249,7 +253,10 @@ export function getModelVariantTests() {
         buildInteractionsPairs(model);
 
         const second = buildScopedInteractionsPairs(model, [action.id]);
-        assert.ok(second.index !== cachedIndex, "version change rebuilds scoped index");
+        assert.ok(
+          second.index !== cachedIndex,
+          "version change rebuilds scoped index",
+        );
         assert.ok(
           model.interactionsIndexCache?.[`d:${action.id}`]?.baseVersion,
           "cache entry tracked base version",
@@ -266,7 +273,10 @@ export function getModelVariantTests() {
         const action = addAction("Idle");
         addInput("Tap");
 
-        const { variants, diagnostics } = collectVariantsForAction(action, model);
+        const { variants, diagnostics } = collectVariantsForAction(
+          action,
+          model,
+        );
         assert.deepStrictEqual(
           variants,
           [],
@@ -288,7 +298,11 @@ export function getModelVariantTests() {
         );
 
         const stats = buildInteractionsPairs(model);
-        assert.strictEqual(stats.pairsCount, 0, "no rows generated for invalid variants");
+        assert.strictEqual(
+          stats.pairsCount,
+          0,
+          "no rows generated for invalid variants",
+        );
         assert.strictEqual(
           stats.variantDiagnostics.invalidActions,
           1,
@@ -318,10 +332,23 @@ export function getModelVariantTests() {
         });
 
         const stats = buildInteractionsPairs(model);
-        assert.strictEqual(stats.capped, true, "group truncation marks build as capped");
-        assert.strictEqual(stats.cappedActions, 1, "only the overflowing action is capped");
-        assert.ok(stats.groupTruncations.length > 0, "surface truncated group metadata");
-        const forAction = stats.groupTruncations.find((g) => g.actionId === action.id);
+        assert.strictEqual(
+          stats.capped,
+          true,
+          "group truncation marks build as capped",
+        );
+        assert.strictEqual(
+          stats.cappedActions,
+          1,
+          "only the overflowing action is capped",
+        );
+        assert.ok(
+          stats.groupTruncations.length > 0,
+          "surface truncated group metadata",
+        );
+        const forAction = stats.groupTruncations.find(
+          (g) => g.actionId === action.id,
+        );
         assert.ok(forAction, "associate truncation with its action");
         assert.strictEqual(
           forAction.groupName,
@@ -366,8 +393,13 @@ export function getModelVariantTests() {
       name: "variant caps are configurable via model metadata",
       run(assert) {
         const { model, addAction, addInput, addModifier } = makeModelFixture();
-        model.meta.variantCaps = { variantCapPerAction: 2, variantCapPerGroup: 3 };
-        const mods = Array.from({ length: 6 }, (_, i) => addModifier(`Cap${i}`));
+        model.meta.variantCaps = {
+          variantCapPerAction: 2,
+          variantCapPerGroup: 3,
+        };
+        const mods = Array.from({ length: 6 }, (_, i) =>
+          addModifier(`Cap${i}`),
+        );
         const action = addAction(
           "Capped",
           mods.reduce((acc, mod) => {
@@ -388,10 +420,26 @@ export function getModelVariantTests() {
         const stats = buildInteractionsPairs(model);
         const variants = model.interactionsIndex.variantCatalog[action.id];
 
-        assert.strictEqual(stats.variantCaps.variantCapPerAction, 2, "caps surface in summaries");
-        assert.strictEqual(stats.capped, true, "custom action cap marks build as capped");
-        assert.strictEqual(stats.cappedActions, 1, "only the overflowing action is capped");
-        assert.strictEqual(variants.length, 2, "per-action cap limits emitted variants");
+        assert.strictEqual(
+          stats.variantCaps.variantCapPerAction,
+          2,
+          "caps surface in summaries",
+        );
+        assert.strictEqual(
+          stats.capped,
+          true,
+          "custom action cap marks build as capped",
+        );
+        assert.strictEqual(
+          stats.cappedActions,
+          1,
+          "only the overflowing action is capped",
+        );
+        assert.strictEqual(
+          variants.length,
+          2,
+          "per-action cap limits emitted variants",
+        );
         assert.ok(
           stats.groupTruncations.some((g) => g.limit === 3),
           "group truncation respects configured cap",
@@ -401,7 +449,8 @@ export function getModelVariantTests() {
     {
       name: "diagnostics capture modifier and combo counts with caps",
       run(assert) {
-        const { model, addAction, addModifier, groupExact } = makeModelFixture();
+        const { model, addAction, addModifier, groupExact } =
+          makeModelFixture();
         const m1 = addModifier("Opt 1");
         const m2 = addModifier("Opt 2");
         const action = addAction("Diag", { [m1.id]: MOD.ON, [m2.id]: MOD.ON });
@@ -416,13 +465,21 @@ export function getModelVariantTests() {
           { required: 0, optional: 2, bypassed: 0 },
           "diagnostics include modifier counts",
         );
-        assert.strictEqual(diagnostics.groupCombos.length, 1, "one group reported");
+        assert.strictEqual(
+          diagnostics.groupCombos.length,
+          1,
+          "one group reported",
+        );
         assert.strictEqual(
           diagnostics.groupCombos[0].comboCount,
           2,
           "group combo count reflects combinations before caps",
         );
-        assert.strictEqual(diagnostics.capsHit, true, "per-action cap surfaced");
+        assert.strictEqual(
+          diagnostics.capsHit,
+          true,
+          "per-action cap surfaced",
+        );
         assert.strictEqual(
           diagnostics.yielded,
           1,
@@ -433,7 +490,8 @@ export function getModelVariantTests() {
     {
       name: "diagnostics count constraint prunes",
       run(assert) {
-        const { model, addAction, addModifier, groupExact } = makeModelFixture();
+        const { model, addAction, addModifier, groupExact } =
+          makeModelFixture();
         const a = addModifier("A");
         const b = addModifier("B");
         const c = addModifier("C");
@@ -454,7 +512,11 @@ export function getModelVariantTests() {
           1,
           "constraint prunes are counted",
         );
-        assert.strictEqual(diagnostics.variants.length, 3, "invalid combos removed");
+        assert.strictEqual(
+          diagnostics.variants.length,
+          3,
+          "invalid combos removed",
+        );
       },
     },
     {

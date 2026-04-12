@@ -103,7 +103,10 @@ export function normalizeInteractionCommentMetadata(rowId, rawMeta = null) {
     if (!Object.prototype.hasOwnProperty.call(meta, "rhsVariantSig")) {
       meta.rhsVariantSig = canonicalSig(meta.rhsVariantSig || "");
     }
-  } else if (meta.kind === "AI" && !Object.prototype.hasOwnProperty.call(meta, "inputId")) {
+  } else if (
+    meta.kind === "AI" &&
+    !Object.prototype.hasOwnProperty.call(meta, "inputId")
+  ) {
     meta.inputId = normalizeInteractionId(meta.inputId);
   }
   return Object.keys(meta).length ? meta : null;
@@ -122,7 +125,8 @@ function resolveColumns(viewDef) {
 function resolveColumn(columns, columnOrIndex) {
   if (typeof columnOrIndex === "number") {
     const index = columnOrIndex | 0;
-    if (index >= 0 && index < columns.length) return { column: columns[index], index };
+    if (index >= 0 && index < columns.length)
+      return { column: columns[index], index };
     return { column: null, index };
   }
   if (columnOrIndex && typeof columnOrIndex === "object") {
@@ -141,7 +145,10 @@ export function createEmptyCommentMap(viewKeys = DEFAULT_COMMENT_VIEW_KEYS) {
   return normalizeCommentsMap({}, viewKeys);
 }
 
-export function normalizeCommentsMap(rawComments, viewKeys = DEFAULT_COMMENT_VIEW_KEYS) {
+export function normalizeCommentsMap(
+  rawComments,
+  viewKeys = DEFAULT_COMMENT_VIEW_KEYS,
+) {
   const normalized = {};
   if (rawComments && typeof rawComments === "object") {
     for (const [viewKey, rows] of Object.entries(rawComments)) {
@@ -151,10 +158,14 @@ export function normalizeCommentsMap(rawComments, viewKeys = DEFAULT_COMMENT_VIE
         for (const [rowKey, value] of Object.entries(rows)) {
           const normalizedRowId = normalizeRowId(rowKey);
           if (safeViewKey === "interactions") {
-            const rowValue = value && typeof value === "object" && !Array.isArray(value)
-              ? { ...value }
-              : { default: value };
-            const meta = normalizeInteractionCommentMetadata(rowKey, rowValue[INTERACTION_COMMENT_META_KEY]);
+            const rowValue =
+              value && typeof value === "object" && !Array.isArray(value)
+                ? { ...value }
+                : { default: value };
+            const meta = normalizeInteractionCommentMetadata(
+              rowKey,
+              rowValue[INTERACTION_COMMENT_META_KEY],
+            );
             if (meta) rowValue[INTERACTION_COMMENT_META_KEY] = meta;
             bucket[normalizedRowId] = rowValue;
           } else {

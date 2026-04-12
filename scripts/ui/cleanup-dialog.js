@@ -63,11 +63,14 @@ function formatActionStatus(entry, applied) {
   const issues = Number(entry.candidates) || 0;
   const removed = Number(entry.removed) || 0;
   if (!issues && !applied) return "No issues detected.";
-  if (!issues && applied) return removed ? `Removed ${removed}.` : "No changes applied.";
+  if (!issues && applied)
+    return removed ? `Removed ${removed}.` : "No changes applied.";
   if (!applied) {
     return issues === 1 ? "1 issue" : `${issues} issues`;
   }
-  return removed ? `Removed ${removed} of ${issues}.` : `0 of ${issues} removed.`;
+  return removed
+    ? `Removed ${removed} of ${issues}.`
+    : `0 of ${issues} removed.`;
 }
 
 export async function openCleanupDialog(options = {}) {
@@ -80,7 +83,8 @@ export async function openCleanupDialog(options = {}) {
 
     const title = document.createElement("h2");
     title.textContent = "Clean up project";
-    title.style.cssText = "margin:0;font-size:20px;font-weight:600;color:#f0f2ff;";
+    title.style.cssText =
+      "margin:0;font-size:20px;font-weight:600;color:#f0f2ff;";
 
     const description = document.createElement("p");
     description.textContent =

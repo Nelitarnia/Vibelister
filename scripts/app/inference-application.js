@@ -4,7 +4,10 @@ import {
   describeInteractionInference,
   normalizeInteractionSource,
 } from "./interactions.js";
-import { HEURISTIC_SOURCES, proposeInteractionInferences } from "./inference-heuristics.js";
+import {
+  HEURISTIC_SOURCES,
+  proposeInteractionInferences,
+} from "./inference-heuristics.js";
 import {
   captureInferenceProfilesSnapshot,
   recordProfileImpact,
@@ -155,7 +158,8 @@ export function applySuggestions({
       if (suggestion.sourceMetadata)
         suggestionMetadata.sourceMetadata = suggestion.sourceMetadata;
       applyInteractionMetadata(dest, suggestionMetadata);
-      result.sources[suggestion.source] = (result.sources[suggestion.source] || 0) + 1;
+      result.sources[suggestion.source] =
+        (result.sources[suggestion.source] || 0) + 1;
       appliedChange = true;
     } else if (metadata) {
       applyInteractionMetadata(dest, metadata);
@@ -177,10 +181,13 @@ export function applySuggestions({
     }
   }
   if (tagsChanged) {
-    emitInteractionTagChangeEvent({ type: "set" }, {
-      reason: "inference",
-      force: true,
-    });
+    emitInteractionTagChangeEvent(
+      { type: "set" },
+      {
+        reason: "inference",
+        force: true,
+      },
+    );
   }
   return { result, thresholdOverrides };
 }

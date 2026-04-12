@@ -44,7 +44,10 @@ export function createGridCells({
     if (state.activeView === "interactions") {
       const k = String(col?.kind || "");
       if (k === "interactions") {
-        return getCellForKind("interactions", kindCtx({ r, c, col, row: null }));
+        return getCellForKind(
+          "interactions",
+          kindCtx({ r, c, col, row: null }),
+        );
       }
       if (k) {
         return getCellForKind(k, kindCtx({ r, c, col, row: null }));
@@ -62,7 +65,8 @@ export function createGridCells({
   function cellValueToPlainText(value) {
     if (value == null) return "";
     if (typeof value === "string") return value;
-    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    if (typeof value === "number" || typeof value === "boolean")
+      return String(value);
     if (typeof value === "object") {
       if (typeof value.plainText === "string") return value.plainText;
       if (Array.isArray(value.segments)) {
@@ -114,7 +118,13 @@ export function createGridCells({
           if (col.kind === "modState") {
             const isBypassed = isModStateBypassed(row, col);
             if (wasBypassed !== isBypassed) {
-              const change = setCommentInactive(model, vd, row, col, isBypassed);
+              const change = setCommentInactive(
+                model,
+                vd,
+                row,
+                col,
+                isBypassed,
+              );
               if (change) {
                 commentChanges.push({
                   change,
@@ -184,7 +194,11 @@ export function createGridCells({
     const arr = dataArray();
     const row = Array.isArray(arr) ? arr[r] : null;
     let wasBypassed = null;
-    if (state.activeView !== "interactions" && col?.kind === "modState" && row) {
+    if (
+      state.activeView !== "interactions" &&
+      col?.kind === "modState" &&
+      row
+    ) {
       wasBypassed = isModStateBypassed(row, col);
     }
     const applied = baseApplyStructuredCell(r, c, payload);

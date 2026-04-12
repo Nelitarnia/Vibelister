@@ -27,7 +27,9 @@ function createCommands(model, view, runner = null) {
     sel,
     model,
     statusBar: { set() {} },
-    runModelMutation: runner ? runner.runModelMutation.bind(runner) : () => ({}),
+    runModelMutation: runner
+      ? runner.runModelMutation.bind(runner)
+      : () => ({}),
     runModelTransaction: runner
       ? runner.runModelTransaction.bind(runner)
       : (_label, fn) => fn(),
@@ -99,7 +101,10 @@ export function getClipboardTests() {
         };
         const column = view.columns[1];
 
-        setComment(model, view, rowA, column, { text: "copied", color: SAMPLE_COLOR });
+        setComment(model, view, rowA, column, {
+          text: "copied",
+          color: SAMPLE_COLOR,
+        });
 
         const originalDocument = globalThis.document;
         globalThis.document = { dispatchEvent() {} };
@@ -112,14 +117,23 @@ export function getClipboardTests() {
           });
           assert.ok(payload, "clipboard payload should exist for comment");
 
-          const change = commands.applyCellCommentClipboardPayload(1, 1, payload, {
-            view: "actions",
-            viewDef: view,
-          });
+          const change = commands.applyCellCommentClipboardPayload(
+            1,
+            1,
+            payload,
+            {
+              view: "actions",
+              viewDef: view,
+            },
+          );
           assert.ok(change, "applying clipboard payload should report change");
 
           const destEntries = listCommentsForCell(model, view, rowB, column);
-          assert.strictEqual(destEntries.length, 1, "destination comment recorded");
+          assert.strictEqual(
+            destEntries.length,
+            1,
+            "destination comment recorded",
+          );
           assert.deepStrictEqual(destEntries[0].value, {
             text: "copied",
             color: SAMPLE_COLOR,
@@ -173,10 +187,15 @@ export function getClipboardTests() {
           runner.runModelTransaction(
             "pasteCells",
             () => {
-              const change = commands.applyCellCommentClipboardPayload(1, 1, payload, {
-                view: "actions",
-                viewDef: view,
-              });
+              const change = commands.applyCellCommentClipboardPayload(
+                1,
+                1,
+                payload,
+                {
+                  view: "actions",
+                  viewDef: view,
+                },
+              );
               return {
                 changed: !!change,
                 appliedCount: change ? 1 : 0,
@@ -197,7 +216,11 @@ export function getClipboardTests() {
           );
 
           let destEntries = listCommentsForCell(model, view, rowB, column);
-          assert.strictEqual(destEntries.length, 1, "comment applied during paste");
+          assert.strictEqual(
+            destEntries.length,
+            1,
+            "comment applied during paste",
+          );
           assert.deepStrictEqual(destEntries[0].value, {
             text: "history",
             color: SECONDARY_COLOR,
@@ -205,11 +228,19 @@ export function getClipboardTests() {
 
           assert.strictEqual(runner.undo(), true, "undo succeeds");
           destEntries = listCommentsForCell(model, view, rowB, column);
-          assert.strictEqual(destEntries.length, 0, "comment removed after undo");
+          assert.strictEqual(
+            destEntries.length,
+            0,
+            "comment removed after undo",
+          );
 
           assert.strictEqual(runner.redo(), true, "redo succeeds");
           destEntries = listCommentsForCell(model, view, rowB, column);
-          assert.strictEqual(destEntries.length, 1, "comment restored after redo");
+          assert.strictEqual(
+            destEntries.length,
+            1,
+            "comment restored after redo",
+          );
           assert.deepStrictEqual(destEntries[0].value, {
             text: "history",
             color: SECONDARY_COLOR,

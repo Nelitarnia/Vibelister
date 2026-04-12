@@ -210,7 +210,11 @@ export function getUiGridMouseTests() {
           "column selection should be preserved",
         );
         assert.deepStrictEqual([deps.sel.r, deps.sel.c], [4, 2]);
-        assert.strictEqual(deps._rendered, 1, "render should run for ctrl-click");
+        assert.strictEqual(
+          deps._rendered,
+          1,
+          "render should run for ctrl-click",
+        );
 
         const existingRowCell = makeCell(deps.sheet, 2, 0);
         deps.sheet.dispatch("mousedown", {

@@ -1,4 +1,7 @@
-import { computeDestinationIndices, initGridKeys } from "../../../ui/grid-keys.js";
+import {
+  computeDestinationIndices,
+  initGridKeys,
+} from "../../../ui/grid-keys.js";
 import { initPalette } from "../../../ui/palette.js";
 import { MIME_RANGE } from "../../../app/clipboard-codec.js";
 import { createInteractionsOutline } from "../../../ui/interactions-outline.js";
@@ -52,7 +55,9 @@ export function getGridKeysTests() {
           },
           removeEventListener(type, cb, capture) {
             const arr = listeners.get(type) || [];
-            const idx = arr.findIndex((entry) => entry.cb === cb && entry.capture === !!capture);
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
             if (idx >= 0) arr.splice(idx, 1);
             listeners.set(type, arr);
           },
@@ -159,8 +164,16 @@ export function getGridKeysTests() {
 
           shortcutListener.cb(event);
 
-          assert.strictEqual(toggles, 1, "Ctrl+Shift+O should toggle outline from filter");
-          assert.strictEqual(event.prevented, true, "toggle shortcut should prevent default");
+          assert.strictEqual(
+            toggles,
+            1,
+            "Ctrl+Shift+O should toggle outline from filter",
+          );
+          assert.strictEqual(
+            event.prevented,
+            true,
+            "toggle shortcut should prevent default",
+          );
         } finally {
           dispose?.();
         }
@@ -187,14 +200,18 @@ export function getGridKeysTests() {
           },
         };
 
-        const colorPickerStub = { getAttribute: () => "false", contains: () => false };
+        const colorPickerStub = {
+          getAttribute: () => "false",
+          contains: () => false,
+        };
         const outlinePanel = { querySelector: () => null };
         const input = { tagName: "INPUT", isContentEditable: false };
 
         let modalOpen = true;
         const documentStub = {
           querySelector(selector) {
-            if (selector === '[aria-modal="true"]') return modalOpen ? {} : null;
+            if (selector === '[aria-modal="true"]')
+              return modalOpen ? {} : null;
             return null;
           },
           getElementById(id) {
@@ -289,7 +306,11 @@ export function getGridKeysTests() {
 
           const modalEvent = makeEvent();
           shortcutListener.cb(modalEvent);
-          assert.strictEqual(toggles, 0, "modal presence should block shortcut");
+          assert.strictEqual(
+            toggles,
+            0,
+            "modal presence should block shortcut",
+          );
           assert.strictEqual(
             modalEvent.prevented,
             false,
@@ -438,7 +459,10 @@ export function getGridKeysTests() {
         try {
           const pasteListeners = listeners.get("paste") || [];
           const captureListener = pasteListeners.find((entry) => entry.capture);
-          assert.ok(captureListener, "paste handler should be registered in capture phase");
+          assert.ok(
+            captureListener,
+            "paste handler should be registered in capture phase",
+          );
 
           const rowsBefore = Array.from(selection.rows);
           const colsBefore = Array.from(selection.cols);
@@ -595,7 +619,10 @@ export function getGridKeysTests() {
                 {
                   colKey: "action",
                   colKind: "refRO",
-                  structured: { type: "action", data: { id: 7, variantSig: "v1" } },
+                  structured: {
+                    type: "action",
+                    data: { id: 7, variantSig: "v1" },
+                  },
                 },
               ],
             ],
@@ -617,7 +644,10 @@ export function getGridKeysTests() {
 
           pasteListener(event);
 
-          assert.ok(event.prevented, "paste handler should prevent default paste");
+          assert.ok(
+            event.prevented,
+            "paste handler should prevent default paste",
+          );
           assert.deepStrictEqual(
             appliedPayloads,
             [{ type: "action", data: { id: 7, variantSig: "v1" } }],
@@ -752,7 +782,10 @@ export function getGridKeysTests() {
 
           pasteListener(event);
 
-          assert.ok(event.prevented, "paste handler should prevent default paste");
+          assert.ok(
+            event.prevented,
+            "paste handler should prevent default paste",
+          );
           assert.deepStrictEqual(
             setCalls.map((call) => call.c),
             [2, 3],
@@ -885,7 +918,10 @@ export function getGridKeysTests() {
 
           pasteListener(event);
 
-          assert.ok(event.prevented, "paste handler should prevent default paste");
+          assert.ok(
+            event.prevented,
+            "paste handler should prevent default paste",
+          );
           assert.deepStrictEqual(
             setCalls.map((call) => call.c),
             [0, 1, 2, 3],
@@ -927,7 +963,10 @@ export function getGridKeysTests() {
         };
         const sel = { r: 0, c: 0 };
 
-        const gridData = [["a0", "b0", "c0", "d0"], ["a1", "b1", "c1", "d1"]];
+        const gridData = [
+          ["a0", "b0", "c0", "d0"],
+          ["a1", "b1", "c1", "d1"],
+        ];
         const setCalls = [];
 
         const dispose = initGridKeys({
@@ -1015,7 +1054,10 @@ export function getGridKeysTests() {
 
           pasteListener(event);
 
-          assert.ok(event.prevented, "paste handler should prevent default paste");
+          assert.ok(
+            event.prevented,
+            "paste handler should prevent default paste",
+          );
           assert.deepStrictEqual(
             setCalls.map((call) => call.c),
             [1, 2, 3],
@@ -1154,7 +1196,10 @@ export function getGridKeysTests() {
 
           pasteListener(event);
 
-          assert.ok(event.prevented, "paste handler should prevent default paste");
+          assert.ok(
+            event.prevented,
+            "paste handler should prevent default paste",
+          );
           assert.deepStrictEqual(
             setCalls.map((call) => call.c),
             [0, 1, 2, 3],
@@ -1261,7 +1306,10 @@ export function getGridKeysTests() {
         try {
           const keyListeners = listeners.get("keydown") || [];
           const captureListener = keyListeners.find((entry) => entry.capture);
-          assert.ok(captureListener, "grid keydown listener should be registered");
+          assert.ok(
+            captureListener,
+            "grid keydown listener should be registered",
+          );
 
           const event = {
             key: "Enter",
@@ -1502,12 +1550,14 @@ export function getGridKeysTests() {
         });
 
         const typeChar = (ch) => {
-          const start = typeof editor.selectionStart === "number"
-            ? editor.selectionStart
-            : editor.value.length;
-          const end = typeof editor.selectionEnd === "number"
-            ? editor.selectionEnd
-            : start;
+          const start =
+            typeof editor.selectionStart === "number"
+              ? editor.selectionStart
+              : editor.value.length;
+          const end =
+            typeof editor.selectionEnd === "number"
+              ? editor.selectionEnd
+              : start;
           const before = editor.value.slice(0, start);
           const after = editor.value.slice(end);
           editor.value = `${before}${ch}${after}`;
@@ -1519,7 +1569,10 @@ export function getGridKeysTests() {
         try {
           const keyListeners = listeners.get("keydown") || [];
           const captureListener = keyListeners.find((entry) => entry.capture);
-          assert.ok(captureListener, "grid keydown listener should be registered");
+          assert.ok(
+            captureListener,
+            "grid keydown listener should be registered",
+          );
 
           const keyEvent = {
             key: "a",
@@ -1598,7 +1651,9 @@ export function getGridKeysTests() {
           contains(target) {
             if (this === target) return true;
             return this.children.some((child) =>
-              typeof child.contains === "function" ? child.contains(target) : child === target,
+              typeof child.contains === "function"
+                ? child.contains(target)
+                : child === target,
             );
           }
 
@@ -1710,10 +1765,20 @@ export function getGridKeysTests() {
           document: documentStub,
         });
 
-        palette.openForCurrentCell({ r: 0, c: 0, initialText: "", focusEditor: false });
+        palette.openForCurrentCell({
+          r: 0,
+          c: 0,
+          initialText: "",
+          focusEditor: false,
+        });
 
-        const paletteRoot = editorParent.children.find((child) => child.id === "universalPalette");
-        assert.ok(paletteRoot, "palette root should be attached to editor parent");
+        const paletteRoot = editorParent.children.find(
+          (child) => child.id === "universalPalette",
+        );
+        assert.ok(
+          paletteRoot,
+          "palette root should be attached to editor parent",
+        );
         const list = paletteRoot.children[0];
         const firstItem = list?.children?.[0];
         assert.strictEqual(
@@ -1723,8 +1788,10 @@ export function getGridKeysTests() {
         );
 
         const keyListeners = editorListeners.get("keydown") || [];
-        const keydown = keyListeners.find((entry) => typeof entry === "function") ||
-          keyListeners.find((entry) => entry && typeof entry.cb === "function")?.cb;
+        const keydown =
+          keyListeners.find((entry) => typeof entry === "function") ||
+          keyListeners.find((entry) => entry && typeof entry.cb === "function")
+            ?.cb;
         assert.ok(keydown, "editor keydown listener should be registered");
 
         const enterEvent = {
@@ -1743,12 +1810,21 @@ export function getGridKeysTests() {
 
         keydown(enterEvent);
 
-        assert.strictEqual(setCellValue, null, "Enter should clear the cell value");
+        assert.strictEqual(
+          setCellValue,
+          null,
+          "Enter should clear the cell value",
+        );
         assert.ok(endEditCalls > 0, "clearing via Enter should exit edit mode");
 
         viewColumn.key = "dualof";
         setCellValue = undefined;
-        palette.openForCurrentCell({ r: 0, c: 0, initialText: "", focusEditor: false });
+        palette.openForCurrentCell({
+          r: 0,
+          c: 0,
+          initialText: "",
+          focusEditor: false,
+        });
 
         const outcomeList = editorParent.children.find(
           (child) => child.id === "universalPalette",
@@ -1762,8 +1838,15 @@ export function getGridKeysTests() {
 
         outcomeClear?.onclick?.({ preventDefault() {}, stopPropagation() {} });
 
-        assert.strictEqual(setCellValue, null, "clicking clear option should clear the cell");
-        assert.ok(endEditCalls > 1, "clicking clear option should exit edit mode");
+        assert.strictEqual(
+          setCellValue,
+          null,
+          "clicking clear option should clear the cell",
+        );
+        assert.ok(
+          endEditCalls > 1,
+          "clicking clear option should exit edit mode",
+        );
       },
     },
     {
@@ -1889,7 +1972,11 @@ export function getGridKeysTests() {
 
           bubbleListener.cb(bubbleEvent);
 
-          assert.strictEqual(toggles, 1, "comments toggle should be invoked once");
+          assert.strictEqual(
+            toggles,
+            1,
+            "comments toggle should be invoked once",
+          );
           assert.strictEqual(
             bubbleEvent.prevented,
             true,
@@ -2033,12 +2120,19 @@ export function getGridKeysTests() {
         try {
           const copyListeners = listeners.get("copy") || [];
           const copyListener = copyListeners.find((entry) => entry.capture);
-          assert.ok(copyListener, "copy listener should register in capture phase");
+          assert.ok(
+            copyListener,
+            "copy listener should register in capture phase",
+          );
 
           const copyEvent = makeClipboardEvent();
           copyListener.cb(copyEvent);
 
-          assert.strictEqual(copyEvent.prevented, true, "copy should prevent default");
+          assert.strictEqual(
+            copyEvent.prevented,
+            true,
+            "copy should prevent default",
+          );
           assert.strictEqual(
             clipboardStore["text/plain"],
             "Name A\t42\tNote",
@@ -2051,16 +2145,24 @@ export function getGridKeysTests() {
 
           const cutListeners = listeners.get("cut") || [];
           const cutListener = cutListeners.find((entry) => entry.capture);
-          assert.ok(cutListener, "cut listener should register in capture phase");
+          assert.ok(
+            cutListener,
+            "cut listener should register in capture phase",
+          );
 
           clipboardTypes.clear();
-          for (const key of Object.keys(clipboardStore)) delete clipboardStore[key];
+          for (const key of Object.keys(clipboardStore))
+            delete clipboardStore[key];
           statusMessages.length = 0;
 
           const cutEvent = makeClipboardEvent();
           cutListener.cb(cutEvent);
 
-          assert.strictEqual(cutEvent.prevented, true, "cut should prevent default");
+          assert.strictEqual(
+            cutEvent.prevented,
+            true,
+            "cut should prevent default",
+          );
           assert.strictEqual(
             clipboardStore["text/plain"],
             "Name A\t42\tNote",
@@ -2070,8 +2172,12 @@ export function getGridKeysTests() {
           const cutRangePayload = JSON.parse(clipboardStore[MIME_RANGE]);
           assert.strictEqual(cutRangePayload.columns.length, 3);
           assert.strictEqual(cutRangePayload.cells[0].length, 3);
-          assert.deepStrictEqual(clearCalls, [{ reason: "cut", skipStatus: true }]);
-          assert.deepStrictEqual(statusMessages, ["Cut 1×3 cells (types: Name, Value, Note)."]);
+          assert.deepStrictEqual(clearCalls, [
+            { reason: "cut", skipStatus: true },
+          ]);
+          assert.deepStrictEqual(statusMessages, [
+            "Cut 1×3 cells (types: Name, Value, Note).",
+          ]);
         } finally {
           dispose?.();
         }
@@ -2109,7 +2215,11 @@ export function getGridKeysTests() {
 
         const navigatorStub = { platform: "Win" };
 
-        const selection = { rows: new Set([0, 1]), cols: new Set([0, 1]), colsAll: false };
+        const selection = {
+          rows: new Set([0, 1]),
+          cols: new Set([0, 1]),
+          colsAll: false,
+        };
         const sel = { r: 0, c: 0 };
 
         const gridData = [
@@ -2206,12 +2316,21 @@ export function getGridKeysTests() {
         try {
           const cutListeners = listeners.get("cut") || [];
           const captureListener = cutListeners.find((entry) => entry.capture);
-          assert.ok(captureListener, "cut listener should register in capture phase");
+          assert.ok(
+            captureListener,
+            "cut listener should register in capture phase",
+          );
 
           captureListener.cb(event);
 
-          assert.strictEqual(event.prevented, true, "cut handler should prevent default");
-          assert.deepStrictEqual(clearCalls, [{ reason: "cut", skipStatus: true }]);
+          assert.strictEqual(
+            event.prevented,
+            true,
+            "cut handler should prevent default",
+          );
+          assert.deepStrictEqual(clearCalls, [
+            { reason: "cut", skipStatus: true },
+          ]);
 
           assert.strictEqual(
             clipboardStore["text/plain"],
@@ -2220,8 +2339,16 @@ export function getGridKeysTests() {
           );
 
           const rangePayload = JSON.parse(clipboardStore[MIME_RANGE]);
-          assert.strictEqual(rangePayload.cells.length, 2, "cut should encode two rows");
-          assert.strictEqual(rangePayload.cells[0].length, 2, "cut should encode two columns");
+          assert.strictEqual(
+            rangePayload.cells.length,
+            2,
+            "cut should encode two rows",
+          );
+          assert.strictEqual(
+            rangePayload.cells[0].length,
+            2,
+            "cut should encode two columns",
+          );
 
           assert.deepStrictEqual(
             statusMessages,
@@ -2477,7 +2604,11 @@ export function getGridKeysTests() {
           bubbleListener.cb(eventAbove);
 
           assert.strictEqual(aboveCalls, 1, "Ctrl+Alt+= should add rows above");
-          assert.strictEqual(belowCalls, 0, "Ctrl+Alt+= should not add rows below");
+          assert.strictEqual(
+            belowCalls,
+            0,
+            "Ctrl+Alt+= should not add rows below",
+          );
           assert.strictEqual(
             eventAbove.prevented,
             true,
@@ -2500,8 +2631,16 @@ export function getGridKeysTests() {
 
           bubbleListener.cb(eventBelow);
 
-          assert.strictEqual(aboveCalls, 1, "Ctrl+Alt+Shift+= should not add rows above");
-          assert.strictEqual(belowCalls, 1, "Ctrl+Alt+Shift+= should add rows below");
+          assert.strictEqual(
+            aboveCalls,
+            1,
+            "Ctrl+Alt+Shift+= should not add rows above",
+          );
+          assert.strictEqual(
+            belowCalls,
+            1,
+            "Ctrl+Alt+Shift+= should add rows below",
+          );
           assert.strictEqual(
             eventBelow.prevented,
             true,
@@ -2934,7 +3073,10 @@ export function getGridKeysTests() {
           ["interactionsOutlineToggle", toggleButton],
         ]);
 
-        const hadDocument = Object.prototype.hasOwnProperty.call(global, "document");
+        const hadDocument = Object.prototype.hasOwnProperty.call(
+          global,
+          "document",
+        );
         const originalDocument = global.document;
         global.document = {
           getElementById(id) {
@@ -3006,7 +3148,11 @@ export function getGridKeysTests() {
           outline.setActive(true);
           const moved = outline.jumpToVariant(-1);
           assert.strictEqual(moved, true, "jump should succeed");
-          assert.strictEqual(sel.r, 2, "selection cursor should move to previous variant row");
+          assert.strictEqual(
+            sel.r,
+            2,
+            "selection cursor should move to previous variant row",
+          );
           assert.strictEqual(
             Selection.cell.r,
             2,
@@ -3145,7 +3291,10 @@ export function getGridKeysTests() {
         try {
           const keyListeners = listeners.get("keydown") || [];
           const captureListener = keyListeners.find((entry) => entry.capture);
-          assert.ok(captureListener, "grid keydown listener should be registered");
+          assert.ok(
+            captureListener,
+            "grid keydown listener should be registered",
+          );
 
           function dispatch(event) {
             shiftMode = !!event.shiftKey;
@@ -3210,7 +3359,11 @@ export function getGridKeysTests() {
             [2],
             "repeated shift-up should collapse back to anchor",
           );
-          assert.strictEqual(globalSel.r, 2, "active row should return to anchor");
+          assert.strictEqual(
+            globalSel.r,
+            2,
+            "active row should return to anchor",
+          );
 
           shiftMode = false;
           globalSelectionCtl.startSingle(2, 2);
@@ -3236,8 +3389,16 @@ export function getGridKeysTests() {
             4,
             "Ctrl+Right should jump to the next non-empty cell",
           );
-          assert.strictEqual(ctrlRight.prevented, true, "Ctrl+Right should consume the event");
-          assert.strictEqual(cycleInvocations, 0, "Ctrl+Arrow should not cycle views");
+          assert.strictEqual(
+            ctrlRight.prevented,
+            true,
+            "Ctrl+Right should consume the event",
+          );
+          assert.strictEqual(
+            cycleInvocations,
+            0,
+            "Ctrl+Arrow should not cycle views",
+          );
 
           const ctrlRightEdge = {
             key: "ArrowRight",

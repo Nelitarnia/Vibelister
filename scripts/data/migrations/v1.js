@@ -1,7 +1,4 @@
-import {
-  MOD,
-  SCHEMA_VERSION,
-} from "../constants.js";
+import { MOD, SCHEMA_VERSION } from "../constants.js";
 import { DEFAULT_VARIANT_CAPS } from "../variants/variant-settings.js";
 import {
   enumerateModStates,
@@ -22,8 +19,9 @@ import {
 
 const DEFAULT_MOD_RUNTIME = enumerateModStates(MOD);
 const DEFAULT_MOD_TRUE_VALUE =
-  DEFAULT_MOD_RUNTIME.states.find((state) => state.name === MOD_STATE_BOOLEAN_TRUE_NAME)
-    ?.value ?? MOD_STATE_DEFAULT_VALUE;
+  DEFAULT_MOD_RUNTIME.states.find(
+    (state) => state.name === MOD_STATE_BOOLEAN_TRUE_NAME,
+  )?.value ?? MOD_STATE_DEFAULT_VALUE;
 const DEFAULT_MOD_FALLBACK = DEFAULT_MOD_RUNTIME.defaultState.value;
 
 function sanitizeModValue(raw) {
@@ -51,7 +49,10 @@ function clearBypassIndexArtifacts(target) {
 
 function stripDefaultInteractionMetadata(note) {
   if (!note || typeof note !== "object") return;
-  const hasConfidence = Object.prototype.hasOwnProperty.call(note, "confidence");
+  const hasConfidence = Object.prototype.hasOwnProperty.call(
+    note,
+    "confidence",
+  );
   const hasSource = Object.prototype.hasOwnProperty.call(note, "source");
   if (hasConfidence) {
     const conf = normalizeInteractionConfidence(note.confidence);
@@ -67,7 +68,8 @@ function stripDefaultInteractionMetadata(note) {
 
 function stripDefaultInteractionMetadataFromNotes(notes) {
   if (!notes || typeof notes !== "object") return;
-  for (const note of Object.values(notes)) stripDefaultInteractionMetadata(note);
+  for (const note of Object.values(notes))
+    stripDefaultInteractionMetadata(note);
 }
 
 function normalizeVariantCaps(raw) {
@@ -80,8 +82,14 @@ function normalizeVariantCaps(raw) {
     return asInt > 0 ? asInt : fallbackValue;
   };
   return {
-    variantCapPerAction: normalizeCap(caps.variantCapPerAction, fallback.variantCapPerAction),
-    variantCapPerGroup: normalizeCap(caps.variantCapPerGroup, fallback.variantCapPerGroup),
+    variantCapPerAction: normalizeCap(
+      caps.variantCapPerAction,
+      fallback.variantCapPerAction,
+    ),
+    variantCapPerGroup: normalizeCap(
+      caps.variantCapPerGroup,
+      fallback.variantCapPerGroup,
+    ),
   };
 }
 
@@ -109,7 +117,8 @@ export function migrateToSchemaV1(model) {
   model.meta.projectInfo = normalizeProjectInfo(model.meta.projectInfo);
   if (
     !("interactionsMode" in model.meta) ||
-    (model.meta.interactionsMode !== "AI" && model.meta.interactionsMode !== "AA")
+    (model.meta.interactionsMode !== "AI" &&
+      model.meta.interactionsMode !== "AA")
   ) {
     model.meta.interactionsMode = "AI";
   }
@@ -125,7 +134,10 @@ export function migrateToSchemaV1(model) {
     model.meta.columnWidths = cleaned;
   }
 
-  if (!model.meta.commentFilter || typeof model.meta.commentFilter !== "object") {
+  if (
+    !model.meta.commentFilter ||
+    typeof model.meta.commentFilter !== "object"
+  ) {
     model.meta.commentFilter = {};
   } else {
     const cf = model.meta.commentFilter;
@@ -138,7 +150,9 @@ export function migrateToSchemaV1(model) {
     if (rows) normalized.rowIds = rows;
     const columns = normalizeList(cf.columnKeys || cf.columns);
     if (columns) normalized.columnKeys = columns;
-    const colors = normalizeList(cf.colorIds || cf.colors || cf.colorId || cf.color);
+    const colors = normalizeList(
+      cf.colorIds || cf.colors || cf.colorId || cf.color,
+    );
     if (colors) normalized.colorIds = colors;
     if (!normalized.viewKey && defaultMeta.commentFilter?.viewKey) {
       normalized.viewKey = defaultMeta.commentFilter.viewKey;
@@ -146,7 +160,9 @@ export function migrateToSchemaV1(model) {
     model.meta.commentFilter = normalized;
   }
 
-  model.meta.commentColors = normalizeCommentColorPalette(model.meta.commentColors);
+  model.meta.commentColors = normalizeCommentColorPalette(
+    model.meta.commentColors,
+  );
   model.meta.variantCaps = normalizeVariantCaps(model.meta.variantCaps);
 
   if (!Array.isArray(model.actions)) model.actions = [];
@@ -165,12 +181,16 @@ export function migrateToSchemaV1(model) {
   if (!model.interactionsIndex || typeof model.interactionsIndex !== "object") {
     model.interactionsIndex = { mode: "AI", groups: [] };
   } else {
-    if (!Array.isArray(model.interactionsIndex.groups)) model.interactionsIndex.groups = [];
+    if (!Array.isArray(model.interactionsIndex.groups))
+      model.interactionsIndex.groups = [];
     if (!model.interactionsIndex.mode) model.interactionsIndex.mode = "AI";
     const total = Number(model.interactionsIndex.totalRows);
-    model.interactionsIndex.totalRows = Number.isFinite(total) && total >= 0 ? total : 0;
-    if (!Array.isArray(model.interactionsIndex.actionsOrder)) model.interactionsIndex.actionsOrder = [];
-    if (!Array.isArray(model.interactionsIndex.inputsOrder)) model.interactionsIndex.inputsOrder = [];
+    model.interactionsIndex.totalRows =
+      Number.isFinite(total) && total >= 0 ? total : 0;
+    if (!Array.isArray(model.interactionsIndex.actionsOrder))
+      model.interactionsIndex.actionsOrder = [];
+    if (!Array.isArray(model.interactionsIndex.inputsOrder))
+      model.interactionsIndex.inputsOrder = [];
     if (
       !model.interactionsIndex.variantCatalog ||
       typeof model.interactionsIndex.variantCatalog !== "object"
@@ -191,7 +211,8 @@ export function migrateToSchemaV1(model) {
     if (typeof row.id !== "number") row.id = ++maxId;
     else maxId = Math.max(maxId, row.id);
     if (!row.modSet || typeof row.modSet !== "object") row.modSet = {};
-    for (const key in row.modSet) row.modSet[key] = sanitizeModValue(row.modSet[key]);
+    for (const key in row.modSet)
+      row.modSet[key] = sanitizeModValue(row.modSet[key]);
     const props = normalizeActionProperties(row.properties);
     if (props.length) row.properties = props;
     else delete row.properties;

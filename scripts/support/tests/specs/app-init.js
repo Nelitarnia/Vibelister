@@ -7,10 +7,22 @@ export function getAppInitTests() {
       name: "factory bootstrap exposes core APIs",
       run(assert) {
         const harness = createAppHarness();
-        assert.ok(typeof harness.app.init === "function", "init lifecycle exposed");
-        assert.ok(typeof harness.app.GridNS.render === "function", "render api");
-        assert.ok(typeof harness.app.ViewsNS.setActiveView === "function", "setActiveView api");
-        assert.ok(typeof harness.app.appContext.destroy === "function", "destroy on context");
+        assert.ok(
+          typeof harness.app.init === "function",
+          "init lifecycle exposed",
+        );
+        assert.ok(
+          typeof harness.app.GridNS.render === "function",
+          "render api",
+        );
+        assert.ok(
+          typeof harness.app.ViewsNS.setActiveView === "function",
+          "setActiveView api",
+        );
+        assert.ok(
+          typeof harness.app.appContext.destroy === "function",
+          "destroy on context",
+        );
         harness.teardown();
       },
     },
@@ -33,8 +45,16 @@ export function getAppInitTests() {
       run(assert) {
         const harness = createAppHarness();
         const { menus } = harness.dom;
-        assert.strictEqual(typeof menus.undoMenuItem.onclick, "function", "undo wired");
-        assert.strictEqual(typeof menus.redoMenuItem.onclick, "function", "redo wired");
+        assert.strictEqual(
+          typeof menus.undoMenuItem.onclick,
+          "function",
+          "undo wired",
+        );
+        assert.strictEqual(
+          typeof menus.redoMenuItem.onclick,
+          "function",
+          "redo wired",
+        );
         harness.teardown();
       },
     },
@@ -80,7 +100,11 @@ export function getAppInitTests() {
         const second = initMenus(menuDeps);
         const docClick = elements.get("document:click");
         docClick.dispatchEvent({ type: "click" });
-        assert.strictEqual(closeCalls, 1, "only one click listener active after reinit");
+        assert.strictEqual(
+          closeCalls,
+          1,
+          "only one click listener active after reinit",
+        );
         second.destroy();
         restore();
       },

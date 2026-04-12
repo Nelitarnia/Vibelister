@@ -77,7 +77,11 @@ function findVariantEntry(index, rowIndex) {
       lo = mid + 1;
       continue;
     }
-    return { group: range.group, variant: range.variant, offset: rowIndex - range.start };
+    return {
+      group: range.group,
+      variant: range.variant,
+      offset: rowIndex - range.start,
+    };
   }
   return null;
 }
@@ -91,7 +95,9 @@ export function getInteractionsPair(model, rowIndex, options = {}) {
   const { group, variant, offset } = info;
   const kind = String(index.mode || "AI").toUpperCase();
   if (kind === "AI") {
-    const inputsOrder = Array.isArray(index.inputsOrder) ? index.inputsOrder : [];
+    const inputsOrder = Array.isArray(index.inputsOrder)
+      ? index.inputsOrder
+      : [];
     const inputId = inputsOrder[offset];
     if (inputId == null) return null;
     return {

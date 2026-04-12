@@ -76,7 +76,8 @@ export async function openProjectInfoDialog(options = {}) {
     const title = document.createElement("h2");
     title.textContent = "Project info";
     title.id = "project-info-title";
-    title.style.cssText = "margin:0;font-size:20px;font-weight:600;color:#f0f2ff;";
+    title.style.cssText =
+      "margin:0;font-size:20px;font-weight:600;color:#f0f2ff;";
 
     const description = document.createElement("p");
     description.textContent =

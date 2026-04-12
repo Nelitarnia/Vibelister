@@ -15,7 +15,10 @@ export function getPropertiesPaletteTests() {
         sel.r = 0;
         sel.c = 3;
         harness.app.GridNS.beginEdit(0, 3);
-        assert.ok(palette.isOpen(), "properties palette should open during first edit");
+        assert.ok(
+          palette.isOpen(),
+          "properties palette should open during first edit",
+        );
 
         palette.close();
         assert.ok(!palette.isOpen(), "palette should close without errors");

@@ -5,14 +5,21 @@ import {
   modStateSelectors,
   normalizeModStateValue,
 } from "../../../data/variants/mod-state-normalize.js";
-import { MOD_STATE_MAX_VALUE, MOD_STATE_MIN_VALUE } from "../../../data/mod-state.js";
+import {
+  MOD_STATE_MAX_VALUE,
+  MOD_STATE_MIN_VALUE,
+} from "../../../data/mod-state.js";
 
 export function getVariantNormalizationTests() {
   return [
     {
       name: "normalizes raw modifier state inputs",
       run(assert) {
-        assert.strictEqual(normalizeModStateValue("2"), 2, "string numbers should parse");
+        assert.strictEqual(
+          normalizeModStateValue("2"),
+          2,
+          "string numbers should parse",
+        );
         assert.strictEqual(
           normalizeModStateValue(MOD_STATE_MAX_VALUE + 1),
           null,
@@ -23,8 +30,16 @@ export function getVariantNormalizationTests() {
           null,
           "values below min should be rejected",
         );
-        assert.strictEqual(normalizeModStateValue("not-a-number"), null, "NaN should fail");
-        assert.strictEqual(normalizeModStateValue(3.9), 3, "values should truncate to ints");
+        assert.strictEqual(
+          normalizeModStateValue("not-a-number"),
+          null,
+          "NaN should fail",
+        );
+        assert.strictEqual(
+          normalizeModStateValue(3.9),
+          3,
+          "values should truncate to ints",
+        );
       },
     },
     {
@@ -49,7 +64,11 @@ export function getVariantNormalizationTests() {
           ["isActiveish", "isOn", "isRequired", "normalize"],
           "selectors should be discoverable",
         );
-        assert.strictEqual(modStateSelectors.isOn, modStateIsOn, "exports reuse helpers");
+        assert.strictEqual(
+          modStateSelectors.isOn,
+          modStateIsOn,
+          "exports reuse helpers",
+        );
       },
     },
   ];

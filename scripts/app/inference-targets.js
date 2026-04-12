@@ -15,7 +15,8 @@ function getRelevantColumns(def, options, selection) {
   if (!selection) return matches;
   if (selection.colsAll) return matches;
   const hasMultiColumnSelection = selection.cols && selection.cols.size > 1;
-  if (hasMultiColumnSelection) return matches.filter(({ idx }) => selection.cols.has(idx));
+  if (hasMultiColumnSelection)
+    return matches.filter(({ idx }) => selection.cols.has(idx));
   return matches;
 }
 
@@ -30,7 +31,8 @@ function getActionGroupForAction(cache, model, actionId) {
   if (!Number.isFinite(actionId)) return "";
   if (cache.has(actionId)) return cache.get(actionId);
   const action = getActionRecord(model, actionId);
-  const raw = typeof action?.actionGroup === "string" ? action.actionGroup.trim() : "";
+  const raw =
+    typeof action?.actionGroup === "string" ? action.actionGroup.trim() : "";
   const value = raw || "";
   cache.set(actionId, value);
   return value;
@@ -64,7 +66,13 @@ function collectRowsForActionId(actionId, totalRows, getPair) {
   return rows;
 }
 
-function collectRowsForActionGroup(targetGroup, totalRows, getPair, cache, model) {
+function collectRowsForActionGroup(
+  targetGroup,
+  totalRows,
+  getPair,
+  cache,
+  model,
+) {
   const rows = [];
   for (let i = 0; i < totalRows; i++) {
     const pair = getPair?.(i);
@@ -103,7 +111,8 @@ export function buildScopePlan({ requestedScope, selection, indexAccess }) {
     ) {
       return "project";
     }
-    if (requestedScope === "selection" && !indexAccess.includeBypass) return "action";
+    if (requestedScope === "selection" && !indexAccess.includeBypass)
+      return "action";
     return requestedScope;
   })();
   const suggestionReason = (() => {
@@ -143,7 +152,11 @@ export function createInferenceTargetResolver({
       if (!activePair) return [];
       const targetId = activePair.aId;
       if (scope === "actionGroup") {
-        const group = getActionGroupForAction(actionGroupCache, model, targetId);
+        const group = getActionGroupForAction(
+          actionGroupCache,
+          model,
+          targetId,
+        );
         if (group)
           return collectRowsForActionGroup(
             group,
@@ -162,17 +175,30 @@ export function createInferenceTargetResolver({
   }
 
   function collectTargets(scope, options, indexAccess, rows) {
-    if (typeof getActiveView === "function" && getActiveView() !== "interactions") {
+    if (
+      typeof getActiveView === "function" &&
+      getActiveView() !== "interactions"
+    ) {
       return { targets: [], allowed: false, reason: OUT_OF_VIEW_STATUS };
     }
     const def = typeof viewDef === "function" ? viewDef() : viewDef;
-    const resolvedRows = Array.isArray(rows) ? rows : getRows(scope, indexAccess);
-    const columns = getRelevantColumns(def, options, scope === "selection" ? selection : null);
+    const resolvedRows = Array.isArray(rows)
+      ? rows
+      : getRows(scope, indexAccess);
+    const columns = getRelevantColumns(
+      def,
+      options,
+      scope === "selection" ? selection : null,
+    );
     const targets = [];
     for (const r of resolvedRows) {
       const pair = indexAccess.getPair(r);
       if (!pair) continue;
-      const allowedPhases = getAllowedPhasesForAction(actionPhaseCache, model, pair.aId);
+      const allowedPhases = getAllowedPhasesForAction(
+        actionPhaseCache,
+        model,
+        pair.aId,
+      );
       for (const { pk } of columns) {
         if (!pk) continue;
         if (allowedPhases && !allowedPhases.has(pk.p)) continue;
@@ -187,7 +213,8 @@ export function createInferenceTargetResolver({
           row: r,
           action: getActionRecord(model, pair.aId),
           actionGroup: indexAccess.includeBypass
-            ? getActionGroupForAction(actionGroupCache, model, pair.aId) || "__bypass__"
+            ? getActionGroupForAction(actionGroupCache, model, pair.aId) ||
+              "__bypass__"
             : getActionGroupForAction(actionGroupCache, model, pair.aId),
           allowInferredTargets: options?.overwriteInferred !== false,
         });
@@ -206,7 +233,13 @@ export function createInferenceTargetResolver({
     );
     const plan = buildScopePlan({ requestedScope, selection, indexAccess });
     if (!allowed) {
-      return { plan, requestedTargets: targets, suggestionTargets: targets, allowed, reason };
+      return {
+        plan,
+        requestedTargets: targets,
+        suggestionTargets: targets,
+        allowed,
+        reason,
+      };
     }
     const { targets: broaderTargets, allowed: suggestionAllowed } =
       plan.suggestion.scope === requestedScope
@@ -226,7 +259,12 @@ export function createInferenceTargetResolver({
       }
       return merged;
     })();
-    return { plan, requestedTargets: targets, suggestionTargets, allowed: true };
+    return {
+      plan,
+      requestedTargets: targets,
+      suggestionTargets,
+      allowed: true,
+    };
   }
 
   return { getRows, collectTargets, resolveScopes };

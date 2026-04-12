@@ -90,7 +90,9 @@ export function initCommentsUI(options = {}) {
   const paletteApplyButtonEl = paletteApplyButton || null;
   const paletteResetButtonEl = paletteResetButton || null;
   const setActiveViewFn =
-    typeof setActiveView === "function" ? (...args) => setActiveView(...args) : null;
+    typeof setActiveView === "function"
+      ? (...args) => setActiveView(...args)
+      : null;
   let colorPresetSource = normalizeCommentColorPalette(
     Array.isArray(commentColors) && commentColors.length
       ? commentColors
@@ -105,10 +107,11 @@ export function initCommentsUI(options = {}) {
   let nextClickHandler = null;
   let filterState = null;
 
-
   function setColorPalette(nextPalette, options = {}) {
     colorPresetSource = normalizeCommentColorPalette(
-      Array.isArray(nextPalette) && nextPalette.length ? nextPalette : COMMENT_COLOR_PRESETS,
+      Array.isArray(nextPalette) && nextPalette.length
+        ? nextPalette
+        : COMMENT_COLOR_PRESETS,
     );
     colorMap = buildColorMap(colorPresetSource);
     const firstPreset = colorMap.values().next().value || null;
@@ -124,7 +127,8 @@ export function initCommentsUI(options = {}) {
       const cleanedColors = filterState.colorIds
         ?.map((id) => normalizeColorId(id))
         .filter(Boolean);
-      const nextColorIds = cleanedColors && cleanedColors.length ? cleanedColors : null;
+      const nextColorIds =
+        cleanedColors && cleanedColors.length ? cleanedColors : null;
       setFilter({ colorIds: nextColorIds }, { skipRebuild: true });
     }
     updateColorSelectAppearance(lastSelectedColor);
@@ -176,12 +180,18 @@ export function initCommentsUI(options = {}) {
     if (preset) {
       colorSelectEl.dataset.color = preset.id;
       if (preset.badgeBackground) {
-        colorSelectEl.style.setProperty("--comment-color-fill", preset.badgeBackground);
+        colorSelectEl.style.setProperty(
+          "--comment-color-fill",
+          preset.badgeBackground,
+        );
       } else {
         colorSelectEl.style.removeProperty("--comment-color-fill");
       }
       if (preset.badgeBorder) {
-        colorSelectEl.style.setProperty("--comment-color-accent", preset.badgeBorder);
+        colorSelectEl.style.setProperty(
+          "--comment-color-accent",
+          preset.badgeBorder,
+        );
       } else {
         colorSelectEl.style.removeProperty("--comment-color-accent");
       }
@@ -255,13 +265,17 @@ export function initCommentsUI(options = {}) {
 
   function ensureColorOptions() {
     if (!colorSelectEl) return;
-    while (colorSelectEl.firstChild) colorSelectEl.removeChild(colorSelectEl.firstChild);
+    while (colorSelectEl.firstChild)
+      colorSelectEl.removeChild(colorSelectEl.firstChild);
     if (!colorMap.size) {
       const option = document.createElement("option");
       option.value = fallbackColorId;
       const label = fallbackColorId || "Default";
       option.dataset.label = label;
-      option.textContent = formatColorOptionText(label, getColorCount(fallbackColorId));
+      option.textContent = formatColorOptionText(
+        label,
+        getColorCount(fallbackColorId),
+      );
       colorSelectEl.appendChild(option);
     } else {
       for (const preset of colorMap.values()) {
@@ -310,7 +324,10 @@ export function initCommentsUI(options = {}) {
   let filteredEntries = [];
   let filteredIndex = -1;
 
-  setColorPalette(colorPresetSource, { skipFilterCleanup: true, skipRebuild: true });
+  setColorPalette(colorPresetSource, {
+    skipFilterCleanup: true,
+    skipRebuild: true,
+  });
 
   let activeTab = "comments";
   let paletteDraft = buildPaletteDraft(colorPresetSource);
@@ -319,23 +336,32 @@ export function initCommentsUI(options = {}) {
     const target = tabId === "customize" ? "customize" : "comments";
     activeTab = target;
     if (commentsTabButtonEl)
-      commentsTabButtonEl.setAttribute("aria-selected", target === "comments" ? "true" : "false");
+      commentsTabButtonEl.setAttribute(
+        "aria-selected",
+        target === "comments" ? "true" : "false",
+      );
     if (customizeTabButtonEl)
-      customizeTabButtonEl.setAttribute("aria-selected", target === "customize" ? "true" : "false");
+      customizeTabButtonEl.setAttribute(
+        "aria-selected",
+        target === "customize" ? "true" : "false",
+      );
     if (commentsPageEl) commentsPageEl.hidden = target !== "comments";
     if (customizePageEl) customizePageEl.hidden = target !== "customize";
   }
 
   function palettesEqual(a, b) {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length)
+      return false;
     for (let i = 0; i < a.length; i++) {
       const left = a[i];
       const right = b[i];
       if (!left || !right) return false;
       if (left.id !== right.id) return false;
       if ((left.label || left.id) !== (right.label || right.id)) return false;
-      if (normalizeHexColor(left.swatch) !== normalizeHexColor(right.swatch)) return false;
-      if ((left.badgeBackground || "") !== (right.badgeBackground || "")) return false;
+      if (normalizeHexColor(left.swatch) !== normalizeHexColor(right.swatch))
+        return false;
+      if ((left.badgeBackground || "") !== (right.badgeBackground || ""))
+        return false;
       if ((left.badgeBorder || "") !== (right.badgeBorder || "")) return false;
       if ((left.badgeText || "") !== (right.badgeText || "")) return false;
     }
@@ -348,13 +374,17 @@ export function initCommentsUI(options = {}) {
   }
 
   function paletteDraftMatchesDefaults() {
-    return palettesEqual(paletteDraft, buildPaletteDraft(COMMENT_COLOR_PRESETS));
+    return palettesEqual(
+      paletteDraft,
+      buildPaletteDraft(COMMENT_COLOR_PRESETS),
+    );
   }
 
   function updatePaletteButtons() {
     const changed = paletteDraftChanged();
     if (paletteApplyButtonEl) paletteApplyButtonEl.disabled = !changed;
-    if (paletteResetButtonEl) paletteResetButtonEl.disabled = paletteDraftMatchesDefaults();
+    if (paletteResetButtonEl)
+      paletteResetButtonEl.disabled = paletteDraftMatchesDefaults();
   }
 
   function updatePaletteSwatch(el, entry) {
@@ -379,20 +409,29 @@ export function initCommentsUI(options = {}) {
       meta && Array.isArray(meta.commentColors) && meta.commentColors.length
         ? meta.commentColors
         : COMMENT_COLOR_PRESETS;
-    setColorPalette(paletteSource, { skipFilterCleanup: false, skipRebuild: true });
+    setColorPalette(paletteSource, {
+      skipFilterCleanup: false,
+      skipRebuild: true,
+    });
     setPaletteDraft(paletteSource);
 
     let nextFilter = normalizeFilter(
       meta && typeof meta.commentFilter === "object"
         ? meta.commentFilter
-        : { viewKey: typeof getActiveView === "function" ? getActiveView() : null },
+        : {
+            viewKey:
+              typeof getActiveView === "function" ? getActiveView() : null,
+          },
     );
     if (!nextFilter.viewKey && typeof getActiveView === "function") {
       nextFilter = { ...nextFilter, viewKey: getActiveView() };
     }
     filterState = nextFilter;
     const activeColorId = filterState.colorIds?.[0] || fallbackColorId;
-    setColorSelectValue(activeColorId, { updateFilter: false, updateLastSelected: true });
+    setColorSelectValue(activeColorId, {
+      updateFilter: false,
+      updateLastSelected: true,
+    });
     persistFilterState(filterState);
     rebuildFilteredEntries();
     syncFromSelection();
@@ -400,7 +439,8 @@ export function initCommentsUI(options = {}) {
 
   function renderPaletteList() {
     if (!paletteListEl) return;
-    while (paletteListEl.firstChild) paletteListEl.removeChild(paletteListEl.firstChild);
+    while (paletteListEl.firstChild)
+      paletteListEl.removeChild(paletteListEl.firstChild);
     if (!Array.isArray(paletteDraft) || !paletteDraft.length) {
       const empty = document.createElement("div");
       empty.className = "comment-sidebar__empty";
@@ -489,7 +529,8 @@ export function initCommentsUI(options = {}) {
   }
 
   function movePaletteEntry(id, delta = 0) {
-    if (!delta || !Array.isArray(paletteDraft) || paletteDraft.length < 2) return;
+    if (!delta || !Array.isArray(paletteDraft) || paletteDraft.length < 2)
+      return;
     const index = paletteDraft.findIndex((entry) => entry && entry.id === id);
     if (index < 0) return;
     const next = paletteDraft.slice();
@@ -516,7 +557,10 @@ export function initCommentsUI(options = {}) {
     model.meta.commentColors = normalizeCommentColorPalette(nextPalette);
     setColorPalette(model.meta.commentColors);
     setPaletteDraft(model.meta.commentColors);
-    setColorSelectValue(activeColorId, { updateFilter: false, updateLastSelected: false });
+    setColorSelectValue(activeColorId, {
+      updateFilter: false,
+      updateLastSelected: false,
+    });
     renderList();
     statusBar?.set?.("Comment colors updated.");
     render?.();
@@ -580,7 +624,12 @@ export function initCommentsUI(options = {}) {
   }
 
   function normalizeFilter(raw = {}) {
-    const base = { viewKey: null, rowIds: null, columnKeys: null, colorIds: null };
+    const base = {
+      viewKey: null,
+      rowIds: null,
+      columnKeys: null,
+      colorIds: null,
+    };
     if (!raw || typeof raw !== "object") return base;
     if (typeof raw.viewKey === "string") {
       const trimmed = raw.viewKey.trim();
@@ -646,11 +695,14 @@ export function initCommentsUI(options = {}) {
       const rows = typeof dataArray === "function" ? dataArray() : null;
       return Array.isArray(rows) ? rows : [];
     }
-    if (viewKey === "actions") return Array.isArray(model.actions) ? model.actions : [];
-    if (viewKey === "inputs") return Array.isArray(model.inputs) ? model.inputs : [];
+    if (viewKey === "actions")
+      return Array.isArray(model.actions) ? model.actions : [];
+    if (viewKey === "inputs")
+      return Array.isArray(model.inputs) ? model.inputs : [];
     if (viewKey === "modifiers")
       return Array.isArray(model.modifiers) ? model.modifiers : [];
-    if (viewKey === "outcomes") return Array.isArray(model.outcomes) ? model.outcomes : [];
+    if (viewKey === "outcomes")
+      return Array.isArray(model.outcomes) ? model.outcomes : [];
     return [];
   }
 
@@ -687,7 +739,11 @@ export function initCommentsUI(options = {}) {
   function getCountableColorId(entry) {
     if (!entry) return "";
     if (!hasAvailableRow(entry)) return "";
-    if (entry?.value && typeof entry.value === "object" && entry.value.inactive === true)
+    if (
+      entry?.value &&
+      typeof entry.value === "object" &&
+      entry.value.inactive === true
+    )
       return "";
     const entryColorId = getEntryColorId(entry);
     const normalized = normalizeColorId(entryColorId);
@@ -701,7 +757,11 @@ export function initCommentsUI(options = {}) {
   function matchesFilterEntry(entry) {
     if (!entry) return false;
     if (!hasAvailableRow(entry)) return false;
-    if (entry.value && typeof entry.value === "object" && entry.value.inactive === true)
+    if (
+      entry.value &&
+      typeof entry.value === "object" &&
+      entry.value.inactive === true
+    )
       return false;
     if (filterState.rowIds && filterState.rowIds.length) {
       if (!filterState.rowIds.includes(entry.rowId)) return false;
@@ -837,7 +897,8 @@ export function initCommentsUI(options = {}) {
   }
 
   function updateNavButtons() {
-    const hasTargets = Array.isArray(filteredEntries) && filteredEntries.length > 0;
+    const hasTargets =
+      Array.isArray(filteredEntries) && filteredEntries.length > 0;
     if (prevButtonEl) {
       prevButtonEl.disabled = !hasTargets;
       prevButtonEl.setAttribute("aria-disabled", hasTargets ? "false" : "true");
@@ -861,7 +922,9 @@ export function initCommentsUI(options = {}) {
     return {
       viewKey: filterState.viewKey,
       rowIds: filterState.rowIds ? filterState.rowIds.slice() : null,
-      columnKeys: filterState.columnKeys ? filterState.columnKeys.slice() : null,
+      columnKeys: filterState.columnKeys
+        ? filterState.columnKeys.slice()
+        : null,
       colorIds: filterState.colorIds ? filterState.colorIds.slice() : null,
     };
   }
@@ -888,7 +951,9 @@ export function initCommentsUI(options = {}) {
       const desiredView = entry.viewKey || null;
       if (desiredView && desiredView !== active) {
         if (!setActiveViewFn) {
-          statusBar?.set?.(`Switch to the ${desiredView} view to inspect this comment.`);
+          statusBar?.set?.(
+            `Switch to the ${desiredView} view to inspect this comment.`,
+          );
           return null;
         }
         const previous = entry;
@@ -932,7 +997,8 @@ export function initCommentsUI(options = {}) {
             statusBar?.set?.("No comments match the current filter.");
             return null;
           }
-          if (targetIndex >= filteredEntries.length) targetIndex = filteredEntries.length - 1;
+          if (targetIndex >= filteredEntries.length)
+            targetIndex = filteredEntries.length - 1;
           entry = filteredEntries[targetIndex];
           updateNavButtons();
           continue;
@@ -946,7 +1012,8 @@ export function initCommentsUI(options = {}) {
 
       SelectionCtl?.setActiveCell?.(entry.rowIndex, entry.columnIndex);
       if (typeof ensureVisible === "function") {
-        const align = options && typeof options === "object" ? options.align : undefined;
+        const align =
+          options && typeof options === "object" ? options.align : undefined;
         if (align) ensureVisible(entry.rowIndex, entry.columnIndex, { align });
         else ensureVisible(entry.rowIndex, entry.columnIndex);
       }
@@ -1078,7 +1145,8 @@ export function initCommentsUI(options = {}) {
       const rows = dataArray();
       const row = rows && rows[sel.r];
       if (row) {
-        if (typeof row.name === "string" && row.name.trim()) rowLabel = row.name.trim();
+        if (typeof row.name === "string" && row.name.trim())
+          rowLabel = row.name.trim();
         else if (row.id != null) rowLabel = `Row ${row.id}`;
       }
     }
@@ -1090,7 +1158,8 @@ export function initCommentsUI(options = {}) {
   function renderList() {
     if (listElement) listElement.innerHTML = "";
     const hasComments = Array.isArray(comments) && comments.length > 0;
-    if (toggleButton) toggleButton.dataset.hasComment = hasComments ? "true" : "false";
+    if (toggleButton)
+      toggleButton.dataset.hasComment = hasComments ? "true" : "false";
     if (addButton) {
       addButton.textContent = hasComments ? "Edit comment" : "Add comment";
       addButton.disabled = !hasValidSelection();
@@ -1119,7 +1188,11 @@ export function initCommentsUI(options = {}) {
     comments.forEach((entry, index) => {
       const item = document.createElement("li");
       item.className = "comment-sidebar__item";
-      if (entry?.value && typeof entry.value === "object" && entry.value.inactive === true) {
+      if (
+        entry?.value &&
+        typeof entry.value === "object" &&
+        entry.value.inactive === true
+      ) {
         item.classList.add("comment-sidebar__item--inactive");
       }
 
@@ -1138,7 +1211,11 @@ export function initCommentsUI(options = {}) {
       const metaText = document.createElement("span");
       metaText.className = "comment-sidebar__item-meta-text";
       const parts = [index === 0 ? "Primary" : `Entry ${index + 1}`];
-      if (entry?.value && typeof entry.value === "object" && entry.value.inactive === true) {
+      if (
+        entry?.value &&
+        typeof entry.value === "object" &&
+        entry.value.inactive === true
+      ) {
         parts.push("Inactive");
       }
       const colorLabel = getColorLabel(entry);
@@ -1362,7 +1439,10 @@ export function initCommentsUI(options = {}) {
       paletteResetButtonEl?.removeEventListener("click", paletteResetHandler);
       if (selectionUnsub) selectionUnsub();
       if (commentsHandler) {
-        document.removeEventListener("vibelister:comments-updated", commentsHandler);
+        document.removeEventListener(
+          "vibelister:comments-updated",
+          commentsHandler,
+        );
         commentsHandler = null;
       }
     },

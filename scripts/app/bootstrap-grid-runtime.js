@@ -34,21 +34,22 @@ export function bootstrapGridRuntime({
   const { schedule, cancel } = scheduleRender(render);
   const disposeSelectionRender = selectionApi.onSelectionChanged(schedule);
 
-  const { interactionsOutline, createDoGenerate, createDiagnosticsActions } = setupInteractionTools({
-    model: appContext.model,
-    selectionApi: {
-      Selection: selectionApi.Selection,
-      SelectionCtl: selectionApi.SelectionCtl,
-      selection: selectionApi.selection,
-      sel: selectionApi.sel,
-      getActiveView: selectionApi.getActiveView,
-      ensureVisible,
-      onSelectionChanged: selectionApi.onSelectionChanged,
-    },
-    rendererApi: { render, sheet },
-    layoutApi: { layout },
-    getInteractionsPair,
-  });
+  const { interactionsOutline, createDoGenerate, createDiagnosticsActions } =
+    setupInteractionTools({
+      model: appContext.model,
+      selectionApi: {
+        Selection: selectionApi.Selection,
+        SelectionCtl: selectionApi.SelectionCtl,
+        selection: selectionApi.selection,
+        sel: selectionApi.sel,
+        getActiveView: selectionApi.getActiveView,
+        ensureVisible,
+        onSelectionChanged: selectionApi.onSelectionChanged,
+      },
+      rendererApi: { render, sheet },
+      layoutApi: { layout },
+      getInteractionsPair,
+    });
 
   const historyApi = setupHistory({
     appContext,
@@ -86,7 +87,11 @@ export function bootstrapGridRuntime({
       cancel();
       disposeSelectionRender?.();
     },
-    interactionToolsApi: { interactionsOutline, createDoGenerate, createDiagnosticsActions },
+    interactionToolsApi: {
+      interactionsOutline,
+      createDoGenerate,
+      createDiagnosticsActions,
+    },
     historyApi,
     mutationApi: {
       makeUndoConfig: historyApi.makeUndoConfig,

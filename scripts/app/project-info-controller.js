@@ -29,7 +29,11 @@ export function createProjectInfoController(options = {}) {
 
   function applyResult(result) {
     if (result && typeof result === "object") return result;
-    return { changed: false, value: getProjectInfo(), previous: getProjectInfo() };
+    return {
+      changed: false,
+      value: getProjectInfo(),
+      previous: getProjectInfo(),
+    };
   }
 
   function mutateProjectInfo(normalized) {
@@ -77,7 +81,9 @@ export function createProjectInfoController(options = {}) {
         undo: undoOptions,
         shouldRecord: (res) => !!res?.changed,
         status: (res) =>
-          res?.changed ? "Project info updated." : "No changes to project info.",
+          res?.changed
+            ? "Project info updated."
+            : "No changes to project info.",
       },
     );
 

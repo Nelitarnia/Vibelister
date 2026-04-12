@@ -149,7 +149,10 @@ const DEFAULT_CYCLE = MOD_STATES.map((s) => s.name);
 
 export function enumerateModStates(override = null) {
   const states = MOD_STATES.map((state) => {
-    const raw = override && typeof override === "object" ? override[state.name] : undefined;
+    const raw =
+      override && typeof override === "object"
+        ? override[state.name]
+        : undefined;
     const value = Number.isFinite(raw) ? Number(raw) : state.id;
     return Object.freeze({ ...state, value });
   });
@@ -204,10 +207,12 @@ export function normalizeModStateValue(
     fallback ?? defaultState?.value ?? MOD_STATE_DEFAULT_VALUE;
   const boolTrue =
     booleanTrueValue ??
-    (states.find((st) => st.name === MOD_STATE_BOOLEAN_TRUE_NAME) ||
+    (
+      states.find((st) => st.name === MOD_STATE_BOOLEAN_TRUE_NAME) ||
       states.find((st) => st.isActive) ||
-      defaultState)?.value ??
-      fallbackValue;
+      defaultState
+    )?.value ??
+    fallbackValue;
 
   if (raw === true) return boolTrue;
   if (raw === false || raw == null) return fallbackValue;

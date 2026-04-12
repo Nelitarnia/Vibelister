@@ -105,7 +105,9 @@ export function initInferenceBulkActions(options = {}) {
   clearButton?.addEventListener("click", () =>
     run(actions.clearInferenceMetadata),
   );
-  uncertainButton?.addEventListener("click", () => run(actions.toggleUncertain));
+  uncertainButton?.addEventListener("click", () =>
+    run(actions.toggleUncertain),
+  );
   diagnosticsButton?.addEventListener("click", () =>
     diagnosticsActions?.openDiagnostics?.(),
   );

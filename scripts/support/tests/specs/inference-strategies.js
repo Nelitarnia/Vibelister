@@ -36,7 +36,8 @@ function makeTarget({
   const pair = { kind: "AI", aId: actionId, iId: inputId, variantSig };
   const note = makeNote(value, source ? { source, confidence: 0.4 } : {});
   return {
-    key: key || `${actionId}-${inputId}-${variantSig || "base"}-${phase}-${field}`,
+    key:
+      key || `${actionId}-${inputId}-${variantSig || "base"}-${phase}-${field}`,
     field,
     phase,
     note,
@@ -58,7 +59,12 @@ export function getInferenceStrategyTests() {
           makeTarget({}),
         ];
         const strategies = [inputDefaultStrategy, consensusStrategy];
-        const suggestions = runInferenceStrategies(targets, null, null, strategies);
+        const suggestions = runInferenceStrategies(
+          targets,
+          null,
+          null,
+          strategies,
+        );
         const suggestion = suggestions.get(targets[1].key)?.outcome;
         assert.ok(suggestion, "consensus suggested a value");
         assert.strictEqual(
@@ -73,11 +79,21 @@ export function getInferenceStrategyTests() {
       name: "action-group keeps higher-confidence propagation",
       run(assert) {
         const targets = [
-          makeTarget({ actionId: 2, inputId: 5, actionGroup: "bundle", value: { outcomeId: 8 } }),
+          makeTarget({
+            actionId: 2,
+            inputId: 5,
+            actionGroup: "bundle",
+            value: { outcomeId: 8 },
+          }),
           makeTarget({ actionId: 2, inputId: 5, actionGroup: "bundle" }),
         ];
         const strategies = [consensusStrategy, actionGroupStrategy];
-        const suggestions = runInferenceStrategies(targets, null, null, strategies);
+        const suggestions = runInferenceStrategies(
+          targets,
+          null,
+          null,
+          strategies,
+        );
         const suggestion = suggestions.get(targets[1].key)?.outcome;
         assert.ok(suggestion, "suggestion produced");
         assert.strictEqual(
@@ -98,25 +114,49 @@ export function getInferenceStrategyTests() {
             actionGroup: "bundle",
             value: { outcomeId: 12 },
           }),
-          makeTarget({ actionId: 3, inputId: 6, variantSig: "7", actionGroup: "bundle" }),
+          makeTarget({
+            actionId: 3,
+            inputId: 6,
+            variantSig: "7",
+            actionGroup: "bundle",
+          }),
         ];
         const strategies = [actionGroupStrategy, modifierProfileStrategy];
-        const suggestions = runInferenceStrategies(targets, null, null, strategies);
+        const suggestions = runInferenceStrategies(
+          targets,
+          null,
+          null,
+          strategies,
+        );
         const suggestion = suggestions.get(targets[1].key)?.outcome;
         assert.ok(suggestion, "modifier profile produced suggestion");
-        assert.strictEqual(suggestion.source, HEURISTIC_SOURCES.modifierProfile);
-        assert.ok(suggestion.confidence > 0.3, "modifier profile confidence applied");
+        assert.strictEqual(
+          suggestion.source,
+          HEURISTIC_SOURCES.modifierProfile,
+        );
+        assert.ok(
+          suggestion.confidence > 0.3,
+          "modifier profile confidence applied",
+        );
       },
     },
     {
       name: "input default fills when no other strategies run",
       run(assert) {
-        const targets = [makeTarget({ value: { outcomeId: 21 } }), makeTarget({})];
-        const suggestions = runInferenceStrategies(targets, null, null, [inputDefaultStrategy]);
+        const targets = [
+          makeTarget({ value: { outcomeId: 21 } }),
+          makeTarget({}),
+        ];
+        const suggestions = runInferenceStrategies(targets, null, null, [
+          inputDefaultStrategy,
+        ]);
         const suggestion = suggestions.get(targets[1].key)?.outcome;
         assert.ok(suggestion, "input default emitted suggestion");
         assert.strictEqual(suggestion.source, HEURISTIC_SOURCES.inputDefault);
-        assert.ok(suggestion.confidence > 0, "input default confidence assigned");
+        assert.ok(
+          suggestion.confidence > 0,
+          "input default confidence assigned",
+        );
       },
     },
     {
@@ -154,7 +194,11 @@ export function getInferenceStrategyTests() {
           HEURISTIC_SOURCES.actionProperty,
           "property heuristic annotated the source",
         );
-        assert.strictEqual(suggestion.value.outcomeId, 42, "propagated the observed value");
+        assert.strictEqual(
+          suggestion.value.outcomeId,
+          42,
+          "propagated the observed value",
+        );
       },
     },
     {
@@ -162,7 +206,11 @@ export function getInferenceStrategyTests() {
       run(assert) {
         const parsed = parseEndActionQuery("Air +sky +prop:Aerial #launcher");
         assert.strictEqual(parsed.name, "air", "normalizes name query");
-        assert.deepStrictEqual(parsed.mods, ["sky"], "captures modifier tokens");
+        assert.deepStrictEqual(
+          parsed.mods,
+          ["sky"],
+          "captures modifier tokens",
+        );
         assert.deepStrictEqual(
           parsed.properties,
           ["aerial", "launcher"],
@@ -190,7 +238,10 @@ export function getInferenceStrategyTests() {
           propertyTokens: ["aerial"],
           variantModNames: [],
         });
-        assert.ok(!misses, "action without properties should not pass property filters");
+        assert.ok(
+          !misses,
+          "action without properties should not pass property filters",
+        );
       },
     },
     {
@@ -218,14 +269,22 @@ export function getInferenceStrategyTests() {
           makeTarget({}),
         ];
         const strategies = [consensusStrategy, profileTrendStrategy];
-        const suggestions = runInferenceStrategies(targets, profiles, {
-          profileTrendMinObservations: 1,
-          profileTrendMinPreferenceRatio: 0,
-        }, strategies);
+        const suggestions = runInferenceStrategies(
+          targets,
+          profiles,
+          {
+            profileTrendMinObservations: 1,
+            profileTrendMinPreferenceRatio: 0,
+          },
+          strategies,
+        );
         const suggestion = suggestions.get(targets[1].key)?.outcome;
         assert.ok(suggestion, "profile trend suggested a value");
         assert.strictEqual(suggestion.source, HEURISTIC_SOURCES.profileTrend);
-        assert.strictEqual(suggestion.value.outcomeId, preferredValue.outcomeId);
+        assert.strictEqual(
+          suggestion.value.outcomeId,
+          preferredValue.outcomeId,
+        );
       },
     },
     {
@@ -236,16 +295,16 @@ export function getInferenceStrategyTests() {
           makeTarget({ phase: 2 }),
           makeTarget({ phase: 3, value: { outcomeId: 5 } }),
         ];
-        const suggestions = runInferenceStrategies(
-          targets,
-          null,
-          null,
-          [phaseAdjacencyStrategy],
-        );
+        const suggestions = runInferenceStrategies(targets, null, null, [
+          phaseAdjacencyStrategy,
+        ]);
         const suggestion = suggestions.get(targets[1].key)?.outcome;
         assert.ok(suggestion, "gap received adjacency suggestion");
         assert.strictEqual(suggestion.source, HEURISTIC_SOURCES.phaseAdjacency);
-        assert.ok(suggestion.confidence > 0.3, "adjacency confidence scaled by gap");
+        assert.ok(
+          suggestion.confidence > 0.3,
+          "adjacency confidence scaled by gap",
+        );
       },
     },
   ];

@@ -62,7 +62,11 @@ function trapFocus(overlay, box, onClose) {
   return () => overlay.removeEventListener("keydown", keyHandler, true);
 }
 
-function buildNumberField(labelText, defaultValue, { min, max, step, title } = {}) {
+function buildNumberField(
+  labelText,
+  defaultValue,
+  { min, max, step, title } = {},
+) {
   const wrapper = document.createElement("label");
   wrapper.style.cssText =
     "display:flex;flex-direction:column;gap:6px;color:#d3dcff;font-size:13px;";
@@ -105,14 +109,24 @@ function derivePresetThresholds(baseThresholds = {}, variant = "default") {
     return {
       ...base,
       consensusMinGroupSize: adjustCount(base.consensusMinGroupSize, -1),
-      consensusMinExistingRatio: clampRatio(base.consensusMinExistingRatio - 0.15),
+      consensusMinExistingRatio: clampRatio(
+        base.consensusMinExistingRatio - 0.15,
+      ),
       actionGroupMinGroupSize: adjustCount(base.actionGroupMinGroupSize, -1),
-      actionGroupMinExistingRatio: clampRatio(base.actionGroupMinExistingRatio - 0.15),
-      actionGroupPhaseMinGroupSize: adjustCount(base.actionGroupPhaseMinGroupSize, -1),
+      actionGroupMinExistingRatio: clampRatio(
+        base.actionGroupMinExistingRatio - 0.15,
+      ),
+      actionGroupPhaseMinGroupSize: adjustCount(
+        base.actionGroupPhaseMinGroupSize,
+        -1,
+      ),
       actionGroupPhaseMinExistingRatio: clampRatio(
         base.actionGroupPhaseMinExistingRatio - 0.17,
       ),
-      actionPropertyMinGroupSize: adjustCount(base.actionPropertyMinGroupSize, -1),
+      actionPropertyMinGroupSize: adjustCount(
+        base.actionPropertyMinGroupSize,
+        -1,
+      ),
       actionPropertyMinExistingRatio: clampRatio(
         base.actionPropertyMinExistingRatio - 0.15,
       ),
@@ -140,14 +154,24 @@ function derivePresetThresholds(baseThresholds = {}, variant = "default") {
     return {
       ...base,
       consensusMinGroupSize: adjustCount(base.consensusMinGroupSize, 1),
-      consensusMinExistingRatio: clampRatio(base.consensusMinExistingRatio + 0.2),
+      consensusMinExistingRatio: clampRatio(
+        base.consensusMinExistingRatio + 0.2,
+      ),
       actionGroupMinGroupSize: adjustCount(base.actionGroupMinGroupSize, 1),
-      actionGroupMinExistingRatio: clampRatio(base.actionGroupMinExistingRatio + 0.15),
-      actionGroupPhaseMinGroupSize: adjustCount(base.actionGroupPhaseMinGroupSize, 1),
+      actionGroupMinExistingRatio: clampRatio(
+        base.actionGroupMinExistingRatio + 0.15,
+      ),
+      actionGroupPhaseMinGroupSize: adjustCount(
+        base.actionGroupPhaseMinGroupSize,
+        1,
+      ),
       actionGroupPhaseMinExistingRatio: clampRatio(
         base.actionGroupPhaseMinExistingRatio + 0.13,
       ),
-      actionPropertyMinGroupSize: adjustCount(base.actionPropertyMinGroupSize, 1),
+      actionPropertyMinGroupSize: adjustCount(
+        base.actionPropertyMinGroupSize,
+        1,
+      ),
       actionPropertyMinExistingRatio: clampRatio(
         base.actionPropertyMinExistingRatio + 0.15,
       ),
@@ -191,7 +215,8 @@ function buildScopeSelector(defaultValue) {
 
   scopes.forEach((entry, idx) => {
     const label = document.createElement("label");
-    label.style.cssText = "display:flex;align-items:center;gap:8px;margin:6px 0;";
+    label.style.cssText =
+      "display:flex;align-items:center;gap:8px;margin:6px 0;";
     const input = document.createElement("input");
     input.type = "radio";
     input.name = "inference-scope";
@@ -206,7 +231,8 @@ function buildScopeSelector(defaultValue) {
 
 function buildCheckbox(labelText, defaultValue, title) {
   const label = document.createElement("label");
-  label.style.cssText = "display:flex;align-items:center;gap:10px;color:#d3dcff;";
+  label.style.cssText =
+    "display:flex;align-items:center;gap:10px;color:#d3dcff;";
   const input = document.createElement("input");
   input.type = "checkbox";
   input.checked = !!defaultValue;
@@ -238,7 +264,8 @@ const STRATEGY_CONFIG = Object.freeze({
         options: {
           min: 1,
           step: 1,
-          title: "Minimum rows needed in scope before consensus suggestions run.",
+          title:
+            "Minimum rows needed in scope before consensus suggestions run.",
         },
       },
       {
@@ -248,7 +275,8 @@ const STRATEGY_CONFIG = Object.freeze({
           min: 0,
           max: 1,
           step: 0.01,
-          title: "Fraction of rows that must already be filled to trust consensus suggestions.",
+          title:
+            "Fraction of rows that must already be filled to trust consensus suggestions.",
         },
       },
     ],
@@ -262,7 +290,8 @@ const STRATEGY_CONFIG = Object.freeze({
         options: {
           min: 0,
           step: 1,
-          title: "Rows per action group required before suggesting group defaults.",
+          title:
+            "Rows per action group required before suggesting group defaults.",
         },
       },
       {
@@ -272,7 +301,8 @@ const STRATEGY_CONFIG = Object.freeze({
           min: 0,
           max: 1,
           step: 0.01,
-          title: "Filled ratio per action group before defaults or clears propagate.",
+          title:
+            "Filled ratio per action group before defaults or clears propagate.",
         },
       },
       {
@@ -291,7 +321,8 @@ const STRATEGY_CONFIG = Object.freeze({
           min: 0,
           max: 1,
           step: 0.01,
-          title: "Filled ratio per phase required before phase-level suggestions kick in.",
+          title:
+            "Filled ratio per phase required before phase-level suggestions kick in.",
         },
       },
     ],
@@ -305,7 +336,8 @@ const STRATEGY_CONFIG = Object.freeze({
         options: {
           min: 0,
           step: 1,
-          title: "Rows per property required before suggesting property defaults.",
+          title:
+            "Rows per property required before suggesting property defaults.",
         },
       },
       {
@@ -315,7 +347,8 @@ const STRATEGY_CONFIG = Object.freeze({
           min: 0,
           max: 1,
           step: 0.01,
-          title: "Filled ratio per property before defaults or clears propagate.",
+          title:
+            "Filled ratio per property before defaults or clears propagate.",
         },
       },
       {
@@ -334,7 +367,8 @@ const STRATEGY_CONFIG = Object.freeze({
           min: 0,
           max: 1,
           step: 0.01,
-          title: "Filled ratio per phase required before property-based suggestions.",
+          title:
+            "Filled ratio per phase required before property-based suggestions.",
         },
       },
     ],
@@ -348,7 +382,8 @@ const STRATEGY_CONFIG = Object.freeze({
         options: {
           min: 1,
           step: 1,
-          title: "Minimum rows needed in scope before consensus suggestions run.",
+          title:
+            "Minimum rows needed in scope before consensus suggestions run.",
         },
       },
       {
@@ -358,7 +393,8 @@ const STRATEGY_CONFIG = Object.freeze({
           min: 0,
           max: 1,
           step: 0.01,
-          title: "Fraction of rows that must already be filled to trust consensus suggestions.",
+          title:
+            "Fraction of rows that must already be filled to trust consensus suggestions.",
         },
       },
     ],
@@ -370,7 +406,11 @@ const STRATEGY_CONFIG = Object.freeze({
       {
         key: "inputDefaultMinGroupSize",
         label: "Input default min group size",
-        options: { min: 1, step: 1, title: "Rows per input needed before seeding defaults." },
+        options: {
+          min: 1,
+          step: 1,
+          title: "Rows per input needed before seeding defaults.",
+        },
       },
       {
         key: "inputDefaultMinExistingRatio",
@@ -390,7 +430,11 @@ const STRATEGY_CONFIG = Object.freeze({
       {
         key: "profileTrendMinObservations",
         label: "Trend min observations",
-        options: { min: 0, step: 1, title: "Observations needed before applying trend preferences." },
+        options: {
+          min: 0,
+          step: 1,
+          title: "Observations needed before applying trend preferences.",
+        },
       },
       {
         key: "profileTrendMinPreferenceRatio",
@@ -435,7 +479,8 @@ export async function openInferenceDialog(options = {}) {
 
     const title = document.createElement("h2");
     title.textContent = "Inference";
-    title.style.cssText = "margin:0;font-size:20px;font-weight:600;color:#f0f2ff;flex:1;";
+    title.style.cssText =
+      "margin:0;font-size:20px;font-weight:600;color:#f0f2ff;flex:1;";
 
     const infoButton = document.createElement("button");
     infoButton.type = "button";
@@ -470,7 +515,8 @@ export async function openInferenceDialog(options = {}) {
       " It suggests outcomes, ends, and tags when similar rows share recognizable patterns.";
 
     const infoList = document.createElement("ul");
-    infoList.style.cssText = "margin:0 0 10px 18px;padding:0;display:grid;gap:8px;";
+    infoList.style.cssText =
+      "margin:0 0 10px 18px;padding:0;display:grid;gap:8px;";
 
     const addInfo = (label, text) => {
       const item = document.createElement("li");
@@ -532,7 +578,7 @@ export async function openInferenceDialog(options = {}) {
     trendsHint.textContent =
       "Suggestions may lean on recent modifier/input trends; heuristics pick confidence and source automatically.";
     trendsHint.title =
-      "Heuristics set their own confidence/source when proposing values. Manual defaults live in settings and manual edits keep source \"manual\".";
+      'Heuristics set their own confidence/source when proposing values. Manual defaults live in settings and manual edits keep source "manual".';
     trendsHint.style.cssText = "margin:0;font-size:12px;color:#7f8ab5;";
 
     const scopeSelector = buildScopeSelector(defaults.scope || "selection");
@@ -553,19 +599,18 @@ export async function openInferenceDialog(options = {}) {
 
     const bypassRow = document.createElement("div");
     bypassRow.style.cssText = "display:flex;flex-wrap:wrap;gap:14px;";
-    const {
-      label: inferFromBypassLabel,
-      input: inferFromBypassInput,
-    } = buildCheckbox(
-      "Infer from bypassed modifiers",
-      !!defaults.inferFromBypassed,
-      "When enabled, bypass/marked modifiers participate when mining inference sources.",
-    );
-    const { label: inferToBypassLabel, input: inferToBypassInput } = buildCheckbox(
-      "Infer to bypassed modifiers",
-      !!defaults.inferToBypassed,
-      "When enabled, bypass/marked modifier rows are eligible inference targets.",
-    );
+    const { label: inferFromBypassLabel, input: inferFromBypassInput } =
+      buildCheckbox(
+        "Infer from bypassed modifiers",
+        !!defaults.inferFromBypassed,
+        "When enabled, bypass/marked modifiers participate when mining inference sources.",
+      );
+    const { label: inferToBypassLabel, input: inferToBypassInput } =
+      buildCheckbox(
+        "Infer to bypassed modifiers",
+        !!defaults.inferToBypassed,
+        "When enabled, bypass/marked modifier rows are eligible inference targets.",
+      );
     bypassRow.append(inferFromBypassLabel, inferToBypassLabel);
 
     const runOptions = document.createElement("div");
@@ -581,14 +626,12 @@ export async function openInferenceDialog(options = {}) {
       !!defaults.onlyFillEmpty,
       "Skip cells that already contain structured values so inference only touches blanks.",
     );
-    const {
-      label: skipManualOutcomeLabel,
-      input: skipManualOutcomeInput,
-    } = buildCheckbox(
-      "Skip rows with manual Outcome",
-      !!defaults.skipManualOutcome,
-      "When enabled, inference leaves End/Tag untouched if the row already has a manual Outcome.",
-    );
+    const { label: skipManualOutcomeLabel, input: skipManualOutcomeInput } =
+      buildCheckbox(
+        "Skip rows with manual Outcome",
+        !!defaults.skipManualOutcome,
+        "When enabled, inference leaves End/Tag untouched if the row already has a manual Outcome.",
+      );
     overwriteLabel.style.marginTop = "8px";
     onlyEmptyLabel.style.marginTop = "8px";
     skipManualOutcomeLabel.style.marginTop = "8px";
@@ -686,7 +729,8 @@ export async function openInferenceDialog(options = {}) {
             checkbox.checked = !!preset.values[enabledKey];
           }
         }
-        if (summary) summary.textContent = `${preset.label} thresholds applied.`;
+        if (summary)
+          summary.textContent = `${preset.label} thresholds applied.`;
       });
       presetRow.appendChild(button);
     });
@@ -855,7 +899,9 @@ export async function openInferenceDialog(options = {}) {
     }
 
     function getScope() {
-      const checked = scopeSelector.querySelector('input[name="inference-scope"]:checked');
+      const checked = scopeSelector.querySelector(
+        'input[name="inference-scope"]:checked',
+      );
       return checked ? checked.value : "selection";
     }
 

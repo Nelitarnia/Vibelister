@@ -17,7 +17,11 @@ export function getVariantCombinatoricsTests() {
           ["b", "c"],
         ]);
         assert.deepStrictEqual(rangeCombos([1, 2], 0, 1), [[], [1], [2]]);
-        assert.deepStrictEqual(kCombos([1, 2, 3], 0), [[]], "zero picks yields empty combo");
+        assert.deepStrictEqual(
+          kCombos([1, 2, 3], 0),
+          [[]],
+          "zero picks yields empty combo",
+        );
       },
     },
     {
@@ -26,7 +30,12 @@ export function getVariantCombinatoricsTests() {
         const optionalEligible = new Set([1, 3]);
         const required = new Set([2]);
         const exact = groupCombos(
-          { mode: GROUP_MODES.EXACT, k: 2, memberIds: [1, 2, 3], required: true },
+          {
+            mode: GROUP_MODES.EXACT,
+            k: 2,
+            memberIds: [1, 2, 3],
+            required: true,
+          },
           { optionalEligible, required },
         );
         assert.deepStrictEqual(
@@ -36,7 +45,12 @@ export function getVariantCombinatoricsTests() {
         );
 
         const atMost = groupCombos(
-          { mode: GROUP_MODES.AT_MOST, k: 1, memberIds: [1, 2], required: false },
+          {
+            mode: GROUP_MODES.AT_MOST,
+            k: 1,
+            memberIds: [1, 2],
+            required: false,
+          },
           { optionalEligible, required },
         );
         assert.deepStrictEqual(
@@ -61,7 +75,11 @@ export function getVariantCombinatoricsTests() {
           },
           { optionalEligible, required },
         );
-        assert.deepStrictEqual(impossible, [], "range that cannot be satisfied should bail early");
+        assert.deepStrictEqual(
+          impossible,
+          [],
+          "range that cannot be satisfied should bail early",
+        );
 
         const viable = groupCombos(
           {
@@ -82,7 +100,9 @@ export function getVariantCombinatoricsTests() {
     {
       name: "group combos report truncation when capped",
       run(assert) {
-        const optionalEligible = new Set(Array.from({ length: 17 }, (_, i) => i + 1));
+        const optionalEligible = new Set(
+          Array.from({ length: 17 }, (_, i) => i + 1),
+        );
         const oversized = groupCombos(
           {
             mode: GROUP_MODES.RANGE,
@@ -93,7 +113,11 @@ export function getVariantCombinatoricsTests() {
           },
           { optionalEligible, required: new Set() },
         );
-        assert.strictEqual(oversized.truncated, true, "flag truncation when hitting the cap");
+        assert.strictEqual(
+          oversized.truncated,
+          true,
+          "flag truncation when hitting the cap",
+        );
         assert.strictEqual(
           oversized.length,
           MAX_GROUP_COMBOS,
@@ -112,7 +136,11 @@ export function getVariantCombinatoricsTests() {
           { optionalEligible, required: new Set() },
           { variantCapPerGroup: smallerCap },
         );
-        assert.strictEqual(resized.truncated, true, "custom caps should also trigger truncation");
+        assert.strictEqual(
+          resized.truncated,
+          true,
+          "custom caps should also trigger truncation",
+        );
         assert.strictEqual(
           resized.truncationLimit,
           smallerCap,

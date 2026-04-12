@@ -6,14 +6,20 @@ import {
   modStateIsRequired,
 } from "./mod-state-normalize.js";
 import { groupCombos } from "./variant-combinatorics.js";
-import { buildConstraintMaps, violatesConstraints } from "./variant-constraints.js";
+import {
+  buildConstraintMaps,
+  violatesConstraints,
+} from "./variant-constraints.js";
 import {
   makeInteractionsIndexCacheContext,
   readInteractionsIndexCache,
   writeInteractionsIndexCache,
 } from "./interactions-index-cache.js";
 import { normalizeActionProperties } from "../properties.js";
-import { normalizeVariantCaps, DEFAULT_VARIANT_CAPS } from "./variant-settings.js";
+import {
+  normalizeVariantCaps,
+  DEFAULT_VARIANT_CAPS,
+} from "./variant-settings.js";
 
 // helpers for ordering
 export function modOrderMap(model) {
@@ -72,7 +78,8 @@ function variantSignature(ids) {
 export function normalizeActionsAndInputs(model, options = {}) {
   const includeBypass = !!options.includeBypass;
   const targetIndexField = options.targetIndexField || "interactionsIndex";
-  const isBaseIndex = !includeBypass && targetIndexField === "interactionsIndex";
+  const isBaseIndex =
+    !includeBypass && targetIndexField === "interactionsIndex";
   const currentBaseVersion = Number(model?.interactionsIndexVersion) || 0;
   const baseVersion = isBaseIndex ? currentBaseVersion + 1 : currentBaseVersion;
   const actionSet = options.actionIds
@@ -157,8 +164,7 @@ function computeVariantsForAction(action, model, options = {}) {
     const isRequired = modStateIsRequired(value);
     const isOn = modStateIsOn(value);
     const isMarked = modStateActiveish(value);
-    const isActive =
-      isRequired || (includeMarked ? isMarked : isOn);
+    const isActive = isRequired || (includeMarked ? isMarked : isOn);
     if (isRequired) {
       requiredIds.push(id);
       requiredSet.add(id);
@@ -341,7 +347,14 @@ function createVariantDiagnosticsCollector(action, caps) {
       };
     },
     recordGroupCombos(info = {}) {
-      const { group, comboCount, truncated, limit, requiredCount, optionalCount } = info;
+      const {
+        group,
+        comboCount,
+        truncated,
+        limit,
+        requiredCount,
+        optionalCount,
+      } = info;
       groupCombos.push({
         groupId: group?.id,
         groupName: group?.name,
@@ -424,7 +437,9 @@ export function diagnoseVariantsForAction(action, model, options = {}) {
   const variants = [];
   for (const sig of iterator) variants.push(sig);
   variants.sort((a, b) => compareVariantSig(a, b, model));
-  const baseDiagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
+  const baseDiagnostics = iterator.getDiagnostics
+    ? iterator.getDiagnostics()
+    : {};
   return collector.summarize(baseDiagnostics, variants);
 }
 
@@ -460,7 +475,10 @@ export function buildInteractionsPairs(model, options = {}) {
     ? buildConstraintMaps(model.modifierConstraints)
     : null;
   const propertiesCatalog = collectPropertiesCatalog(actions);
-  const variantCaps = normalizeVariantCaps(model?.meta?.variantCaps, DEFAULT_VARIANT_CAPS);
+  const variantCaps = normalizeVariantCaps(
+    model?.meta?.variantCaps,
+    DEFAULT_VARIANT_CAPS,
+  );
 
   const variantDiagnostics = {
     candidates: 0,
@@ -521,8 +539,11 @@ export function buildInteractionsPairs(model, options = {}) {
     }
     const ordered = Array.from(variants.values());
     ordered.sort((a, b) => compareVariantSig(a, b, model));
-    const diagnostics = iterator.getDiagnostics ? iterator.getDiagnostics() : {};
-    const truncated = diagnostics.truncated || ordered.length > variantCaps.variantCapPerAction;
+    const diagnostics = iterator.getDiagnostics
+      ? iterator.getDiagnostics()
+      : {};
+    const truncated =
+      diagnostics.truncated || ordered.length > variantCaps.variantCapPerAction;
     const invalid = !!diagnostics.invalid;
     const truncatedGroups = diagnostics.truncatedGroups || [];
     recordGroupTruncations(action, truncatedGroups);
@@ -544,7 +565,8 @@ export function buildInteractionsPairs(model, options = {}) {
   if (mode === "AA") {
     // Actions × Actions (with variants on BOTH sides)
     for (const a of actions) {
-      const { variants: varsA, truncated: truncatedA } = getVariantsForAction(a);
+      const { variants: varsA, truncated: truncatedA } =
+        getVariantsForAction(a);
       if (truncatedA) {
         capped = true;
         cappedActions++;
@@ -665,8 +687,7 @@ export function buildScopedInteractionsPairs(model, actionIds, options = {}) {
             .map((id) => Number(id))
             .filter((id) => Number.isFinite(id) && id >= 0),
         ),
-      )
-        .sort((a, b) => a - b)
+      ).sort((a, b) => a - b)
     : [];
   const normalization = normalizeActionsAndInputs(model, {
     ...options,

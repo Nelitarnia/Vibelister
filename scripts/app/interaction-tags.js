@@ -176,7 +176,10 @@ export function createInteractionTagManager(options = {}) {
           if (typeof originalApply === "function") {
             originalApply(attachments, direction, context);
           }
-          const reason = direction === "undo" || direction === "redo" ? direction : "history";
+          const reason =
+            direction === "undo" || direction === "redo"
+              ? direction
+              : "history";
           emitInteractionTagChangeEvent(null, { reason, force: true });
         };
       }
@@ -239,7 +242,10 @@ export function createInteractionTagManager(options = {}) {
           if (typeof originalApply === "function") {
             originalApply(attachments, direction, context);
           }
-          const reason = direction === "undo" || direction === "redo" ? direction : "history";
+          const reason =
+            direction === "undo" || direction === "redo"
+              ? direction
+              : "history";
           emitInteractionTagChangeEvent(null, { reason, force: true });
         };
       }

@@ -34,7 +34,10 @@ import {
 //
 // You can add more modes later by extending MODE_MAP.
 
-export { parseEndActionQuery, matchesEndActionFilters } from "./palette-actions.js";
+export {
+  parseEndActionQuery,
+  matchesEndActionFilters,
+} from "./palette-actions.js";
 
 export function initPalette(ctx) {
   const {
@@ -77,13 +80,13 @@ export function initPalette(ctx) {
   };
 
   const getBaseActionModNames = (rowIndex) => {
-    const activeView = typeof getActiveView === "function" ? getActiveView() : "";
+    const activeView =
+      typeof getActiveView === "function" ? getActiveView() : "";
     if (activeView !== "interactions") return [];
     const pair = getInteractionsPair(model, rowIndex);
     if (!pair) return [];
     return modNamesFromVariantSig(pair.variantSig || "");
   };
-
 
   // ---------- Mode registry -------------------
   const MODE_MAP = [
@@ -141,7 +144,11 @@ export function initPalette(ctx) {
       filterFn: () => true,
       domId: "universalPalette",
       parseInitial: () => "",
-      parseQuery: (raw) => ({ q: String(raw || "").trim().toLowerCase() }),
+      parseQuery: (raw) => ({
+        q: String(raw || "")
+          .trim()
+          .toLowerCase(),
+      }),
       makeItems: (model, parsed, extras = {}) => {
         const q = parsed.q || "";
         const { sel, viewDef } = extras;
@@ -152,7 +159,11 @@ export function initPalette(ctx) {
         const rowIndex = Number(sel?.r);
         const actions = Array.isArray(model?.actions) ? model.actions : [];
         let current = MOD.OFF;
-        if (Number.isFinite(rowIndex) && rowIndex >= 0 && rowIndex < actions.length) {
+        if (
+          Number.isFinite(rowIndex) &&
+          rowIndex >= 0 &&
+          rowIndex < actions.length
+        ) {
           const row = actions[rowIndex];
           if (row && Number.isFinite(id)) {
             const raw = row.modSet?.[id];
@@ -177,7 +188,9 @@ export function initPalette(ctx) {
             return false;
           })
           .map((state) => ({
-            display: state.glyph ? `${state.glyph} ${state.label}` : state.label,
+            display: state.glyph
+              ? `${state.glyph} ${state.label}`
+              : state.label,
             description: state.description,
             data: { value: state.value },
             isCurrent: state.value === current,
@@ -199,7 +212,11 @@ export function initPalette(ctx) {
       parseInitial: (s) => normalizeCellTextToQuery(s, model),
       parseQuery: (raw) => {
         const parsed = parseEndActionQuery(raw);
-        return { a: parsed.name, mods: parsed.mods, properties: parsed.properties };
+        return {
+          a: parsed.name,
+          mods: parsed.mods,
+          properties: parsed.properties,
+        };
       },
       makeItems: (model, parsed) => {
         const { a, mods, properties } = parsed;
@@ -298,7 +315,9 @@ export function initPalette(ctx) {
         render();
       },
       recentKeyOf: (it) =>
-        it?.data?.clear ? "" : `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
+        it?.data?.clear
+          ? ""
+          : `a:${it.data.endActionId}|${it.data.endVariantSig || ""}`,
     },
     {
       name: "properties",
@@ -346,7 +365,8 @@ export function initPalette(ctx) {
           : [];
         const activeRaw = parsed.activeRaw || "";
         const arraysEqual = (a = [], b = []) =>
-          a.length === b.length && a.every((value, index) => value === b[index]);
+          a.length === b.length &&
+          a.every((value, index) => value === b[index]);
         const typedDisplay = typedNormalized.length
           ? typedNormalized.join(", ")
           : "Clear properties";
@@ -375,7 +395,9 @@ export function initPalette(ctx) {
         const catalog = (() => {
           const seen = new Set();
           const list = [];
-          const fromActions = Array.isArray(model?.actions) ? model.actions : [];
+          const fromActions = Array.isArray(model?.actions)
+            ? model.actions
+            : [];
           for (const aRow of fromActions) {
             for (const prop of normalizeActionProperties(aRow?.properties)) {
               const key = prop.toLowerCase();
@@ -468,7 +490,8 @@ export function initPalette(ctx) {
           : [];
         const activeRaw = parsed.activeRaw || "";
         const arraysEqual = (a = [], b = []) =>
-          a.length === b.length && a.every((value, index) => value === b[index]);
+          a.length === b.length &&
+          a.every((value, index) => value === b[index]);
         const typedDisplay = typedNormalized.length
           ? typedNormalized.join(", ")
           : "Clear tags";
@@ -496,17 +519,13 @@ export function initPalette(ctx) {
 
         const catalog = collectInteractionTags(model) || [];
         if (catalog.length) {
-          const skip = new Set(
-            typedNormalized.map((tag) => tag.toLowerCase()),
-          );
+          const skip = new Set(typedNormalized.map((tag) => tag.toLowerCase()));
           for (const tag of catalog) {
             const lower = tag.toLowerCase();
             if (skip.has(lower)) continue;
-            if (parsed.activeLower && !lower.includes(parsed.activeLower)) continue;
-            const nextTags = normalizeInteractionTags([
-              ...baseNormalized,
-              tag,
-            ]);
+            if (parsed.activeLower && !lower.includes(parsed.activeLower))
+              continue;
+            const nextTags = normalizeInteractionTags([...baseNormalized, tag]);
             items.push({
               display: tag,
               description: baseNormalized.length
@@ -617,8 +636,12 @@ export function initPalette(ctx) {
 
   function openForCurrentCell(arg1, arg2, arg3, arg4) {
     const targetArg =
-      arg1 && typeof arg1 === "object" &&
-      ("r" in arg1 || "c" in arg1 || "initialText" in arg1 || "focusEditor" in arg1)
+      arg1 &&
+      typeof arg1 === "object" &&
+      ("r" in arg1 ||
+        "c" in arg1 ||
+        "initialText" in arg1 ||
+        "focusEditor" in arg1)
         ? arg1
         : null;
 
@@ -632,7 +655,8 @@ export function initPalette(ctx) {
       const rectHeight = Number(maybeRect?.height);
       if (Number.isFinite(rectHeight) && rectHeight > 0) return rectHeight;
       const editorHeight = Number(editor?.offsetHeight);
-      if (Number.isFinite(editorHeight) && editorHeight > 0) return editorHeight;
+      if (Number.isFinite(editorHeight) && editorHeight > 0)
+        return editorHeight;
       return 24;
     };
 
@@ -669,7 +693,8 @@ export function initPalette(ctx) {
       }
       if (rect) {
         left = Number(rect.left) || 0;
-        top = (Number(rect.top) || 0) + resolveCellHeight(rect) + marginBelowCell;
+        top =
+          (Number(rect.top) || 0) + resolveCellHeight(rect) + marginBelowCell;
         width = Math.max(200, Number(rect.width) || 0);
       } else {
         left = 0;
@@ -702,7 +727,8 @@ export function initPalette(ctx) {
       let paletteHeight = pal.el.offsetHeight || pal.el.scrollHeight || 0;
       if (!paletteHeight) {
         const parsedMax = Number.parseFloat(style.maxHeight);
-        if (Number.isFinite(parsedMax) && parsedMax > 0) paletteHeight = parsedMax;
+        if (Number.isFinite(parsedMax) && parsedMax > 0)
+          paletteHeight = parsedMax;
       }
       if (style.display !== restoreDisplay) {
         style.display = restoreDisplay;
@@ -782,7 +808,8 @@ export function initPalette(ctx) {
     pal.isOpen = true;
     pal.showRecent = false;
 
-    if (claimEditor) prepareEditorForCell(rect, initialText, { focus: focusEditor });
+    if (claimEditor)
+      prepareEditorForCell(rect, initialText, { focus: focusEditor });
     else pal.ownsEditor = false;
 
     // Initialize query
@@ -856,8 +883,16 @@ export function initPalette(ctx) {
 
   function openOutcome(target = {}) {
     const t = target || {};
-    const rowIndex = Number.isFinite(t.r) ? t.r : Number.isFinite(sel?.r) ? sel.r : NaN;
-    const colIndex = Number.isFinite(t.c) ? t.c : Number.isFinite(sel?.c) ? sel.c : NaN;
+    const rowIndex = Number.isFinite(t.r)
+      ? t.r
+      : Number.isFinite(sel?.r)
+        ? sel.r
+        : NaN;
+    const colIndex = Number.isFinite(t.c)
+      ? t.c
+      : Number.isFinite(sel?.c)
+        ? sel.c
+        : NaN;
 
     const resolveOutcomeName = (rawId) => {
       const id = Number(rawId);
@@ -867,12 +902,13 @@ export function initPalette(ctx) {
       return match ? match.name || "" : "";
     };
 
-    let initialText =
-      typeof t.initialText === "string" ? t.initialText : "";
+    let initialText = typeof t.initialText === "string" ? t.initialText : "";
     if (!initialText) {
       const colKey = t.col?.key || "dualof";
       const fromRow =
-        t.row && colKey && typeof t.row[colKey] === "number" ? t.row[colKey] : null;
+        t.row && colKey && typeof t.row[colKey] === "number"
+          ? t.row[colKey]
+          : null;
       const rows = Array.isArray(model?.outcomes) ? model.outcomes : [];
       const modelRow =
         Number.isFinite(rowIndex) && rowIndex >= 0 && rowIndex < rows.length
@@ -932,7 +968,8 @@ export function initPalette(ctx) {
     else {
       const preferred = items.findIndex((it) => it && it.isCurrent);
       if (preferred >= 0) pal.selIndex = preferred;
-      else if (pal.selIndex < 0 || pal.selIndex >= items.length) pal.selIndex = 0;
+      else if (pal.selIndex < 0 || pal.selIndex >= items.length)
+        pal.selIndex = 0;
     }
     pal.items = items;
     renderList(false);
@@ -1040,11 +1077,11 @@ export function initPalette(ctx) {
           (segments && segments.some((seg) => seg && seg.text)) || fallback,
         );
         const ariaLabel =
-          fallback
-            || (segments
-              ? segments.map((seg) => (seg && seg.text) || "").join("")
-              : "")
-            || (it.description && !hasLabelContent ? it.description : "");
+          fallback ||
+          (segments
+            ? segments.map((seg) => (seg && seg.text) || "").join("")
+            : "") ||
+          (it.description && !hasLabelContent ? it.description : "");
 
         if (it.description) {
           if (hasLabelContent) {

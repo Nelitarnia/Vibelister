@@ -38,7 +38,9 @@ export function getAppCoordinatorTests() {
           buildInteractionsPairs() {
             rebuildCalled += 1;
           },
-          getInteractionsOutline: () => ({ refresh: () => (refreshCalled += 1) }),
+          getInteractionsOutline: () => ({
+            refresh: () => (refreshCalled += 1),
+          }),
           getInteractionsRowCount: () => 1,
           getInteractionsPair: () => ({ aId: 1, iId: 2, variantSig: "sig" }),
           noteKeyForPair: (p) => `${p.aId}|${p.iId}|${p.variantSig}`,
@@ -50,7 +52,11 @@ export function getAppCoordinatorTests() {
         assert.strictEqual(refreshCalled, 1, "outline refreshed");
 
         maintenance.pruneNotesToValidPairs();
-        assert.deepStrictEqual(Object.keys(model.notes), ["1|2|sig"], "pruned invalid notes");
+        assert.deepStrictEqual(
+          Object.keys(model.notes),
+          ["1|2|sig"],
+          "pruned invalid notes",
+        );
       },
     },
     {
@@ -102,7 +108,12 @@ export function getAppCoordinatorTests() {
         let receivedRuntimeOptions = null;
         let lastMutationArgs = null;
         const runtimeResult = {
-          rendererApi: { render() {}, layout() {}, ensureVisible() {}, getColGeomFor() {} },
+          rendererApi: {
+            render() {},
+            layout() {},
+            ensureVisible() {},
+            getColGeomFor() {},
+          },
           selectionListeners: { onSelectionChanged: () => {} },
           selectionRenderDisposer: () => {},
           interactionToolsApi: {},
@@ -137,13 +148,24 @@ export function getAppCoordinatorTests() {
         });
 
         runModelMutationHook("payload");
-        assert.strictEqual(receivedRuntimeOptions.selectionApi.sel, selectionApi.sel, "selection wired");
+        assert.strictEqual(
+          receivedRuntimeOptions.selectionApi.sel,
+          selectionApi.sel,
+          "selection wired",
+        );
         assert.strictEqual(
           receivedRuntimeOptions.rebuildInteractionsInPlace instanceof Function,
           true,
         );
-        assert.deepStrictEqual(lastMutationArgs, ["payload"], "grid cells forward mutation");
-        assert.strictEqual(runModelMutationHook && typeof runModelMutationHook, "function");
+        assert.deepStrictEqual(
+          lastMutationArgs,
+          ["payload"],
+          "grid cells forward mutation",
+        );
+        assert.strictEqual(
+          runModelMutationHook && typeof runModelMutationHook,
+          "function",
+        );
       },
     },
   ];

@@ -33,7 +33,8 @@ export function setupPalette({
     sheet: dom.sheet,
     sel: editingApi.sel,
     getCellRect: editingApi.getCellRect,
-    getColorValue: (r, c) => gridApi.cellValueToPlainText(gridApi.getCell(r, c)),
+    getColorValue: (r, c) =>
+      gridApi.cellValueToPlainText(gridApi.getCell(r, c)),
     setColorValue: (r, c, v) => gridApi.setCellSelectionAware(r, c, v),
     render: rendererApi.render,
     makeUndoConfig: historyApi.makeUndoConfig,
@@ -42,9 +43,13 @@ export function setupPalette({
 
   if (paletteAPI && colorPickerAPI) {
     const baseIsOpen =
-      typeof paletteAPI.isOpen === "function" ? paletteAPI.isOpen.bind(paletteAPI) : () => false;
-    if (typeof colorPickerAPI.openColor === "function") paletteAPI.openColor = colorPickerAPI.openColor;
-    if (typeof colorPickerAPI.close === "function") paletteAPI.closeColor = colorPickerAPI.close;
+      typeof paletteAPI.isOpen === "function"
+        ? paletteAPI.isOpen.bind(paletteAPI)
+        : () => false;
+    if (typeof colorPickerAPI.openColor === "function")
+      paletteAPI.openColor = colorPickerAPI.openColor;
+    if (typeof colorPickerAPI.close === "function")
+      paletteAPI.closeColor = colorPickerAPI.close;
     paletteAPI.isOpen = () => baseIsOpen() || !!colorPickerAPI.isOpen?.();
   }
 

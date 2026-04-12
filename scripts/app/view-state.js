@@ -53,7 +53,8 @@ export function createViewStateController(options = {}) {
   }
 
   function resetAllViewState() {
-    for (const key of Object.keys(perViewState)) perViewState[key] = EMPTY_STATE();
+    for (const key of Object.keys(perViewState))
+      perViewState[key] = EMPTY_STATE();
   }
 
   let cachedViewDef = null;

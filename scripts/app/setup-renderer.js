@@ -1,10 +1,20 @@
 import { sel, selection, SelectionNS, isRowSelected } from "./selection.js";
 import { createGridRenderer } from "./grid-renderer.js";
-import { noteKeyForPair, getInteractionsPair, describeInteractionInference } from "./interactions.js";
+import {
+  noteKeyForPair,
+  getInteractionsPair,
+  describeInteractionInference,
+} from "./interactions.js";
 import { parsePhaseKey } from "../data/utils.js";
 import { ROW_HEIGHT } from "../data/constants.js";
 
-export function setupRenderer({ appContext, viewState, dom, getCell, modHelpers }) {
+export function setupRenderer({
+  appContext,
+  viewState,
+  dom,
+  getCell,
+  modHelpers,
+}) {
   const { model } = appContext;
   const { sheet, cellsLayer, spacer, colHdrs, rowHdrs } = dom;
   return createGridRenderer({

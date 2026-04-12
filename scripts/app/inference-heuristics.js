@@ -32,31 +32,31 @@ function prepareTargets(targets) {
     const variantSig = normalizeVariantSig(target.pair);
     const inputKey = normalizeInputKey(target.pair);
     const actionGroupKey = normalizeActionGroup(target.actionGroup);
-  const info = describeInteractionInference(target.note);
-  const source = normalizeInteractionSource(info?.source);
-  const isInferred = !!info?.inferred;
-  const allowInferredExisting = !!target?.allowInferredExisting;
-  const allowInferredTargets = !!target?.allowInferredTargets;
-  const properties = normalizePropertyKeys(target.action?.properties);
-  const includeValue = !isInferred || allowInferredExisting;
-  const currentValue = includeValue ? extractFieldValue(target) : null;
-  const hasValue = includeValue && !!currentValue;
-  const isManual = hasValue && source === DEFAULT_INTERACTION_SOURCE;
-  return {
+    const info = describeInteractionInference(target.note);
+    const source = normalizeInteractionSource(info?.source);
+    const isInferred = !!info?.inferred;
+    const allowInferredExisting = !!target?.allowInferredExisting;
+    const allowInferredTargets = !!target?.allowInferredTargets;
+    const properties = normalizePropertyKeys(target.action?.properties);
+    const includeValue = !isInferred || allowInferredExisting;
+    const currentValue = includeValue ? extractFieldValue(target) : null;
+    const hasValue = includeValue && !!currentValue;
+    const isManual = hasValue && source === DEFAULT_INTERACTION_SOURCE;
+    return {
       ...target,
       actionId,
       variantSig,
       inputKey,
       actionGroupKey,
-    currentValue,
-    hasValue,
-    isManual,
-    isInferred,
-    allowInferredTargets,
-    properties,
-    source,
-  };
-});
+      currentValue,
+      hasValue,
+      isManual,
+      isInferred,
+      allowInferredTargets,
+      properties,
+      source,
+    };
+  });
 }
 
 function eligibleForSuggestion(target) {
@@ -177,7 +177,8 @@ function applyPhaseAdjacency(
       ) {
         const interiorTargets = ordered.filter(
           (gapTarget) =>
-            gapTarget.phase > lastAnchor.phase && gapTarget.phase < target.phase,
+            gapTarget.phase > lastAnchor.phase &&
+            gapTarget.phase < target.phase,
         );
         const hasConflicts = interiorTargets.some((gapTarget) => {
           if (!gapTarget?.currentValue) return false;
@@ -187,7 +188,11 @@ function applyPhaseAdjacency(
           return !matchesValue || !matchesSource;
         });
         if (hasConflicts) {
-          lastAnchor = { valueKey: key, source: target.source, phase: target.phase };
+          lastAnchor = {
+            valueKey: key,
+            source: target.source,
+            phase: target.phase,
+          };
           continue;
         }
 
@@ -209,7 +214,11 @@ function applyPhaseAdjacency(
           );
         }
       }
-      lastAnchor = { valueKey: key, source: target.source, phase: target.phase };
+      lastAnchor = {
+        valueKey: key,
+        source: target.source,
+        phase: target.phase,
+      };
     }
   }
 }
@@ -250,8 +259,10 @@ function shouldReplaceSuggestion(existing, candidate) {
   if (candidateConfidence > existingConfidence) return true;
   if (candidateConfidence < existingConfidence) return false;
 
-  const existingPriority = SOURCE_PRIORITY.get(existing?.source) ?? Number.MAX_SAFE_INTEGER;
-  const candidatePriority = SOURCE_PRIORITY.get(candidate?.source) ?? Number.MAX_SAFE_INTEGER;
+  const existingPriority =
+    SOURCE_PRIORITY.get(existing?.source) ?? Number.MAX_SAFE_INTEGER;
+  const candidatePriority =
+    SOURCE_PRIORITY.get(candidate?.source) ?? Number.MAX_SAFE_INTEGER;
   return candidatePriority < existingPriority;
 }
 
@@ -320,89 +331,104 @@ export const DEFAULT_HEURISTIC_THRESHOLDS = Object.freeze({
   phaseAdjacencyEnabled: DEFAULT_PHASE_ADJACENCY_ENABLED,
 });
 
-  function normalizeThresholds(override = {}) {
-    if (!override || typeof override !== "object") override = {};
-    const defaults = DEFAULT_HEURISTIC_THRESHOLDS;
-    return {
-      consensusEnabled:
-        typeof override.consensusEnabled === "boolean"
-          ? override.consensusEnabled
-          : defaults.consensusEnabled,
-      consensusMinGroupSize: Number.isFinite(override.consensusMinGroupSize)
-        ? override.consensusMinGroupSize
-        : defaults.consensusMinGroupSize,
-      consensusMinExistingRatio: Number.isFinite(override.consensusMinExistingRatio)
-        ? override.consensusMinExistingRatio
-        : defaults.consensusMinExistingRatio,
-      actionGroupEnabled:
-        typeof override.actionGroupEnabled === "boolean"
-          ? override.actionGroupEnabled
-          : defaults.actionGroupEnabled,
-      actionGroupMinGroupSize: Number.isFinite(override.actionGroupMinGroupSize)
-        ? override.actionGroupMinGroupSize
-        : defaults.actionGroupMinGroupSize,
-      actionGroupMinExistingRatio: Number.isFinite(override.actionGroupMinExistingRatio)
-        ? override.actionGroupMinExistingRatio
-        : defaults.actionGroupMinExistingRatio,
-      actionGroupPhaseMinGroupSize: Number.isFinite(
-        override.actionGroupPhaseMinGroupSize,
-      )
-        ? override.actionGroupPhaseMinGroupSize
-        : defaults.actionGroupPhaseMinGroupSize,
-      actionGroupPhaseMinExistingRatio: Number.isFinite(
-        override.actionGroupPhaseMinExistingRatio,
-      )
-        ? override.actionGroupPhaseMinExistingRatio
-        : defaults.actionGroupPhaseMinExistingRatio,
-      actionPropertyEnabled:
-        typeof override.actionPropertyEnabled === "boolean"
-          ? override.actionPropertyEnabled
-          : defaults.actionPropertyEnabled,
-      actionPropertyMinGroupSize: Number.isFinite(override.actionPropertyMinGroupSize)
-        ? override.actionPropertyMinGroupSize
-        : defaults.actionPropertyMinGroupSize,
-      actionPropertyMinExistingRatio: Number.isFinite(
-        override.actionPropertyMinExistingRatio,
-      )
-        ? override.actionPropertyMinExistingRatio
-        : defaults.actionPropertyMinExistingRatio,
-      actionPropertyPhaseMinGroupSize: Number.isFinite(
-        override.actionPropertyPhaseMinGroupSize,
-      )
-        ? override.actionPropertyPhaseMinGroupSize
-        : defaults.actionPropertyPhaseMinGroupSize,
-      actionPropertyPhaseMinExistingRatio: Number.isFinite(
-        override.actionPropertyPhaseMinExistingRatio,
-      )
-        ? override.actionPropertyPhaseMinExistingRatio
-        : defaults.actionPropertyPhaseMinExistingRatio,
-      modifierProfileEnabled:
-        typeof override.modifierProfileEnabled === "boolean"
-          ? override.modifierProfileEnabled
-          : defaults.modifierProfileEnabled,
-      inputDefaultEnabled:
-        typeof override.inputDefaultEnabled === "boolean"
-          ? override.inputDefaultEnabled
-          : defaults.inputDefaultEnabled,
-      inputDefaultMinGroupSize: Number.isFinite(override.inputDefaultMinGroupSize)
-        ? override.inputDefaultMinGroupSize
-        : defaults.inputDefaultMinGroupSize,
-      inputDefaultMinExistingRatio: Number.isFinite(override.inputDefaultMinExistingRatio)
-        ? override.inputDefaultMinExistingRatio
-        : defaults.inputDefaultMinExistingRatio,
-      profileTrendEnabled:
-        typeof override.profileTrendEnabled === "boolean"
-          ? override.profileTrendEnabled
-          : defaults.profileTrendEnabled,
-      profileTrendMinObservations: Number.isFinite(override.profileTrendMinObservations)
-        ? Math.max(override.profileTrendMinObservations, defaults.profileTrendMinObservations)
-        : defaults.profileTrendMinObservations,
-      profileTrendMinPreferenceRatio: Number.isFinite(override.profileTrendMinPreferenceRatio)
-        ? Math.max(
-            override.profileTrendMinPreferenceRatio,
-            defaults.profileTrendMinPreferenceRatio,
-          )
-        : defaults.profileTrendMinPreferenceRatio,
+function normalizeThresholds(override = {}) {
+  if (!override || typeof override !== "object") override = {};
+  const defaults = DEFAULT_HEURISTIC_THRESHOLDS;
+  return {
+    consensusEnabled:
+      typeof override.consensusEnabled === "boolean"
+        ? override.consensusEnabled
+        : defaults.consensusEnabled,
+    consensusMinGroupSize: Number.isFinite(override.consensusMinGroupSize)
+      ? override.consensusMinGroupSize
+      : defaults.consensusMinGroupSize,
+    consensusMinExistingRatio: Number.isFinite(
+      override.consensusMinExistingRatio,
+    )
+      ? override.consensusMinExistingRatio
+      : defaults.consensusMinExistingRatio,
+    actionGroupEnabled:
+      typeof override.actionGroupEnabled === "boolean"
+        ? override.actionGroupEnabled
+        : defaults.actionGroupEnabled,
+    actionGroupMinGroupSize: Number.isFinite(override.actionGroupMinGroupSize)
+      ? override.actionGroupMinGroupSize
+      : defaults.actionGroupMinGroupSize,
+    actionGroupMinExistingRatio: Number.isFinite(
+      override.actionGroupMinExistingRatio,
+    )
+      ? override.actionGroupMinExistingRatio
+      : defaults.actionGroupMinExistingRatio,
+    actionGroupPhaseMinGroupSize: Number.isFinite(
+      override.actionGroupPhaseMinGroupSize,
+    )
+      ? override.actionGroupPhaseMinGroupSize
+      : defaults.actionGroupPhaseMinGroupSize,
+    actionGroupPhaseMinExistingRatio: Number.isFinite(
+      override.actionGroupPhaseMinExistingRatio,
+    )
+      ? override.actionGroupPhaseMinExistingRatio
+      : defaults.actionGroupPhaseMinExistingRatio,
+    actionPropertyEnabled:
+      typeof override.actionPropertyEnabled === "boolean"
+        ? override.actionPropertyEnabled
+        : defaults.actionPropertyEnabled,
+    actionPropertyMinGroupSize: Number.isFinite(
+      override.actionPropertyMinGroupSize,
+    )
+      ? override.actionPropertyMinGroupSize
+      : defaults.actionPropertyMinGroupSize,
+    actionPropertyMinExistingRatio: Number.isFinite(
+      override.actionPropertyMinExistingRatio,
+    )
+      ? override.actionPropertyMinExistingRatio
+      : defaults.actionPropertyMinExistingRatio,
+    actionPropertyPhaseMinGroupSize: Number.isFinite(
+      override.actionPropertyPhaseMinGroupSize,
+    )
+      ? override.actionPropertyPhaseMinGroupSize
+      : defaults.actionPropertyPhaseMinGroupSize,
+    actionPropertyPhaseMinExistingRatio: Number.isFinite(
+      override.actionPropertyPhaseMinExistingRatio,
+    )
+      ? override.actionPropertyPhaseMinExistingRatio
+      : defaults.actionPropertyPhaseMinExistingRatio,
+    modifierProfileEnabled:
+      typeof override.modifierProfileEnabled === "boolean"
+        ? override.modifierProfileEnabled
+        : defaults.modifierProfileEnabled,
+    inputDefaultEnabled:
+      typeof override.inputDefaultEnabled === "boolean"
+        ? override.inputDefaultEnabled
+        : defaults.inputDefaultEnabled,
+    inputDefaultMinGroupSize: Number.isFinite(override.inputDefaultMinGroupSize)
+      ? override.inputDefaultMinGroupSize
+      : defaults.inputDefaultMinGroupSize,
+    inputDefaultMinExistingRatio: Number.isFinite(
+      override.inputDefaultMinExistingRatio,
+    )
+      ? override.inputDefaultMinExistingRatio
+      : defaults.inputDefaultMinExistingRatio,
+    profileTrendEnabled:
+      typeof override.profileTrendEnabled === "boolean"
+        ? override.profileTrendEnabled
+        : defaults.profileTrendEnabled,
+    profileTrendMinObservations: Number.isFinite(
+      override.profileTrendMinObservations,
+    )
+      ? Math.max(
+          override.profileTrendMinObservations,
+          defaults.profileTrendMinObservations,
+        )
+      : defaults.profileTrendMinObservations,
+    profileTrendMinPreferenceRatio: Number.isFinite(
+      override.profileTrendMinPreferenceRatio,
+    )
+      ? Math.max(
+          override.profileTrendMinPreferenceRatio,
+          defaults.profileTrendMinPreferenceRatio,
+        )
+      : defaults.profileTrendMinPreferenceRatio,
     phaseAdjacencyMaxGap: Number.isFinite(override.phaseAdjacencyMaxGap)
       ? override.phaseAdjacencyMaxGap
       : defaults.phaseAdjacencyMaxGap,
@@ -543,7 +569,9 @@ export function runInferenceStrategies(
   const prepared = prepareTargets(targets || []);
   const suggestions = new Map();
 
-  const profilePrefs = profiles ? buildProfilePrefs(profiles, thresholds) : null;
+  const profilePrefs = profiles
+    ? buildProfilePrefs(profiles, thresholds)
+    : null;
   const helperContext = {
     applyConsensus,
     applyPhaseAdjacency,
@@ -561,7 +589,10 @@ export function runInferenceStrategies(
       : thresholds;
     if (strategyThresholds === false) continue;
     if (strategyThresholds && strategyThresholds.enabled === false) continue;
-    if (typeof strategy.enabled === "function" && !strategy.enabled(strategyThresholds))
+    if (
+      typeof strategy.enabled === "function" &&
+      !strategy.enabled(strategyThresholds)
+    )
       continue;
 
     const state = strategy.prepare({
@@ -585,7 +616,11 @@ export function runInferenceStrategies(
   return suggestions;
 }
 
-export function proposeInteractionInferences(targets, profiles, thresholdOverrides) {
+export function proposeInteractionInferences(
+  targets,
+  profiles,
+  thresholdOverrides,
+) {
   return runInferenceStrategies(
     targets,
     profiles,

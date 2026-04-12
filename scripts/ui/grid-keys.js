@@ -93,13 +93,11 @@ export function initGridKeys(deps) {
     }
   }
 
-
   function isColorKind(col) {
     const kind = col && col.kind;
     if (kind == null) return false;
     return String(kind).toLowerCase() === "color";
   }
-
 
   function isColorPickerContext(ae) {
     const root = doc?.getElementById?.("vlColorPicker");
@@ -172,7 +170,12 @@ export function initGridKeys(deps) {
   }
 
   function onGridKeyDown(e) {
-    if (!shouldHandleGlobalShortcuts({ allowWhileEditing: true, activeElement: doc?.activeElement || null }))
+    if (
+      !shouldHandleGlobalShortcuts({
+        allowWhileEditing: true,
+        activeElement: doc?.activeElement || null,
+      })
+    )
       return;
 
     // Clear multi-selection with Escape when not editing
@@ -424,7 +427,10 @@ export function initGridKeys(deps) {
     const keyRaw = e.key;
     const keyLower = String(keyRaw || "").toLowerCase();
     const isViewCycleShortcut =
-      mod && e.shiftKey && !e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft");
+      mod &&
+      e.shiftKey &&
+      !e.altKey &&
+      (e.key === "ArrowRight" || e.key === "ArrowLeft");
 
     const outlineFilterFocused = isOutlineFilterInput(activeElement);
     if (
@@ -440,7 +446,10 @@ export function initGridKeys(deps) {
     }
 
     const plusLike =
-      keyRaw === "=" || keyRaw === "+" || keyRaw === "Add" || keyLower === "add";
+      keyRaw === "=" ||
+      keyRaw === "+" ||
+      keyRaw === "Add" ||
+      keyLower === "add";
 
     if (mod && keyLower === "s") {
       e.preventDefault();
@@ -614,8 +623,8 @@ export function initGridKeys(deps) {
     const current = Number.isFinite(startC)
       ? Math.min(Math.max(Math.floor(startC), 0), total - 1)
       : dir > 0
-      ? 0
-      : total - 1;
+        ? 0
+        : total - 1;
     const step = dir > 0 ? 1 : -1;
     let c = current + step;
     while (c >= 0 && c < total) {
@@ -758,7 +767,10 @@ export function initGridKeys(deps) {
     const structuredType = meta.structured?.type;
     if (structuredType && String(col?.kind || "") === "interactions") {
       const pk = parsePhaseKey(col.key);
-      if (pk?.field === "end" && String(structuredType).toLowerCase() === "action")
+      if (
+        pk?.field === "end" &&
+        String(structuredType).toLowerCase() === "action"
+      )
         return true;
     }
     if (
@@ -784,7 +796,10 @@ export function initGridKeys(deps) {
 
     const rows = getSelectedRowsList();
     const cols = getSelectedColsList();
-    const { cells, hasStructured, hasComments } = gatherSelectionData(rows, cols);
+    const { cells, hasStructured, hasComments } = gatherSelectionData(
+      rows,
+      cols,
+    );
     const text = buildPlainTextFromCells(cells);
     e.preventDefault();
     try {
@@ -827,7 +842,10 @@ export function initGridKeys(deps) {
 
     const rows = getSelectedRowsList();
     const cols = getSelectedColsList();
-    const { cells, hasStructured, hasComments } = gatherSelectionData(rows, cols);
+    const { cells, hasStructured, hasComments } = gatherSelectionData(
+      rows,
+      cols,
+    );
     const text = buildPlainTextFromCells(cells);
     e.preventDefault();
     try {
@@ -1100,11 +1118,18 @@ export function initGridKeys(deps) {
             commentPayload &&
             typeof applyCellCommentClipboardPayload === "function"
           ) {
-            const commentChange = applyCellCommentClipboardPayload(r, c, commentPayload, {
-              view:
-                typeof getActiveView === "function" ? getActiveView() : undefined,
-              viewDef: vd,
-            });
+            const commentChange = applyCellCommentClipboardPayload(
+              r,
+              c,
+              commentPayload,
+              {
+                view:
+                  typeof getActiveView === "function"
+                    ? getActiveView()
+                    : undefined,
+                viewDef: vd,
+              },
+            );
             if (commentChange) {
               changed = true;
               cellChanged = true;

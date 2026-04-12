@@ -53,7 +53,9 @@ function mergeSettings(defaults, overrides) {
   const src = overrides && typeof overrides === "object" ? overrides : {};
   const colors = src.colors && typeof src.colors === "object" ? src.colors : {};
   const variantCaps =
-    src.variantCaps && typeof src.variantCaps === "object" ? src.variantCaps : {};
+    src.variantCaps && typeof src.variantCaps === "object"
+      ? src.variantCaps
+      : {};
   base.colors = base.colors || {};
   COLOR_FIELDS.forEach(({ key }) => {
     base.colors[key] = normalizeColor(colors[key], base.colors[key]);
@@ -62,7 +64,8 @@ function mergeSettings(defaults, overrides) {
   CAP_FIELDS.forEach(({ key }) => {
     const n = Number(variantCaps[key]);
     const fallback = base.variantCaps[key];
-    base.variantCaps[key] = Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+    base.variantCaps[key] =
+      Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
   });
   return base;
 }
@@ -304,7 +307,8 @@ export async function openSettingsDialog(options = {}) {
       if (isActive) btn.setAttribute("aria-current", "page");
       else btn.removeAttribute("aria-current");
     });
-    if (colorSection) colorSection.style.display = activeTab === "ui" ? "flex" : "none";
+    if (colorSection)
+      colorSection.style.display = activeTab === "ui" ? "flex" : "none";
     if (capsSection)
       capsSection.style.display = activeTab === "variants" ? "flex" : "none";
   }
@@ -321,10 +325,7 @@ export async function openSettingsDialog(options = {}) {
       style:
         "display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid #2c3350;padding-bottom:8px;",
     },
-    [
-      makeTabButton("ui", "UI"),
-      makeTabButton("variants", "Variants"),
-    ],
+    [makeTabButton("ui", "UI"), makeTabButton("variants", "Variants")],
   );
 
   const content = h(
@@ -417,8 +418,12 @@ export async function openSettingsDialog(options = {}) {
         "padding:6px 8px;border-radius:6px;border:1px solid #2d3a58;background:#0b1222;color:#e5ecff;font-family:monospace;",
     });
     capInputs.set(key, capInput);
-    capInput.addEventListener("input", () => applyCapChange(key, capInput.value));
-    capInput.addEventListener("blur", () => applyCapChange(key, capInput.value));
+    capInput.addEventListener("input", () =>
+      applyCapChange(key, capInput.value),
+    );
+    capInput.addEventListener("blur", () =>
+      applyCapChange(key, capInput.value),
+    );
     capInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();

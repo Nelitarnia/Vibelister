@@ -30,7 +30,8 @@ export function setupEditing({
     setCell: gridApi.setCell,
     runModelTransaction: historyApi.runModelTransaction,
     makeUndoConfig: historyApi.makeUndoConfig,
-    isInteractionPhaseColumnActiveForRow: gridApi.isInteractionPhaseColumnActiveForRow,
+    isInteractionPhaseColumnActiveForRow:
+      gridApi.isInteractionPhaseColumnActiveForRow,
     model: appContext.model,
     cloneValueForAssignment: gridApi.cloneValueForAssignment,
     getHorizontalTargetColumns: gridApi.getHorizontalTargetColumns,

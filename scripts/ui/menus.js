@@ -32,7 +32,9 @@ export function initMenus(deps) {
   const registerListener = (target, type, handler, options) => {
     if (!target?.addEventListener) return;
     target.addEventListener(type, handler, options);
-    listenerDisposers.push(() => target.removeEventListener(type, handler, options));
+    listenerDisposers.push(() =>
+      target.removeEventListener(type, handler, options),
+    );
   };
 
   function closeAllMenus() {
@@ -105,15 +107,23 @@ export function initMenus(deps) {
     };
     const undoLabel = state?.undoLabel ? String(state.undoLabel) : "";
     if (undoItem) {
-      undoItem.disabled = !(state?.canUndo);
+      undoItem.disabled = !state?.canUndo;
       const formatted = formatLabel(undoLabel);
-      undoItem.textContent = buildUndoRedoLabel("Undo", formatted, undoShortcutSuffix);
+      undoItem.textContent = buildUndoRedoLabel(
+        "Undo",
+        formatted,
+        undoShortcutSuffix,
+      );
     }
     const redoLabel = state?.redoLabel ? String(state.redoLabel) : "";
     if (redoItem) {
-      redoItem.disabled = !(state?.canRedo);
+      redoItem.disabled = !state?.canRedo;
       const formatted = formatLabel(redoLabel);
-      redoItem.textContent = buildUndoRedoLabel("Redo", formatted, redoShortcutSuffix);
+      redoItem.textContent = buildUndoRedoLabel(
+        "Redo",
+        formatted,
+        redoShortcutSuffix,
+      );
     }
   }
 

@@ -11,7 +11,11 @@ import { makeRow } from "../data/rows.js";
 import { parsePhasesSpec } from "../data/utils.js";
 import { setCommentInactive } from "./comments.js";
 import { emitCommentChangeEvent } from "./comment-events.js";
-import { makeGetStructuredCell, makeApplyStructuredCell, isCanonicalStructuredPayload } from "./clipboard-codec.js";
+import {
+  makeGetStructuredCell,
+  makeApplyStructuredCell,
+  isCanonicalStructuredPayload,
+} from "./clipboard-codec.js";
 
 export function createGridRuntimeCoordinator({
   appContext,
@@ -30,15 +34,8 @@ export function createGridRuntimeCoordinator({
   const { model, state } = appContext;
   let runModelMutationRef = null;
 
-  const {
-    sheet,
-    cellsLayer,
-    spacer,
-    colHdrs,
-    rowHdrs,
-    editor,
-    dragLine,
-  } = coreDom;
+  const { sheet, cellsLayer, spacer, colHdrs, rowHdrs, editor, dragLine } =
+    coreDom;
 
   const {
     viewDef,
@@ -112,7 +109,13 @@ export function createGridRuntimeCoordinator({
 
   return {
     ...runtime,
-    gridCellsApi: { getCell, setCell, getStructuredCell, applyStructuredCell, cellValueToPlainText },
+    gridCellsApi: {
+      getCell,
+      setCell,
+      getStructuredCell,
+      applyStructuredCell,
+      cellValueToPlainText,
+    },
     modHelpers,
     viewStateApi: {
       updateSelectionSnapshot,

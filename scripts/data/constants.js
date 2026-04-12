@@ -123,8 +123,10 @@ export const DEFAULT_OUTCOME_NOTES = Object.freeze({
   Impossible: "No result — cannot be tested or input cannot be performed.",
   Reserved: "No result — input is already reserved by the current state.",
   "No effect": "Old state continues — nothing observable changes.",
-  Buffers: "Old state continues — input is stored to trigger later if conditions allow.",
-  Follows: "Old state continues — a follow-up action is scheduled to occur automatically.",
+  Buffers:
+    "Old state continues — input is stored to trigger later if conditions allow.",
+  Follows:
+    "Old state continues — a follow-up action is scheduled to occur automatically.",
   Overrides: "Current state ends and a new one begins immediately.",
   Changes: "Current state transforms without a sharp break.",
 });

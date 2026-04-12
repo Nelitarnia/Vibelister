@@ -36,7 +36,7 @@ export function getCommentTests() {
         };
         const normalized = normalizeCommentsMap(raw, ["actions", "inputs"]);
         assert.deepStrictEqual(normalized, {
-          actions: { "1": { text: "A" }, "2": { text: "B" } },
+          actions: { 1: { text: "A" }, 2: { text: "B" } },
           inputs: {},
           custom: { note: "keep" },
         });
@@ -85,14 +85,25 @@ export function getCommentTests() {
         const row = { id: 42, name: "Row" };
         const payload = { text: "hello", color: SAMPLE_COLOR };
 
-        const change = setComment(model, viewDef, row, viewDef.columns[0], payload);
+        const change = setComment(
+          model,
+          viewDef,
+          row,
+          viewDef.columns[0],
+          payload,
+        );
         assert.ok(change, "setComment reports change");
         assert.strictEqual(change.type, "set");
         assert.strictEqual(change.rowId, "42");
         assert.strictEqual(change.columnKey, "name");
         assert.deepStrictEqual(model.comments.actions["42"].name, payload);
 
-        const listed = listCommentsForCell(model, viewDef, row, viewDef.columns[0]);
+        const listed = listCommentsForCell(
+          model,
+          viewDef,
+          row,
+          viewDef.columns[0],
+        );
         assert.deepStrictEqual(listed, [
           {
             type: "value",
@@ -131,7 +142,9 @@ export function getCommentTests() {
           color: SECONDARY_COLOR,
         });
 
-        const entries = listCommentsForView(model, viewDef, { rows: model.actions });
+        const entries = listCommentsForView(model, viewDef, {
+          rows: model.actions,
+        });
         assert.strictEqual(entries.length, 2);
         assert.deepStrictEqual(
           entries.map(({ rowIndex, columnIndex, rowId, columnKey }) => ({
@@ -171,7 +184,10 @@ export function getCommentTests() {
       name: "deleteComment removes column payload and row buckets",
       run(assert) {
         const model = { comments: createEmptyCommentMap(["actions"]) };
-        const viewDef = { key: "actions", columns: [{ key: "name" }, { key: "notes" }] };
+        const viewDef = {
+          key: "actions",
+          columns: [{ key: "name" }, { key: "notes" }],
+        };
         const row = { id: 7 };
         setComment(model, viewDef, row, viewDef.columns[0], { text: "keep" });
         setComment(model, viewDef, row, viewDef.columns[1], { text: "drop" });
@@ -198,12 +214,13 @@ export function getCommentTests() {
         };
         const viewDef = () => ({
           key: "actions",
-          columns: [
-            { key: "name" },
-            { key: "notes" },
-          ],
+          columns: [{ key: "name" }, { key: "notes" }],
         });
-        const selection = { rows: new Set([0]), cols: new Set([1]), colsAll: false };
+        const selection = {
+          rows: new Set([0]),
+          cols: new Set([1]),
+          colsAll: false,
+        };
         const sel = { r: 0, c: 1 };
         const modelView = viewDef();
         setComment(model, modelView, model.actions[0], modelView.columns[1], {
@@ -262,7 +279,11 @@ export function getCommentTests() {
           interactionsPairs: [],
         };
         const viewDef = () => ({ key: "actions", columns: [{ key: "name" }] });
-        const selection = { rows: new Set([1]), cols: new Set(), colsAll: false };
+        const selection = {
+          rows: new Set([1]),
+          cols: new Set(),
+          colsAll: false,
+        };
         const sel = { r: 1, c: 0 };
         const modelView = viewDef();
         setComment(model, modelView, model.actions[1], modelView.columns[0], {
@@ -318,7 +339,13 @@ export function getCommentTests() {
         const row = model.actions[0];
         setComment(model, viewDef, row, viewDef.columns[0], { text: "note" });
 
-        const change = setCommentInactive(model, viewDef, row, viewDef.columns[0], true);
+        const change = setCommentInactive(
+          model,
+          viewDef,
+          row,
+          viewDef.columns[0],
+          true,
+        );
         assert.ok(change, "inactive change recorded");
         assert.strictEqual(
           model.comments.actions["1"].name.inactive,
@@ -326,7 +353,13 @@ export function getCommentTests() {
           "comment marked inactive",
         );
 
-        const revert = setCommentInactive(model, viewDef, row, viewDef.columns[0], false);
+        const revert = setCommentInactive(
+          model,
+          viewDef,
+          row,
+          viewDef.columns[0],
+          false,
+        );
         assert.ok(revert, "reactivation change recorded");
         assert.ok(
           !model.comments.actions["1"].name.inactive,
@@ -453,7 +486,8 @@ export function getCommentTests() {
           get classList() {
             return {
               add: (...tokens) => tokens.forEach((t) => this._classSet.add(t)),
-              remove: (...tokens) => tokens.forEach((t) => this._classSet.delete(t)),
+              remove: (...tokens) =>
+                tokens.forEach((t) => this._classSet.delete(t)),
               contains: (token) => this._classSet.has(token),
             };
           }
@@ -496,7 +530,11 @@ export function getCommentTests() {
           const rowHdrs = new GridStubElement("div");
 
           const ROW_HEIGHT = 26;
-          const selection = { rows: new Set(), cols: new Set(), colsAll: false };
+          const selection = {
+            rows: new Set(),
+            cols: new Set(),
+            colsAll: false,
+          };
           const SelectionNS = { isAllCols: () => false };
           const sel = { r: 0, c: 0 };
 
@@ -518,7 +556,9 @@ export function getCommentTests() {
             outcomes: [],
           };
 
-          model.comments.actions["1"] = { name: { text: "hi", color: "sunset" } };
+          model.comments.actions["1"] = {
+            name: { text: "hi", color: "sunset" },
+          };
 
           const viewDef = () => ({
             key: "actions",
@@ -681,7 +721,10 @@ export function getCommentTests() {
             sel: { r: 0, c: 0 },
             getCellComments: () => [],
             getActiveView: () => "actions",
-            viewDef: () => ({ key: "actions", columns: [{ key: "name", title: "Name" }] }),
+            viewDef: () => ({
+              key: "actions",
+              columns: [{ key: "name", title: "Name" }],
+            }),
             dataArray: () => model.actions,
             model,
           });

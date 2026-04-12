@@ -111,7 +111,6 @@ export function initGridMouse(deps) {
     }
     ensureVisible(r, c);
     render();
-
   }
 
   function onCellDblClick(e) {
