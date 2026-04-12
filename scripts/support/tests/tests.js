@@ -8,6 +8,7 @@ import { getVariantNormalizationTests } from "./specs/variant-normalization.js";
 import { getVariantCombinatoricsTests } from "./specs/variant-combinatorics.js";
 import { getVariantConstraintTests } from "./specs/variant-constraints.js";
 import { getInferenceStrategyTests } from "./specs/inference-strategies.js";
+import { getMigrationTests } from "./specs/migrations.js";
 
 export function runSelfTests() {
   const log = (...args) => console.log("[tests]", ...args);
@@ -21,6 +22,7 @@ export function runSelfTests() {
     { name: "Inference strategies", tests: getInferenceStrategyTests() },
     { name: "Interactions", tests: getInteractionsTests() },
     { name: "Persistence", tests: getPersistenceTests() },
+    { name: "Migrations", tests: getMigrationTests() },
     { name: "Selection", tests: getSelectionTests() },
     { name: "Cleanup", tests: getCleanupTests() },
   ];

@@ -4,24 +4,11 @@ import {
   DEFAULT_OUTCOME_NOTES,
   DEFAULT_OUTCOME_MIRRORED,
   DEFAULT_OUTCOME_DUAL_OF,
-  MOD,
-  SCHEMA_VERSION,
 } from "../data/constants.js";
-import {
-  enumerateModStates,
-  MOD_STATE_BOOLEAN_TRUE_NAME,
-  MOD_STATE_DEFAULT_VALUE,
-  normalizeModStateValue,
-} from "../data/mod-state.js";
 import { makeRow } from "../data/rows.js";
-import {
-  createEmptyCommentMap,
-  normalizeCommentsMap,
-} from "../data/comments.js";
-import { normalizeCommentColorPalette } from "../data/comment-colors.js";
+import { createEmptyCommentMap } from "../data/comments.js";
 import { snapshotModel } from "../data/mutation-runner.js";
 import { buildInteractionsPairs } from "../data/variants/variants.js";
-import { normalizeActionProperties } from "../data/properties.js";
 import {
   DEFAULT_INTERACTION_CONFIDENCE,
   DEFAULT_INTERACTION_SOURCE,
@@ -33,7 +20,7 @@ import {
   createInferenceProfileStore,
   resetInferenceProfiles,
 } from "./inference-profiles.js";
-import { DEFAULT_VARIANT_CAPS } from "../data/variants/variant-settings.js";
+import { runProjectMigrationsInPlace } from "../data/migrations/index.js";
 
 export function createPersistenceController({
   model,
@@ -50,25 +37,6 @@ export function createPersistenceController({
   loadFsModule = () => import("../data/fs.js"),
 }) {
   let fsModulePromise = null;
-
-  const DEFAULT_MOD_RUNTIME = enumerateModStates(MOD);
-  const DEFAULT_MOD_TRUE_VALUE =
-    DEFAULT_MOD_RUNTIME.states.find(
-      (state) => state.name === MOD_STATE_BOOLEAN_TRUE_NAME,
-    )?.value ?? MOD_STATE_DEFAULT_VALUE;
-  const DEFAULT_MOD_FALLBACK = DEFAULT_MOD_RUNTIME.defaultState.value;
-  const sanitizeModValue = (raw) =>
-    normalizeModStateValue(raw, {
-      runtime: DEFAULT_MOD_RUNTIME,
-      fallback: DEFAULT_MOD_FALLBACK,
-      booleanTrueValue: DEFAULT_MOD_TRUE_VALUE,
-    });
-
-  function normalizeProjectInfo(value) {
-    if (value == null) return "";
-    const text = String(value);
-    return text.replace(/\r\n?/g, "\n");
-  }
 
   function clearBypassIndexArtifacts(target) {
     if (!target || typeof target !== "object") return;
@@ -117,21 +85,6 @@ export function createPersistenceController({
     for (const note of Object.values(notes)) {
       stripDefaultInteractionMetadata(note);
     }
-  }
-
-  function normalizeVariantCaps(raw) {
-    const caps = raw && typeof raw === "object" ? raw : {};
-    const fallback = DEFAULT_VARIANT_CAPS;
-    const normalizeCap = (value, fallbackValue) => {
-      const n = Number(value);
-      if (!Number.isFinite(n)) return fallbackValue;
-      const asInt = Math.floor(n);
-      return asInt > 0 ? asInt : fallbackValue;
-    };
-    return {
-      variantCapPerAction: normalizeCap(caps.variantCapPerAction, fallback.variantCapPerAction),
-      variantCapPerGroup: normalizeCap(caps.variantCapPerGroup, fallback.variantCapPerGroup),
-    };
   }
 
   function getFsModule() {
@@ -215,127 +168,8 @@ export function createPersistenceController({
   }
 
   function upgradeModelInPlace(o) {
-    clearBypassIndexArtifacts(o);
-    const defaultMeta = createDefaultMeta();
-    if (!o.meta) o.meta = createDefaultMeta();
-    if (typeof o.meta.projectName !== "string") o.meta.projectName = "";
-    o.meta.projectInfo = normalizeProjectInfo(o.meta.projectInfo);
-    if (
-      !("interactionsMode" in o.meta) ||
-      (o.meta.interactionsMode !== "AI" && o.meta.interactionsMode !== "AA")
-    ) {
-      o.meta.interactionsMode = "AI";
-    }
-    if (!o.meta.columnWidths || typeof o.meta.columnWidths !== "object") {
-      o.meta.columnWidths = {};
-    } else {
-      const cleaned = {};
-      for (const [key, value] of Object.entries(o.meta.columnWidths)) {
-        const num = Number(value);
-        if (Number.isFinite(num) && num > 0) cleaned[key] = num;
-      }
-      o.meta.columnWidths = cleaned;
-    }
-    const normalizeList = (values) => {
-      if (!Array.isArray(values) || !values.length) return undefined;
-      const unique = Array.from(
-        new Set(
-          values
-            .map((value) => {
-              const str = String(value ?? "").trim();
-              return str || null;
-            })
-            .filter(Boolean),
-        ),
-      );
-      return unique.length ? unique : undefined;
-    };
-    if (!o.meta.commentFilter || typeof o.meta.commentFilter !== "object") {
-      o.meta.commentFilter = {};
-    } else {
-      const cf = o.meta.commentFilter;
-      const normalized = {};
-      if (typeof cf.viewKey === "string") {
-        const trimmed = cf.viewKey.trim();
-        if (trimmed) normalized.viewKey = trimmed;
-      }
-      const rows = normalizeList(cf.rowIds || cf.rows);
-      if (rows) normalized.rowIds = rows;
-      const columns = normalizeList(cf.columnKeys || cf.columns);
-      if (columns) normalized.columnKeys = columns;
-      const colors = normalizeList(cf.colorIds || cf.colors || cf.colorId || cf.color);
-      if (colors) normalized.colorIds = colors;
-      if (!normalized.viewKey && defaultMeta.commentFilter?.viewKey)
-        normalized.viewKey = defaultMeta.commentFilter.viewKey;
-      o.meta.commentFilter = normalized;
-    }
-    o.meta.commentColors = normalizeCommentColorPalette(o.meta.commentColors);
-    o.meta.variantCaps = normalizeVariantCaps(o.meta.variantCaps);
-    if (!Array.isArray(o.actions)) o.actions = [];
-    if (!Array.isArray(o.inputs)) o.inputs = [];
-    if (!Array.isArray(o.modifiers)) o.modifiers = [];
-    if (!Array.isArray(o.outcomes)) o.outcomes = [];
-    if (!Array.isArray(o.modifierGroups)) o.modifierGroups = [];
-    if (!Array.isArray(o.modifierConstraints)) o.modifierConstraints = [];
-    if (!o.notes || typeof o.notes !== "object") o.notes = {};
-    stripDefaultInteractionMetadataFromNotes(o.notes);
-    o.comments = normalizeCommentsMap(o.comments);
-    if (!Array.isArray(o.interactionsPairs)) o.interactionsPairs = [];
-    if (!o.interactionsIndex || typeof o.interactionsIndex !== "object") {
-      o.interactionsIndex = { mode: "AI", groups: [] };
-    } else {
-      if (!Array.isArray(o.interactionsIndex.groups))
-        o.interactionsIndex.groups = [];
-      if (!o.interactionsIndex.mode)
-        o.interactionsIndex.mode = "AI";
-      const total = Number(o.interactionsIndex.totalRows);
-      o.interactionsIndex.totalRows =
-        Number.isFinite(total) && total >= 0 ? total : 0;
-      if (!Array.isArray(o.interactionsIndex.actionsOrder))
-        o.interactionsIndex.actionsOrder = [];
-      if (!Array.isArray(o.interactionsIndex.inputsOrder))
-        o.interactionsIndex.inputsOrder = [];
-      if (
-        !o.interactionsIndex.variantCatalog ||
-        typeof o.interactionsIndex.variantCatalog !== "object"
-      ) {
-        o.interactionsIndex.variantCatalog = {};
-      }
-      if (!Array.isArray(o.interactionsIndex.propertiesCatalog)) {
-        o.interactionsIndex.propertiesCatalog = [];
-      } else {
-        o.interactionsIndex.propertiesCatalog =
-          normalizeActionProperties(o.interactionsIndex.propertiesCatalog);
-      }
-    }
-    let maxId = 0;
-    for (const r of o.actions) {
-      if (typeof r.id !== "number") r.id = ++maxId;
-      else maxId = Math.max(maxId, r.id);
-      if (!r.modSet || typeof r.modSet !== "object") r.modSet = {};
-      for (const k in r.modSet) {
-        r.modSet[k] = sanitizeModValue(r.modSet[k]);
-      }
-      const props = normalizeActionProperties(r.properties);
-      if (props.length) r.properties = props;
-      else delete r.properties;
-    }
-    for (const r of o.inputs) {
-      if (typeof r.id !== "number") r.id = ++maxId;
-      else maxId = Math.max(maxId, r.id);
-    }
-    for (const r of o.modifiers) {
-      if (typeof r.id !== "number") r.id = ++maxId;
-      else maxId = Math.max(maxId, r.id);
-    }
-    for (const r of o.outcomes) {
-      if (typeof r.id !== "number") r.id = ++maxId;
-      else maxId = Math.max(maxId, r.id);
-    }
-    if (!Number.isFinite(o.nextId)) o.nextId = maxId + 1;
-    else o.nextId = Math.max(o.nextId, maxId + 1);
+    runProjectMigrationsInPlace(o);
     o.inferenceProfiles = normalizeInferenceProfileStore(o.inferenceProfiles);
-    o.meta.schema = SCHEMA_VERSION;
   }
 
   function newProject() {

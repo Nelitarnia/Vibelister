@@ -30,6 +30,7 @@ import { getAppInitTests } from "../scripts/support/tests/specs/app-init.js";
 import { getVariantNormalizationTests } from "../scripts/support/tests/specs/variant-normalization.js";
 import { getVariantCombinatoricsTests } from "../scripts/support/tests/specs/variant-combinatorics.js";
 import { getVariantConstraintTests } from "../scripts/support/tests/specs/variant-constraints.js";
+import { getMigrationTests } from "../scripts/support/tests/specs/migrations.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -147,4 +148,8 @@ for (const spec of getDataUtilsTests()) {
 
 for (const spec of getDataVersionTests()) {
   test(`Data versioning › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getMigrationTests()) {
+  test(`Migrations › ${spec.name}`, () => spec.run(sharedAssert));
 }
