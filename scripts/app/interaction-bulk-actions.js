@@ -397,37 +397,38 @@ export function createInteractionBulkActions(options = {}) {
             result.skippedManual += noteTargets.length;
             continue;
           }
-          for (const target of noteTargets) {
-            const hadValue = hasStructuredValue(note, target.field);
-            if (target.field === "outcome") {
-              delete note.outcomeId;
-              delete note.result;
-            } else if (target.field === "end") {
-              delete note.endActionId;
-              delete note.endVariantSig;
-              delete note.endFree;
-            } else if (target.field === "tag") {
-              const previous = Array.isArray(note.tags)
-                ? note.tags.slice()
-                : [];
-              delete note.tags;
-              if (previous.length) {
-                emitInteractionTagChangeEvent(null, {
-                  reason: "clearInference",
-                  noteKey: group.noteKey,
-                  pair: group.pair,
-                  phase: group.phase,
-                  tags: previous,
-                  count: previous.length,
-                });
-              }
-            }
-            if (!hasStructuredValue(note, target.field)) {
-              result.cleared++;
-            } else if (!hadValue) {
-              result.skippedEmpty++;
-            }
+          const eligible = noteTargets.some((target) =>
+            ["outcome", "end", "tag"].includes(target.field),
+          );
+          if (!eligible) {
+            result.skippedEmpty += noteTargets.length;
+            continue;
           }
+
+          const hadPhaseValues = noteHasStructuredInteractionValue(note);
+          const previousTags = Array.isArray(note.tags) ? note.tags.slice() : [];
+
+          delete note.outcomeId;
+          delete note.result;
+          delete note.endActionId;
+          delete note.endVariantSig;
+          delete note.endFree;
+          delete note.tags;
+
+          if (previousTags.length) {
+            emitInteractionTagChangeEvent(null, {
+              reason: "clearInference",
+              noteKey: group.noteKey,
+              pair: group.pair,
+              phase: group.phase,
+              tags: previousTags,
+              count: previousTags.length,
+            });
+          }
+
+          if (hadPhaseValues) result.cleared++;
+          else result.skippedEmpty += noteTargets.length;
+
           applyInteractionMetadata(note, null);
           if (!Object.keys(note).length) {
             delete notes[group.noteKey];
@@ -456,7 +457,7 @@ export function createInteractionBulkActions(options = {}) {
           const skippedText = skippedParts.length
             ? ` (left ${skippedParts.join(", ")} unchanged)`
             : "";
-          return `Cleared ${cleared || "no"} inferred note-level value${
+          return `Cleared ${cleared || "no"} inferred phase value${
             cleared === 1 ? "" : "s"
           }.${removedNote}${skippedText}`;
         },

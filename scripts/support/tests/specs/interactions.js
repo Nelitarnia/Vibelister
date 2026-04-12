@@ -4386,6 +4386,127 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "clearing inferred metadata removes full phase values, preserves manual phases, and deletes empty notes",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const action = addAction("Strike");
+        const followUp = addAction("Follow");
+        const inputPrimary = addInput("High");
+        const inputSecondary = addInput("Low");
+        const inferredOutcome = addOutcome("Hit");
+        const manualOutcome = addOutcome("Block");
+        buildInteractionsPairs(model);
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p1:outcome" },
+            { key: "p1:end" },
+            { key: "p1:tag" },
+          ],
+        };
+
+        const inferredRow = findPairIndex(
+          model,
+          (pair) => pair.aId === action.id && pair.iId === inputPrimary.id,
+        );
+        const manualRow = findPairIndex(
+          model,
+          (pair) => pair.aId === followUp.id && pair.iId === inputSecondary.id,
+        );
+        assert.ok(inferredRow >= 0 && manualRow >= 0, "target rows exist");
+
+        const inferredKey = noteKeyForPair(getPair(model, inferredRow), 1);
+        const manualKey = noteKeyForPair(getPair(model, manualRow), 1);
+
+        model.notes[inferredKey] = {
+          outcomeId: inferredOutcome.id,
+          endActionId: followUp.id,
+          endVariantSig: "",
+          tags: ["Stun"],
+          confidence: 0.5,
+          source: "model",
+        };
+        model.notes[manualKey] = {
+          outcomeId: manualOutcome.id,
+          endActionId: action.id,
+          endVariantSig: "",
+          tags: ["Safe"],
+          source: "manual",
+        };
+
+        const selection = {
+          rows: new Set([inferredRow, manualRow]),
+          cols: new Set([2]),
+          colsAll: false,
+        };
+        const sel = { r: inferredRow, c: 2 };
+        const runModelMutation = (label, mutate, options = {}) => {
+          const res = mutate();
+          if (options.status) res.status = options.status(res);
+          return res;
+        };
+        const tagCapture = captureInteractionTagEvents();
+
+        try {
+          const actions = createInteractionBulkActions({
+            model,
+            selection,
+            sel,
+            getActiveView: () => "interactions",
+            viewDef,
+            runModelMutation,
+            getInteractionsPair: (m, r) => getPair(m, r),
+          });
+
+          const clearResult = actions.clearInferenceMetadata();
+          assert.strictEqual(
+            clearResult.cleared,
+            1,
+            "selecting one field clears all inferred values in that phase",
+          );
+          assert.strictEqual(
+            model.notes[inferredKey],
+            undefined,
+            "inferred phase note deleted after clearing all phase values and metadata",
+          );
+          assert.deepStrictEqual(
+            model.notes[manualKey],
+            {
+              outcomeId: manualOutcome.id,
+              endActionId: action.id,
+              endVariantSig: "",
+              tags: ["Safe"],
+              source: "manual",
+            },
+            "manual phase remains unchanged",
+          );
+          assert.ok(
+            /phase value/.test(clearResult.status || ""),
+            "status reflects phase-level clears",
+          );
+          assert.strictEqual(tagCapture.events.length, 1, "tag removal event emitted");
+          assert.strictEqual(
+            tagCapture.events[0].type,
+            INTERACTION_TAGS_EVENT,
+            "tag event type matches",
+          );
+          assert.deepStrictEqual(
+            tagCapture.events[0].detail?.tags,
+            ["Stun"],
+            "removed inferred tags are reported",
+          );
+          assert.strictEqual(
+            tagCapture.events[0].detail?.noteKey,
+            inferredKey,
+            "event targets inferred phase note",
+          );
+        } finally {
+          tagCapture.restore();
+        }
+      },
+    },
+    {
       name: "promoting inferred notes works when selection field is empty but sibling inferred value exists",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
