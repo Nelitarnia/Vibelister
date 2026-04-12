@@ -13,6 +13,7 @@
 * @property {number} id
 * @property {string=} name
 * @property {string=} color
+* @property {string=} color2
 * @property {string=} notes
   */
 
@@ -29,10 +30,14 @@
 
 /** @typedef {BaseRow} InputRow */
 /** @typedef {BaseRow} ModifierRow */
-/** @typedef {BaseRow} OutcomeRow */
+/** @typedef {BaseRow & {
+* mirrored?: boolean,
+* dualof?: (number|null)
+* }} OutcomeRow */
 
 /** Interactions mode: Actions×Inputs (AI) or Actions×Actions (AA). */
 /** @typedef {"AI"|"AA"} InteractionsMode */
+/** @typedef {import("../data/variants/variant-settings.js").VariantCaps} VariantCaps */
 
 /**
 
@@ -87,7 +92,9 @@
  *   projectName: string,
  *   projectInfo: string,
  *   interactionsMode: InteractionsMode,
+ *   dataVersion: number,
  *   columnWidths: Record<string, number>,
+ *   variantCaps: VariantCaps,
  *   commentFilter?: {
  *     viewKey?: string,
  *     rowIds?: string[],
@@ -129,6 +136,12 @@
  *   variantCatalog?: Record<number, string[]>,
  *   propertiesCatalog?: string[],
  * }} interactionsIndex
+ * @property {number=} interactionsIndexVersion
+ * @property {{
+ *   modifierProfiles: Map<number, unknown>,
+ *   inputProfiles: Map<number, unknown>,
+ *   decayBudget?: number,
+ * }=} inferenceProfiles
  * @property {number} nextId
  */
 
@@ -140,9 +153,12 @@
 /** @typedef {{ type: 'input',   data: { id: number } }} StructuredInputRef */
 /** @typedef {{ type: 'outcome', data: { outcomeId: number, confidence?: number, source?: string } }} StructuredOutcomeRef */
 /** @typedef {{ type: 'end',     data: { endActionId: number, endVariantSig?: string, confidence?: number, source?: string } }} StructuredEndRef */
+/** @typedef {{ type: 'notes',   data: { notes: string } }} StructuredNotesRef */
 /** @typedef {{ type: 'tag',     data: { tags: string[], confidence?: number, source?: string } }} StructuredTagRef */
+/** @typedef {{ type: 'properties', data: { properties: string[] } }} StructuredPropertiesRef */
+/** @typedef {{ type: 'modifierState', data: { value: number } }} StructuredModifierStateRef */
 /** @typedef {{ type: 'comment', data: { value: unknown, viewKey?: string, rowId?: string, columnKey?: string, cellKey?: string } }} StructuredCommentRef */
-/** @typedef {(StructuredActionRef|StructuredInputRef|StructuredOutcomeRef|StructuredEndRef|StructuredTagRef|StructuredCommentRef)} StructuredPayload */
+/** @typedef {(StructuredActionRef|StructuredInputRef|StructuredOutcomeRef|StructuredEndRef|StructuredNotesRef|StructuredTagRef|StructuredPropertiesRef|StructuredModifierStateRef|StructuredCommentRef)} StructuredPayload */
 
 /**
 
