@@ -34,6 +34,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── grid-commands.js
 │   │   ├── grid-cells.js
 │   │   ├── grid-renderer.js
+│   │   ├── grid-renderer-state.js
 │   │   ├── grid-runtime-coordinator.js
 │   │   ├── history.js
 │   │   ├── inference-application.js
@@ -50,6 +51,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── interaction-tags.js
 │   │   ├── interactions-data.js
 │   │   ├── interactions.js
+│   │   ├── interactions-metadata.js
 │   │   ├── outcomes.js
 │   │   ├── persistence.js
 │   │   ├── menus-bootstrap.js
@@ -131,12 +133,15 @@ This document outlines a maintainable directory layout tailored to the current c
 │       ├── column-resize.js
 │       ├── drag.js
 │       ├── comments.js
+│       ├── comments-state.js
 │       ├── grid-keys.js
+│       ├── grid-keys-state.js
 │       ├── grid-mouse.js
 │       ├── interactions-outline.js
 │       ├── inference-bulk-actions.js
 │       ├── menus.js
 │       ├── palette.js
+│       ├── palette-actions.js
 │       ├── project-info.js
 │       ├── cleanup-dialog.js
 │       ├── rules.js
@@ -193,7 +198,8 @@ This document outlines a maintainable directory layout tailored to the current c
 - `editing-shortcuts.js` centralizes editing state, keyboard shortcuts, and palette-aware focus management so `app.js` only wires the controller into grid and palette initializers.
 - `grid-commands.js` groups selection-aware grid mutations (row insertion, clearing, modifier toggles) so `app.js` can share a single command surface across menus, keyboard shortcuts, and palettes.
 - `grid-cells.js` encapsulates cell lookups, mutations, and structured clipboard helpers behind a dependency-injected factory so the grid can read/write values and comments without coupling to global state.
-- `grid-renderer.js` owns grid layout, pooled cell rendering, and color resolution so the entry file simply requests reflows and scroll adjustments.
+- `grid-renderer.js` remains the thin render coordinator, wiring DOM updates, pooling, and viewport invalidation while delegating value/comment normalization helpers to focused modules.
+- `grid-renderer-state.js` collects pure grid renderer helpers for comment palette normalization, badge preset lookup, and rich-text cell value normalization so renderer wiring stays lean.
 - `grid-runtime-coordinator.js` composes grid cell helpers, modifiers metadata, selection APIs, and runtime wiring so the entry point can bootstrap the grid with one injected factory.
 - `comments.js` exposes undo-friendly helpers for reading and mutating the normalized comment store so the rest of the app can work with stable row IDs and column keys.
 - `comment-events.js` centralizes the DOM event dispatch for comment mutations so grid commands and other controllers can signal UI refreshes without duplicating `CustomEvent` wiring.
@@ -210,6 +216,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `interaction-bulk-actions.js` coordinates toolbar and sidebar bulk actions for interaction cells, applying Uncertain toggles, accepting inferred metadata, and clearing inference flags with undo/status updates.
 - `interaction-maintenance.js` rebuilds interaction pairs and prunes orphaned notes to valid signatures so inference and grid routines consume a consistent catalog.
 - `interactions-data.js` maintains the derived interaction metadata catalog so UI code can synthesize on-demand interaction pairs without keeping a large in-memory array.
+- `interactions-metadata.js` centralizes interaction confidence/source normalization and metadata application/extraction helpers so `interactions.js` can focus on note-key and cell behaviors.
 - `interaction-tags.js` provides undo-friendly helpers for renaming and deleting interaction tags across the notes map so UI controllers can reuse consistent mutation wiring.
 - `tag-events.js` centralizes the DOM event dispatch for interaction tag mutations so sidebar controllers can refresh in response to grid or bulk edits without duplicating `CustomEvent` wiring.
 - `sidebar-wiring.js` coordinates the shared sidebar host, panel registration, and tab toggles so view controllers can reuse the same plumbing.
@@ -255,6 +262,12 @@ This document outlines a maintainable directory layout tailored to the current c
 - `project-info.js` renders the project notes dialog, providing a textarea host and dispatching change events so controllers can persist updates without duplicating DOM wiring.
 - `cleanup-dialog.js` displays the cleanup overlay, tracks per-action selections, and surfaces analyze/apply results provided by the controller.
 - `inference-dialog.js` renders the inference modal with scope selectors, overwrite/empty toggles, confidence/source defaults, and run/clear actions aligned with cleanup dialog affordances.
+- `comments.js` acts as the comments sidebar coordinator while delegating entry parsing, payload shaping, and palette map construction to `comments-state.js`.
+- `comments-state.js` contains reusable pure helpers for comment text/color extraction, payload creation, and palette swatch normalization.
+- `grid-keys.js` remains the keyboard/event coordinator for grid and app shortcuts, with copy/paste destination and status formatting logic extracted into `grid-keys-state.js`.
+- `grid-keys-state.js` provides pure helpers for paste-destination index resolution, copy-status messaging, and color payload validation.
+- `palette.js` remains the coordinator for palette DOM behavior and mode dispatch while query parsing/filter predicates are isolated in `palette-actions.js`.
+- `palette-actions.js` packages reusable pure helpers for end-action query parsing, filtering, and typed text normalization.
 
 #### `scripts/support/`
 
