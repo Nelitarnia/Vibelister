@@ -47,6 +47,14 @@ If you prefer a Windows-only option, `run.bat` still spins up a temporary Python
 - The workflow installs dependencies, executes `npm test`, and runs `npm run format:check` by default.
 - To skip the formatter gate, set a repository variable `RUN_FORMAT_CHECK=false`; the workflow also caches `~/.npm` to speed up installs.
 
+## Data schema migration policy
+
+- Persisted project files are versioned via `meta.schema`.
+- Bump `SCHEMA_VERSION` only when a file-format change is not backward-compatible with already-saved projects.
+- Every bump must include a new sequential migration module in `scripts/data/migrations/` so older files can be upgraded in order (`n -> n+1 -> ... -> current`).
+- Keep migrations idempotent and normalization-safe: running the migration pipeline more than once should not change already-migrated data.
+- Backward compatibility target: newly released builds should continue opening files from all prior shipped schema versions.
+
 ## Repository organization roadmap
 
 - A proposed folder structure lives in [`docs/folder-structure.md`](docs/folder-structure.md).
