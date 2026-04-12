@@ -4157,5 +4157,80 @@ export function getInteractionsTests() {
         );
       },
     },
+    {
+      name: "promoting inferred notes works when selection field is empty but sibling inferred value exists",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("Strike");
+        const follow = addAction("Follow");
+        const input = addInput("High");
+        buildInteractionsPairs(model);
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p1:outcome" },
+            { key: "p1:end" },
+            { key: "p1:tag" },
+          ],
+        };
+        const row = findPairIndex(
+          model,
+          (pair) => pair.aId === action.id && pair.iId === input.id,
+        );
+        assert.ok(row >= 0, "target row exists");
+
+        setInteractionsCell(model, { set() {} }, viewDef, row, 3, {
+          endActionId: follow.id,
+          endVariantSig: "",
+          confidence: 0.5,
+          source: "model",
+        });
+        const noteKey = noteKeyForPair(getPair(model, row), 1);
+        assert.strictEqual(
+          model.notes[noteKey].source,
+          "model",
+          "note starts inferred",
+        );
+        assert.strictEqual(
+          "outcomeId" in model.notes[noteKey],
+          false,
+          "selected field is initially empty",
+        );
+
+        const selection = {
+          rows: new Set([row]),
+          cols: new Set([2]),
+          colsAll: false,
+        };
+        const runModelMutation = (label, mutate, options = {}) => {
+          const res = mutate();
+          if (options.status) res.status = options.status(res);
+          return res;
+        };
+        const actions = createInteractionBulkActions({
+          model,
+          selection,
+          sel: { r: row, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef,
+          runModelMutation,
+          getInteractionsPair: (m, r) => getPair(m, r),
+        });
+
+        const res = actions.acceptInferred();
+        assert.strictEqual(res.promoted, 1, "note promoted from empty field selection");
+        assert.strictEqual(
+          "source" in model.notes[noteKey],
+          false,
+          "promotion resets source to manual default",
+        );
+        assert.strictEqual(
+          "confidence" in model.notes[noteKey],
+          false,
+          "promotion resets confidence to manual default",
+        );
+      },
+    },
   ];
 }
