@@ -598,9 +598,6 @@ export const ColumnKinds = {
   },
 };
 
-// Legacy alias: outcomeRef now routes through the generic refPick implementation.
-ColumnKinds.outcomeRef = ColumnKinds.refPick;
-
 function getModifiersFromSig(model, sig) {
   const s = typeof sig === "string" ? sig : "";
   if (!s) return [];
