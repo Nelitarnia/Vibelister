@@ -278,21 +278,30 @@ export function createInteractionBulkActions(options = {}) {
       "Accept inferred",
       () => {
         const notes = model?.notes || (model.notes = {});
+        const groupedTargets = new Map();
+        for (const target of targets) {
+          const list = groupedTargets.get(target.key) || [];
+          list.push(target);
+          groupedTargets.set(target.key, list);
+        }
         const result = {
           promoted: 0,
           skippedManual: 0,
           skippedEmpty: 0,
         };
-        for (const target of targets) {
-          const note = notes[target.key];
-          const hasValue = hasStructuredValue(note, target.field);
-          if (!hasValue) {
-            result.skippedEmpty++;
-            continue;
-          }
+        for (const [noteKey] of groupedTargets.entries()) {
+          const note = notes[noteKey];
           const info = describeInteractionInference(note);
           if (!info?.inferred) {
             result.skippedManual++;
+            continue;
+          }
+          const hasValue =
+            hasStructuredValue(note, "outcome") ||
+            hasStructuredValue(note, "end") ||
+            hasStructuredValue(note, "tag");
+          if (!hasValue) {
+            result.skippedEmpty++;
             continue;
           }
           applyInteractionMetadata(note, {
