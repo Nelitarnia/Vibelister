@@ -1,4 +1,4 @@
-//**
+/**
 
 * JSDoc model types (authoritative, lightweight)
 * ---
