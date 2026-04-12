@@ -387,7 +387,7 @@ export function createInteractionBulkActions(options = {}) {
         };
         for (const group of groupedTargets.values()) {
           const noteTargets = group.targets;
-          const note = group.note;
+          const note = notes[group.noteKey];
           if (!note || typeof note !== "object") {
             result.skippedEmpty += noteTargets.length;
             continue;
