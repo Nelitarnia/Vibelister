@@ -1,12 +1,8 @@
 import {
-  DEFAULT_INTERACTION_SOURCE,
-  applyInteractionMetadata,
-  describeInteractionInference,
   normalizeInteractionConfidence,
   normalizeInteractionSource,
 } from "./interactions.js";
 import { DEFAULT_HEURISTIC_THRESHOLDS } from "./inference-heuristics.js";
-import { extractNoteFieldValue } from "./inference-utils.js";
 import {
   createInferenceProfileStore,
   recordProfileImpact,
@@ -14,7 +10,7 @@ import {
 import { applySuggestions, HEURISTIC_LABELS } from "./inference-application.js";
 import { createInferenceIndexAccess } from "./inference-index-access.js";
 import { createInferenceTargetResolver } from "./inference-targets.js";
-import { emitInteractionTagChangeEvent } from "./tag-events.js";
+import { clearInferredTargets } from "./inference-clear-helpers.js";
 
 const DEFAULT_OPTIONS = Object.freeze({
   scope: "selection",
@@ -188,63 +184,23 @@ export function createInferenceController(options) {
       return { cleared: 0, allowed: true, status: NO_TARGETS_STATUS };
     }
     const notes = model?.notes || {};
-    const groupedTargets = new Map();
-    for (const target of targets) {
-      const list = groupedTargets.get(target.key) || [];
-      list.push(target);
-      groupedTargets.set(target.key, list);
-    }
-    const result = { cleared: 0, skippedManual: 0 };
-    for (const [noteKey, noteTargets] of groupedTargets.entries()) {
-      const note = notes[noteKey];
-      if (!note || typeof note !== "object") continue;
-      const info = describeInteractionInference(note);
-      const currentSource = normalizeInteractionSource(info?.source);
-      if (currentSource === DEFAULT_INTERACTION_SOURCE) {
-        result.skippedManual += noteTargets.length;
-        continue;
-      }
-      if (!info?.inferred) continue;
-      for (const target of noteTargets) {
-        const previousValue = extractNoteFieldValue(note, target.field);
-        if (target.field === "outcome") {
-          delete note.outcomeId;
-          delete note.result;
-        } else if (target.field === "end") {
-          delete note.endActionId;
-          delete note.endVariantSig;
-          delete note.endFree;
-        } else if (target.field === "tag") {
-          const previous = Array.isArray(note.tags) ? note.tags.slice() : [];
-          delete note.tags;
-          if (previous.length) {
-            emitInteractionTagChangeEvent(null, {
-              reason: "clearInference",
-              noteKey: target.key,
-              pair: target.pair,
-              phase: target.phase,
-              tags: previous,
-              count: previous.length,
-            });
-          }
-        }
-        result.cleared++;
-        const nextValue = extractNoteFieldValue(note, target.field);
+    return clearInferredTargets({
+      notes,
+      targets,
+      mode: "phase",
+      onFieldCleared: ({ pair, phase, field, previousValue, nextValue }) => {
         recordProfileImpact({
           store: inferenceProfiles,
-          pair: target.pair,
-          field: target.field,
+          pair,
+          field,
           previousValue,
           nextValue,
-          phase: target.phase,
+          phase,
           inferred: true,
           delta: -1,
         });
-      }
-      applyInteractionMetadata(note, null);
-      if (!Object.keys(note).length) delete notes[noteKey];
-    }
-    return result;
+      },
+    });
   }
 
   function runWithHistory(label, mutate, formatter, shouldRecord) {

@@ -9,50 +9,20 @@ import {
   normalizeInteractionSource,
 } from "./interactions.js";
 import { parsePhaseKey } from "../data/utils.js";
-import { emitInteractionTagChangeEvent } from "./tag-events.js";
+import { clearInferredTargets, groupTargetsByNote } from "./inference-clear-helpers.js";
 
 const OUT_OF_VIEW_STATUS =
   "Inference tools only work in the Interactions view.";
 const NO_TARGETS_STATUS =
   "Select Outcome, End, or Tag cells in the Interactions view to use inference tools.";
 
-function hasStructuredValue(note, field) {
-  if (!note || typeof note !== "object") return false;
-  if (field === "outcome") return "outcomeId" in note || "result" in note;
-  if (field === "end")
-    return (
-      "endActionId" in note || "endVariantSig" in note || "endFree" in note
-    );
-  if (field === "tag") return Array.isArray(note.tags) && note.tags.length > 0;
-  return false;
-}
-
 function noteHasStructuredInteractionValue(note) {
+  if (!note || typeof note !== "object") return false;
   return (
-    hasStructuredValue(note, "outcome") ||
-    hasStructuredValue(note, "end") ||
-    hasStructuredValue(note, "tag")
+    ("outcomeId" in note || "result" in note) ||
+    ("endActionId" in note || "endVariantSig" in note || "endFree" in note) ||
+    (Array.isArray(note.tags) && note.tags.length > 0)
   );
-}
-
-function groupTargetsByNote(targets = [], notes = {}) {
-  const groupedTargets = new Map();
-  for (const target of targets) {
-    if (!target?.key) continue;
-    let entry = groupedTargets.get(target.key);
-    if (!entry) {
-      entry = {
-        noteKey: target.key,
-        note: notes?.[target.key],
-        pair: target.pair,
-        phase: target.phase,
-        targets: [],
-      };
-      groupedTargets.set(target.key, entry);
-    }
-    entry.targets.push(target);
-  }
-  return groupedTargets;
 }
 
 function normalizeUncertainty(value) {
@@ -378,64 +348,11 @@ export function createInteractionBulkActions(options = {}) {
       "Clear inference metadata",
       () => {
         const notes = model?.notes || (model.notes = {});
-        const groupedTargets = groupTargetsByNote(targets, notes);
-        const result = {
-          cleared: 0,
-          removed: 0,
-          skippedManual: 0,
-          skippedEmpty: 0,
-        };
-        for (const group of groupedTargets.values()) {
-          const noteTargets = group.targets;
-          const note = notes[group.noteKey];
-          if (!note || typeof note !== "object") {
-            result.skippedEmpty += noteTargets.length;
-            continue;
-          }
-          const info = describeInteractionInference(note);
-          if (!info?.inferred) {
-            result.skippedManual += noteTargets.length;
-            continue;
-          }
-          const eligible = noteTargets.some((target) =>
-            ["outcome", "end", "tag"].includes(target.field),
-          );
-          if (!eligible) {
-            result.skippedEmpty += noteTargets.length;
-            continue;
-          }
-
-          const hadPhaseValues = noteHasStructuredInteractionValue(note);
-          const previousTags = Array.isArray(note.tags) ? note.tags.slice() : [];
-
-          delete note.outcomeId;
-          delete note.result;
-          delete note.endActionId;
-          delete note.endVariantSig;
-          delete note.endFree;
-          delete note.tags;
-
-          if (previousTags.length) {
-            emitInteractionTagChangeEvent(null, {
-              reason: "clearInference",
-              noteKey: group.noteKey,
-              pair: group.pair,
-              phase: group.phase,
-              tags: previousTags,
-              count: previousTags.length,
-            });
-          }
-
-          if (hadPhaseValues) result.cleared++;
-          else result.skippedEmpty += noteTargets.length;
-
-          applyInteractionMetadata(note, null);
-          if (!Object.keys(note).length) {
-            delete notes[group.noteKey];
-            result.removed++;
-          }
-        }
-        return result;
+        return clearInferredTargets({
+          notes,
+          targets,
+          mode: "phase",
+        });
       },
       {
         render: true,

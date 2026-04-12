@@ -3902,7 +3902,7 @@ export function getInteractionsTests() {
       },
     },
     {
-      name: "clear inference with single selected column clears only matching field",
+      name: "clear inference with single selected column uses canonical phase-level clear",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
         const action = addAction("Strike");
@@ -3969,19 +3969,16 @@ export function getInteractionsTests() {
 
         const res = controller.runClear({ scope: "selection" });
 
-        assert.strictEqual(res.cleared, 1, "clears only selected column field");
-        assert.deepStrictEqual(
+        assert.strictEqual(res.cleared, 1, "clears one inferred phase note");
+        assert.strictEqual(
           model.notes[noteKey],
-          {
-            outcomeId: outcome.id,
-            tags: ["Pressure"],
-          },
-          "single column selection only clears end field",
+          undefined,
+          "single-column selection still clears outcome/end/tag for that phase",
         );
       },
     },
     {
-      name: "clear inference with multi-column selection clears exactly selected fields",
+      name: "clear inference with multi-column selection still clears one phase note",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
         const action = addAction("Strike");
@@ -4048,19 +4045,16 @@ export function getInteractionsTests() {
 
         const res = controller.runClear({ scope: "selection" });
 
-        assert.strictEqual(res.cleared, 2, "clears selected outcome and tag");
-        assert.deepStrictEqual(
+        assert.strictEqual(res.cleared, 1, "phase-level clear counts one note");
+        assert.strictEqual(
           model.notes[noteKey],
-          {
-            endActionId: followUp.id,
-            endVariantSig: "",
-          },
-          "multi-column selection preserves unselected end field",
+          undefined,
+          "multi-column selection clears all clearable fields in the phase",
         );
       },
     },
     {
-      name: "clear inference with colsAll clears all relevant inference fields",
+      name: "clear inference with colsAll clears inferred phase note",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
         const action = addAction("Strike");
@@ -4126,8 +4120,121 @@ export function getInteractionsTests() {
 
         const res = controller.runClear({ scope: "selection" });
 
-        assert.strictEqual(res.cleared, 3, "colsAll clears all inference fields");
+        assert.strictEqual(res.cleared, 1, "colsAll clears one inferred phase note");
         assert.strictEqual(model.notes[noteKey], undefined, "note removed fully");
+      },
+    },
+    {
+      name: "controller and bulk metadata clear produce equivalent phase-level results",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const strike = addAction("Strike");
+        const follow = addAction("Follow");
+        const inputHigh = addInput("High");
+        const inputLow = addInput("Low");
+        const hit = addOutcome("Hit");
+        const block = addOutcome("Block");
+        buildInteractionsPairs(model);
+        const viewDef = {
+          columns: [
+            { key: "action" },
+            { key: "input" },
+            { key: "p1:outcome" },
+            { key: "p1:end" },
+            { key: "p1:tag" },
+          ],
+        };
+
+        const inferredRow = findPairIndex(
+          model,
+          (pair) => pair.aId === strike.id && pair.iId === inputHigh.id,
+        );
+        const manualRow = findPairIndex(
+          model,
+          (pair) => pair.aId === follow.id && pair.iId === inputLow.id,
+        );
+        assert.ok(inferredRow >= 0 && manualRow >= 0, "rows exist");
+
+        const inferredKey = noteKeyForPair(getPair(model, inferredRow), 1);
+        const manualKey = noteKeyForPair(getPair(model, manualRow), 1);
+        model.notes[inferredKey] = {
+          outcomeId: hit.id,
+          endActionId: follow.id,
+          endVariantSig: "",
+          tags: ["Stun"],
+          confidence: 0.5,
+          source: "model",
+        };
+        model.notes[manualKey] = {
+          outcomeId: block.id,
+          endActionId: strike.id,
+          endVariantSig: "",
+          tags: ["Safe"],
+          source: "manual",
+        };
+
+        const selection = {
+          rows: new Set([inferredRow, manualRow]),
+          cols: new Set([2]),
+          colsAll: false,
+        };
+        const sel = { r: inferredRow, c: 2 };
+        const runModelMutation = (label, mutate, options = {}) => {
+          const res = mutate();
+          if (options.status) res.status = options.status(res);
+          return res;
+        };
+
+        const modelForController = structuredClone(model);
+        const modelForBulk = structuredClone(model);
+
+        const controller = createInferenceController({
+          model: modelForController,
+          selection,
+          sel,
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation,
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getPair(m, r),
+          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
+        });
+        const bulkActions = createInteractionBulkActions({
+          model: modelForBulk,
+          selection,
+          sel,
+          getActiveView: () => "interactions",
+          viewDef,
+          statusBar: { set() {} },
+          runModelMutation,
+          makeUndoConfig: () => ({}),
+          getInteractionsPair: (m, r) => getPair(m, r),
+        });
+
+        const controllerResult = controller.runClear({ scope: "selection" });
+        const bulkResult = bulkActions.clearInferenceMetadata();
+
+        assert.deepStrictEqual(
+          modelForController.notes,
+          modelForBulk.notes,
+          "both entry points mutate notes identically",
+        );
+        assert.deepStrictEqual(
+          {
+            cleared: controllerResult.cleared,
+            removed: controllerResult.removed,
+            skippedManual: controllerResult.skippedManual,
+            skippedEmpty: controllerResult.skippedEmpty,
+          },
+          {
+            cleared: bulkResult.cleared,
+            removed: bulkResult.removed,
+            skippedManual: bulkResult.skippedManual,
+            skippedEmpty: bulkResult.skippedEmpty,
+          },
+          "both entry points report equivalent clear counters",
+        );
       },
     },
     {
