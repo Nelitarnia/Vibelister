@@ -61,9 +61,6 @@ function extractNoteFieldValue(note, field) {
   if (!note || typeof note !== "object") return null;
   if (field === "outcome") {
     if (Number.isFinite(note.outcomeId)) return { outcomeId: note.outcomeId };
-    if (typeof note.result === "string" && note.result.trim()) {
-      return { result: note.result.trim() };
-    }
     return null;
   }
   if (field === "end") {
@@ -73,9 +70,6 @@ function extractNoteFieldValue(note, field) {
         endVariantSig:
           typeof note.endVariantSig === "string" ? note.endVariantSig : "",
       };
-    }
-    if (typeof note.endFree === "string" && note.endFree.trim()) {
-      return { endFree: note.endFree.trim() };
     }
     return null;
   }
@@ -90,7 +84,6 @@ function valueKey(field, value) {
   if (!value) return "";
   if (field === "outcome") {
     if (Number.isFinite(value.outcomeId)) return `o:${value.outcomeId}`;
-    if (typeof value.result === "string") return `r:${value.result}`;
   }
   if (field === "end") {
     if (Number.isFinite(value.endActionId)) {
@@ -98,7 +91,6 @@ function valueKey(field, value) {
         typeof value.endVariantSig === "string" ? value.endVariantSig : "";
       return `e:${value.endActionId}|${sig}`;
     }
-    if (typeof value.endFree === "string") return `f:${value.endFree}`;
   }
   if (field === "tag") {
     const tags = normalizeTagList(value.tags);
@@ -111,7 +103,6 @@ function cloneValue(field, value) {
   if (!value) return null;
   if (field === "outcome") {
     if (Number.isFinite(value.outcomeId)) return { outcomeId: value.outcomeId };
-    if (typeof value.result === "string") return { result: value.result };
     return null;
   }
   if (field === "end") {
@@ -122,7 +113,6 @@ function cloneValue(field, value) {
           typeof value.endVariantSig === "string" ? value.endVariantSig : "",
       };
     }
-    if (typeof value.endFree === "string") return { endFree: value.endFree };
     return null;
   }
   if (field === "tag") {

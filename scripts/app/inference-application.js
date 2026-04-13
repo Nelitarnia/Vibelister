@@ -27,11 +27,8 @@ export const HEURISTIC_LABELS = Object.freeze({
 
 function hasStructuredValue(note, field) {
   if (!note || typeof note !== "object") return false;
-  if (field === "outcome") return "outcomeId" in note || "result" in note;
-  if (field === "end")
-    return (
-      "endActionId" in note || "endVariantSig" in note || "endFree" in note
-    );
+  if (field === "outcome") return "outcomeId" in note;
+  if (field === "end") return "endActionId" in note || "endVariantSig" in note;
   if (field === "tag") return Array.isArray(note.tags) && note.tags.length > 0;
   return false;
 }
@@ -125,20 +122,11 @@ export function applySuggestions({
       if (target.field === "outcome") {
         if ("outcomeId" in suggestion.value) {
           dest.outcomeId = suggestion.value.outcomeId;
-          delete dest.result;
-        } else if ("result" in suggestion.value) {
-          dest.result = suggestion.value.result;
-          delete dest.outcomeId;
         }
       } else if (target.field === "end") {
         if ("endActionId" in suggestion.value) {
           dest.endActionId = suggestion.value.endActionId;
           dest.endVariantSig = suggestion.value.endVariantSig || "";
-          delete dest.endFree;
-        } else if ("endFree" in suggestion.value) {
-          dest.endFree = suggestion.value.endFree;
-          delete dest.endActionId;
-          delete dest.endVariantSig;
         }
       } else if (target.field === "tag") {
         const tags = Array.isArray(suggestion.value.tags)

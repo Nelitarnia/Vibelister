@@ -26,7 +26,7 @@ import {
 //     palette.openForCurrentCell({ left, top, width }, editor.value);
 //
 // Modes (built-in):
-//   - 'outcome' → for ^p\\d+:outcome$ and legacy 'result'
+//   - 'outcome' → for ^p\\d+:outcome$
 //   - 'end'     → for ^p\\d+:end$ (Action + optional variant)
 //   - 'modifierState' → for Actions view modifier compatibility columns
 //   - 'tag'     → for ^p\\d+:tag$ (Interactions phase tags)
@@ -93,7 +93,7 @@ export function initPalette(ctx) {
     {
       name: "outcome",
       testKey: (key) =>
-        key === "result" || key === "dualof" || /^p\d+:outcome$/.test(key),
+        key === "dualof" || /^p\d+:outcome$/.test(key),
       consumeTyping: false,
       filterFn: (name, q) => name.toLowerCase().startsWith(q), // startsWith
       domId: "universalPalette", // one element for all modes

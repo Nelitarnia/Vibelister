@@ -5,12 +5,8 @@ const CLEARABLE_FIELDS = Object.freeze(["outcome", "end", "tag"]);
 
 function hasStructuredValue(note, field) {
   if (!note || typeof note !== "object") return false;
-  if (field === "outcome") return "outcomeId" in note || "result" in note;
-  if (field === "end") {
-    return (
-      "endActionId" in note || "endVariantSig" in note || "endFree" in note
-    );
-  }
+  if (field === "outcome") return "outcomeId" in note;
+  if (field === "end") return "endActionId" in note || "endVariantSig" in note;
   if (field === "tag") return Array.isArray(note.tags) && note.tags.length > 0;
   return false;
 }
@@ -18,17 +14,14 @@ function hasStructuredValue(note, field) {
 function clearFieldFromNote(note, field) {
   if (!note || typeof note !== "object") return false;
   if (field === "outcome") {
-    const hadValue = "outcomeId" in note || "result" in note;
+    const hadValue = "outcomeId" in note;
     delete note.outcomeId;
-    delete note.result;
     return hadValue;
   }
   if (field === "end") {
-    const hadValue =
-      "endActionId" in note || "endVariantSig" in note || "endFree" in note;
+    const hadValue = "endActionId" in note || "endVariantSig" in note;
     delete note.endActionId;
     delete note.endVariantSig;
-    delete note.endFree;
     return hadValue;
   }
   if (field === "tag") {
@@ -110,9 +103,9 @@ export function clearInferredTargets({ notes, targets, mode = "phase", onFieldCl
             ? note.tags.slice()
             : []
           : field === "outcome"
-            ? note.outcomeId ?? note.result ?? null
+            ? note.outcomeId ?? null
             : field === "end"
-              ? note.endActionId ?? note.endVariantSig ?? note.endFree ?? null
+              ? note.endActionId ?? note.endVariantSig ?? null
               : null;
       const hadValue = hasStructuredValue(note, field);
       if (!hadValue) continue;

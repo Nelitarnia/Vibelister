@@ -1,8 +1,10 @@
 import { SCHEMA_VERSION } from "../constants.js";
 import { migrateToSchemaV1 } from "./v1.js";
+import { migrateToSchemaV2 } from "./v2.js";
 
 const MIGRATIONS_BY_TARGET_VERSION = Object.freeze({
   1: migrateToSchemaV1,
+  2: migrateToSchemaV2,
 });
 
 function readSchemaVersion(model) {

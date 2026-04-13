@@ -147,7 +147,7 @@ export const DEFAULT_OUTCOME_DUAL_OF = Object.freeze({
   Changes: "Changes",
 });
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 // Back-compat bindings (import directly where needed)
 export const ROW_HEIGHT = UI.ROW_HEIGHT;
