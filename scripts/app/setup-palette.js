@@ -1,6 +1,7 @@
 import { HEADER_HEIGHT, ROW_HEIGHT } from "../data/constants.js";
 import { initPalette } from "../ui/palette.js";
 import { initColorPicker } from "../ui/color-picker.js";
+import { selection } from "./selection.js";
 
 export function setupPalette({
   appContext,
@@ -32,10 +33,12 @@ export function setupPalette({
     parent: dom.editor?.parentElement || dom.sheet,
     sheet: dom.sheet,
     sel: editingApi.sel,
+    selection,
     getCellRect: editingApi.getCellRect,
     getColorValue: (r, c) =>
       gridApi.cellValueToPlainText(gridApi.getCell(r, c)),
     setColorValue: (r, c, v) => gridApi.setCellSelectionAware(r, c, v),
+    setSingleColorValue: (r, c, v) => gridApi.setCell(r, c, v),
     render: rendererApi.render,
     makeUndoConfig: historyApi.makeUndoConfig,
     beginUndoableTransaction: historyApi.beginUndoableTransaction,
