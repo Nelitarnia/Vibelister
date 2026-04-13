@@ -115,6 +115,11 @@ export function initGridKeys(deps) {
     );
   }
 
+  function isInStatusHistoryScope(ae) {
+    if (!ae || typeof ae.closest !== "function") return false;
+    return !!ae.closest(".status-history, [data-ui-scope='status-history']");
+  }
+
   function getOutlineFilterInput() {
     const panel = doc?.getElementById?.("interactionsOutline");
     if (!panel?.querySelector) return null;
@@ -791,6 +796,7 @@ export function initGridKeys(deps) {
   function onCopy(e) {
     if (doc?.querySelector?.('[aria-modal="true"]')) return;
     const ae = doc?.activeElement || null;
+    if (isInStatusHistoryScope(ae)) return;
     if (isTypingInEditable(ae)) return;
     if (gridIsEditing()) return;
 
@@ -837,6 +843,7 @@ export function initGridKeys(deps) {
   function onCut(e) {
     if (doc?.querySelector?.('[aria-modal="true"]')) return;
     const ae = doc?.activeElement || null;
+    if (isInStatusHistoryScope(ae)) return;
     if (isTypingInEditable(ae)) return;
     if (gridIsEditing()) return;
 
@@ -910,6 +917,7 @@ export function initGridKeys(deps) {
   function onPaste(e) {
     if (doc?.querySelector?.('[aria-modal="true"]')) return;
     const ae = doc?.activeElement || null;
+    if (isInStatusHistoryScope(ae)) return;
     if (ae === editor) return;
     if (isTypingInEditable(ae)) return;
 
