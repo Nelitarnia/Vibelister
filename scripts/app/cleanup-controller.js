@@ -499,7 +499,6 @@ function hasPhaseField(note) {
   if (!note || typeof note !== "object") return false;
   return (
     Object.prototype.hasOwnProperty.call(note, "outcomeId") ||
-    Object.prototype.hasOwnProperty.call(note, "result") ||
     Object.prototype.hasOwnProperty.call(note, "endActionId") ||
     Object.prototype.hasOwnProperty.call(note, "endVariantSig") ||
     Object.prototype.hasOwnProperty.call(note, "tags")

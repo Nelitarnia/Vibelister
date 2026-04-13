@@ -19,14 +19,19 @@ const FIXTURES = [
       actions: [
         {
           id: 1,
+          name: "Action",
           modSet: { 1: true, 2: 99, 3: "requires" },
           properties: [" a ", "", "a"],
         },
       ],
       inputs: [{ name: "Input" }],
       modifiers: [{ name: "Mod" }],
-      outcomes: [{ name: "Outcome" }],
-      notes: { x: { source: "manual", confidence: 1 } },
+      outcomes: [{ id: 2, name: "Outcome" }],
+      notes: {
+        x: { source: "manual", confidence: 1 },
+        y: { result: "Outcome" },
+        z: { endFree: "Action" },
+      },
       comments: { actions: { 1: { text: "ok" } }, inputs: "bad" },
       interactionsPairs: "bad",
       interactionsIndex: { mode: "AI", groups: "bad" },
@@ -43,13 +48,18 @@ const FIXTURES = [
       assert.strictEqual(model.actions[0].modSet[2], MOD.OFF);
       assert.strictEqual(model.actions[0].modSet[3], MOD.REQUIRES);
       assert.deepStrictEqual(model.notes.x, {});
+      assert.strictEqual(model.notes.y.outcomeId, 2);
+      assert.ok(!("result" in model.notes.y));
+      assert.strictEqual(model.notes.z.endActionId, 1);
+      assert.strictEqual(model.notes.z.endVariantSig, "");
+      assert.ok(!("endFree" in model.notes.z));
       assert.ok(Array.isArray(model.interactionsPairs));
       assert.ok(Array.isArray(model.interactionsIndex.groups));
       assert.ok(Number.isFinite(model.nextId));
     },
   },
   {
-    name: "schema 1 current fixture",
+    name: "schema 1 fixture migrates to schema 2",
     input: {
       meta: {
         schema: 1,
@@ -63,7 +73,10 @@ const FIXTURES = [
       outcomes: [],
       modifierGroups: [],
       modifierConstraints: [],
-      notes: {},
+      notes: {
+        a: { result: "Unknown Outcome" },
+        b: { endFree: "Unknown Action" },
+      },
       comments: {},
       interactionsPairs: [],
       interactionsIndex: { mode: "AI", groups: [] },
@@ -73,6 +86,8 @@ const FIXTURES = [
       assert.strictEqual(model.meta.schema, SCHEMA_VERSION);
       assert.strictEqual(model.meta.projectName, "Current");
       assert.strictEqual(model.nextId, 1);
+      assert.deepStrictEqual(model.notes.a, {});
+      assert.deepStrictEqual(model.notes.b, {});
     },
   },
 ];

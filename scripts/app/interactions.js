@@ -314,9 +314,6 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
     if (typeof sourceNote.outcomeId === "number") {
       valueType = "number";
       value = sourceNote.outcomeId;
-    } else if (typeof sourceNote.result === "string") {
-      valueType = "string";
-      value = sourceNote.result;
     }
   }
 
@@ -326,10 +323,6 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
     let changed = false;
     if ("outcomeId" in mnote) {
       delete mnote.outcomeId;
-      changed = true;
-    }
-    if ("result" in mnote) {
-      delete mnote.result;
       changed = true;
     }
     if ("confidence" in mnote) {
@@ -351,25 +344,6 @@ function mirrorAaPhase0Outcome(model, pair, phase) {
     let changed = false;
     if (mnote.outcomeId !== mirroredId) {
       mnote.outcomeId = mirroredId;
-      changed = true;
-    }
-    if ("result" in mnote) {
-      delete mnote.result;
-      changed = true;
-    }
-    applyInteractionMetadata(mnote, sourceMeta.inferred ? sourceMeta : null);
-    return changed;
-  }
-
-  if (valueType === "string") {
-    const mnote = notes[mirrorKey] || (notes[mirrorKey] = {});
-    let changed = false;
-    if (mnote.result !== value) {
-      mnote.result = value;
-      changed = true;
-    }
-    if ("outcomeId" in mnote) {
-      delete mnote.outcomeId;
       changed = true;
     }
     applyInteractionMetadata(mnote, sourceMeta.inferred ? sourceMeta : null);
@@ -445,7 +419,6 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
     const metadata = extractInteractionMetadata(value);
     if (value == null || value === "") {
       if ("outcomeId" in note) delete note.outcomeId;
-      if ("result" in note) delete note.result;
       finalizeInteractionNoteEdit(note, model.notes, k, null);
       mirrorAaPhase0Outcome(model, pair, pk.p);
       return finalize(true);
@@ -456,7 +429,6 @@ export function setInteractionsCell(model, status, viewDef, r, c, value) {
         : Number(value && typeof value === "object" ? value.outcomeId : NaN);
     if (Number.isFinite(outcomeId)) {
       note.outcomeId = outcomeId;
-      if ("result" in note) delete note.result;
       finalizeInteractionNoteEdit(note, model.notes, k, metadata);
       mirrorAaPhase0Outcome(model, pair, pk.p);
       return finalize(true);
@@ -790,10 +762,6 @@ export function clearInteractionsCell(model, viewDef, r, c) {
       delete note.outcomeId;
       changed = true;
     }
-    if ("result" in note) {
-      delete note.result;
-      changed = true;
-    }
     if ("confidence" in note) {
       delete note.confidence;
       changed = true;
@@ -809,10 +777,6 @@ export function clearInteractionsCell(model, viewDef, r, c) {
     }
     if ("endVariantSig" in note) {
       delete note.endVariantSig;
-      changed = true;
-    }
-    if ("endFree" in note) {
-      delete note.endFree;
       changed = true;
     }
     if ("confidence" in note) {
@@ -874,13 +838,9 @@ export function clearInteractionsSelection(
   let cleared = 0;
   const tagEvents = [];
   function clearField(note, key, pk, context = {}) {
-    if (pk && pk.field === "outcome") {
+  if (pk && pk.field === "outcome") {
       if ("outcomeId" in note) {
         delete note.outcomeId;
-        cleared++;
-      }
-      if ("result" in note) {
-        delete note.result;
         cleared++;
       }
       if ("confidence" in note) {
@@ -900,10 +860,6 @@ export function clearInteractionsSelection(
       }
       if ("endVariantSig" in note) {
         delete note.endVariantSig;
-        cleared++;
-      }
-      if ("endFree" in note) {
-        delete note.endFree;
         cleared++;
       }
       if ("confidence" in note) {
