@@ -46,6 +46,7 @@ export function bootstrapEditingAndPersistence({
     rendererApi,
     gridApi: {
       getCell: gridApi.getCell,
+      setCell: gridApi.setCell,
       setCellSelectionAware: gridApi.setCellSelectionAware,
       cellValueToPlainText: gridApi.cellValueToPlainText,
     },

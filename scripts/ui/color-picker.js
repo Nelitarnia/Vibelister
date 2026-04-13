@@ -5,9 +5,11 @@ export function initColorPicker(ctx = {}) {
     parent,
     sheet,
     sel,
+    selection,
     getCellRect,
     getColorValue,
     setColorValue,
+    setSingleColorValue,
     render,
     makeUndoConfig,
     beginUndoableTransaction,
@@ -51,6 +53,60 @@ export function initColorPicker(ctx = {}) {
 
   let previewTx = null;
   let previewResult = null;
+  let previewBaseline = null;
+
+  function makeCellKey(r, c) {
+    return `${r}:${c}`;
+  }
+
+  function getPreviewTargets() {
+    const target = state.target;
+    if (!target) return [];
+    const rowsSet = selection?.rows;
+    const colsSet = selection?.cols;
+    const rows =
+      rowsSet && rowsSet.size > 1 && rowsSet.has(target.r)
+        ? Array.from(rowsSet).sort((a, b) => a - b)
+        : [target.r];
+    let cols = [target.c];
+    if (colsSet && colsSet.size > 1 && colsSet.has(target.c)) {
+      cols = Array.from(colsSet).sort((a, b) => a - b);
+    } else if (selection?.colsAll && colsSet && colsSet.size) {
+      cols = Array.from(colsSet).sort((a, b) => a - b);
+    }
+    const out = [];
+    for (const r of rows) {
+      if (!Number.isFinite(r)) continue;
+      for (const c of cols) {
+        if (!Number.isFinite(c)) continue;
+        out.push({ r, c });
+      }
+    }
+    return out;
+  }
+
+  function capturePreviewBaseline() {
+    if (previewBaseline || !state.target) return;
+    const cells = getPreviewTargets();
+    const values = new Map();
+    cells.forEach(({ r, c }) => {
+      values.set(makeCellKey(r, c), normalizeColor(getColorValue?.(r, c)) || "");
+    });
+    previewBaseline = { cells, values };
+  }
+
+  function clearPreviewBaseline() {
+    previewBaseline = null;
+  }
+
+  function restorePreviewBaseline() {
+    if (!previewBaseline || typeof setSingleColorValue !== "function") return;
+    previewBaseline.cells.forEach(({ r, c }) => {
+      const prev = previewBaseline.values.get(makeCellKey(r, c)) || "";
+      setSingleColorValue(r, c, prev);
+    });
+    render();
+  }
 
   function resetPreviewTransaction() {
     if (previewTx && typeof previewTx.cancel === "function") {
@@ -83,10 +139,10 @@ export function initColorPicker(ctx = {}) {
     }
   }
 
-  function finalizePreviewTransaction() {
+  function finalizePreviewTransaction({ commit = false } = {}) {
     if (!previewTx) return;
     try {
-      if (typeof previewTx.commit === "function") {
+      if (commit && typeof previewTx.commit === "function") {
         previewTx.commit(previewResult);
       } else if (typeof previewTx.cancel === "function") {
         previewTx.cancel();
@@ -152,7 +208,7 @@ export function initColorPicker(ctx = {}) {
     };
     closeBtn.onclick = (ev) => {
       ev.preventDefault();
-      close();
+      close({ commit: false });
     };
     root.appendChild(closeBtn);
 
@@ -265,7 +321,7 @@ export function initColorPicker(ctx = {}) {
         if (!normalized) return;
         state.current = normalized;
         updateInputs(normalized);
-        applyColor(normalized, { closeAfter: true, recordRecent: true });
+        applyColor(normalized, { closeAfter: true, closeCommit: true, recordRecent: true });
       }
     });
 
@@ -275,12 +331,12 @@ export function initColorPicker(ctx = {}) {
       if (!normalized) return;
       state.current = normalized;
       updateInputs(normalized);
-      applyColor(normalized, { closeAfter: true, recordRecent: true });
+      applyColor(normalized, { closeAfter: true, closeCommit: true, recordRecent: true });
     };
 
     clearBtn.onclick = (e) => {
       e.preventDefault();
-      applyColor("", { closeAfter: true, recordRecent: false });
+      applyColor("", { closeAfter: true, closeCommit: true, recordRecent: false });
     };
   }
 
@@ -405,7 +461,11 @@ export function initColorPicker(ctx = {}) {
         e.preventDefault();
         state.current = color;
         updateInputs(color);
-        applyColor(color, { closeAfter: true, recordRecent: true });
+        applyColor(color, {
+          closeAfter: true,
+          closeCommit: true,
+          recordRecent: true,
+        });
       };
       recentWrap.appendChild(swatch);
     });
@@ -424,10 +484,14 @@ export function initColorPicker(ctx = {}) {
     if (!state.target) return;
     const {
       closeAfter = false,
+      closeCommit = false,
       recordRecent = false,
       isPreview = false,
     } = options;
-    if (isPreview) ensurePreviewTransaction();
+    if (isPreview) {
+      capturePreviewBaseline();
+      ensurePreviewTransaction();
+    }
     const color = normalizeColor(raw);
     const valueToSet = color || "";
     const result = setColorValue(state.target.r, state.target.c, valueToSet);
@@ -442,10 +506,11 @@ export function initColorPicker(ctx = {}) {
       state.current = "";
       updateInputs("");
     }
-    if (closeAfter) close();
+    if (closeAfter) close({ commit: closeCommit });
   }
 
   function openColor(target = null) {
+    if (state.isOpen) close({ commit: false });
     ensureDOM();
     renderRecents();
     const r = target?.row ?? sel.r;
@@ -453,7 +518,8 @@ export function initColorPicker(ctx = {}) {
     if (!Number.isFinite(r) || !Number.isFinite(c) || r < 0 || c < 0)
       return false;
     const rect = getCellRect(r, c);
-    finalizePreviewTransaction();
+    finalizePreviewTransaction({ commit: false });
+    clearPreviewBaseline();
     state.target = { r, c };
     const initial = normalizeColor(getColorValue ? getColorValue(r, c) : "");
     state.initial = initial;
@@ -488,9 +554,12 @@ export function initColorPicker(ctx = {}) {
     }
   }
 
-  function close() {
+  function close(options = {}) {
+    const { commit = false } = options;
     if (!state.isOpen || !root) return;
-    finalizePreviewTransaction();
+    finalizePreviewTransaction({ commit });
+    if (!commit) restorePreviewBaseline();
+    clearPreviewBaseline();
     root.style.display = "none";
     root.removeAttribute("data-open");
     state.isOpen = false;
@@ -501,7 +570,7 @@ export function initColorPicker(ctx = {}) {
   function onDocMouseDown(ev) {
     if (!state.isOpen || !root) return;
     if (root.contains(ev.target)) return;
-    close();
+    close({ commit: false });
   }
 
   function onDocKeyDown(ev) {
@@ -509,7 +578,7 @@ export function initColorPicker(ctx = {}) {
     if (ev.key === "Escape") {
       ev.preventDefault();
       ev.stopPropagation();
-      close();
+      close({ commit: false });
     }
   }
 
@@ -527,7 +596,7 @@ export function initColorPicker(ctx = {}) {
   sheet.addEventListener(
     "scroll",
     () => {
-      if (state.isOpen) close();
+      if (state.isOpen) close({ commit: false });
     },
     { passive: true },
   );
