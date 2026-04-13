@@ -2184,6 +2184,198 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "Clipboard handlers no-op inside status history scope",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const activeElement = {
+          tagName: "DIV",
+          isContentEditable: false,
+          closest(selector) {
+            if (
+              selector ===
+              ".status-history, [data-ui-scope='status-history']"
+            ) {
+              return { dataset: { uiScope: "status-history" } };
+            }
+            return null;
+          },
+        };
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement,
+        };
+
+        const navigatorStub = { platform: "Win" };
+        const selection = {
+          rows: new Set([0]),
+          cols: new Set([0]),
+          colsAll: false,
+          horizontalMode: false,
+        };
+        const sel = { r: 0, c: 0 };
+        const gridData = [["A1"]];
+
+        const clipboardStore = {};
+        const clipboardTypes = new Set();
+        const makeClipboardEvent = () => ({
+          clipboardData: {
+            types: clipboardTypes,
+            setData(type, value) {
+              clipboardStore[type] = value;
+              clipboardTypes.add(type);
+            },
+            getData(type) {
+              if (type === "text/plain") return "Pasted";
+              return clipboardStore[type] || "";
+            },
+          },
+          preventDefault() {
+            this.prevented = true;
+          },
+          stopPropagation() {},
+          stopImmediatePropagation() {},
+          prevented: false,
+        });
+
+        const clearCalls = [];
+        const setCellCalls = [];
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "actions",
+          selection,
+          sel,
+          editor: { style: { display: "none" } },
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {},
+          moveSelectionForTab: () => {},
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [{ key: "name" }] }),
+          getRowCount: () => gridData.length,
+          dataArray: () => gridData,
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: (...args) => {
+            setCellCalls.push(args);
+          },
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: (options) => {
+            clearCalls.push(options);
+            return { cleared: 1, message: null };
+          },
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: () => "A1",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => ({ isOpen: () => false }),
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: navigatorStub,
+        });
+
+        try {
+          const copyListener = (listeners.get("copy") || []).find(
+            (entry) => entry.capture,
+          );
+          const cutListener = (listeners.get("cut") || []).find(
+            (entry) => entry.capture,
+          );
+          const pasteListener = (listeners.get("paste") || []).find(
+            (entry) => entry.capture,
+          );
+          assert.ok(copyListener, "copy listener should be registered");
+          assert.ok(cutListener, "cut listener should be registered");
+          assert.ok(pasteListener, "paste listener should be registered");
+
+          const copyEvent = makeClipboardEvent();
+          copyListener.cb(copyEvent);
+          assert.strictEqual(
+            copyEvent.prevented,
+            false,
+            "copy should not prevent default in status history scope",
+          );
+
+          const cutEvent = makeClipboardEvent();
+          cutListener.cb(cutEvent);
+          assert.strictEqual(
+            cutEvent.prevented,
+            false,
+            "cut should not prevent default in status history scope",
+          );
+
+          const pasteEvent = makeClipboardEvent();
+          pasteListener.cb(pasteEvent);
+          assert.strictEqual(
+            pasteEvent.prevented,
+            false,
+            "paste should not prevent default in status history scope",
+          );
+
+          assert.deepStrictEqual(
+            Object.keys(clipboardStore),
+            [],
+            "clipboard handlers should not write clipboard data",
+          );
+          assert.deepStrictEqual(
+            clearCalls,
+            [],
+            "cut should not clear cells in status history scope",
+          );
+          assert.deepStrictEqual(
+            setCellCalls,
+            [],
+            "paste should not mutate grid cells in status history scope",
+          );
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
       name: "Cut handler copies selection and clears cells",
       run(assert) {
         const listeners = new Map();
