@@ -343,6 +343,172 @@ export function getGridKeysTests() {
       },
     },
     {
+      name: "Grid and shortcut key handlers ignore status history focus",
+      run(assert) {
+        const listeners = new Map();
+        const windowStub = {
+          listeners,
+          addEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            arr.push({ cb, capture: !!capture });
+            listeners.set(type, arr);
+          },
+          removeEventListener(type, cb, capture) {
+            const arr = listeners.get(type) || [];
+            const idx = arr.findIndex(
+              (entry) => entry.cb === cb && entry.capture === !!capture,
+            );
+            if (idx >= 0) arr.splice(idx, 1);
+            listeners.set(type, arr);
+          },
+        };
+
+        const statusHistoryInput = {
+          tagName: "INPUT",
+          isContentEditable: false,
+          closest(selector) {
+            if (selector === ".status-history, [data-ui-scope='status-history']")
+              return { id: "statusHistory" };
+            return null;
+          },
+        };
+
+        const documentStub = {
+          querySelector: () => null,
+          getElementById: () => ({
+            getAttribute: () => "false",
+            contains: () => false,
+          }),
+          activeElement: statusHistoryInput,
+        };
+
+        const selection = {
+          rows: new Set(),
+          cols: new Set(),
+          colsAll: false,
+          horizontalMode: false,
+        };
+        const sel = { r: 2, c: 2 };
+
+        let moveCalls = 0;
+        let tabCalls = 0;
+        let modeToggles = 0;
+
+        const dispose = initGridKeys({
+          isEditing: () => false,
+          getActiveView: () => "interactions",
+          selection,
+          sel,
+          editor: { style: { display: "none" } },
+          clearSelection: () => {},
+          render: () => {},
+          beginEdit: () => {},
+          endEdit: () => {},
+          moveSel: () => {
+            moveCalls += 1;
+          },
+          moveSelectionForTab: () => {
+            tabCalls += 1;
+          },
+          ensureVisible: () => {},
+          viewDef: () => ({ columns: [{ key: "c0" }, { key: "c1" }, { key: "c2" }] }),
+          getRowCount: () => 3,
+          dataArray: () => [],
+          isModColumn: () => false,
+          modIdFromKey: () => null,
+          setModForSelection: () => {},
+          setCell: () => {},
+          runModelTransaction: () => {},
+          makeUndoConfig: () => ({}),
+          cycleView: () => {},
+          saveToDisk: () => {},
+          openFromDisk: () => {},
+          newProject: () => {},
+          doGenerate: () => {},
+          runSelfTests: () => {},
+          deleteRows: () => {},
+          clearCells: () => {},
+          addRowsAbove: () => {},
+          addRowsBelow: () => {},
+          model: {},
+          getCellText: () => "",
+          getStructuredCell: () => null,
+          applyStructuredCell: () => {},
+          getCellCommentClipboardPayload: () => null,
+          applyCellCommentClipboardPayload: () => {},
+          status: { set() {} },
+          undo: () => {},
+          redo: () => {},
+          getPaletteAPI: () => null,
+          toggleInteractionsOutline: () => {},
+          jumpToInteractionsAction: () => {},
+          jumpToInteractionsVariant: () => {},
+          toggleInteractionsMode: () => {
+            modeToggles += 1;
+          },
+          toggleCommentsSidebar: () => {},
+          toggleTagsSidebar: () => {},
+          window: windowStub,
+          document: documentStub,
+          navigator: { platform: "Test" },
+        });
+
+        const makeEvent = (overrides) => ({
+          key: "",
+          ctrlKey: false,
+          metaKey: false,
+          shiftKey: false,
+          altKey: false,
+          prevented: false,
+          preventDefault() {
+            this.prevented = true;
+          },
+          ...overrides,
+        });
+
+        try {
+          const keyListeners = listeners.get("keydown") || [];
+          const gridListener = keyListeners.find((entry) => entry.capture);
+          const shortcutListener = keyListeners.find((entry) => !entry.capture);
+          assert.ok(gridListener, "grid keydown listener should be registered");
+          assert.ok(shortcutListener, "shortcut listener should be registered");
+
+          const arrowEvent = makeEvent({ key: "ArrowRight" });
+          gridListener.cb(arrowEvent);
+          assert.strictEqual(moveCalls, 0, "arrow movement should be ignored");
+          assert.strictEqual(
+            arrowEvent.prevented,
+            false,
+            "ignored arrow should not prevent default",
+          );
+
+          const tabEvent = makeEvent({ key: "Tab" });
+          gridListener.cb(tabEvent);
+          assert.strictEqual(tabCalls, 0, "tab navigation should be ignored");
+          assert.strictEqual(
+            tabEvent.prevented,
+            false,
+            "ignored tab should not prevent default",
+          );
+
+          const shortcutEvent = makeEvent({
+            key: "A",
+            ctrlKey: true,
+            shiftKey: true,
+          });
+          shortcutListener.cb(shortcutEvent);
+          assert.strictEqual(modeToggles, 0, "shortcut should be ignored");
+          assert.strictEqual(
+            shortcutEvent.prevented,
+            false,
+            "ignored shortcut should not prevent default",
+          );
+        } finally {
+          dispose?.();
+        }
+      },
+    },
+    {
       name: "computeDestinationIndices falls back when selection is small",
       run(assert) {
         const selection = new Set([5]);

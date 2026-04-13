@@ -159,6 +159,7 @@ export function initGridKeys(deps) {
     const {
       allowWhileEditing = false,
       allowWhileOutlineFilter = false,
+      allowWhileStatusHistory = false,
       activeElement = doc?.activeElement || null,
     } = options;
 
@@ -166,6 +167,9 @@ export function initGridKeys(deps) {
     if (paletteIsOpen()) return false; // let palette capture its own shortcuts
     if (!allowWhileEditing && gridIsEditing()) return false;
     if (isColorPickerContext(activeElement)) return false;
+    if (!allowWhileStatusHistory && isInStatusHistoryScope(activeElement)) {
+      return false;
+    }
     if (isOutlineFilterInput(activeElement)) {
       if (!allowWhileOutlineFilter) return false;
     } else if (isTypingInEditable(activeElement)) {
@@ -175,10 +179,11 @@ export function initGridKeys(deps) {
   }
 
   function onGridKeyDown(e) {
+    const activeElement = doc?.activeElement || null;
     if (
       !shouldHandleGlobalShortcuts({
         allowWhileEditing: true,
-        activeElement: doc?.activeElement || null,
+        activeElement,
       })
     )
       return;
