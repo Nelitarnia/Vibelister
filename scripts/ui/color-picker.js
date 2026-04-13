@@ -49,6 +49,7 @@ export function initColorPicker(ctx = {}) {
     target: null,
     current: "",
     initial: "",
+    explicitlyChanged: false,
   };
 
   let previewTx = null;
@@ -283,9 +284,13 @@ export function initColorPicker(ctx = {}) {
       if (isSyncing) return;
       const normalized = normalizeColor(colorInput.value);
       if (!normalized) return;
+      const isFirstChangeFromEmpty = !state.initial && !state.explicitlyChanged;
+      state.explicitlyChanged = true;
       state.current = normalized;
       updateInputs(normalized);
-      applyColor(normalized, { recordRecent: false, isPreview: true });
+      if (!isFirstChangeFromEmpty) {
+        applyColor(normalized, { recordRecent: false, isPreview: true });
+      }
     });
 
     hexInput.addEventListener("input", () => {
@@ -309,6 +314,7 @@ export function initColorPicker(ctx = {}) {
       if (digits.length === 6) {
         const normalized = normalizeColor(sanitized);
         if (!normalized) return;
+        state.explicitlyChanged = true;
         state.current = normalized;
         updateInputs(normalized);
       }
@@ -319,6 +325,7 @@ export function initColorPicker(ctx = {}) {
         e.preventDefault();
         const normalized = normalizeColor(hexInput.value);
         if (!normalized) return;
+        state.explicitlyChanged = true;
         state.current = normalized;
         updateInputs(normalized);
         applyColor(normalized, { closeAfter: true, closeCommit: true, recordRecent: true });
@@ -327,8 +334,12 @@ export function initColorPicker(ctx = {}) {
 
     applyBtn.onclick = (e) => {
       e.preventDefault();
-      const normalized = normalizeColor(hexInput.value || colorInput.value);
+      const fromHex = normalizeColor(hexInput.value);
+      const normalized =
+        fromHex ||
+        (state.explicitlyChanged ? normalizeColor(state.current || colorInput.value) : "");
       if (!normalized) return;
+      state.explicitlyChanged = true;
       state.current = normalized;
       updateInputs(normalized);
       applyColor(normalized, { closeAfter: true, closeCommit: true, recordRecent: true });
@@ -474,8 +485,7 @@ export function initColorPicker(ctx = {}) {
   function updateInputs(color) {
     if (!colorInput || !hexInput) return;
     isSyncing = true;
-    const fallback = color || "#000000";
-    colorInput.value = fallback;
+    colorInput.value = normalizeColor(color) || "#000000";
     hexInput.value = color || "";
     isSyncing = false;
   }
@@ -524,6 +534,7 @@ export function initColorPicker(ctx = {}) {
     const initial = normalizeColor(getColorValue ? getColorValue(r, c) : "");
     state.initial = initial;
     state.current = initial;
+    state.explicitlyChanged = false;
     updateInputs(initial);
     root.style.display = "block";
     root.setAttribute("data-open", "true");
@@ -564,7 +575,9 @@ export function initColorPicker(ctx = {}) {
     root.removeAttribute("data-open");
     state.isOpen = false;
     state.target = null;
+    state.current = "";
     state.initial = "";
+    state.explicitlyChanged = false;
   }
 
   function onDocMouseDown(ev) {
