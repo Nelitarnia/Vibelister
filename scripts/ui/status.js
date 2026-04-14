@@ -173,6 +173,12 @@ export function initStatusBar(element, opts = {}) {
     const nextItem = items[nextIndex];
     if (document.activeElement !== nextItem)
       nextItem.focus({ preventScroll: options.preventScroll ?? true });
+    if (options.ensureVisible) {
+      nextItem.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
   }
 
   function focusFirstHistoryEntry() {
@@ -196,10 +202,12 @@ export function initStatusBar(element, opts = {}) {
     ) {
       e.preventDefault();
       e.stopPropagation();
-      if (key === "ArrowDown") focusHistoryItem(activeHistoryIndex + 1);
-      else if (key === "ArrowUp") focusHistoryItem(activeHistoryIndex - 1);
-      else if (key === "Home") focusHistoryItem(0);
-      else focusHistoryItem(items.length - 1);
+      if (key === "ArrowDown")
+        focusHistoryItem(activeHistoryIndex + 1, { ensureVisible: true });
+      else if (key === "ArrowUp")
+        focusHistoryItem(activeHistoryIndex - 1, { ensureVisible: true });
+      else if (key === "Home") focusHistoryItem(0, { ensureVisible: true });
+      else focusHistoryItem(items.length - 1, { ensureVisible: true });
       return;
     }
 
