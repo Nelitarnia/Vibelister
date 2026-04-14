@@ -155,15 +155,15 @@ Running inference makes the program attempt to fill empty notes in the selected 
 
 Inferred cells are marked with a border inside the Interactions-view. The color of the border changes depending on the certainty value.
 
-Inference deduces results from similarity between Actions (through both modified Actions and user-set Action Groups), commonly seen Input or Modifier patterns as well as a trend of recently set Actions.
+There are multiple different modes for Inference, including deducing results from similarity between Actions (through both modified Actions and user-set Action Groups), commonly seen Input or Modifier patterns as well as a trend of recently set Actions.
 
 Explanation of the various options:
 
-- Include End-Column / Include Tag-Column: Basically, this means whether you want the Inference to target other Phase-columns than just Outcome. Both of these options are on by default.
+- Include End-Column / Include Tag-Column: Inference automatically attempts filling cells on Outcome columns. These two options allow you to choose if you also want the heuristic to guess values on End and Tag columns. They are on by default.
 - Infer from/to Bypassed Modifiers: Whether modifiers that are set to "Bypassed" in Action view influence or receive inference. These options are off by default.
-- Overwrite existing inferred values: Whether inference will update any existing inferred values during a new inference pass. It makes sense to have this on if you want your previously inferred predictions to improve as you add data to the project. This option is on by default.
-- Only fill empty cells: Similar to the above, but it will ...
-- Skip rows with manual Outcome: Any Phase which already has a manually filled Outcome won't be inferred to even if it has an empty End or Tags column. This can be useful depending on how you use the program and how you want to use inference for. This option is off by default.
+- Overwrite existing inferred values: Whether inference will update any cells that have existing inference metadata during a new inference pass, or if it will only make new guesses. It makes sense to have this on if you want your previously inferred predictions to improve as you add data to the project. This option is on by default.
+- Only fill empty cells: This option will make inference skip any cells which already have a value, like a pre-set Outcome, End or Tag. It's a niche option, but might be useful if you f.e. frequently give your own notes an uncertainty value and want to retain the cell contents instead of having inference overwrite them. It's off by default.
+- Skip rows with manual Outcome: Inference skips any rows which have a manually set Outcome, even if their End or Tag columns are empty. This can be useful f.e. if you prefer making notes which don't use End or Tag columns in a particularly systematic way, and you suspect trying to infer them would only add noise to your notes. This option is off by default.
 - Clear inferred: A button which lets you clear inference data from the current scope.
 
 "Advanced Thresholds" lets you choose specific values for each inference mode, or quickly choose between presets on how leniently inference happens. A more lenient inference lowers the threshold for a guess, which can let you get started faster, but it can also reduce overall accuracy. The question mark in the corner also contains an explanation for what each of the heuristics does.
@@ -174,9 +174,9 @@ Besides that, there's also an Inference sub-panel which can be opened with Ctrl+
 
 Explanation:
 
-- Promote inferred notes: This button turns the current Phase's inferred data into verified data by setting its uncertainty to 0% and giving it the source "Manual". Please use this button on an Outcome cell. This button also has a keyboard shortcut "Ctrl+."
-- Clear inference metadata: This button clears the guessed data ...
-- Apply default uncertainty: You can manually make the selected Phase uncertain and adding it an uncertainty value from the "Default Uncertainty" slider.
+- Promote inferred notes: This button turns the current Phase's inferred data into verified data by setting its uncertainty to 0% and giving it the source "Manual". This button also has a keyboard shortcut "Ctrl+."
+- Clear inference metadata: This button clears any inference metadata as well as the guessed values from the active selection.
+- Apply default uncertainty: You can manually make the selected Phase uncertain by giving it an uncertainty value from the "Default Uncertainty" slider.
 - Variant diagnostics: Show some debug information about the current Action its generation.
 
 ## Other features
