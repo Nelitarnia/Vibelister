@@ -2374,10 +2374,7 @@ export function getGridKeysTests() {
           tagName: "DIV",
           isContentEditable: false,
           closest(selector) {
-            if (
-              selector ===
-              ".status-history, [data-ui-scope='status-history']"
-            ) {
+            if (selector === ".status-history") {
               return { dataset: { uiScope: "status-history" } };
             }
             return null;
