@@ -628,9 +628,9 @@ export async function openInferenceDialog(options = {}) {
     );
     const { label: skipManualOutcomeLabel, input: skipManualOutcomeInput } =
       buildCheckbox(
-        "Skip rows with manual Outcome",
+        "Skip phases with manual Outcome",
         !!defaults.skipManualOutcome,
-        "When enabled, inference leaves End/Tag untouched if the row already has a manual Outcome.",
+        "When enabled, inference leaves End/Tag untouched for phases where Outcome is already manual.",
       );
     overwriteLabel.style.marginTop = "8px";
     onlyEmptyLabel.style.marginTop = "8px";
