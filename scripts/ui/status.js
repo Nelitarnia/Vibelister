@@ -21,6 +21,10 @@ function normalizeDisplayValue(text) {
   return text && text.trim() ? text : NBSP;
 }
 
+function isHTMLElement(value) {
+  return typeof HTMLElement !== "undefined" && value instanceof HTMLElement;
+}
+
 export function initStatusBar(element, opts = {}) {
   if (!element) return null;
 
@@ -45,6 +49,11 @@ export function initStatusBar(element, opts = {}) {
   let escHandler = null;
   let focusHandler = null;
   let shortcutHandler = null;
+  let openerFocusEl = null;
+  let pendingOpenerFocusEl = null;
+  let lastExternalFocusEl =
+    isHTMLElement(document.activeElement) ? document.activeElement : null;
+  let activeHistoryIndex = -1;
   const panelId = element.id
     ? `${element.id}-history`
     : `status-history-${Math.random().toString(36).slice(2)}`;
@@ -68,7 +77,7 @@ export function initStatusBar(element, opts = {}) {
   function renderHistory() {
     if (!panel) return;
     panel.innerHTML = "";
-    panel.setAttribute("role", "log");
+    panel.setAttribute("role", "region");
     panel.setAttribute("aria-label", "Status message history");
     if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "-1");
 
@@ -87,13 +96,21 @@ export function initStatusBar(element, opts = {}) {
 
     const list = document.createElement("ul");
     list.className = "status-history__list";
+    list.setAttribute("role", "list");
     panel.appendChild(list);
 
-    for (const entry of [...history].reverse()) {
+    const reversed = [...history].reverse();
+    if (!reversed.length) activeHistoryIndex = -1;
+    if (activeHistoryIndex < 0) activeHistoryIndex = 0;
+    if (activeHistoryIndex >= reversed.length) activeHistoryIndex = reversed.length - 1;
+
+    reversed.forEach((entry, index) => {
       const item = document.createElement("li");
       item.className = "status-history__item";
       item.setAttribute("role", "listitem");
-      item.tabIndex = 0;
+      item.tabIndex = index === activeHistoryIndex ? 0 : -1;
+      item.dataset.historyIndex = String(index);
+      item.dataset.historyMessage = entry.message;
 
       const time = document.createElement("time");
       time.className = "status-history__item-time";
@@ -107,7 +124,7 @@ export function initStatusBar(element, opts = {}) {
       item.appendChild(text);
 
       list.appendChild(item);
-    }
+    });
   }
 
   function ensurePanel() {
@@ -121,6 +138,24 @@ export function initStatusBar(element, opts = {}) {
     renderHistory();
   }
 
+  function isFocusWithinStatus(target) {
+    if (!isHTMLElement(target)) return false;
+    if (element.contains(target)) return true;
+    if (panel && panel.contains(target)) return true;
+    return false;
+  }
+
+  function rememberExternalFocus(target) {
+    if (!isHTMLElement(target)) return;
+    if (!target.isConnected) return;
+    if (isFocusWithinStatus(target)) return;
+    lastExternalFocusEl = target;
+  }
+
+  function onDocumentFocusTrack(e) {
+    rememberExternalFocus(e.target);
+  }
+
   function onDocumentMouseDown(e) {
     if (!panel) return;
     if (element.contains(e.target)) return;
@@ -131,7 +166,7 @@ export function initStatusBar(element, opts = {}) {
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
-      hideHistory(true);
+      hideHistory("opener");
     }
   }
 
@@ -142,18 +177,125 @@ export function initStatusBar(element, opts = {}) {
     hideHistory();
   }
 
-  function focusFirstHistoryEntry() {
-    if (!panel) return;
-    const firstItem = panel.querySelector(".status-history__item");
-    if (firstItem) {
-      firstItem.focus({ preventScroll: true });
-      return;
-    }
-    panel.focus({ preventScroll: true });
+  function getHistoryItems() {
+    if (!panel) return [];
+    return Array.from(panel.querySelectorAll(".status-history__item"));
   }
 
-  function showHistory() {
+  function focusHistoryItem(index, options = {}) {
+    const items = getHistoryItems();
+    if (!items.length) {
+      activeHistoryIndex = -1;
+      if (!options.preventPanelFocus && panel)
+        panel.focus({ preventScroll: true });
+      return;
+    }
+    const nextIndex = Math.max(0, Math.min(index, items.length - 1));
+    activeHistoryIndex = nextIndex;
+    items.forEach((item, itemIndex) => {
+      item.tabIndex = itemIndex === nextIndex ? 0 : -1;
+    });
+    const nextItem = items[nextIndex];
+    if (document.activeElement !== nextItem)
+      nextItem.focus({ preventScroll: options.preventScroll ?? true });
+    if (options.ensureVisible) {
+      nextItem.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }
+
+  function focusFirstHistoryEntry() {
+    if (!panel) return;
+    focusHistoryItem(activeHistoryIndex >= 0 ? activeHistoryIndex : 0, {
+      preventScroll: true,
+    });
+  }
+
+  function onPanelKeyDown(e) {
+    if (!isOpen) return;
+    const key = e.key;
+    const items = getHistoryItems();
+    if (!items.length) return;
+
+    if (
+      key === "ArrowDown" ||
+      key === "ArrowUp" ||
+      key === "Home" ||
+      key === "End"
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (key === "ArrowDown")
+        focusHistoryItem(activeHistoryIndex + 1, { ensureVisible: true });
+      else if (key === "ArrowUp")
+        focusHistoryItem(activeHistoryIndex - 1, { ensureVisible: true });
+      else if (key === "Home") focusHistoryItem(0, { ensureVisible: true });
+      else focusHistoryItem(items.length - 1, { ensureVisible: true });
+      return;
+    }
+
+    const activeItem =
+      isHTMLElement(document.activeElement) &&
+      document.activeElement.classList.contains("status-history__item")
+        ? document.activeElement
+        : items[activeHistoryIndex];
+    const copyActiveItemToClipboard = () => {
+      if (!activeItem) return;
+      const msg = activeItem.dataset.historyMessage;
+      if (!msg) return;
+      navigator.clipboard?.writeText(msg).catch(() => {});
+    };
+
+    if (key === "Enter" || key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      copyActiveItemToClipboard();
+      return;
+    }
+
+    const copyChordPressed =
+      (e.ctrlKey || e.metaKey) && !e.altKey && key.toLowerCase() === "c";
+    if (!copyChordPressed) return;
+
+    const selection = window.getSelection();
+    const hasSelectedText = selection && !selection.isCollapsed;
+    const selectionInsidePanel =
+      hasSelectedText &&
+      panel &&
+      selection &&
+      selection.anchorNode &&
+      panel.contains(selection.anchorNode) &&
+      selection.focusNode &&
+      panel.contains(selection.focusNode);
+    if (selectionInsidePanel) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    copyActiveItemToClipboard();
+  }
+
+  function onPanelFocusIn(e) {
+    const item =
+      isHTMLElement(e.target)
+        ? e.target.closest(".status-history__item")
+        : null;
+    if (!item || !panel || !panel.contains(item)) return;
+    const index = Number.parseInt(item.dataset.historyIndex || "-1", 10);
+    if (!Number.isFinite(index) || index < 0) return;
+    focusHistoryItem(index, { preventScroll: true, preventPanelFocus: true });
+  }
+
+  function showHistory(openSource = "trigger") {
     ensurePanel();
+    const activeEl =
+      isHTMLElement(document.activeElement) ? document.activeElement : null;
+    const shouldUseActive = activeEl && !isFocusWithinStatus(activeEl);
+    openerFocusEl =
+      pendingOpenerFocusEl ||
+      (shouldUseActive ? activeEl : lastExternalFocusEl);
+    pendingOpenerFocusEl = null;
     renderHistory();
     panel.dataset.open = "true";
     panel.style.display = "flex";
@@ -174,7 +316,7 @@ export function initStatusBar(element, opts = {}) {
     }
   }
 
-  function hideHistory(shouldFocusElement = false) {
+  function hideHistory(restoreFocus = "none") {
     if (!panel) return;
     panel.dataset.open = "false";
     panel.style.display = "none";
@@ -192,16 +334,26 @@ export function initStatusBar(element, opts = {}) {
       document.removeEventListener("focusin", focusHandler, true);
       focusHandler = null;
     }
-    if (shouldFocusElement) element.focus({ preventScroll: true });
+    if (restoreFocus === "trigger") {
+      element.focus({ preventScroll: true });
+    } else if (
+      restoreFocus === "opener" &&
+      openerFocusEl &&
+      isHTMLElement(openerFocusEl) &&
+      openerFocusEl.isConnected
+    ) {
+      openerFocusEl.focus({ preventScroll: true });
+    }
+    openerFocusEl = null;
   }
 
   function toggleHistory() {
-    if (isOpen) hideHistory();
-    else showHistory();
+    if (isOpen) hideHistory("opener");
+    else showHistory("trigger");
   }
 
   function shouldIgnoreShortcutTarget(target) {
-    if (!(target instanceof HTMLElement)) return false;
+    if (!isHTMLElement(target)) return false;
     const focusableFormField = target.closest(
       "input, textarea, select, button",
     );
@@ -222,8 +374,8 @@ export function initStatusBar(element, opts = {}) {
 
     e.preventDefault();
     e.stopPropagation();
-    if (isOpen) hideHistory(true);
-    else showHistory();
+    if (isOpen) hideHistory("opener");
+    else showHistory("shortcut");
   }
 
   function updateDisplayedMessage(msg) {
@@ -281,7 +433,16 @@ export function initStatusBar(element, opts = {}) {
     toggleHistory();
   }
 
+  function handlePointerDown() {
+    const activeEl =
+      isHTMLElement(document.activeElement) ? document.activeElement : null;
+    if (!activeEl) return;
+    if (isFocusWithinStatus(activeEl)) return;
+    pendingOpenerFocusEl = activeEl;
+  }
+
   function handleKeyDown(e) {
+    if (e.target !== element) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       toggleHistory();
@@ -289,6 +450,9 @@ export function initStatusBar(element, opts = {}) {
   }
 
   element.dataset.interactive = "true";
+  document.addEventListener("focusin", onDocumentFocusTrack, true);
+  rememberExternalFocus(document.activeElement);
+  element.addEventListener("pointerdown", handlePointerDown, true);
   element.addEventListener("click", handleClick);
   element.addEventListener("keydown", handleKeyDown);
   if (!shortcutHandler) {
@@ -297,6 +461,8 @@ export function initStatusBar(element, opts = {}) {
   }
 
   ensureLiveRegion();
+  element.addEventListener("keydown", onPanelKeyDown);
+  element.addEventListener("focusin", onPanelFocusIn);
   if (latest && latest.trim()) {
     pushHistory({ message: latest, time: new Date() });
     renderHistory();
