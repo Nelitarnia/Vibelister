@@ -149,9 +149,9 @@ The recommended default settings for this feature are included when starting a n
 
 ## Inference
 
-It's possible to use automatic inference to predict notes based on what you've manually added to the project so far. This functionality has its own separate dialog window inside "Tools -> Inference..."
+It's possible to use automatic inference to predict notes based on what you've manually added to the project so far. This functionality has its own separate dialog window inside "Tools -> Inference..." The scope of the inference can be selected to cover anything from current selection to the whole project.
 
-Running inference makes the program attempt to fill empty notes in the selected scope (from current selection to entire project). If it succeeds, it adds guessed values to any cell that exceeded a certain confidence threshold while also giving the cell unique "uncertainty" and "source" values. Uncertainty means how likely the inference is and source means which data point was the primary factor in deciding the result.
+Running inference makes the program attempt to guess values in notes which are not already user-set. If the guess exceeds a customizable confidence threshold, inference gives the cell a guessed value as well as "uncertainty" and "source" inference metadata values. Uncertainty means how likely the inference is and source means which data point was the primary factor in deciding the result.
 
 Inferred cells are marked with a border inside the Interactions-view. The color of the border changes depending on the certainty value.
 
@@ -162,7 +162,7 @@ Explanation of the various options:
 - Include End-Column / Include Tag-Column: Inference automatically attempts filling cells on Outcome columns. These two options allow you to choose if you also want the heuristic to guess values on End and Tag columns. They are on by default.
 - Infer from/to Bypassed Modifiers: Whether modifiers that are set to "Bypassed" in Action view influence or receive inference. These options are off by default.
 - Overwrite existing inferred values: Whether inference will update any cells that have existing inference metadata during a new inference pass, or if it will only make new guesses. It makes sense to have this on if you want your previously inferred predictions to improve as you add data to the project. This option is on by default.
-- Only fill empty cells: This option will make inference skip any cells which already have a value, like a pre-set Outcome, End or Tag. It's a niche option, but might be useful if you f.e. frequently give your own notes an uncertainty value and want to retain the cell contents instead of having inference overwrite them. It's off by default.
+- Only fill empty cells: This option will make inference skip any cells which already have a value, like a pre-set Outcome, End or Tag. It's a niche option with lets you control the scope of the inference when needed. It's off by default.
 - Skip phases with manual Outcome: Inference skips End/Tag inference for phases where Outcome is manually set, even if End or Tag is empty. This can be useful f.e. if you prefer making notes which don't use End or Tag columns in a particularly systematic way, and you suspect trying to infer them would only add noise to your notes. This option is off by default.
 - Clear inferred: A button which lets you clear inference data from the current scope.
 
