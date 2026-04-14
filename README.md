@@ -189,6 +189,8 @@ You can undo any action which changes the core data model (editing cells, reorde
 
 You can leave comments (categorized by color) on any cell in the project, then quick jump between them using the arrows in the Comments sidebar. The keyboard shortcut for the comment side panel is Ctrl+Shift+L.
 
+The status bar also keeps a status history panel: click the status text or press Alt+Shift+H to toggle it from anywhere outside active text inputs. When the history is open, use Arrow Up/Down (plus Home/End) to move between entries, press Enter/Space to copy the focused message, and press Escape to close while returning focus to where you were.
+
 It's possible to save / load project files in .json-format. Note: on Firefox and Safari (which don't have the File System Access API), regular "Save" and "Save as..." instead default to "Export as JSON".
 
 You can write general project notes in File -> Project Info.
