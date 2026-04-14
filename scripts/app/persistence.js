@@ -232,7 +232,8 @@ export function createPersistenceController({
       );
       onModelReset?.();
     } catch (e) {
-      statusBar?.set("Open failed: " + (e?.message || e));
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      statusBar?.set("Open failed: " + errorMessage);
     }
   }
 
@@ -252,7 +253,8 @@ export function createPersistenceController({
       });
       statusBar?.set(as ? `Saved As: ${name}` : `Saved: ${name}`);
     } catch (e) {
-      statusBar?.set("Save failed: " + (e?.message || e));
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      statusBar?.set("Save failed: " + errorMessage);
     }
   }
 
