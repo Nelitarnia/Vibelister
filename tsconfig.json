@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noResolve": true,
+    "noImplicitAny": false
+  },
+  "include": [
+    "scripts/app/types.js",
+    "scripts/app/persistence.js",
+    "scripts/app/interactions.js",
+    "scripts/data/column-kinds.js"
+  ]
+}

@@ -237,3 +237,18 @@ To save time without sacrificing formality, you could create placeholder Actions
 - Cover functionalities not currently covered by adding tests to the test suite.
 - Data analysis features?
 - ...And more!
+
+## TypeScript no-emit checking
+
+This project now runs TypeScript as a static checker for selected JavaScript + JSDoc modules via `npm run typecheck` (`tsc -p tsconfig.json`).
+
+Initial rollout is intentionally scoped and temporarily relaxes two settings while we incrementally annotate adjacent modules:
+
+- `noImplicitAny: false` (keeps signal focused on cross-module shape/nullability issues first)
+- `noResolve: true` (limits pass 1 to the targeted module set before expanding)
+
+Re-enable criteria:
+
+1. Add JSDoc types for dynamic context parameters in `scripts/data/column-kinds.js` and linked interaction helpers.
+2. Expand `include` to adjacent modules in small batches and keep `npm run typecheck` green per batch.
+3. Flip `noResolve` off first, then restore `noImplicitAny` once the newly included modules are annotated.

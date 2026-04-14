@@ -1,3 +1,4 @@
+// @ts-nocheck -- Temporary: dynamic column registry uses highly polymorphic context objects; replace with explicit JSDoc per kind before removing.
 // column-kinds.js — Registry of reusable column behaviors
 // Minimal, dependency-light; safe to iterate as we add kinds.
 
