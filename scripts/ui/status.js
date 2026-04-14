@@ -47,6 +47,7 @@ export function initStatusBar(element, opts = {}) {
   let shortcutHandler = null;
   let openerFocusEl = null;
   let activeHistoryIndex = -1;
+  let openedViaShortcut = false;
   const panelId = element.id
     ? `${element.id}-history`
     : `status-history-${Math.random().toString(36).slice(2)}`;
@@ -141,7 +142,7 @@ export function initStatusBar(element, opts = {}) {
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
-      hideHistory("trigger");
+      hideHistory(openedViaShortcut ? "opener" : "trigger");
     }
   }
 
@@ -237,8 +238,9 @@ export function initStatusBar(element, opts = {}) {
     focusHistoryItem(index, { preventScroll: true, preventPanelFocus: true });
   }
 
-  function showHistory() {
+  function showHistory(openSource = "trigger") {
     ensurePanel();
+    openedViaShortcut = openSource === "shortcut";
     openerFocusEl = document.activeElement;
     renderHistory();
     panel.dataset.open = "true";
@@ -289,11 +291,12 @@ export function initStatusBar(element, opts = {}) {
       openerFocusEl.focus({ preventScroll: true });
     }
     openerFocusEl = null;
+    openedViaShortcut = false;
   }
 
   function toggleHistory() {
     if (isOpen) hideHistory("opener");
-    else showHistory();
+    else showHistory("trigger");
   }
 
   function shouldIgnoreShortcutTarget(target) {
@@ -319,7 +322,7 @@ export function initStatusBar(element, opts = {}) {
     e.preventDefault();
     e.stopPropagation();
     if (isOpen) hideHistory("trigger");
-    else showHistory();
+    else showHistory("shortcut");
   }
 
   function updateDisplayedMessage(msg) {
