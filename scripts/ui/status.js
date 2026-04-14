@@ -46,8 +46,10 @@ export function initStatusBar(element, opts = {}) {
   let focusHandler = null;
   let shortcutHandler = null;
   let openerFocusEl = null;
+  let pendingOpenerFocusEl = null;
+  let lastExternalFocusEl =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
   let activeHistoryIndex = -1;
-  let openedViaShortcut = false;
   const panelId = element.id
     ? `${element.id}-history`
     : `status-history-${Math.random().toString(36).slice(2)}`;
@@ -132,6 +134,24 @@ export function initStatusBar(element, opts = {}) {
     renderHistory();
   }
 
+  function isFocusWithinStatus(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    if (element.contains(target)) return true;
+    if (panel && panel.contains(target)) return true;
+    return false;
+  }
+
+  function rememberExternalFocus(target) {
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.isConnected) return;
+    if (isFocusWithinStatus(target)) return;
+    lastExternalFocusEl = target;
+  }
+
+  function onDocumentFocusTrack(e) {
+    rememberExternalFocus(e.target);
+  }
+
   function onDocumentMouseDown(e) {
     if (!panel) return;
     if (element.contains(e.target)) return;
@@ -142,7 +162,7 @@ export function initStatusBar(element, opts = {}) {
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
-      hideHistory(openedViaShortcut ? "opener" : "trigger");
+      hideHistory("opener");
     }
   }
 
@@ -265,8 +285,13 @@ export function initStatusBar(element, opts = {}) {
 
   function showHistory(openSource = "trigger") {
     ensurePanel();
-    openedViaShortcut = openSource === "shortcut";
-    openerFocusEl = document.activeElement;
+    const activeEl =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const shouldUseActive = activeEl && !isFocusWithinStatus(activeEl);
+    openerFocusEl =
+      pendingOpenerFocusEl ||
+      (shouldUseActive ? activeEl : lastExternalFocusEl);
+    pendingOpenerFocusEl = null;
     renderHistory();
     panel.dataset.open = "true";
     panel.style.display = "flex";
@@ -316,7 +341,6 @@ export function initStatusBar(element, opts = {}) {
       openerFocusEl.focus({ preventScroll: true });
     }
     openerFocusEl = null;
-    openedViaShortcut = false;
   }
 
   function toggleHistory() {
@@ -346,7 +370,7 @@ export function initStatusBar(element, opts = {}) {
 
     e.preventDefault();
     e.stopPropagation();
-    if (isOpen) hideHistory("trigger");
+    if (isOpen) hideHistory("opener");
     else showHistory("shortcut");
   }
 
@@ -405,6 +429,14 @@ export function initStatusBar(element, opts = {}) {
     toggleHistory();
   }
 
+  function handlePointerDown() {
+    const activeEl =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!activeEl) return;
+    if (isFocusWithinStatus(activeEl)) return;
+    pendingOpenerFocusEl = activeEl;
+  }
+
   function handleKeyDown(e) {
     if (e.target !== element) return;
     if (e.key === "Enter" || e.key === " ") {
@@ -414,6 +446,9 @@ export function initStatusBar(element, opts = {}) {
   }
 
   element.dataset.interactive = "true";
+  document.addEventListener("focusin", onDocumentFocusTrack, true);
+  rememberExternalFocus(document.activeElement);
+  element.addEventListener("pointerdown", handlePointerDown, true);
   element.addEventListener("click", handleClick);
   element.addEventListener("keydown", handleKeyDown);
   if (!shortcutHandler) {
