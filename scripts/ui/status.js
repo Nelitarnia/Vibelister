@@ -21,6 +21,10 @@ function normalizeDisplayValue(text) {
   return text && text.trim() ? text : NBSP;
 }
 
+function isHTMLElement(value) {
+  return typeof HTMLElement !== "undefined" && value instanceof HTMLElement;
+}
+
 export function initStatusBar(element, opts = {}) {
   if (!element) return null;
 
@@ -48,7 +52,7 @@ export function initStatusBar(element, opts = {}) {
   let openerFocusEl = null;
   let pendingOpenerFocusEl = null;
   let lastExternalFocusEl =
-    document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    isHTMLElement(document.activeElement) ? document.activeElement : null;
   let activeHistoryIndex = -1;
   const panelId = element.id
     ? `${element.id}-history`
@@ -135,14 +139,14 @@ export function initStatusBar(element, opts = {}) {
   }
 
   function isFocusWithinStatus(target) {
-    if (!(target instanceof HTMLElement)) return false;
+    if (!isHTMLElement(target)) return false;
     if (element.contains(target)) return true;
     if (panel && panel.contains(target)) return true;
     return false;
   }
 
   function rememberExternalFocus(target) {
-    if (!(target instanceof HTMLElement)) return;
+    if (!isHTMLElement(target)) return;
     if (!target.isConnected) return;
     if (isFocusWithinStatus(target)) return;
     lastExternalFocusEl = target;
@@ -233,7 +237,7 @@ export function initStatusBar(element, opts = {}) {
     }
 
     const activeItem =
-      document.activeElement instanceof HTMLElement &&
+      isHTMLElement(document.activeElement) &&
       document.activeElement.classList.contains("status-history__item")
         ? document.activeElement
         : items[activeHistoryIndex];
@@ -274,7 +278,7 @@ export function initStatusBar(element, opts = {}) {
 
   function onPanelFocusIn(e) {
     const item =
-      e.target instanceof HTMLElement
+      isHTMLElement(e.target)
         ? e.target.closest(".status-history__item")
         : null;
     if (!item || !panel || !panel.contains(item)) return;
@@ -286,7 +290,7 @@ export function initStatusBar(element, opts = {}) {
   function showHistory(openSource = "trigger") {
     ensurePanel();
     const activeEl =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      isHTMLElement(document.activeElement) ? document.activeElement : null;
     const shouldUseActive = activeEl && !isFocusWithinStatus(activeEl);
     openerFocusEl =
       pendingOpenerFocusEl ||
@@ -335,7 +339,7 @@ export function initStatusBar(element, opts = {}) {
     } else if (
       restoreFocus === "opener" &&
       openerFocusEl &&
-      openerFocusEl instanceof HTMLElement &&
+      isHTMLElement(openerFocusEl) &&
       openerFocusEl.isConnected
     ) {
       openerFocusEl.focus({ preventScroll: true });
@@ -349,7 +353,7 @@ export function initStatusBar(element, opts = {}) {
   }
 
   function shouldIgnoreShortcutTarget(target) {
-    if (!(target instanceof HTMLElement)) return false;
+    if (!isHTMLElement(target)) return false;
     const focusableFormField = target.closest(
       "input, textarea, select, button",
     );
@@ -431,7 +435,7 @@ export function initStatusBar(element, opts = {}) {
 
   function handlePointerDown() {
     const activeEl =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      isHTMLElement(document.activeElement) ? document.activeElement : null;
     if (!activeEl) return;
     if (isFocusWithinStatus(activeEl)) return;
     pendingOpenerFocusEl = activeEl;
