@@ -212,19 +212,44 @@ export function initStatusBar(element, opts = {}) {
       return;
     }
 
-    if (key === "Enter" || key === " ") {
-      const activeItem =
-        document.activeElement instanceof HTMLElement &&
-        document.activeElement.classList.contains("status-history__item")
-          ? document.activeElement
-          : items[activeHistoryIndex];
+    const activeItem =
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement.classList.contains("status-history__item")
+        ? document.activeElement
+        : items[activeHistoryIndex];
+    const copyActiveItemToClipboard = () => {
       if (!activeItem) return;
-      e.preventDefault();
-      e.stopPropagation();
       const msg = activeItem.dataset.historyMessage;
       if (!msg) return;
       navigator.clipboard?.writeText(msg).catch(() => {});
+    };
+
+    if (key === "Enter" || key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      copyActiveItemToClipboard();
+      return;
     }
+
+    const copyChordPressed =
+      (e.ctrlKey || e.metaKey) && !e.altKey && key.toLowerCase() === "c";
+    if (!copyChordPressed) return;
+
+    const selection = window.getSelection();
+    const hasSelectedText = selection && !selection.isCollapsed;
+    const selectionInsidePanel =
+      hasSelectedText &&
+      panel &&
+      selection &&
+      selection.anchorNode &&
+      panel.contains(selection.anchorNode) &&
+      selection.focusNode &&
+      panel.contains(selection.focusNode);
+    if (selectionInsidePanel) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    copyActiveItemToClipboard();
   }
 
   function onPanelFocusIn(e) {
