@@ -37,7 +37,7 @@ export function initStatusBar(element, opts = {}) {
         : DEFAULT_HISTORY_LIMIT,
   );
   const history = [];
-  let latest = element.textContent || "";
+  let latest = (element.textContent || "").trim();
   const messageEl = document.createElement("span");
   messageEl.className = "status__text";
   while (element.firstChild) element.removeChild(element.firstChild);
