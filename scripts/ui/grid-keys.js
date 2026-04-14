@@ -117,7 +117,8 @@ export function initGridKeys(deps) {
 
   function isInStatusHistoryScope(ae) {
     if (!ae || typeof ae.closest !== "function") return false;
-    return !!ae.closest(".status-history, [data-ui-scope='status-history']");
+    // Contract: status history scope is identified solely by the `.status-history` panel.
+    return !!ae.closest(".status-history");
   }
 
   function getOutlineFilterInput() {
