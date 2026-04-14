@@ -66,7 +66,10 @@ export function initStatusBar(element, opts = {}) {
       element.setAttribute("tabindex", "0");
     element.setAttribute("aria-expanded", isOpen ? "true" : "false");
     if (!element.getAttribute("title"))
-      element.setAttribute("title", "Status (click to view history)");
+      element.setAttribute(
+        "title",
+        "Status (click or Alt+Shift+H to view history). Keyboard: Arrow keys/Home/End move focus, Enter/Space copies, Esc closes and restores focus.",
+      );
   }
 
   function pushHistory(entry) {
