@@ -290,7 +290,7 @@ export function initStatusBar(element, opts = {}) {
     focusHistoryItem(index, { preventScroll: true, preventPanelFocus: true });
   }
 
-  function showHistory(openSource = "trigger") {
+  function showHistory() {
     ensurePanel();
     const activeEl =
       isHTMLElement(document.activeElement) ? document.activeElement : null;
@@ -352,7 +352,7 @@ export function initStatusBar(element, opts = {}) {
 
   function toggleHistory() {
     if (isOpen) hideHistory("opener");
-    else showHistory("trigger");
+    else showHistory();
   }
 
   function shouldIgnoreShortcutTarget(target) {
@@ -378,7 +378,7 @@ export function initStatusBar(element, opts = {}) {
     e.preventDefault();
     e.stopPropagation();
     if (isOpen) hideHistory("opener");
-    else showHistory("shortcut");
+    else showHistory();
   }
 
   function updateDisplayedMessage(msg) {
