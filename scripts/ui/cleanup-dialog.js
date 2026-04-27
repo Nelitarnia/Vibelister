@@ -78,6 +78,7 @@ export async function openCleanupDialog(options = {}) {
   return new Promise((resolve) => {
     const { overlay, box } = createOverlay();
     overlay.setAttribute("role", "dialog");
+    overlay.dataset.testid = "cleanup-dialog-root";
     overlay.setAttribute("aria-modal", "true");
     overlay.tabIndex = -1;
 

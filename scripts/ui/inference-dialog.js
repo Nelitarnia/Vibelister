@@ -469,6 +469,7 @@ export async function openInferenceDialog(options = {}) {
   return new Promise((resolve) => {
     const { overlay, box } = createOverlay();
     overlay.setAttribute("role", "dialog");
+    overlay.dataset.testid = "inference-dialog-root";
     overlay.setAttribute("aria-modal", "true");
     overlay.tabIndex = -1;
 

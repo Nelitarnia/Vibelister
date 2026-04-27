@@ -199,6 +199,7 @@
           type="button"
           class="toolbar-button"
           id="comment-toggle"
+          data-testid="sidebar-toggle-comments"
           aria-expanded="false"
           aria-controls="side-panel"
           title="Toggle Comments sidebar (Ctrl+Shift+L)"
@@ -209,6 +210,7 @@
           type="button"
           class="toolbar-button"
           id="tag-toggle"
+          data-testid="sidebar-toggle-tags"
           aria-expanded="false"
           aria-controls="side-panel"
           title="Toggle Tags sidebar (Ctrl+Shift+X)"
@@ -219,6 +221,7 @@
           type="button"
           class="toolbar-button"
           id="interaction-tools-toggle"
+          data-testid="sidebar-toggle-inference-tools"
           aria-expanded="false"
           aria-controls="side-panel"
           title="Inference tools — Ctrl+Shift+U toggles this panel"
@@ -268,6 +271,7 @@
       <aside
         class="sheet-sidebar"
         id="interactionsOutline"
+        data-testid="interactions-outline-root"
         data-open="false"
         aria-hidden="true"
       >
@@ -319,7 +323,7 @@
           Hide
         </button>
       </div>
-      <div class="grid-wrap" id="gridWrap">
+      <div class="grid-wrap" id="gridWrap" data-testid="grid-root">
         <div class="corner">#</div>
         <div class="col-headers">
           <div class="col-headers-inner" id="colHdrs"></div>
@@ -330,12 +334,20 @@
 
         <div class="sheet" id="sheet">
           <div class="spacer" id="spacer">
-            <div class="cells-layer" id="cells"></div>
+            <div
+              class="cells-layer"
+              id="cells"
+              data-testid="grid-visible-cells"
+            ></div>
           </div>
           <div class="drag-line" id="dragLine"></div>
         </div>
 
-        <textarea class="editor" id="editor"></textarea>
+        <textarea
+          class="editor"
+          id="editor"
+          data-testid="active-cell-editor"
+        ></textarea>
       </div>
       <aside
         class="comment-sidebar side-panel"
@@ -362,6 +374,7 @@
           <section
             class="side-panel__pane"
             id="comment-pane"
+            data-testid="sidebar-pane-comments"
             data-pane="comments"
             hidden
           >
@@ -500,6 +513,7 @@
           <section
             class="side-panel__pane tag-sidebar"
             id="tag-pane"
+            data-testid="sidebar-pane-tags"
             data-pane="tags"
             hidden
           >
@@ -548,6 +562,7 @@
           <section
             class="side-panel__pane interaction-tools"
             id="interaction-tools-pane"
+            data-testid="sidebar-pane-inference-tools"
             data-pane="interaction-tools"
             hidden
           >

@@ -9,9 +9,12 @@
     "build": "node scripts/build-entry.js",
     "test": "node --test",
     "test:watch": "node --test --watch",
-    "typecheck": "npx tsc -p tsconfig.json"
+    "typecheck": "npx tsc -p tsconfig.json",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "esbuild": "^0.27.1"
+    "esbuild": "^0.27.1",
+    "@playwright/test": "^1.54.1"
   }
 }

@@ -150,8 +150,14 @@ This document outlines a maintainable directory layout tailored to the current c
 │       ├── rules.js
 │       ├── settings.js
 │       └── status.js
+├── e2e/
+│   ├── helpers/
+│   │   ├── app-helpers.js
+│   │   └── grid-helpers.js
+│   └── smoke.spec.js
 ├── tests/
 │   └── node.test.js
+├── playwright.config.js
 ├── agents.md
 ├── format.bat
 ├── LICENSE
@@ -288,6 +294,12 @@ This document outlines a maintainable directory layout tailored to the current c
 - `specs/variant-normalization.js`, `specs/variant-combinatorics.js`, and `specs/variant-constraints.js` isolate tests for the mod-state normalization, combination builder, and constraint evaluation helpers used by the variant generator.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.
 
+### `e2e/`
+
+- Browser smoke specs live here and run via Playwright using the existing `npm start` web server.
+- `helpers/` holds reusable menu/grid utilities so virtualization-safe interaction logic stays centralized instead of duplicated across specs.
+- Keep this suite intentionally small and focused on critical product workflows.
+
 ### `tests/`
 
 - Node's built-in test runner (`node --test`) looks here for CLI-driven specs; `node.test.js` wires the shared suites into the command line workflow.
@@ -296,7 +308,8 @@ This document outlines a maintainable directory layout tailored to the current c
 ### Root files
 
 - `agents.md` captures repository-specific contribution guidelines—skim it before adjusting tooling or adding new modules.
-- `package.json` enables the automated test script (`npm test`) and flags the project as an ES module environment.
+- `package.json` enables the automated test scripts (`npm test`, `npm run test:e2e`) and flags the project as an ES module environment.
+- `playwright.config.js` configures browser smoke tests, including the Chromium project, shared web server boot command, and failure-only diagnostics artifacts.
 - `prettierrc.json` carries formatting conventions enforced by automated tooling.
 - `format.bat` provides a Windows-friendly wrapper around the Prettier formatter so contributors can quickly normalize style.
 - `run.bat` launches a lightweight static server and opens the current build in a browser for manual testing on Windows.
