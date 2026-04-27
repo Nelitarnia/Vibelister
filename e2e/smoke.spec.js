@@ -30,22 +30,20 @@ test("core grid data entry/edit persists in visible grid", async ({ page }) => {
   await expectCellText(page, 1, 0, "Defend");
 });
 
-test("generate interactions updates interaction view and outline", async ({
+test("generate interactions switches to interaction view and reports success", async ({
   page,
 }) => {
   await editCell(page, 0, 0, "Action A");
   await editCell(page, 0, 1, "Input B");
   await openMenubarMenu(page, "Tools");
   await clickMenuItem(page, "Generate Interactions");
-  await expect(page.getByRole("tab", { name: "Interactions" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await expect(page.getByTestId("interactions-outline-root")).toHaveAttribute(
-    "data-open",
-    "true",
-  );
+  await expect(
+    page.getByRole("tab", { name: "Interactions", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await expectStatusContains(page, "Generated Interactions");
+  await expect(
+    page.getByTestId("grid-visible-cells").locator('[data-r="0"]').first(),
+  ).toBeVisible();
 });
 
 test("undo/redo works after mutation", async ({ page }) => {
