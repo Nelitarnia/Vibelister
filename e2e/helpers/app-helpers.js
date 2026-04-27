@@ -1,5 +1,10 @@
 import { expect } from "@playwright/test";
 
+function exactNameRegex(label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped}(?:\\b|\\s|$)`);
+}
+
 export async function bootstrapApp(page) {
   await page.addInitScript(() => {
     window.showOpenFilePicker = undefined;
@@ -13,9 +18,21 @@ export async function bootstrapApp(page) {
   await expect(page.getByTestId("grid-root")).toBeVisible();
 }
 
-export async function openMenuItem(page, menuName, itemName) {
-  await page.getByRole("button", { name: new RegExp(`^${menuName}`) }).click();
-  await page.getByRole("button", { name: new RegExp(`^${itemName}`) }).click();
+export async function openMenubarMenu(page, menuName) {
+  await page
+    .getByRole("button", { name: exactNameRegex(menuName) })
+    .first()
+    .click();
+}
+
+export async function clickMenuItem(page, itemName) {
+  const matcher = exactNameRegex(itemName);
+  const menuItem = page.getByRole("menuitem", { name: matcher }).first();
+  if (await menuItem.count()) {
+    await menuItem.click();
+    return;
+  }
+  await page.getByRole("button", { name: matcher }).first().click();
 }
 
 export async function expectStatusContains(page, text) {

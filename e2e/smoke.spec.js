@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 import {
   bootstrapApp,
   expectStatusContains,
-  openMenuItem,
+  clickMenuItem,
+  openMenubarMenu,
 } from "./helpers/app-helpers.js";
 import {
   editCell,
@@ -15,10 +16,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("app loads with default Actions sheet usable", async ({ page }) => {
-  await expect(page.getByRole("tab", { name: "Actions" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(
+    page.getByRole("tab", { name: "Actions", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await editCell(page, 0, 0, "Jump");
   await expectCellText(page, 0, 0, "Jump");
 });
@@ -35,7 +35,8 @@ test("generate interactions updates interaction view and outline", async ({
 }) => {
   await editCell(page, 0, 0, "Action A");
   await editCell(page, 0, 1, "Input B");
-  await openMenuItem(page, "Tools", "Generate Interactions");
+  await openMenubarMenu(page, "Tools");
+  await clickMenuItem(page, "Generate Interactions");
   await expect(page.getByRole("tab", { name: "Interactions" })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -49,21 +50,25 @@ test("generate interactions updates interaction view and outline", async ({
 
 test("undo/redo works after mutation", async ({ page }) => {
   await editCell(page, 2, 0, "Before Undo");
-  await openMenuItem(page, "Edit", "Undo");
+  await openMenubarMenu(page, "Edit");
+  await clickMenuItem(page, "Undo");
   await expectCellEmpty(page, 2, 0);
-  await openMenuItem(page, "Edit", "Redo");
+  await openMenubarMenu(page, "Edit");
+  await clickMenuItem(page, "Redo");
   await expectCellText(page, 2, 0, "Before Undo");
 });
 
 test("inference dialog opens and closes", async ({ page }) => {
-  await openMenuItem(page, "Tools", "Inference");
+  await openMenubarMenu(page, "Tools");
+  await clickMenuItem(page, "Inference");
   await expect(page.getByTestId("inference-dialog-root")).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
   await expect(page.getByTestId("inference-dialog-root")).toHaveCount(0);
 });
 
 test("cleanup dialog opens and closes", async ({ page }) => {
-  await openMenuItem(page, "Tools", "Clean Up");
+  await openMenubarMenu(page, "Tools");
+  await clickMenuItem(page, "Clean Up");
   await expect(page.getByTestId("cleanup-dialog-root")).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
   await expect(page.getByTestId("cleanup-dialog-root")).toHaveCount(0);
@@ -75,16 +80,19 @@ test("export json and import roundtrip restores edited value", async ({
   await editCell(page, 0, 0, "Roundtrip Value");
 
   const downloadPromise = page.waitForEvent("download");
-  await openMenuItem(page, "File", "Export JSON");
+  await openMenubarMenu(page, "File");
+  await clickMenuItem(page, "Export JSON");
   const download = await downloadPromise;
   const savePath = test.info().outputPath("roundtrip-project.json");
   await download.saveAs(savePath);
 
-  await openMenuItem(page, "File", "New");
+  await openMenubarMenu(page, "File");
+  await clickMenuItem(page, "New");
   await expectCellEmpty(page, 0, 0);
 
   const chooserPromise = page.waitForEvent("filechooser");
-  await openMenuItem(page, "File", "Open");
+  await openMenubarMenu(page, "File");
+  await clickMenuItem(page, "Open");
   const chooser = await chooserPromise;
   await chooser.setFiles(savePath);
 
