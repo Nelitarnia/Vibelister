@@ -18,6 +18,7 @@ export function getInferenceControllerTests() {
           requestedScope: "selection",
           selection,
           indexAccess: makeIndexAccess(false, [{ aId: 1, iId: 10 }]),
+          options: {},
         });
         assert.strictEqual(plan.requested.scope, "selection");
         assert.deepStrictEqual(plan.requested.selectionActionIds, [1]);
@@ -25,16 +26,31 @@ export function getInferenceControllerTests() {
       },
     },
     {
-      name: "broadens suggestion scope when bypass inference can write",
+      name: "broadens suggestion scope when bypass inference can read",
       run(assert) {
         const selection = { rows: new Set([0]) };
         const plan = buildScopePlan({
           requestedScope: "selection",
           selection,
           indexAccess: makeIndexAccess(true, [{ aId: 7, iId: 2 }]),
+          options: { inferFromBypassed: true, inferToBypassed: true },
         });
         assert.strictEqual(plan.suggestion.scope, "project");
         assert.strictEqual(plan.suggestion.reason, "bypassSelection");
+      },
+    },
+    {
+      name: "inferToBypassed alone does not broaden selection suggestions",
+      run(assert) {
+        const selection = { rows: new Set([0]) };
+        const plan = buildScopePlan({
+          requestedScope: "selection",
+          selection,
+          indexAccess: makeIndexAccess(true, [{ aId: 7, iId: 2 }]),
+          options: { inferFromBypassed: false, inferToBypassed: true },
+        });
+        assert.strictEqual(plan.suggestion.scope, "selection");
+        assert.strictEqual(plan.suggestion.reason, "requested");
       },
     },
     {
@@ -48,6 +64,7 @@ export function getInferenceControllerTests() {
             { aId: 3, iId: 1 },
             { aId: 4, iId: 1 },
           ]),
+          options: { inferFromBypassed: true, inferToBypassed: true },
         });
         assert.strictEqual(plan.suggestion.scope, "selection");
         assert.strictEqual(plan.suggestion.reason, "requested");

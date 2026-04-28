@@ -93,19 +93,25 @@ function collectSelectionActionIds(selection, requestedScope, indexAccess) {
   return ids.size ? Array.from(ids) : null;
 }
 
-export function buildScopePlan({ requestedScope, selection, indexAccess }) {
+export function buildScopePlan({
+  requestedScope,
+  selection,
+  indexAccess,
+  options,
+}) {
   const selectionActionIds = collectSelectionActionIds(
     selection,
     requestedScope,
     indexAccess,
   );
+  const canReadBypassRows = !!options?.inferFromBypassed;
   const suggestionScope = (() => {
     if (requestedScope === "project") return "project";
     if (requestedScope === "actionGroup") return "actionGroup";
     if (requestedScope === "action") return "action";
     if (
       requestedScope === "selection" &&
-      indexAccess.includeBypass &&
+      canReadBypassRows &&
       Array.isArray(selectionActionIds) &&
       selectionActionIds.length === 1
     ) {
@@ -117,7 +123,7 @@ export function buildScopePlan({ requestedScope, selection, indexAccess }) {
   })();
   const suggestionReason = (() => {
     if (suggestionScope === requestedScope) return "requested";
-    if (suggestionScope === "project" && indexAccess.includeBypass)
+    if (suggestionScope === "project" && canReadBypassRows)
       return "bypassSelection";
     return "broadened";
   })();
@@ -235,7 +241,12 @@ export function createInferenceTargetResolver({
       indexAccess,
       rowPlan.requestedRows,
     );
-    const plan = buildScopePlan({ requestedScope, selection, indexAccess });
+    const plan = buildScopePlan({
+      requestedScope,
+      selection,
+      indexAccess,
+      options,
+    });
     if (!allowed) {
       return {
         plan,
