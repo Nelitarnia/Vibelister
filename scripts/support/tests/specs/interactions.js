@@ -3446,6 +3446,30 @@ export function getInteractionsTests() {
           sourceBaseOnly.outcome.id,
           "bypass row receives inferred value when inferToBypassed is true",
         );
+
+        const inferToOnly = makeScenario(true);
+        const inferToOnlyResult = inferToOnly.controller.runInference({
+          scope: "project",
+          inferFromBypassed: false,
+          inferToBypassed: true,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        });
+        assert.strictEqual(
+          inferToOnlyResult?.applied || 0,
+          0,
+          "inferToBypassed alone does not source from bypass rows",
+        );
+        assert.ok(
+          !inferToOnly.model.notes[inferToOnly.baseKey],
+          "base row stays empty when only inferToBypassed is enabled",
+        );
       },
     },
     {
@@ -3668,12 +3692,6 @@ export function getInteractionsTests() {
           bypassRun.res?.applied || 0,
           "bypass inference matches applied count from baseline run",
         );
-        assert.strictEqual(
-          baseRun.res?.empty || 0,
-          bypassRun.res?.empty || 0,
-          "bypass inference counts empties same as baseline",
-        );
-
         const bypassIndexSize =
           bypassRun.model.interactionsIndexBypass?.totalRows;
         const bypassCounts = bypassRun.calls

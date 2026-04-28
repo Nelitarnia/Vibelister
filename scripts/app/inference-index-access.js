@@ -282,29 +282,6 @@ export function createInferenceIndexAccess(options) {
     };
     const mappedSelRow = mapRowsToIndex([sel.r], baseAccess, indexAccess)[0];
     if (mappedSelRow != null) indexAccess.activeRow = mappedSelRow;
-    const preferBypassRows = (candidateRows) => {
-      if (!Array.isArray(candidateRows) || !candidateRows.length) return [];
-      const fallback = [];
-      const preferred = new Map();
-      for (const row of candidateRows) {
-        const pair = indexAccess.getPair(row);
-        if (!pair) {
-          fallback.push(row);
-          continue;
-        }
-        const key = `${pair.aId}|${pair.iId}`;
-        const isBypassVariant = !!pair.variantSig;
-        const existing = preferred.get(key);
-        if (!existing || (isBypassVariant && !existing.isBypass)) {
-          preferred.set(key, { row, isBypass: isBypassVariant });
-        }
-      }
-      const merged = [
-        ...fallback,
-        ...Array.from(preferred.values(), (v) => v.row),
-      ];
-      return Array.from(new Set(merged)).sort((a, b) => a - b);
-    };
     const rows = (() => {
       const isBypassRow = (row) => {
         const pair = indexAccess.getPair(row);
@@ -316,17 +293,19 @@ export function createInferenceIndexAccess(options) {
           : candidateRows.filter((row) => !isBypassRow(row));
       const allRows = Array.from({ length: indexAccess.getRowCount() }, (_, i) => i);
       if (options.scope === "project") {
-        const targetRows = filterWritableRows(allRows);
-        const sourceRows = canReadBypassRows ? allRows : targetRows;
+        const visibleRows = allRows.filter((row) => !isBypassRow(row));
+        const sourceRows = canReadBypassRows ? allRows : visibleRows;
+        const targetRows = canWriteBypassRows ? allRows : visibleRows;
         return {
           sourceRows,
           targetRows,
         };
       }
       const mapped = mapRowsToIndex(baseRows, baseAccess, indexAccess);
+      const visibleMapped = mapped.filter((row) => !isBypassRow(row));
+      const sourceRows = canReadBypassRows ? mapped : visibleMapped;
       if (!canWriteBypassRows) {
         const targetRows = filterWritableRows(mapped);
-        const sourceRows = canReadBypassRows ? mapped : targetRows;
         return {
           sourceRows,
           targetRows,
@@ -355,8 +334,7 @@ export function createInferenceIndexAccess(options) {
       } else if (options.scope === "selection" || options.scope === "action") {
         for (let i = 0; i < totalRows; i++) merged.add(i);
       }
-      const sourceRows = Array.from(merged).sort((a, b) => a - b);
-      const targetRows = preferBypassRows(sourceRows);
+      const targetRows = Array.from(merged).sort((a, b) => a - b);
       return { sourceRows, targetRows };
     })();
     const sourceRows = rows.sourceRows;
