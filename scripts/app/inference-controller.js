@@ -134,24 +134,32 @@ export function createInferenceController(options) {
   }
 
   function applyInference(options) {
-    const { indexAccess, rows } = indexAccessManager.resolveIndexAccess(
+    const { indexAccess, targetRows, sourceRows, writableRows } =
+      indexAccessManager.resolveIndexAccess(
       options,
       targetResolver.getRows,
     );
     const { requestedTargets, suggestionTargets, allowed, reason } =
-      targetResolver.resolveScopes(options, indexAccess, rows);
+      targetResolver.resolveScopes(options, indexAccess, {
+        requestedRows: targetRows,
+        suggestionRows: sourceRows,
+      });
     if (!allowed) {
       const status = reason || OUT_OF_VIEW_STATUS;
       statusBar?.set?.(status);
       return { applied: 0, allowed: false, status };
     }
-    if (!requestedTargets.length) {
+    const writableRowSet = new Set(Array.isArray(writableRows) ? writableRows : []);
+    const writableTargets = requestedTargets.filter((target) =>
+      writableRowSet.has(target.row),
+    );
+    if (!writableTargets.length) {
       statusBar?.set?.(NO_TARGETS_STATUS);
       return { applied: 0, allowed: true, status: NO_TARGETS_STATUS };
     }
     const { result } = applySuggestions({
       model,
-      targets: requestedTargets,
+      targets: writableTargets,
       suggestionTargets,
       options,
       baseThresholds,
@@ -164,7 +172,7 @@ export function createInferenceController(options) {
   }
 
   function clearInference(options) {
-    const { indexAccess, rows } = indexAccessManager.resolveIndexAccess(
+    const { indexAccess, writableRows } = indexAccessManager.resolveIndexAccess(
       options,
       targetResolver.getRows,
     );
@@ -172,7 +180,7 @@ export function createInferenceController(options) {
       options.scope,
       options,
       indexAccess,
-      rows,
+      writableRows,
     );
     if (!allowed) {
       const status = reason || OUT_OF_VIEW_STATUS;
