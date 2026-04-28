@@ -3306,6 +3306,148 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "project scope sources bypass notes without writing bypass rows unless inferToBypassed is enabled",
+      run(assert) {
+        const {
+          model,
+          addAction,
+          addInput,
+          addModifier,
+          addOutcome,
+          groupExact,
+        } = makeModelFixture();
+        const modifier = addModifier("Bypassable");
+        const source = addAction("Source", {
+          [modifier.id]: MOD_STATE_ID.BYPASS,
+        });
+        const target = addAction("Target", {
+          [modifier.id]: MOD_STATE_ID.BYPASS,
+        });
+        const input = addInput("High");
+        const outcome = addOutcome("Hit");
+
+        groupExact(1, [modifier], { required: false, name: "Bypassable" });
+
+        buildInteractionsPairs(model);
+        buildInteractionsPairs(model, {
+          includeBypass: true,
+          targetIndexField: "interactionsIndexBypass",
+        });
+
+        function findBypassRow(actionId, inputId) {
+          const total = getInteractionsRowCount(model, { includeBypass: true });
+          for (let r = 0; r < total; r++) {
+            const pair = getInteractionsPair(model, r, { includeBypass: true });
+            if (
+              pair?.aId === actionId &&
+              pair?.iId === inputId &&
+              !!pair?.variantSig
+            ) {
+              return r;
+            }
+          }
+          return -1;
+        }
+
+        const sourceBypassRow = findBypassRow(source.id, input.id);
+        const sourceBypassPair = getInteractionsPair(model, sourceBypassRow, {
+          includeBypass: true,
+        });
+        assert.ok(sourceBypassPair?.variantSig, "source bypass pair found");
+        const sourceBypassKey = noteKeyForPair(sourceBypassPair, 0);
+        model.notes[sourceBypassKey] = {
+          outcomeId: outcome.id,
+          source: DEFAULT_INTERACTION_SOURCE,
+        };
+
+        const targetBaseRow = findPairIndex(
+          model,
+          (pair) => pair?.aId === target.id && pair?.iId === input.id,
+        );
+        const targetBasePair = getInteractionsPair(model, targetBaseRow);
+        const targetBaseKey = noteKeyForPair(targetBasePair, 0);
+        const targetBypassRow = findBypassRow(target.id, input.id);
+        const targetBypassPair = getInteractionsPair(model, targetBypassRow, {
+          includeBypass: true,
+        });
+        assert.ok(targetBypassPair?.variantSig, "target bypass pair found");
+        const targetBypassKey = noteKeyForPair(targetBypassPair, 0);
+
+        const viewDef = {
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
+        };
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([targetBaseRow]), colsAll: true },
+          sel: { r: targetBaseRow, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate) => mutate(),
+          makeUndoConfig: () => ({}),
+          getInteractionsPair,
+          getInteractionsRowCount,
+        });
+
+        const baseTargetOnly = controller.runInference({
+          scope: "project",
+          inferFromBypassed: true,
+          inferToBypassed: false,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        });
+        assert.ok(
+          (baseTargetOnly?.applied || 0) >= 1,
+          "project run applies inference from bypass source",
+        );
+        assert.strictEqual(
+          model.notes[targetBaseKey]?.outcomeId,
+          outcome.id,
+          "base target receives inferred value",
+        );
+        assert.ok(
+          !model.notes[targetBypassKey],
+          "bypass target remains untouched when inferToBypassed is false",
+        );
+
+        delete model.notes[targetBaseKey];
+
+        const bothTargets = controller.runInference({
+          scope: "project",
+          inferFromBypassed: true,
+          inferToBypassed: true,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        });
+        assert.ok(
+          (bothTargets?.applied || 0) >= 2,
+          "project run applies to both base and bypass targets",
+        );
+        assert.strictEqual(
+          model.notes[targetBaseKey]?.outcomeId,
+          outcome.id,
+          "base target still receives inferred value",
+        );
+        assert.strictEqual(
+          model.notes[targetBypassKey]?.outcomeId,
+          outcome.id,
+          "bypass target receives inferred value when inferToBypassed is true",
+        );
+      },
+    },
+    {
       name: "clear inference targets bypass rows when opted in",
       run(assert) {
         const {
