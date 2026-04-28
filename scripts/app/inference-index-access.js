@@ -331,8 +331,6 @@ export function createInferenceIndexAccess(options) {
           }
         }
         for (const { row } of preferredByAction.values()) merged.add(row);
-      } else if (options.scope === "selection" || options.scope === "action") {
-        for (let i = 0; i < totalRows; i++) merged.add(i);
       }
       const targetRows = Array.from(merged).sort((a, b) => a - b);
       return { sourceRows, targetRows };
