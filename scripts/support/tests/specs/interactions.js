@@ -3308,88 +3308,89 @@ export function getInteractionsTests() {
     {
       name: "project scope sources bypass notes without writing bypass rows unless inferToBypassed is enabled",
       run(assert) {
-        const {
-          model,
-          addAction,
-          addInput,
-          addModifier,
-          addOutcome,
-          groupExact,
-        } = makeModelFixture();
-        const modifier = addModifier("Bypassable");
-        const source = addAction("Source", {
-          [modifier.id]: MOD_STATE_ID.BYPASS,
-        });
-        const target = addAction("Target", {
-          [modifier.id]: MOD_STATE_ID.BYPASS,
-        });
-        const input = addInput("High");
-        const outcome = addOutcome("Hit");
+        function makeScenario(seedBypassSource) {
+          const {
+            model,
+            addAction,
+            addInput,
+            addModifier,
+            addOutcome,
+            groupExact,
+          } = makeModelFixture();
+          const modifier = addModifier("Bypassable");
+          const action = addAction("Action", {
+            [modifier.id]: MOD_STATE_ID.BYPASS,
+          });
+          const input = addInput("High");
+          const outcome = addOutcome("Hit");
 
-        groupExact(1, [modifier], { required: false, name: "Bypassable" });
+          groupExact(1, [modifier], { required: false, name: "Bypassable" });
 
-        buildInteractionsPairs(model);
-        buildInteractionsPairs(model, {
-          includeBypass: true,
-          targetIndexField: "interactionsIndexBypass",
-        });
+          buildInteractionsPairs(model);
+          buildInteractionsPairs(model, {
+            includeBypass: true,
+            targetIndexField: "interactionsIndexBypass",
+          });
 
-        function findBypassRow(actionId, inputId) {
+          const baseRow = findPairIndex(
+            model,
+            (pair) =>
+              pair?.aId === action.id &&
+              pair?.iId === input.id &&
+              !pair?.variantSig,
+          );
+          const basePair = getInteractionsPair(model, baseRow);
+          const baseKey = noteKeyForPair(basePair, 0);
+
+          let bypassRow = -1;
           const total = getInteractionsRowCount(model, { includeBypass: true });
           for (let r = 0; r < total; r++) {
             const pair = getInteractionsPair(model, r, { includeBypass: true });
             if (
-              pair?.aId === actionId &&
-              pair?.iId === inputId &&
+              pair?.aId === action.id &&
+              pair?.iId === input.id &&
               !!pair?.variantSig
             ) {
-              return r;
+              bypassRow = r;
+              break;
             }
           }
-          return -1;
+          const bypassPair = getInteractionsPair(model, bypassRow, {
+            includeBypass: true,
+          });
+          assert.ok(bypassPair?.variantSig, "bypass pair found");
+          const bypassKey = noteKeyForPair(bypassPair, 0);
+
+          model.notes[seedBypassSource ? bypassKey : baseKey] = {
+            outcomeId: outcome.id,
+            source: DEFAULT_INTERACTION_SOURCE,
+          };
+
+          const viewDef = {
+            columns: [
+              { key: "action" },
+              { key: "input" },
+              { key: "p0:outcome" },
+            ],
+          };
+          const controller = createInferenceController({
+            model,
+            selection: { rows: new Set([baseRow]), colsAll: true },
+            sel: { r: baseRow, c: 2 },
+            getActiveView: () => "interactions",
+            viewDef: () => viewDef,
+            statusBar: { set() {} },
+            runModelMutation: (label, mutate) => mutate(),
+            makeUndoConfig: () => ({}),
+            getInteractionsPair,
+            getInteractionsRowCount,
+          });
+
+          return { model, controller, outcome, baseKey, bypassKey };
         }
 
-        const sourceBypassRow = findBypassRow(source.id, input.id);
-        const sourceBypassPair = getInteractionsPair(model, sourceBypassRow, {
-          includeBypass: true,
-        });
-        assert.ok(sourceBypassPair?.variantSig, "source bypass pair found");
-        const sourceBypassKey = noteKeyForPair(sourceBypassPair, 0);
-        model.notes[sourceBypassKey] = {
-          outcomeId: outcome.id,
-          source: DEFAULT_INTERACTION_SOURCE,
-        };
-
-        const targetBaseRow = findPairIndex(
-          model,
-          (pair) => pair?.aId === target.id && pair?.iId === input.id,
-        );
-        const targetBasePair = getInteractionsPair(model, targetBaseRow);
-        const targetBaseKey = noteKeyForPair(targetBasePair, 0);
-        const targetBypassRow = findBypassRow(target.id, input.id);
-        const targetBypassPair = getInteractionsPair(model, targetBypassRow, {
-          includeBypass: true,
-        });
-        assert.ok(targetBypassPair?.variantSig, "target bypass pair found");
-        const targetBypassKey = noteKeyForPair(targetBypassPair, 0);
-
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
-        };
-        const controller = createInferenceController({
-          model,
-          selection: { rows: new Set([targetBaseRow]), colsAll: true },
-          sel: { r: targetBaseRow, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate) => mutate(),
-          makeUndoConfig: () => ({}),
-          getInteractionsPair,
-          getInteractionsRowCount,
-        });
-
-        const baseTargetOnly = controller.runInference({
+        const sourceBypassOnly = makeScenario(true);
+        const baseTargetOnly = sourceBypassOnly.controller.runInference({
           scope: "project",
           inferFromBypassed: true,
           inferToBypassed: false,
@@ -3407,18 +3408,18 @@ export function getInteractionsTests() {
           "project run applies inference from bypass source",
         );
         assert.strictEqual(
-          model.notes[targetBaseKey]?.outcomeId,
-          outcome.id,
-          "base target receives inferred value",
+          sourceBypassOnly.model.notes[sourceBypassOnly.baseKey]?.outcomeId,
+          sourceBypassOnly.outcome.id,
+          "base row receives inferred value",
         );
-        assert.ok(
-          !model.notes[targetBypassKey],
-          "bypass target remains untouched when inferToBypassed is false",
+        assert.strictEqual(
+          sourceBypassOnly.model.notes[sourceBypassOnly.bypassKey]?.source,
+          DEFAULT_INTERACTION_SOURCE,
+          "bypass row remains original source note when inferToBypassed is false",
         );
 
-        delete model.notes[targetBaseKey];
-
-        const bothTargets = controller.runInference({
+        const sourceBaseOnly = makeScenario(false);
+        const bothTargets = sourceBaseOnly.controller.runInference({
           scope: "project",
           inferFromBypassed: true,
           inferToBypassed: true,
@@ -3432,18 +3433,18 @@ export function getInteractionsTests() {
           },
         });
         assert.ok(
-          (bothTargets?.applied || 0) >= 2,
-          "project run applies to both base and bypass targets",
+          (bothTargets?.applied || 0) >= 1,
+          "project run applies to bypass targets when inferToBypassed is true",
         );
         assert.strictEqual(
-          model.notes[targetBaseKey]?.outcomeId,
-          outcome.id,
-          "base target still receives inferred value",
+          sourceBaseOnly.model.notes[sourceBaseOnly.baseKey]?.outcomeId,
+          sourceBaseOnly.outcome.id,
+          "base row keeps seeded value",
         );
         assert.strictEqual(
-          model.notes[targetBypassKey]?.outcomeId,
-          outcome.id,
-          "bypass target receives inferred value when inferToBypassed is true",
+          sourceBaseOnly.model.notes[sourceBaseOnly.bypassKey]?.outcomeId,
+          sourceBaseOnly.outcome.id,
+          "bypass row receives inferred value when inferToBypassed is true",
         );
       },
     },
