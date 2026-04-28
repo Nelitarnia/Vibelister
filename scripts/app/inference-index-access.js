@@ -315,6 +315,7 @@ export function createInferenceIndexAccess(options) {
       const totalRows = indexAccess.getRowCount();
       if (
         canWriteBypassRows &&
+        options.scope !== "selection" &&
         Array.isArray(actionIds) &&
         actionIds.length
       ) {

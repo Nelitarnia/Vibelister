@@ -3014,6 +3014,72 @@ export function getInteractionsTests() {
       },
     },
     {
+      name: "selection scope with inferToBypassed keeps writable targets bounded to selection keys",
+      run(assert) {
+        const { model, addAction, addInput, addModifier, groupExact } =
+          makeModelFixture();
+        const modifier = addModifier("Bypassable");
+        const action = addAction("Strike", {
+          [modifier.id]: MOD_STATE_ID.BYPASS,
+        });
+        const firstInput = addInput("High");
+        addInput("Low");
+        addInput("Mid");
+
+        groupExact(1, [modifier], { required: false, name: "Bypassable" });
+        buildInteractionsPairs(model);
+        buildInteractionsPairs(model, {
+          includeBypass: true,
+          targetIndexField: "interactionsIndexBypass",
+        });
+
+        const selectedRow = findPairIndex(
+          model,
+          (pair) => pair?.aId === action.id && pair?.iId === firstInput.id,
+        );
+        assert.ok(selectedRow >= 0, "selected row exists in base index");
+
+        const viewDef = {
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
+        };
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([selectedRow]), cols: new Set([2]) },
+          sel: { r: selectedRow, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate) => mutate(),
+          makeUndoConfig: () => ({}),
+          getInteractionsPair,
+          getInteractionsRowCount,
+        });
+
+        const res = controller.runInference({
+          scope: "selection",
+          inferFromBypassed: false,
+          inferToBypassed: true,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        });
+        assert.strictEqual(
+          res.applied || 0,
+          0,
+          "no seeded evidence means no suggestions are applied",
+        );
+        assert.ok(
+          (res.empty || 0) >= 1 && (res.empty || 0) <= 2,
+          "selection scope stays bounded to selected key and optional bypass counterpart",
+        );
+      },
+    },
+    {
       name: "rebuilds bypass indexes after cleanup before inference",
       run(assert) {
         const {
