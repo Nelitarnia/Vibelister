@@ -44,10 +44,11 @@
 * A single generated pair in the Interactions view.
 * * AI: left Action (aId) × Input (iId), with a left variant signature.
 * * AA: left Action (aId) × right Action (rhsActionId), with signatures for both sides.
+* * `variantSig`/`rhsVariantSig` encode variant identity; bypass status is tracked separately on `isBypassVariant`.
     */
 /** @typedef {(
- * { kind: 'AI', aId: number, iId: number, variantSig?: string }
- * | { kind: 'AA', aId: number, rhsActionId: number, variantSig?: string, rhsVariantSig?: string }
+ * { kind: 'AI', aId: number, iId: number, variantSig?: string, isBypassVariant?: boolean }
+ * | { kind: 'AA', aId: number, rhsActionId: number, variantSig?: string, rhsVariantSig?: string, isBypassVariant?: boolean }
  * )} InteractionPair */
 
 /**

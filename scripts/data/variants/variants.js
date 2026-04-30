@@ -75,6 +75,25 @@ function variantSignature(ids) {
   return a.join("+");
 }
 
+function isBypassVariantSignature(action, sig, includeBypass) {
+  if (!includeBypass || !sig) return false;
+  const modSet = action?.modSet;
+  if (!modSet || typeof modSet !== "object") return false;
+  const bypassedIds = new Set();
+  for (const [key, value] of Object.entries(modSet)) {
+    const id = Number(key);
+    if (!Number.isFinite(id)) continue;
+    if (modStateIsRequired(value)) continue;
+    if (modStateActiveish(value) && !modStateIsOn(value)) bypassedIds.add(id);
+  }
+  if (!bypassedIds.size) return false;
+  const ids = String(sig)
+    .split("+")
+    .map(Number)
+    .filter(Number.isFinite);
+  return ids.some((id) => bypassedIds.has(id));
+}
+
 export function normalizeActionsAndInputs(model, options = {}) {
   const includeBypass = !!options.includeBypass;
   const targetIndexField = options.targetIndexField || "interactionsIndex";
@@ -586,6 +605,7 @@ export function buildInteractionsPairs(model, options = {}) {
         totalRows += rowsAdded;
         group.variants.push({
           variantSig: sigA,
+          isBypassVariant: isBypassVariantSignature(a, sigA, includeBypass),
           rowIndex: variantStart,
           rowCount: rowsAdded,
         });
@@ -634,6 +654,7 @@ export function buildInteractionsPairs(model, options = {}) {
       totalRows += rowsAdded;
       group.variants.push({
         variantSig: sig,
+        isBypassVariant: isBypassVariantSignature(a, sig, includeBypass),
         rowIndex: variantStart,
         rowCount: rowsAdded,
       });
