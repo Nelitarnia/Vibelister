@@ -633,10 +633,22 @@ export async function openInferenceDialog(options = {}) {
         !!defaults.skipManualOutcome,
         "When enabled, inference leaves End/Tag untouched for phases where Outcome is already manual.",
       );
+    const { label: debugInferenceLabel, input: debugInferenceInput } =
+      buildCheckbox(
+        "Debug inference status",
+        !!defaults.debugInference,
+        "When enabled, status messages include inference debug counters and no-change reasons.",
+      );
     overwriteLabel.style.marginTop = "8px";
     onlyEmptyLabel.style.marginTop = "8px";
     skipManualOutcomeLabel.style.marginTop = "8px";
-    runOptions.append(overwriteLabel, onlyEmptyLabel, skipManualOutcomeLabel);
+    debugInferenceLabel.style.marginTop = "8px";
+    runOptions.append(
+      overwriteLabel,
+      onlyEmptyLabel,
+      skipManualOutcomeLabel,
+      debugInferenceLabel,
+    );
 
     const basicSection = document.createElement("div");
     basicSection.append(scopeSelector, includeRow, bypassRow, runOptions);
@@ -916,6 +928,7 @@ export async function openInferenceDialog(options = {}) {
         overwriteInferred: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
         skipManualOutcome: skipManualOutcomeInput.checked,
+        debugInference: debugInferenceInput.checked,
         thresholdOverrides: buildThresholdOverrides(),
       };
     }

@@ -42,7 +42,10 @@ function normalizeOptions(payload = {}) {
     overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
     skipManualOutcome: !!payload.skipManualOutcome,
-    debugInference: !!payload.debugInference,
+    debugInference:
+      payload.debugInference == null
+        ? DEFAULT_OPTIONS.debugInference
+        : !!payload.debugInference,
     defaultConfidence: hasDefaultConfidence
       ? normalizeInteractionConfidence(payload.defaultConfidence)
       : null,
@@ -301,6 +304,7 @@ export function createInferenceController(options) {
           overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
           onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
           skipManualOutcome: DEFAULT_OPTIONS.skipManualOutcome,
+          debugInference: DEFAULT_OPTIONS.debugInference,
           scope: DEFAULT_OPTIONS.scope,
           thresholdOverrides: lastThresholdOverrides,
         },
