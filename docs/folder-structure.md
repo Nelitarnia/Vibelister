@@ -41,6 +41,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── inference-controller.js
 │   │   ├── inference-heuristics.js
 │   │   ├── inference-index-access.js
+│   │   ├── interactions-row-classification.js
 │   │   ├── inference-targets.js
 │   │   ├── inference-profiles.js
 │   │   ├── inference-utils.js
@@ -216,6 +217,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `inference-controller.js` scopes interaction cells for inference runs, applies or clears inferred metadata with undo/status wiring, and skips manual edits so bulk operations respect source flags.
 - `inference-application.js` applies the proposed suggestions to interaction notes, coordinating metadata updates, profile impact tracking, and tag-change events while honoring overwrite/skip rules.
 - `inference-index-access.js` encapsulates index construction and selection mapping for regular vs. bypass interactions, including scoped bypass caches and active-row remapping.
+- `interactions-row-classification.js` centralizes stable row predicates (`isBypassRow`, `isVariantRow`, `isBaselineVisibleRow`) so inference and related callsites share documented bypass/baseline semantics.
 - `inference-targets.js` resolves requested vs. suggestion scopes, gathers eligible cells for inference, and shares scope-plan metadata so the controller can log intent.
 - `inference-heuristics.js` hosts the inference runner that composes discrete strategy modules, normalizes thresholds, and exposes the suggestion entry point.
 - `inference-strategies/` collects table-driven consensus, action-group, action-property, modifier-profile, input-default, profile-trend, and phase-adjacency strategies so heuristics can be enabled, disabled, or unit-tested in isolation.
