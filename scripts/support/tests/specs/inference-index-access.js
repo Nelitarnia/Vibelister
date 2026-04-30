@@ -1,4 +1,5 @@
 import { mapRowsToIndex } from "../../../app/inference-index-access.js";
+import { createInferenceIndexAccess } from "../../../app/inference-index-access.js";
 import {
   isBaselineVisibleRow,
   isBypassRow,
@@ -132,6 +133,42 @@ export function getInferenceIndexAccessTests() {
           targetPairs.length * 2,
           "version change invalidates cached lookup",
         );
+      },
+    },
+    {
+      name: "falls back to baseline evidence rows when mapped evidence rows are empty",
+      run(assert) {
+        const model = {
+          interactionsIndexVersion: 1,
+          interactionsIndexBypass: {
+            baseVersion: 1,
+            pairs: [
+              { kind: "AI", aId: 10, iId: 900, variantSig: "mod:x", isBypassVariant: true },
+            ],
+          },
+        };
+        const basePairs = [{ kind: "AI", aId: 10, iId: 20, variantSig: "" }];
+        const getInteractionsPair = (_model, rowIndex, opts = {}) => {
+          if (opts.includeBypass) return (opts.index?.pairs || [])[rowIndex];
+          return basePairs[rowIndex];
+        };
+        const getInteractionsRowCount = (_model, opts = {}) =>
+          opts.includeBypass ? (opts.index?.pairs || []).length : basePairs.length;
+        const manager = createInferenceIndexAccess({
+          model,
+          sel: { r: 0 },
+          getInteractionsPair,
+          getInteractionsRowCount,
+        });
+        const resolveRows = (_scope, access) =>
+          Array.from({ length: access.getRowCount() }, (_, i) => i);
+        const result = manager.resolveIndexAccess(
+          { scope: "action", inferToBypassed: true, inferFromBypassed: false },
+          resolveRows,
+        );
+        assert.strictEqual(result.writableRows.length > 0, true);
+        assert.strictEqual(result.sourceRows.length > 0, true);
+        assert.strictEqual(result.sourceRows.length, result.suggestionRows.length);
       },
     },
   ];

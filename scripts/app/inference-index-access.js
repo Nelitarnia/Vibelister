@@ -105,6 +105,24 @@ function mapRowsToIndex(rows, sourceAccess, targetAccess) {
   return Array.from(mapped).sort((a, b) => a - b);
 }
 
+function warnOnMappedRowsInvariant(options, details) {
+  if (!options?.debugInference) return;
+  const scope = options?.scope;
+  if (scope !== "selection" && scope !== "action" && scope !== "actionGroup") return;
+  const baselineCount = Number(details?.baselineCount) || 0;
+  const mappedCount = Number(details?.mappedCount) || 0;
+  if (baselineCount <= 0 || mappedCount > 0) return;
+  const payload = {
+    code: "inference.mapped_rows.empty",
+    scope,
+    activeRow: details?.activeRow ?? null,
+    actionIds: Array.isArray(details?.actionIds) ? details.actionIds : [],
+    baselineCount,
+    mappedCount,
+  };
+  console.warn?.("[inference-index-access] mapped rows invariant", payload);
+}
+
 function shouldUseBypassIndex(options) {
   return !!(options?.inferFromBypassed || options?.inferToBypassed);
 }
@@ -302,9 +320,28 @@ export function createInferenceIndexAccess(options) {
         };
       }
       const mapped = mapRowsToIndex(baseRows, baseAccess, indexAccess);
+      warnOnMappedRowsInvariant(options, {
+        baselineCount: baseRows.length,
+        mappedCount: mapped.length,
+        activeRow: indexAccess.activeRow ?? sel?.r ?? null,
+        actionIds,
+      });
       const visibleMapped = filterVisibleRows(mapped);
-      const sourceRows = canReadBypassRows ? mapped : visibleMapped;
-      const suggestionRows = canReadBypassRows ? mapped : visibleMapped;
+      const baselineSourceRows = baseRows.filter((row) =>
+        isBaselineVisibleRow(baseAccess.getPair(row), { includeBypass: false }),
+      );
+      const shouldFallbackToBaselineEvidence =
+        !canReadBypassRows && mapped.length > 0 && visibleMapped.length === 0;
+      const sourceRows = shouldFallbackToBaselineEvidence
+        ? baselineSourceRows
+        : canReadBypassRows
+          ? mapped
+          : visibleMapped;
+      const suggestionRows = shouldFallbackToBaselineEvidence
+        ? baselineSourceRows
+        : canReadBypassRows
+          ? mapped
+          : visibleMapped;
       if (!canWriteBypassRows) {
         const writableRows = visibleMapped;
         return {
