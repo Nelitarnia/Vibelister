@@ -93,19 +93,25 @@ function collectSelectionActionIds(selection, requestedScope, indexAccess) {
   return ids.size ? Array.from(ids) : null;
 }
 
-export function buildScopePlan({ requestedScope, selection, indexAccess }) {
+export function buildScopePlan({
+  requestedScope,
+  selection,
+  indexAccess,
+  options,
+}) {
   const selectionActionIds = collectSelectionActionIds(
     selection,
     requestedScope,
     indexAccess,
   );
+  const canReadBypassRows = !!options?.inferFromBypassed;
   const suggestionScope = (() => {
     if (requestedScope === "project") return "project";
     if (requestedScope === "actionGroup") return "actionGroup";
     if (requestedScope === "action") return "action";
     if (
       requestedScope === "selection" &&
-      indexAccess.includeBypass &&
+      canReadBypassRows &&
       Array.isArray(selectionActionIds) &&
       selectionActionIds.length === 1
     ) {
@@ -117,7 +123,7 @@ export function buildScopePlan({ requestedScope, selection, indexAccess }) {
   })();
   const suggestionReason = (() => {
     if (suggestionScope === requestedScope) return "requested";
-    if (suggestionScope === "project" && indexAccess.includeBypass)
+    if (suggestionScope === "project" && canReadBypassRows)
       return "bypassSelection";
     return "broadened";
   })();
@@ -223,15 +229,24 @@ export function createInferenceTargetResolver({
     return { targets, allowed: true };
   }
 
-  function resolveScopes(options, indexAccess, rows) {
+  function resolveScopes(options, indexAccess, rowsOrPlan) {
+    const rowPlan =
+      rowsOrPlan && typeof rowsOrPlan === "object" && !Array.isArray(rowsOrPlan)
+        ? rowsOrPlan
+        : { requestedRows: rowsOrPlan, suggestionRows: rowsOrPlan };
     const requestedScope = options.scope;
     const { targets, allowed, reason } = collectTargets(
       requestedScope,
       options,
       indexAccess,
-      rows,
+      rowPlan.requestedRows,
     );
-    const plan = buildScopePlan({ requestedScope, selection, indexAccess });
+    const plan = buildScopePlan({
+      requestedScope,
+      selection,
+      indexAccess,
+      options,
+    });
     if (!allowed) {
       return {
         plan,
@@ -241,13 +256,17 @@ export function createInferenceTargetResolver({
         reason,
       };
     }
-    const { targets: broaderTargets, allowed: suggestionAllowed } =
+    const { targets: broaderTargets, allowed: suggestionAllowed } = collectTargets(
+      plan.suggestion.scope,
+      options,
+      indexAccess,
       plan.suggestion.scope === requestedScope
-        ? { targets, allowed }
-        : collectTargets(plan.suggestion.scope, options, indexAccess);
+        ? rowPlan.suggestionRows
+        : undefined,
+    );
     const suggestionTargets = (() => {
       if (!suggestionAllowed) return targets;
-      if (plan.suggestion.scope === requestedScope) return targets;
+      if (plan.suggestion.scope === requestedScope) return broaderTargets;
       const merged = [...targets];
       const seen = new Set(targets.map((item) => `${item.key}:${item.field}`));
       for (const target of broaderTargets) {
