@@ -1,7 +1,77 @@
 import { mapRowsToIndex } from "../../../app/inference-index-access.js";
+import {
+  isBaselineVisibleRow,
+  isBypassRow,
+  isVariantRow,
+} from "../../../app/interactions-row-classification.js";
 
 export function getInferenceIndexAccessTests() {
   return [
+
+    {
+      name: "classifies baseline visibility for bypass and non-bypass variant rows",
+      run(assert) {
+        const enabledVariant = {
+          kind: "AI",
+          aId: 100,
+          iId: 1,
+          variantSig: "mod:enabled",
+          isBypassVariant: false,
+        };
+        const bypassedVariant = {
+          kind: "AI",
+          aId: 100,
+          iId: 1,
+          variantSig: "mod:enabled",
+          isBypassVariant: true,
+        };
+        const baselinePair = { kind: "AI", aId: 100, iId: 2, variantSig: "" };
+
+        assert.strictEqual(isVariantRow(enabledVariant), true);
+        assert.strictEqual(isVariantRow(bypassedVariant), true);
+        assert.strictEqual(isVariantRow(baselinePair), false);
+
+        assert.strictEqual(isBypassRow(enabledVariant), false);
+        assert.strictEqual(isBypassRow(bypassedVariant), true);
+
+        assert.strictEqual(isBaselineVisibleRow(enabledVariant), true);
+        assert.strictEqual(isBaselineVisibleRow(bypassedVariant), false);
+        assert.strictEqual(
+          isBaselineVisibleRow(bypassedVariant, { includeBypass: true }),
+          true,
+        );
+      },
+    },
+    {
+      name: "classifies empty/non-empty signatures with bypass and non-bypass rows",
+      run(assert) {
+        const rows = [
+          { kind: "AI", aId: 1, iId: 1, variantSig: "", isBypassVariant: false },
+          { kind: "AI", aId: 1, iId: 1, variantSig: "", isBypassVariant: true },
+          { kind: "AI", aId: 1, iId: 2, variantSig: "mod:x", isBypassVariant: false },
+          { kind: "AI", aId: 1, iId: 2, variantSig: "mod:x", isBypassVariant: true },
+        ];
+
+        assert.deepStrictEqual(rows.map((pair) => isVariantRow(pair)), [
+          false,
+          false,
+          true,
+          true,
+        ]);
+        assert.deepStrictEqual(rows.map((pair) => isBypassRow(pair)), [
+          false,
+          true,
+          false,
+          true,
+        ]);
+        assert.deepStrictEqual(rows.map((pair) => isBaselineVisibleRow(pair)), [
+          true,
+          false,
+          true,
+          false,
+        ]);
+      },
+    },
     {
       name: "reuses row lookup across repeated mappings for the same index",
       run(assert) {

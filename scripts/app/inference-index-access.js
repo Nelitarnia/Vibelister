@@ -4,6 +4,7 @@ import {
 } from "../data/variants/variants.js";
 import { noteKeyForPair } from "./interactions.js";
 import { getInteractionsIndex } from "./interactions-data.js";
+import { isBaselineVisibleRow, isBypassRow } from "./interactions-row-classification.js";
 
 const BYPASS_INDEX_FIELD = "interactionsIndexBypass";
 const BYPASS_SCOPED_INDEX_FIELD = "interactionsIndexBypassScoped";
@@ -284,12 +285,10 @@ export function createInferenceIndexAccess(options) {
     const mappedSelRow = mapRowsToIndex([sel.r], baseAccess, indexAccess)[0];
     if (mappedSelRow != null) indexAccess.activeRow = mappedSelRow;
     const rows = (() => {
-      const isBypassRow = (row) => {
-        const pair = indexAccess.getPair(row);
-        return pair?.isBypassVariant ?? false;
-      };
       const filterVisibleRows = (candidateRows) =>
-        candidateRows.filter((row) => !isBypassRow(row));
+        candidateRows.filter((row) =>
+          isBaselineVisibleRow(indexAccess.getPair(row), { includeBypass: false }),
+        );
       const allRows = Array.from({ length: indexAccess.getRowCount() }, (_, i) => i);
       if (options.scope === "project") {
         const visibleRows = filterVisibleRows(allRows);
@@ -328,10 +327,10 @@ export function createInferenceIndexAccess(options) {
           const pair = indexAccess.getPair(i);
           if (!pair || !scoped.has(pair.aId)) continue;
           const key = `${pair.aId}|${pair.iId}`;
-          const isBypassVariant = pair.isBypassVariant ?? false;
+          const bypassRow = isBypassRow(pair);
           const existing = preferredByAction.get(key);
-          if (!existing || (isBypassVariant && !existing.isBypass)) {
-            preferredByAction.set(key, { row: i, isBypass: isBypassVariant });
+          if (!existing || (bypassRow && !existing.isBypass)) {
+            preferredByAction.set(key, { row: i, isBypass: bypassRow });
           }
         }
         for (const { row } of preferredByAction.values()) merged.add(row);
