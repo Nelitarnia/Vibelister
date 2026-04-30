@@ -286,7 +286,7 @@ export function createInferenceIndexAccess(options) {
     const rows = (() => {
       const isBypassRow = (row) => {
         const pair = indexAccess.getPair(row);
-        return !!pair?.variantSig;
+        return pair?.isBypassVariant ?? false;
       };
       const filterVisibleRows = (candidateRows) =>
         candidateRows.filter((row) => !isBypassRow(row));
@@ -328,7 +328,7 @@ export function createInferenceIndexAccess(options) {
           const pair = indexAccess.getPair(i);
           if (!pair || !scoped.has(pair.aId)) continue;
           const key = `${pair.aId}|${pair.iId}`;
-          const isBypassVariant = !!pair.variantSig;
+          const isBypassVariant = pair.isBypassVariant ?? false;
           const existing = preferredByAction.get(key);
           if (!existing || (isBypassVariant && !existing.isBypass)) {
             preferredByAction.set(key, { row: i, isBypass: isBypassVariant });

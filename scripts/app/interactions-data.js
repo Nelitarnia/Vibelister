@@ -105,6 +105,7 @@ export function getInteractionsPair(model, rowIndex, options = {}) {
       aId: group.actionId,
       iId: inputId,
       variantSig: String(variant.variantSig || ""),
+      isBypassVariant: variant.isBypassVariant ?? false,
     };
   }
   if (kind === "AA") {
@@ -122,6 +123,7 @@ export function getInteractionsPair(model, rowIndex, options = {}) {
           rhsActionId: rhsId,
           variantSig: String(variant.variantSig || ""),
           rhsVariantSig: String(variants[remaining] || ""),
+          isBypassVariant: variant.isBypassVariant ?? false,
         };
       }
       remaining -= variants.length;
