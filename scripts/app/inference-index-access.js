@@ -244,6 +244,7 @@ export function createInferenceIndexAccess(options) {
         indexAccess: baseAccess,
         rows: baseRows,
         sourceRows: baseRows,
+        suggestionRows: baseRows,
         targetRows: baseRows,
         writableRows: baseRows,
       };
@@ -287,28 +288,30 @@ export function createInferenceIndexAccess(options) {
         const pair = indexAccess.getPair(row);
         return !!pair?.variantSig;
       };
-      const filterWritableRows = (candidateRows) =>
-        canWriteBypassRows
-          ? candidateRows
-          : candidateRows.filter((row) => !isBypassRow(row));
+      const filterVisibleRows = (candidateRows) =>
+        candidateRows.filter((row) => !isBypassRow(row));
       const allRows = Array.from({ length: indexAccess.getRowCount() }, (_, i) => i);
       if (options.scope === "project") {
-        const visibleRows = allRows.filter((row) => !isBypassRow(row));
+        const visibleRows = filterVisibleRows(allRows);
         const sourceRows = canReadBypassRows ? allRows : visibleRows;
-        const targetRows = canWriteBypassRows ? allRows : visibleRows;
+        const suggestionRows = canReadBypassRows ? allRows : visibleRows;
+        const writableRows = canWriteBypassRows ? allRows : visibleRows;
         return {
           sourceRows,
-          targetRows,
+          suggestionRows,
+          writableRows,
         };
       }
       const mapped = mapRowsToIndex(baseRows, baseAccess, indexAccess);
-      const visibleMapped = mapped.filter((row) => !isBypassRow(row));
+      const visibleMapped = filterVisibleRows(mapped);
       const sourceRows = canReadBypassRows ? mapped : visibleMapped;
+      const suggestionRows = canReadBypassRows ? mapped : visibleMapped;
       if (!canWriteBypassRows) {
-        const targetRows = filterWritableRows(mapped);
+        const writableRows = visibleMapped;
         return {
           sourceRows,
-          targetRows,
+          suggestionRows,
+          writableRows,
         };
       }
       const merged = new Set(mapped);
@@ -333,17 +336,19 @@ export function createInferenceIndexAccess(options) {
         }
         for (const { row } of preferredByAction.values()) merged.add(row);
       }
-      const targetRows = Array.from(merged).sort((a, b) => a - b);
-      return { sourceRows, targetRows };
+      const writableRows = Array.from(merged).sort((a, b) => a - b);
+      return { sourceRows, suggestionRows, writableRows };
     })();
     const sourceRows = rows.sourceRows;
-    const targetRows = rows.targetRows;
+    const suggestionRows = rows.suggestionRows;
+    const writableRows = rows.writableRows;
     return {
       indexAccess,
-      rows: targetRows,
+      rows: writableRows,
       sourceRows,
-      targetRows,
-      writableRows: targetRows,
+      suggestionRows,
+      targetRows: writableRows,
+      writableRows,
     };
   }
 

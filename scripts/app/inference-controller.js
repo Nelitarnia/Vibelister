@@ -61,7 +61,7 @@ function normalizeOptions(payload = {}) {
 
 function createInferenceDebugDetails({
   sourceRows,
-  targetRows,
+  suggestionRows,
   writableRows,
   requestedTargets,
   writableTargets,
@@ -69,7 +69,8 @@ function createInferenceDebugDetails({
 }) {
   return {
     sourceRows: Array.isArray(sourceRows) ? sourceRows.length : 0,
-    targetRows: Array.isArray(targetRows) ? targetRows.length : 0,
+    suggestionRows: Array.isArray(suggestionRows) ? suggestionRows.length : 0,
+    targetRows: Array.isArray(suggestionRows) ? suggestionRows.length : 0,
     writableRows: Array.isArray(writableRows) ? writableRows.length : 0,
     requestedTargets: Array.isArray(requestedTargets) ? requestedTargets.length : 0,
     writableTargets: Array.isArray(writableTargets) ? writableTargets.length : 0,
@@ -170,15 +171,34 @@ export function createInferenceController(options) {
   }
 
   function applyInference(options) {
-    const { indexAccess, targetRows, sourceRows, writableRows } =
+    const { indexAccess, suggestionRows, sourceRows, writableRows } =
       indexAccessManager.resolveIndexAccess(
       options,
       targetResolver.getRows,
     );
+    if (options.debugInference && options.inferToBypassed && !options.inferFromBypassed) {
+      const baseline = indexAccessManager.resolveIndexAccess(
+        { ...options, inferToBypassed: false },
+        targetResolver.getRows,
+      );
+      const baselineEvidenceCount = Array.isArray(baseline?.sourceRows)
+        ? baseline.sourceRows.length
+        : 0;
+      const evidenceCount = Array.isArray(sourceRows) ? sourceRows.length : 0;
+      if (evidenceCount < baselineEvidenceCount) {
+        console.warn(
+          `[inference] inferToBypassed guard: evidence rows dropped (${evidenceCount} < ${baselineEvidenceCount}).`,
+        );
+      } else {
+        console.debug?.(
+          `[inference] inferToBypassed guard: evidence rows preserved (${evidenceCount} >= ${baselineEvidenceCount}).`,
+        );
+      }
+    }
     const { requestedTargets, suggestionTargets, allowed, reason } =
       targetResolver.resolveScopes(options, indexAccess, {
-        requestedRows: targetRows,
-        suggestionRows: sourceRows,
+        requestedRows: writableRows,
+        suggestionRows,
       });
     if (!allowed) {
       const status = reason || OUT_OF_VIEW_STATUS;
@@ -196,7 +216,7 @@ export function createInferenceController(options) {
     );
     const debugDetails = createInferenceDebugDetails({
       sourceRows,
-      targetRows,
+      suggestionRows,
       writableRows,
       requestedTargets,
       writableTargets,
