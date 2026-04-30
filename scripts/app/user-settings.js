@@ -24,6 +24,10 @@ const DEFAULT_UI_SETTINGS = {
     cellAlt: "#121826",
   },
   variantCaps: { ...DEFAULT_VARIANT_CAPS },
+  debug: {
+    enabled: false,
+    inferenceStatus: false,
+  },
 };
 
 function normalizeCap(raw, fallback) {
@@ -58,6 +62,7 @@ function sanitizeUiSettings(raw) {
       : {};
   const defaults = DEFAULT_UI_SETTINGS.colors;
   const capDefaults = DEFAULT_UI_SETTINGS.variantCaps;
+  const debugSrc = src.debug && typeof src.debug === "object" ? src.debug : {};
   return {
     meta: {
       kind: SETTINGS_FILE_KIND,
@@ -82,6 +87,10 @@ function sanitizeUiSettings(raw) {
         variantCaps.variantCapPerGroup,
         capDefaults.variantCapPerGroup,
       ),
+    },
+    debug: {
+      enabled: !!debugSrc.enabled,
+      inferenceStatus: !!debugSrc.inferenceStatus,
     },
   };
 }

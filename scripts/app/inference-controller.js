@@ -91,6 +91,7 @@ export function createInferenceController(options) {
     getInteractionsRowCount,
     heuristicThresholds,
     inferenceProfiles: providedProfiles,
+    getUserSettings,
   } = options;
 
   const baseThresholds =
@@ -123,6 +124,13 @@ export function createInferenceController(options) {
     getActiveView,
     viewDef,
   });
+
+  function isInferenceDebugEnabledBySettings() {
+    const settings =
+      typeof getUserSettings === "function" ? getUserSettings() : null;
+    const debug = settings?.debug;
+    return !!(debug?.enabled && debug?.inferenceStatus);
+  }
 
   function formatStatus(result, actionLabel) {
     if (!result) return "";
@@ -313,7 +321,13 @@ export function createInferenceController(options) {
   }
 
   function runInference(payload) {
-    const opts = normalizeOptions(payload);
+    const opts = normalizeOptions({
+      ...payload,
+      debugInference:
+        payload?.debugInference == null
+          ? isInferenceDebugEnabledBySettings()
+          : payload.debugInference,
+    });
     return runWithHistory(
       "Inference",
       () => applyInference(opts),
@@ -344,7 +358,7 @@ export function createInferenceController(options) {
           overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
           onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
           skipManualOutcome: DEFAULT_OPTIONS.skipManualOutcome,
-          debugInference: DEFAULT_OPTIONS.debugInference,
+          debugInference: isInferenceDebugEnabledBySettings(),
           scope: DEFAULT_OPTIONS.scope,
           thresholdOverrides: lastThresholdOverrides,
         },

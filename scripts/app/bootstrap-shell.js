@@ -23,10 +23,13 @@ export function bootstrapShell({ appContext, statusConfig, ids }) {
     statusConfig: resolvedStatusConfig,
   });
 
-  const { openSettingsDialog } = createSettingsController({
+  const { openSettingsDialog, getUserSettings } = createSettingsController({
     statusBar,
     model: appContext?.model,
   });
+  if (appContext && typeof appContext === "object") {
+    appContext.getUserSettings = getUserSettings;
+  }
   const viewState = setupViewState({ appContext, statusBar });
 
   function init() {
@@ -46,6 +49,7 @@ export function bootstrapShell({ appContext, statusConfig, ids }) {
     menuItems: menusDom.items,
     viewState,
     openSettingsDialog,
+    getUserSettings,
     wireMenus,
     lifecycle: { init, destroy },
   };
