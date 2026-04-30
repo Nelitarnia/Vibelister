@@ -21,6 +21,7 @@ const DEFAULT_OPTIONS = Object.freeze({
   overwriteInferred: true,
   onlyFillEmpty: false,
   skipManualOutcome: false,
+  debugInference: false,
 });
 
 function normalizeOptions(payload = {}) {
@@ -41,6 +42,7 @@ function normalizeOptions(payload = {}) {
     overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
     skipManualOutcome: !!payload.skipManualOutcome,
+    debugInference: !!payload.debugInference,
     defaultConfidence: hasDefaultConfidence
       ? normalizeInteractionConfidence(payload.defaultConfidence)
       : null,
@@ -130,7 +132,12 @@ export function createInferenceController(options) {
     const sourceText = sourceEntries.length
       ? ` Heuristics — ${sourceEntries.join(", ")}.`
       : "";
-    return `${actionLabel || "Inference"}: ${actions.join(", ")}${suffix}.${sourceText}`;
+    const debug = result.debug;
+    const debugText =
+      debug && result.options?.debugInference
+        ? ` Debug — evidence:${debug.evidenceTargets}, suggestionTargets:${debug.suggestionTargets}, writable:${debug.writableTargets}, suggestionMap:${debug.suggestionMapSize}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}.`
+        : "";
+    return `${actionLabel || "Inference"}: ${actions.join(", ")}${suffix}.${sourceText}${debugText}`;
   }
 
   function applyInference(options) {
@@ -161,6 +168,7 @@ export function createInferenceController(options) {
       model,
       targets: writableTargets,
       suggestionTargets,
+      evidenceTargets: sourceRows,
       options,
       baseThresholds,
       setLastThresholdOverrides: (overrides) => {
@@ -168,6 +176,13 @@ export function createInferenceController(options) {
       },
       inferenceProfiles,
     });
+    result.options = { debugInference: !!options.debugInference };
+    if (options.debugInference) {
+      const debug = result.debug || {};
+      statusBar?.set?.(
+        `Inference debug — evidence:${debug.evidenceTargets ?? 0}, suggestionTargets:${debug.suggestionTargets ?? 0}, writable:${debug.writableTargets ?? 0}, suggestionMap:${debug.suggestionMapSize ?? 0}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}.`,
+      );
+    }
     return result;
   }
 
