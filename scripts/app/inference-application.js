@@ -37,6 +37,7 @@ export function applySuggestions({
   model,
   targets,
   suggestionTargets,
+  evidenceTargets,
   options,
   baseThresholds,
   setLastThresholdOverrides,
@@ -67,6 +68,7 @@ export function applySuggestions({
     profileSnapshot,
     thresholdOverrides,
   );
+  const suggestionMapSize = suggestions.size;
   const result = {
     applied: 0,
     skippedManual: 0,
@@ -74,6 +76,19 @@ export function applySuggestions({
     skippedExisting: 0,
     empty: 0,
     sources: {},
+  };
+  const debug = {
+    evidenceTargets: Array.isArray(evidenceTargets)
+      ? evidenceTargets.length
+      : Array.isArray(suggestionTargets)
+        ? suggestionTargets.length
+        : 0,
+    suggestionTargets: Array.isArray(suggestionTargets)
+      ? suggestionTargets.length
+      : 0,
+    writableTargets: Array.isArray(targets) ? targets.length : 0,
+    suggestionMapSize,
+    noChangeReason: null,
   };
   let tagsChanged = false;
   for (const target of targets) {
@@ -177,5 +192,19 @@ export function applySuggestions({
       },
     );
   }
+  if (!result.applied) {
+    if (debug.writableTargets === 0) debug.noChangeReason = "no-writable-targets";
+    else if (debug.evidenceTargets === 0) debug.noChangeReason = "no-evidence-targets";
+    else if (debug.suggestionMapSize === 0)
+      debug.noChangeReason = "no-suggestions-generated";
+    else if (result.empty > 0 && result.empty === debug.writableTargets)
+      debug.noChangeReason = "targets-had-no-applicable-suggestions";
+    else if (result.skippedExisting === debug.writableTargets)
+      debug.noChangeReason = "all-skipped-existing";
+    else if (result.skippedManual + result.skippedManualOutcome === debug.writableTargets)
+      debug.noChangeReason = "all-skipped-manual";
+    else debug.noChangeReason = "no-applicable-changes";
+  }
+  result.debug = debug;
   return { result, thresholdOverrides };
 }

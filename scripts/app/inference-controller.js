@@ -21,6 +21,7 @@ const DEFAULT_OPTIONS = Object.freeze({
   overwriteInferred: true,
   onlyFillEmpty: false,
   skipManualOutcome: false,
+  debugInference: false,
 });
 
 function normalizeOptions(payload = {}) {
@@ -41,6 +42,10 @@ function normalizeOptions(payload = {}) {
     overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
     skipManualOutcome: !!payload.skipManualOutcome,
+    debugInference:
+      payload.debugInference == null
+        ? DEFAULT_OPTIONS.debugInference
+        : !!payload.debugInference,
     defaultConfidence: hasDefaultConfidence
       ? normalizeInteractionConfidence(payload.defaultConfidence)
       : null,
@@ -51,6 +56,24 @@ function normalizeOptions(payload = {}) {
       payload && typeof payload.thresholdOverrides === "object"
         ? payload.thresholdOverrides
         : null,
+  };
+}
+
+function createInferenceDebugDetails({
+  sourceRows,
+  targetRows,
+  writableRows,
+  requestedTargets,
+  writableTargets,
+  suggestionTargets,
+}) {
+  return {
+    sourceRows: Array.isArray(sourceRows) ? sourceRows.length : 0,
+    targetRows: Array.isArray(targetRows) ? targetRows.length : 0,
+    writableRows: Array.isArray(writableRows) ? writableRows.length : 0,
+    requestedTargets: Array.isArray(requestedTargets) ? requestedTargets.length : 0,
+    writableTargets: Array.isArray(writableTargets) ? writableTargets.length : 0,
+    suggestionTargets: Array.isArray(suggestionTargets) ? suggestionTargets.length : 0,
   };
 }
 
@@ -68,6 +91,7 @@ export function createInferenceController(options) {
     getInteractionsRowCount,
     heuristicThresholds,
     inferenceProfiles: providedProfiles,
+    getUserSettings,
   } = options;
 
   const baseThresholds =
@@ -101,6 +125,13 @@ export function createInferenceController(options) {
     viewDef,
   });
 
+  function isInferenceDebugEnabledBySettings() {
+    const settings =
+      typeof getUserSettings === "function" ? getUserSettings() : null;
+    const debug = settings?.debug;
+    return !!(debug?.enabled && debug?.inferenceStatus);
+  }
+
   function formatStatus(result, actionLabel) {
     if (!result) return "";
     if (result.status && result.allowed === false) return result.status;
@@ -130,7 +161,12 @@ export function createInferenceController(options) {
     const sourceText = sourceEntries.length
       ? ` Heuristics — ${sourceEntries.join(", ")}.`
       : "";
-    return `${actionLabel || "Inference"}: ${actions.join(", ")}${suffix}.${sourceText}`;
+    const debug = result.debug;
+    const debugText =
+      debug && result.options?.debugInference
+        ? ` Debug — sourceRows:${debug.sourceRows ?? 0}, targetRows:${debug.targetRows ?? 0}, writableRows:${debug.writableRows ?? 0}, requestedTargets:${debug.requestedTargets ?? 0}, evidence:${debug.evidenceTargets}, suggestionTargets:${debug.suggestionTargets}, writable:${debug.writableTargets}, suggestionMap:${debug.suggestionMapSize}${debug.statusReason ? `, statusReason:${debug.statusReason}` : ""}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}.`
+        : "";
+    return `${actionLabel || "Inference"}: ${actions.join(", ")}${suffix}.${sourceText}${debugText}`;
   }
 
   function applyInference(options) {
@@ -147,20 +183,41 @@ export function createInferenceController(options) {
     if (!allowed) {
       const status = reason || OUT_OF_VIEW_STATUS;
       statusBar?.set?.(status);
-      return { applied: 0, allowed: false, status };
+      return {
+        applied: 0,
+        allowed: false,
+        status,
+        statusReason: "out-of-view",
+      };
     }
     const writableRowSet = new Set(Array.isArray(writableRows) ? writableRows : []);
     const writableTargets = requestedTargets.filter((target) =>
       writableRowSet.has(target.row),
     );
+    const debugDetails = createInferenceDebugDetails({
+      sourceRows,
+      targetRows,
+      writableRows,
+      requestedTargets,
+      writableTargets,
+      suggestionTargets,
+    });
     if (!writableTargets.length) {
       statusBar?.set?.(NO_TARGETS_STATUS);
-      return { applied: 0, allowed: true, status: NO_TARGETS_STATUS };
+      return {
+        applied: 0,
+        allowed: true,
+        status: NO_TARGETS_STATUS,
+        statusReason: "no-writable-targets",
+        debug: debugDetails,
+        options: { debugInference: !!options.debugInference },
+      };
     }
     const { result } = applySuggestions({
       model,
       targets: writableTargets,
       suggestionTargets,
+      evidenceTargets: sourceRows,
       options,
       baseThresholds,
       setLastThresholdOverrides: (overrides) => {
@@ -168,6 +225,15 @@ export function createInferenceController(options) {
       },
       inferenceProfiles,
     });
+    result.options = { debugInference: !!options.debugInference };
+    result.statusReason = result.statusReason || "ok";
+    result.debug = { ...debugDetails, ...(result.debug || {}), statusReason: "ok" };
+    if (options.debugInference) {
+      const debug = result.debug || {};
+      statusBar?.set?.(
+        `Inference debug — sourceRows:${debug.sourceRows ?? 0}, targetRows:${debug.targetRows ?? 0}, writableRows:${debug.writableRows ?? 0}, requestedTargets:${debug.requestedTargets ?? 0}, evidence:${debug.evidenceTargets ?? 0}, suggestionTargets:${debug.suggestionTargets ?? 0}, writable:${debug.writableTargets ?? 0}, suggestionMap:${debug.suggestionMapSize ?? 0}${debug.statusReason ? `, statusReason:${debug.statusReason}` : ""}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}.`,
+      );
+    }
     return result;
   }
 
@@ -255,7 +321,13 @@ export function createInferenceController(options) {
   }
 
   function runInference(payload) {
-    const opts = normalizeOptions(payload);
+    const opts = normalizeOptions({
+      ...payload,
+      debugInference:
+        payload?.debugInference == null
+          ? isInferenceDebugEnabledBySettings()
+          : payload.debugInference,
+    });
     return runWithHistory(
       "Inference",
       () => applyInference(opts),
@@ -286,6 +358,7 @@ export function createInferenceController(options) {
           overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
           onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
           skipManualOutcome: DEFAULT_OPTIONS.skipManualOutcome,
+          debugInference: isInferenceDebugEnabledBySettings(),
           scope: DEFAULT_OPTIONS.scope,
           thresholdOverrides: lastThresholdOverrides,
         },

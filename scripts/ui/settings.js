@@ -13,6 +13,10 @@ const FALLBACK_DEFAULTS = {
     variantCapPerAction: 5000,
     variantCapPerGroup: 50000,
   },
+  debug: {
+    enabled: false,
+    inferenceStatus: false,
+  },
 };
 
 const COLOR_FIELDS = [
@@ -56,6 +60,7 @@ function mergeSettings(defaults, overrides) {
     src.variantCaps && typeof src.variantCaps === "object"
       ? src.variantCaps
       : {};
+  const debug = src.debug && typeof src.debug === "object" ? src.debug : {};
   base.colors = base.colors || {};
   COLOR_FIELDS.forEach(({ key }) => {
     base.colors[key] = normalizeColor(colors[key], base.colors[key]);
@@ -67,6 +72,9 @@ function mergeSettings(defaults, overrides) {
     base.variantCaps[key] =
       Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
   });
+  base.debug = base.debug || {};
+  base.debug.enabled = !!debug.enabled;
+  base.debug.inferenceStatus = !!debug.inferenceStatus;
   return base;
 }
 
@@ -138,6 +146,7 @@ export async function openSettingsDialog(options = {}) {
   const colorInputs = new Map();
   const hexInputs = new Map();
   const capInputs = new Map();
+  const debugInputs = new Map();
   const tabButtons = new Map();
   let activeTab = "ui";
 
@@ -154,6 +163,11 @@ export async function openSettingsDialog(options = {}) {
       const capEl = capInputs.get(key);
       if (capEl) capEl.value = value;
     });
+    const debugEnabledInput = debugInputs.get("enabled");
+    if (debugEnabledInput) debugEnabledInput.checked = !!working.debug?.enabled;
+    const inferenceStatusInput = debugInputs.get("inferenceStatus");
+    if (inferenceStatusInput)
+      inferenceStatusInput.checked = !!working.debug?.inferenceStatus;
   }
 
   function applyResult(result) {
@@ -187,6 +201,19 @@ export async function openSettingsDialog(options = {}) {
     const fallback = working.variantCaps[key];
     const normalized = Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
     working.variantCaps[key] = normalized;
+    refreshFields();
+    if (typeof options.onApply === "function") {
+      const payload = options.onApply(clone(working));
+      applyResult(payload);
+    }
+  }
+
+  function applyDebugChange(key, checked) {
+    working.debug = working.debug || {};
+    working.debug[key] = !!checked;
+    if (key === "enabled" && !working.debug.enabled) {
+      working.debug.inferenceStatus = false;
+    }
     refreshFields();
     if (typeof options.onApply === "function") {
       const payload = options.onApply(clone(working));
@@ -311,6 +338,8 @@ export async function openSettingsDialog(options = {}) {
       colorSection.style.display = activeTab === "ui" ? "flex" : "none";
     if (capsSection)
       capsSection.style.display = activeTab === "variants" ? "flex" : "none";
+    if (debugSection)
+      debugSection.style.display = activeTab === "debug" ? "flex" : "none";
   }
 
   function setActiveTab(key) {
@@ -325,7 +354,11 @@ export async function openSettingsDialog(options = {}) {
       style:
         "display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid #2c3350;padding-bottom:8px;",
     },
-    [makeTabButton("ui", "UI"), makeTabButton("variants", "Variants")],
+    [
+      makeTabButton("ui", "UI"),
+      makeTabButton("variants", "Variants"),
+      makeTabButton("debug", "Debug"),
+    ],
   );
 
   const content = h(
@@ -441,6 +474,51 @@ export async function openSettingsDialog(options = {}) {
   });
 
   content.appendChild(capsSection);
+  const debugSection = h(
+    "div",
+    {
+      style:
+        "display:flex;flex-direction:column;gap:12px;background:#111c33;padding:12px;border-radius:10px;border:1px solid #253050;",
+    },
+    [
+      h("h3", { style: "margin:0;font-size:16px;" }, ["Debug"]),
+      h("p", { style: "margin:0;font-size:13px;color:#9fb3ff;" }, [
+        "Enable optional debug messages in status output.",
+      ]),
+    ],
+  );
+  const debugEnabledRow = h(
+    "label",
+    { style: "display:flex;align-items:center;gap:10px;font-size:14px;" },
+    [],
+  );
+  const debugEnabledInput = h("input", { type: "checkbox" }, []);
+  debugInputs.set("enabled", debugEnabledInput);
+  debugEnabledInput.addEventListener("change", () =>
+    applyDebugChange("enabled", debugEnabledInput.checked),
+  );
+  debugEnabledRow.appendChild(debugEnabledInput);
+  debugEnabledRow.appendChild(
+    h("span", null, ["Enable debug features across the app"]),
+  );
+  debugSection.appendChild(debugEnabledRow);
+
+  const inferenceDebugRow = h(
+    "label",
+    { style: "display:flex;align-items:center;gap:10px;font-size:14px;" },
+    [],
+  );
+  const inferenceDebugInput = h("input", { type: "checkbox" }, []);
+  debugInputs.set("inferenceStatus", inferenceDebugInput);
+  inferenceDebugInput.addEventListener("change", () =>
+    applyDebugChange("inferenceStatus", inferenceDebugInput.checked),
+  );
+  inferenceDebugRow.appendChild(inferenceDebugInput);
+  inferenceDebugRow.appendChild(
+    h("span", null, ["Show inference debug status messages"]),
+  );
+  debugSection.appendChild(inferenceDebugRow);
+  content.appendChild(debugSection);
   updateTabs();
 
   const actions = h(

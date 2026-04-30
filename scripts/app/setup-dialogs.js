@@ -46,6 +46,7 @@ export function setupDialogs({
     getInteractionsPair,
     getInteractionsRowCount,
     inferenceProfiles,
+    getUserSettings: appContext?.getUserSettings,
   });
 
   const interactionActions = createInteractionBulkActions({
