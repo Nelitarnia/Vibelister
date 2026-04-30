@@ -93,6 +93,14 @@ function collectSelectionActionIds(selection, requestedScope, indexAccess) {
   return ids.size ? Array.from(ids) : null;
 }
 
+function hasStructuredNoteValue(note, field) {
+  if (!note || typeof note !== "object") return false;
+  if (field === "outcome") return "outcomeId" in note;
+  if (field === "end") return "endActionId" in note || "endVariantSig" in note;
+  if (field === "tag") return Array.isArray(note.tags) && note.tags.length > 0;
+  return false;
+}
+
 export function buildScopePlan({
   requestedScope,
   selection,
@@ -270,6 +278,7 @@ export function createInferenceTargetResolver({
       const merged = [...targets];
       const seen = new Set(targets.map((item) => `${item.key}:${item.field}`));
       for (const target of broaderTargets) {
+        if (!hasStructuredNoteValue(target.note, target.field)) continue;
         const dedupeKey = `${target.key}:${target.field}`;
         if (!seen.has(dedupeKey)) {
           merged.push(target);
