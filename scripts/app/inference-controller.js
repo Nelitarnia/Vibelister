@@ -248,12 +248,6 @@ export function createInferenceController(options) {
     result.options = { debugInference: !!options.debugInference };
     result.statusReason = result.statusReason || "ok";
     result.debug = { ...debugDetails, ...(result.debug || {}), statusReason: "ok" };
-    if (options.debugInference) {
-      const debug = result.debug || {};
-      statusBar?.set?.(
-        `Inference debug — sourceRows:${debug.sourceRows ?? 0}, targetRows:${debug.targetRows ?? 0}, writableRows:${debug.writableRows ?? 0}, requestedTargets:${debug.requestedTargets ?? 0}, evidence:${debug.evidenceTargets ?? 0}, suggestionTargets:${debug.suggestionTargets ?? 0}, writable:${debug.writableTargets ?? 0}, suggestionMap:${debug.suggestionMapSize ?? 0}${debug.statusReason ? `, statusReason:${debug.statusReason}` : ""}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}.`,
-      );
-    }
     return result;
   }
 
