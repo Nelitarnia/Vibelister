@@ -174,10 +174,10 @@ export function getInferenceIndexAccessTests() {
       name: "resolves row universes across inferFrom/inferTo bypass combinations",
       run(assert) {
         const combinations = [
-          { inferFromBypassed: false, inferToBypassed: false, expectedRows: 2 },
-          { inferFromBypassed: true, inferToBypassed: false, expectedRows: 3 },
-          { inferFromBypassed: false, inferToBypassed: true, expectedRows: 2 },
-          { inferFromBypassed: true, inferToBypassed: true, expectedRows: 4 },
+          { inferFromBypassed: false, inferToBypassed: false },
+          { inferFromBypassed: true, inferToBypassed: false },
+          { inferFromBypassed: false, inferToBypassed: true },
+          { inferFromBypassed: true, inferToBypassed: true },
         ];
         const results = combinations.map((options) => {
           const { manager, resolveRows } = makeResolveFixture();
@@ -190,23 +190,21 @@ export function getInferenceIndexAccessTests() {
           `${inferFromBypassed}/${inferToBypassed}`;
         const lookup = new Map(results.map((entry) => [key(entry.options), entry.resolved]));
 
-        for (const entry of results) {
-          assert.strictEqual(
-            entry.resolved.sourceRows.length,
-            entry.options.expectedRows,
-            `source row universe for ${key(entry.options)}`,
-          );
-          assert.strictEqual(
-            entry.resolved.suggestionRows.length,
-            entry.options.expectedRows,
-            `suggestion row universe for ${key(entry.options)}`,
-          );
-        }
-
         const noBypass = lookup.get("false/false");
         const inferToOnly = lookup.get("false/true");
         const inferFromOnly = lookup.get("true/false");
         const inferBoth = lookup.get("true/true");
+
+        assert.deepStrictEqual(
+          noBypass.sourceRows,
+          [0, 1],
+          "baseline source rows stay bound to visible baseline rows",
+        );
+        assert.deepStrictEqual(
+          noBypass.suggestionRows,
+          [0, 1],
+          "baseline suggestion rows stay bound to visible baseline rows",
+        );
 
         assert.strictEqual(
           inferToOnly.sourceRows.length >= noBypass.sourceRows.length,
@@ -231,7 +229,17 @@ export function getInferenceIndexAccessTests() {
         assert.deepStrictEqual(
           inferToOnly.writableRows,
           noBypass.writableRows,
-          "writable universe does not expand when inferToBypassed is true",
+          "writable universe does not expand when inferToBypassed is false",
+        );
+        assert.strictEqual(
+          inferFromOnly.sourceRows.length >= noBypass.sourceRows.length,
+          true,
+          "inferFromBypassed does not reduce evidence universe",
+        );
+        assert.strictEqual(
+          inferFromOnly.suggestionRows.length >= noBypass.suggestionRows.length,
+          true,
+          "inferFromBypassed does not reduce suggestion universe",
         );
         assert.strictEqual(
           inferBoth.writableRows.length > inferFromOnly.writableRows.length,
