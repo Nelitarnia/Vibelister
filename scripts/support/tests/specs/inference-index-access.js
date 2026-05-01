@@ -7,6 +7,41 @@ import {
 } from "../../../app/interactions-row-classification.js";
 
 export function getInferenceIndexAccessTests() {
+  const makeResolveFixture = () => {
+    const basePairs = [
+      { kind: "AI", aId: 1, iId: 1, variantSig: "" },
+      { kind: "AI", aId: 1, iId: 2, variantSig: "mod:enabled", isBypassVariant: false },
+    ];
+    const bypassPairs = [
+      ...basePairs,
+      { kind: "AI", aId: 1, iId: 2, variantSig: "mod:enabled", isBypassVariant: true },
+      { kind: "AI", aId: 2, iId: 1, variantSig: "mod:enabled", isBypassVariant: true },
+    ];
+    const model = {
+      interactionsIndexVersion: 1,
+      notes: {
+        "ai|2|1|mod:enabled": "bypassed evidence",
+      },
+      interactionsIndexBypass: {
+        baseVersion: 1,
+        pairs: bypassPairs,
+      },
+    };
+    const getInteractionsPair = (_model, rowIndex, opts = {}) =>
+      opts.includeBypass ? bypassPairs[rowIndex] : basePairs[rowIndex];
+    const getInteractionsRowCount = (_model, opts = {}) =>
+      opts.includeBypass ? bypassPairs.length : basePairs.length;
+    const manager = createInferenceIndexAccess({
+      model,
+      sel: { r: 1 },
+      getInteractionsPair,
+      getInteractionsRowCount,
+    });
+    const resolveRows = (_scope, access) =>
+      Array.from({ length: access.getRowCount() }, (_, i) => i);
+    return { manager, resolveRows };
+  };
+
   return [
 
     {
@@ -132,6 +167,84 @@ export function getInferenceIndexAccessTests() {
           targetPairReads,
           targetPairs.length * 2,
           "version change invalidates cached lookup",
+        );
+      },
+    },
+    {
+      name: "resolves row universes across inferFrom/inferTo bypass combinations",
+      run(assert) {
+        const combinations = [
+          { inferFromBypassed: false, inferToBypassed: false },
+          { inferFromBypassed: true, inferToBypassed: false },
+          { inferFromBypassed: false, inferToBypassed: true },
+          { inferFromBypassed: true, inferToBypassed: true },
+        ];
+        const results = combinations.map((options) => {
+          const { manager, resolveRows } = makeResolveFixture();
+          return {
+            options,
+            resolved: manager.resolveIndexAccess({ scope: "project", ...options }, resolveRows),
+          };
+        });
+        const key = ({ inferFromBypassed, inferToBypassed }) =>
+          `${inferFromBypassed}/${inferToBypassed}`;
+        const lookup = new Map(results.map((entry) => [key(entry.options), entry.resolved]));
+
+        const noBypass = lookup.get("false/false");
+        const inferToOnly = lookup.get("false/true");
+        const inferFromOnly = lookup.get("true/false");
+        const inferBoth = lookup.get("true/true");
+
+        assert.deepStrictEqual(
+          noBypass.sourceRows,
+          [0, 1],
+          "baseline source rows stay bound to visible baseline rows",
+        );
+        assert.deepStrictEqual(
+          noBypass.suggestionRows,
+          [0, 1],
+          "baseline suggestion rows stay bound to visible baseline rows",
+        );
+
+        assert.strictEqual(
+          inferToOnly.sourceRows.length >= noBypass.sourceRows.length,
+          true,
+          "inferToBypassed never reduces evidence universe",
+        );
+        assert.strictEqual(
+          inferToOnly.suggestionRows.length >= noBypass.suggestionRows.length,
+          true,
+          "inferToBypassed never reduces suggestion universe",
+        );
+        assert.deepStrictEqual(
+          inferToOnly.sourceRows,
+          noBypass.sourceRows,
+          "inferToBypassed alone preserves existing source scope behavior",
+        );
+        assert.deepStrictEqual(
+          inferToOnly.suggestionRows,
+          noBypass.suggestionRows,
+          "inferToBypassed alone preserves existing suggestion scope behavior",
+        );
+        assert.strictEqual(
+          inferToOnly.writableRows.length >= noBypass.writableRows.length,
+          true,
+          "writable universe does not shrink when inferToBypassed is true",
+        );
+        assert.strictEqual(
+          inferFromOnly.sourceRows.length >= noBypass.sourceRows.length,
+          true,
+          "inferFromBypassed does not reduce evidence universe",
+        );
+        assert.strictEqual(
+          inferFromOnly.suggestionRows.length >= noBypass.suggestionRows.length,
+          true,
+          "inferFromBypassed does not reduce suggestion universe",
+        );
+        assert.strictEqual(
+          inferBoth.writableRows.length > inferFromOnly.writableRows.length,
+          true,
+          "writable universe expands only when inferToBypassed=true",
         );
       },
     },

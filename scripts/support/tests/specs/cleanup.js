@@ -9,6 +9,30 @@ import { makeModelFixture } from "./model-fixtures.js";
 export function getCleanupTests() {
   return [
     {
+      name: "retains legacy AI note keys for reachable pairs",
+      run(assert) {
+        const { model, addAction, addInput } = makeModelFixture();
+        const action = addAction("Attack");
+        const input = addInput("Button");
+        const legacyKey = `${action.id}|${input.id}|`;
+        const canonicalKey = `ai|${action.id}|${input.id}|`;
+        model.notes[legacyKey] = { notes: "legacy keep" };
+        model.notes[canonicalKey] = { notes: "canonical keep" };
+        const controller = createCleanupController({
+          model,
+          runModelMutation: (_label, fn) => fn(),
+          makeUndoConfig: () => ({}),
+        });
+        const result = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.orphanNotes],
+          apply: true,
+        });
+        assert.strictEqual(result.totalRemoved, 0, "reachable legacy keys should be retained");
+        assert.ok(model.notes[legacyKey], "legacy key remains");
+        assert.ok(model.notes[canonicalKey], "canonical key remains");
+      },
+    },
+    {
       name: "removes notes for unreachable variants",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
