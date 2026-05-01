@@ -11,6 +11,32 @@ function makeIndexAccess(includeBypass, pairs) {
 export function getInferenceControllerTests() {
   return [
     {
+      name: "selection suggestion scope matrix across inferFrom/inferTo bypass options",
+      run(assert) {
+        const selection = { rows: new Set([0]) };
+        const combinations = [
+          { inferFromBypassed: false, inferToBypassed: false, expectedScope: "action" },
+          { inferFromBypassed: true, inferToBypassed: false, expectedScope: "project" },
+          { inferFromBypassed: false, inferToBypassed: true, expectedScope: "selection" },
+          { inferFromBypassed: true, inferToBypassed: true, expectedScope: "project" },
+        ];
+
+        for (const options of combinations) {
+          const plan = buildScopePlan({
+            requestedScope: "selection",
+            selection,
+            indexAccess: makeIndexAccess(true, [{ aId: 7, iId: 2 }]),
+            options,
+          });
+          assert.strictEqual(
+            plan.suggestion.scope,
+            options.expectedScope,
+            `scope mismatch for inferFrom=${options.inferFromBypassed} inferTo=${options.inferToBypassed}`,
+          );
+        }
+      },
+    },
+    {
       name: "uses action suggestion scope for regular selection",
       run(assert) {
         const selection = { rows: new Set([0]) };
