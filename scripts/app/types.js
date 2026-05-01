@@ -60,10 +60,10 @@
 * Examples (current canonical forms):
 * * AI base:       `ai|<aId>|<iId>|<variantSig>`
 * * AA base:       `aa|<aId>|<rhsActionId>|<lhsSig>|<rhsSig>`
-* * With phase:    `<base>|p<phaseIndex>:<field>` where field ∈ { 'outcome', 'end' }
+* * With phase:    `<base>|p<phaseIndex>` for per-phase interaction fields
 *
-* Older projects may omit the `ai|` prefix or store reduced AA forms; the
-* pruning/migration utilities preserve back-compat.
+* Older projects may omit the `ai|` prefix or store reduced AA forms; cleanup
+* and migration utilities may preserve those as legacy/back-compat keys.
   */
 /** @typedef {Object} NoteRecord
  * @property {number=} outcomeId        // formal outcome (stable id)

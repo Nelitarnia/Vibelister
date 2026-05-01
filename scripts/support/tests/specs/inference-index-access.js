@@ -28,9 +28,9 @@ export function getInferenceIndexAccessTests() {
       },
     };
     const getInteractionsPair = (_model, rowIndex, opts = {}) =>
-      opts.includeBypass ? (opts.index?.pairs || [])[rowIndex] : basePairs[rowIndex];
+      opts.includeBypass ? bypassPairs[rowIndex] : basePairs[rowIndex];
     const getInteractionsRowCount = (_model, opts = {}) =>
-      opts.includeBypass ? (opts.index?.pairs || []).length : basePairs.length;
+      opts.includeBypass ? bypassPairs.length : basePairs.length;
     const manager = createInferenceIndexAccess({
       model,
       sel: { r: 1 },
@@ -231,7 +231,7 @@ export function getInferenceIndexAccessTests() {
         assert.deepStrictEqual(
           inferToOnly.writableRows,
           noBypass.writableRows,
-          "writable universe does not expand when inferToBypassed is false",
+          "writable universe does not expand when inferToBypassed is true",
         );
         assert.strictEqual(
           inferBoth.writableRows.length > inferFromOnly.writableRows.length,

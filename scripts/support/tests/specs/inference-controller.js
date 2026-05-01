@@ -15,7 +15,7 @@ export function getInferenceControllerTests() {
       run(assert) {
         const selection = { rows: new Set([0]) };
         const combinations = [
-          { inferFromBypassed: false, inferToBypassed: false, expectedScope: "action" },
+          { inferFromBypassed: false, inferToBypassed: false, expectedScope: "selection" },
           { inferFromBypassed: true, inferToBypassed: false, expectedScope: "project" },
           { inferFromBypassed: false, inferToBypassed: true, expectedScope: "selection" },
           { inferFromBypassed: true, inferToBypassed: true, expectedScope: "project" },
