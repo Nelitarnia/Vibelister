@@ -69,6 +69,12 @@ function eligibleForSuggestion(target) {
   return target.isInferred && target.allowInferredTargets;
 }
 
+
+function isEvidenceTarget(target) {
+  if (!target?.currentValue) return false;
+  return !!(target.isManual || target.allowInferredExisting);
+}
+
 function registerSuggestion(
   map,
   target,
@@ -108,7 +114,7 @@ function applyConsensus(groups, suggestions, source, profilePrefs, thresholds) {
     const total = list.length;
     if (!Number.isFinite(minGroupSize) || total < minGroupSize) continue;
 
-    const existing = list.filter((t) => t.currentValue);
+    const existing = list.filter((t) => isEvidenceTarget(t));
     if (!existing.length) continue;
     if (
       !Number.isFinite(minExistingRatio) ||
@@ -163,7 +169,7 @@ function applyPhaseAdjacency(
       .sort((a, b) => a.phase - b.phase);
     let lastAnchor = null;
     for (const target of ordered) {
-      if (!target.currentValue) continue;
+      if (!isEvidenceTarget(target)) continue;
       const key = valueKey(target.field, target.currentValue);
       if (!key) {
         lastAnchor = null;
@@ -183,7 +189,7 @@ function applyPhaseAdjacency(
             gapTarget.phase < target.phase,
         );
         const hasConflicts = interiorTargets.some((gapTarget) => {
-          if (!gapTarget?.currentValue) return false;
+          if (!isEvidenceTarget(gapTarget)) return false;
           const interiorKey = valueKey(gapTarget.field, gapTarget.currentValue);
           const matchesValue = interiorKey && interiorKey === key;
           const matchesSource = gapTarget.source === lastAnchor.source;
