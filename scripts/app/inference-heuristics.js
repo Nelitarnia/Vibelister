@@ -38,10 +38,12 @@ function prepareTargets(targets) {
     const allowInferredExisting = !!target?.allowInferredExisting;
     const allowInferredTargets = !!target?.allowInferredTargets;
     const properties = normalizePropertyKeys(target.action?.properties);
-    const includeValue = !isInferred || allowInferredExisting;
+    const sourceIsManual = source === DEFAULT_INTERACTION_SOURCE;
+    // Evidence must come from manual/user-set cells, unless opt-in is explicit.
+    const includeValue = sourceIsManual || allowInferredExisting;
     const currentValue = includeValue ? extractFieldValue(target) : null;
     const hasValue = includeValue && !!currentValue;
-    const isManual = hasValue && source === DEFAULT_INTERACTION_SOURCE;
+    const isManual = hasValue && sourceIsManual;
     return {
       ...target,
       actionId,
