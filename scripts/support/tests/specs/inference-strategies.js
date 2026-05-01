@@ -141,6 +141,36 @@ export function getInferenceStrategyTests() {
       },
     },
     {
+      name: "non-manual cells are never evidence",
+      run(assert) {
+        const targets = [
+          makeTarget({
+            actionId: 14,
+            inputId: 2,
+            actionGroup: "bundle",
+            value: { outcomeId: 77 },
+            source: "action-group",
+          }),
+          makeTarget({
+            actionId: 14,
+            inputId: 2,
+            actionGroup: "bundle",
+          }),
+        ];
+        const suggestions = runInferenceStrategies(targets, null, null, [
+          consensusStrategy,
+          actionGroupStrategy,
+          inputDefaultStrategy,
+        ]);
+        const suggestion = suggestions.get(targets[1].key)?.outcome;
+        assert.strictEqual(
+          suggestion,
+          undefined,
+          "inferred/non-manual values must not seed new inferences",
+        );
+      },
+    },
+    {
       name: "input default fills when no other strategies run",
       run(assert) {
         const targets = [
