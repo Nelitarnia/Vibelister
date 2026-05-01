@@ -219,7 +219,7 @@ To save time without sacrificing formality, you could create placeholder Actions
 
 ## Known Bugs
 
-- In certain projects, the Inference settings "infer to bypassed" and "infer from bypassed" don't work properly. (Exact reason is unknown.)
+- Inferring two times in a row with same settings can give expanded results on 2nd run, as if some heuristic used inferred / unverified notes as evidence.
 
 ## Ideas for later
 
