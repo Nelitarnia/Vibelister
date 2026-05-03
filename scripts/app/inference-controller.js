@@ -1,4 +1,6 @@
 import {
+  DEFAULT_INTERACTION_SOURCE,
+  describeInteractionInference,
   normalizeInteractionConfidence,
   normalizeInteractionSource,
 } from "./interactions.js";
@@ -82,6 +84,19 @@ function createInferenceDebugDetails({
       ? suggestionTargets.length
       : 0,
   };
+}
+
+function summarizeEvidenceSources(model, sourceRows) {
+  const notes = model?.notes || {};
+  let manualEvidenceCount = 0;
+  let inferredEvidenceCount = 0;
+  for (const key of Array.isArray(sourceRows) ? sourceRows : []) {
+    const info = describeInteractionInference(notes[key]);
+    const source = normalizeInteractionSource(info?.source);
+    if (source === DEFAULT_INTERACTION_SOURCE) manualEvidenceCount++;
+    else inferredEvidenceCount++;
+  }
+  return { manualEvidenceCount, inferredEvidenceCount };
 }
 
 export function createInferenceController(options) {
@@ -171,7 +186,7 @@ export function createInferenceController(options) {
     const debug = result.debug;
     const debugText =
       debug && result.options?.debugInference
-        ? ` Debug — sourceRows:${debug.sourceRows ?? 0}, targetRows:${debug.targetRows ?? 0}, writableRows:${debug.writableRows ?? 0}, requestedTargets:${debug.requestedTargets ?? 0}, evidence:${debug.evidenceTargets}, suggestionTargets:${debug.suggestionTargets}, writable:${debug.writableTargets}, suggestionMap:${debug.suggestionMapSize}${debug.statusReason ? `, statusReason:${debug.statusReason}` : ""}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}.`
+        ? ` Debug — sourceRows:${debug.sourceRows ?? 0}, targetRows:${debug.targetRows ?? 0}, writableRows:${debug.writableRows ?? 0}, requestedTargets:${debug.requestedTargets ?? 0}, evidence:${debug.evidenceTargets}, manualEvidence:${debug.manualEvidenceCount ?? 0}, inferredEvidence:${debug.inferredEvidenceCount ?? 0}, suggestionTargets:${debug.suggestionTargets}, writable:${debug.writableTargets}, suggestionMap:${debug.suggestionMapSize}${debug.statusReason ? `, statusReason:${debug.statusReason}` : ""}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}.`
         : "";
     return `${actionLabel || "Inference"}: ${actions.join(", ")}${suffix}.${sourceText}${debugText}`;
   }
@@ -223,14 +238,23 @@ export function createInferenceController(options) {
     const writableTargets = requestedTargets.filter((target) =>
       writableRowSet.has(target.row),
     );
-    const debugDetails = createInferenceDebugDetails({
+    const evidenceSummary = summarizeEvidenceSources(model, sourceRows);
+    const debugDetails = {
+      ...createInferenceDebugDetails({
       sourceRows,
       suggestionRows,
       writableRows,
       requestedTargets,
       writableTargets,
       suggestionTargets,
-    });
+      }),
+      ...evidenceSummary,
+    };
+    if (evidenceSummary.inferredEvidenceCount > 0) {
+      console.warn(
+        `[inference] invariant violation: inferredEvidenceCount must be zero, got ${evidenceSummary.inferredEvidenceCount}.`,
+      );
+    }
     if (!writableTargets.length) {
       statusBar?.set?.(NO_TARGETS_STATUS);
       return {

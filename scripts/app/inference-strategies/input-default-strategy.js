@@ -26,7 +26,7 @@ export const inputDefaultStrategy = {
       const total = list.length;
       if (total < thresholds.minGroupSize) continue;
       const existing = list.filter(
-        (t) => t.currentValue && (t.isManual || t.allowInferredExisting),
+        (t) => t.currentValue && t.isManual,
       );
       if (!existing.length) continue;
       if (existing.length / total < thresholds.minExistingRatio) continue;

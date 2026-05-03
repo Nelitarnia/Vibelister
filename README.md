@@ -227,6 +227,7 @@ To save time without sacrificing formality, you could create placeholder Actions
 ## Known Bugs
 
 - Inferring two times in a row with same settings can give expanded results on 2nd run, as if some heuristic used inferred / unverified notes as evidence.
+- Inferred notes are never used as evidence for further inference.
 
 ## Ideas for later
 

@@ -35,12 +35,11 @@ function prepareTargets(targets) {
     const info = describeInteractionInference(target.note);
     const source = normalizeInteractionSource(info?.source);
     const isInferred = !!info?.inferred;
-    const allowInferredExisting = !!target?.allowInferredExisting;
     const allowInferredTargets = !!target?.allowInferredTargets;
     const properties = normalizePropertyKeys(target.action?.properties);
     const sourceIsManual = source === DEFAULT_INTERACTION_SOURCE;
-    // Evidence must come from manual/user-set cells, unless opt-in is explicit.
-    const includeValue = sourceIsManual || allowInferredExisting;
+    // Evidence is strict manual-only: inferred values are never anchors/evidence.
+    const includeValue = sourceIsManual;
     const currentValue = includeValue ? extractFieldValue(target) : null;
     const hasValue = includeValue && !!currentValue;
     const isManual = hasValue && sourceIsManual;
@@ -71,7 +70,7 @@ function eligibleForSuggestion(target) {
 
 function isEvidenceTarget(target) {
   if (!target?.currentValue) return false;
-  return !!(target.isManual || target.allowInferredExisting);
+  return !!target.isManual;
 }
 
 function registerSuggestion(

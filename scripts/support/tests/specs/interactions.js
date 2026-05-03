@@ -2136,7 +2136,7 @@ export function getInteractionsTests() {
       },
     },
     {
-      name: "consensus ignores inferred anchors unless opted in",
+      name: "consensus ignores inferred anchors",
       run(assert) {
         const { model, addAction, addInput, addModifier, addOutcome } =
           makeModelFixture();
@@ -2208,19 +2208,6 @@ export function getInteractionsTests() {
           "inferred targets stay untouched without opt-in",
         );
 
-        const optInTargets = targets.map((t) =>
-          t.key === inferredKey
-            ? { ...t, allowInferredExisting: true, allowInferredTargets: true }
-            : t,
-        );
-        const optInSuggestions = proposeInteractionInferences(optInTargets);
-        const optedSuggestion = optInSuggestions.get(emptyKey)?.outcome;
-
-        assert.strictEqual(
-          optedSuggestion?.value.outcomeId,
-          outcome.id,
-          "opt-in allows inferred value to seed consensus",
-        );
       },
     },
     {
@@ -2426,7 +2413,7 @@ export function getInteractionsTests() {
       },
     },
     {
-      name: "phase adjacency ignores inferred anchors unless opted in",
+      name: "phase adjacency ignores inferred anchors",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
         const action = addAction("Anchor");
@@ -2484,20 +2471,6 @@ export function getInteractionsTests() {
           "inferred anchors do not seed adjacency",
         );
 
-        const optInTargets = targets.map((t) => ({
-          ...t,
-          allowInferredExisting: true,
-        }));
-        const optInSuggestions = proposeInteractionInferences(optInTargets);
-        const adjacencySuggestion = optInSuggestions.get(
-          noteKeyForPair(pair, 1),
-        )?.outcome;
-
-        assert.strictEqual(
-          adjacencySuggestion?.value.outcomeId,
-          outcome.id,
-          "opt-in re-enables adjacency from inferred anchors",
-        );
       },
     },
     {
@@ -3233,6 +3206,81 @@ export function getInteractionsTests() {
           "bypass note remains accessible after rebuild",
         );
         assert.ok(res, "inference run completed after bypass rebuild");
+      },
+    },
+    {
+      name: "inference is idempotent across repeated runs without manual edits",
+      run(assert) {
+        const { model, addAction, addInput, addOutcome } = makeModelFixture();
+        const actionA = addAction("A");
+        const actionB = addAction("B");
+        const input = addInput("Mid");
+        const outcome = addOutcome("Hit");
+
+        buildInteractionsPairs(model);
+        const rowA = findPairIndex(
+          model,
+          (p) => p?.aId === actionA.id && p?.iId === input.id,
+        );
+        const rowB = findPairIndex(
+          model,
+          (p) => p?.aId === actionB.id && p?.iId === input.id,
+        );
+        const pairA = getInteractionsPair(model, rowA);
+        const keyA = noteKeyForPair(pairA, 0);
+        model.notes[keyA] = { outcomeId: outcome.id, source: DEFAULT_INTERACTION_SOURCE };
+
+        const viewDef = {
+          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
+        };
+        const controller = createInferenceController({
+          model,
+          selection: { rows: new Set([rowA, rowB]), colsAll: true },
+          sel: { r: rowB, c: 2 },
+          getActiveView: () => "interactions",
+          viewDef: () => viewDef,
+          statusBar: { set() {} },
+          runModelMutation: (label, mutate) => mutate(),
+          makeUndoConfig: () => ({}),
+          getInteractionsPair,
+          getInteractionsRowCount,
+        });
+        const opts = {
+          scope: "project",
+          debugInference: true,
+          thresholdOverrides: {
+            consensusMinGroupSize: 1,
+            consensusMinExistingRatio: 0,
+            actionGroupMinGroupSize: 1,
+            actionGroupMinExistingRatio: 0,
+            inputDefaultMinGroupSize: 1,
+            inputDefaultMinExistingRatio: 0,
+          },
+        };
+        const first = controller.runInference(opts);
+        const sourcesAfterFirst = Object.keys(first.sources || {}).sort();
+        const evidenceRowsFirst = first.debug?.evidenceTargets ?? null;
+        const firstApplied = first.applied || 0;
+        const second = controller.runInference(opts);
+        const sourcesAfterSecond = Object.keys(second.sources || {}).sort();
+        const evidenceRowsSecond = second.debug?.evidenceTargets ?? null;
+
+        assert.strictEqual(
+          evidenceRowsSecond,
+          evidenceRowsFirst,
+          "evidence row count stays unchanged across identical reruns",
+        );
+        assert.deepStrictEqual(
+          sourcesAfterSecond,
+          sourcesAfterFirst,
+          "suggestion source set stays unchanged across identical reruns",
+        );
+        assert.strictEqual(
+          second.applied || 0,
+          0,
+          "second run does not gain new evidence-derived outputs",
+        );
+        assert.ok((firstApplied || 0) >= 1, "first run applies at least one inference");
       },
     },
     {
