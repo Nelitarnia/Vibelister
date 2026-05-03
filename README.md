@@ -45,9 +45,16 @@ If you prefer a Windows-only option, `run.bat` still spins up a temporary Python
 
 ## Continuous integration
 
-- GitHub Actions runs `.github/workflows/ci.yml` on pushes and pull requests using Node.js 20.x.
-- The workflow installs dependencies, executes `npm test`, and runs `npm run format:check` by default.
-- To skip the formatter gate, set a repository variable `RUN_FORMAT_CHECK=false`; the workflow also caches `~/.npm` to speed up installs.
+- GitHub Actions runs `.github/workflows/ci.yml` on every push (all branches via `"**"`) and on every pull request, using Node.js 20.x.
+- The workflow installs dependencies, installs Playwright Chromium (`npx playwright install --with-deps chromium`), then runs these gates in order:
+  - `npm run typecheck`
+  - `npm test`
+  - `npm run format:check` (conditional)
+  - `npm run test:e2e`
+- The format gate is enabled by default and is controlled by repository variable `RUN_FORMAT_CHECK`:
+  - `RUN_FORMAT_CHECK=true` (default): run `npm run format:check`
+  - `RUN_FORMAT_CHECK=false`: skip the format check step
+- On failures, CI uploads Playwright artifacts (`playwright-report` and `test-results`).
 
 ## Data schema migration policy
 
