@@ -40,7 +40,8 @@ function createElementFactory() {
         if (node === this) return true;
         for (const child of this.children) {
           if (child === node) return true;
-          if (typeof child.contains === "function" && child.contains(node)) return true;
+          if (typeof child.contains === "function" && child.contains(node))
+            return true;
         }
         return false;
       },
@@ -76,7 +77,8 @@ function createElementFactory() {
       focus() {},
       closest(selector) {
         if (selector === ".status-history__item") {
-          if (this.className.split(/\s+/).includes("status-history__item")) return this;
+          if (this.className.split(/\s+/).includes("status-history__item"))
+            return this;
           return null;
         }
         return null;
@@ -89,7 +91,8 @@ function createElementFactory() {
         const walk = (node) => {
           if (!node || !node.children) return;
           for (const child of node.children) {
-            if ((child.className || "").split(/\s+/).includes(cls)) out.push(child);
+            if ((child.className || "").split(/\s+/).includes(cls))
+              out.push(child);
             walk(child);
           }
         };
@@ -138,7 +141,13 @@ export function getStatusTests() {
         Object.defineProperty(globalThis, "navigator", {
           configurable: true,
           writable: true,
-          value: { clipboard: { writeText() { return Promise.resolve(); } } },
+          value: {
+            clipboard: {
+              writeText() {
+                return Promise.resolve();
+              },
+            },
+          },
         });
 
         try {
@@ -151,8 +160,14 @@ export function getStatusTests() {
           status.showHistory();
 
           const history = status.getHistory();
-          assert.strictEqual(history.length, 1, "seeded history should contain one entry");
-          const plainTextPayload = history.map((entry) => entry.message).join("\n");
+          assert.strictEqual(
+            history.length,
+            1,
+            "seeded history should contain one entry",
+          );
+          const plainTextPayload = history
+            .map((entry) => entry.message)
+            .join("\n");
 
           assert.strictEqual(
             plainTextPayload,
@@ -167,7 +182,11 @@ export function getStatusTests() {
           else globalThis.window = previousWindow;
 
           if (previousNavigatorDescriptor)
-            Object.defineProperty(globalThis, "navigator", previousNavigatorDescriptor);
+            Object.defineProperty(
+              globalThis,
+              "navigator",
+              previousNavigatorDescriptor,
+            );
           else if (previousNavigator === undefined) delete globalThis.navigator;
           else
             Object.defineProperty(globalThis, "navigator", {

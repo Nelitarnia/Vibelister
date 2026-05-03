@@ -9,7 +9,10 @@ import {
   normalizeInteractionSource,
 } from "./interactions.js";
 import { parsePhaseKey } from "../data/utils.js";
-import { clearInferredTargets, groupTargetsByNote } from "./inference-clear-helpers.js";
+import {
+  clearInferredTargets,
+  groupTargetsByNote,
+} from "./inference-clear-helpers.js";
 
 const OUT_OF_VIEW_STATUS =
   "Inference tools only work in the Interactions view.";
@@ -19,8 +22,11 @@ const NO_TARGETS_STATUS =
 function noteHasStructuredInteractionValue(note) {
   if (!note || typeof note !== "object") return false;
   return (
-    ("outcomeId" in note || "result" in note) ||
-    ("endActionId" in note || "endVariantSig" in note || "endFree" in note) ||
+    "outcomeId" in note ||
+    "result" in note ||
+    "endActionId" in note ||
+    "endVariantSig" in note ||
+    "endFree" in note ||
     (Array.isArray(note.tags) && note.tags.length > 0)
   );
 }

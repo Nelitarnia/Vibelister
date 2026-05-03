@@ -92,8 +92,7 @@ export function initPalette(ctx) {
   const MODE_MAP = [
     {
       name: "outcome",
-      testKey: (key) =>
-        key === "dualof" || /^p\d+:outcome$/.test(key),
+      testKey: (key) => key === "dualof" || /^p\d+:outcome$/.test(key),
       consumeTyping: false,
       filterFn: (name, q) => name.toLowerCase().startsWith(q), // startsWith
       domId: "universalPalette", // one element for all modes

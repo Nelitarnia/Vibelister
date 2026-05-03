@@ -31,9 +31,9 @@
 /** @typedef {BaseRow} InputRow */
 /** @typedef {BaseRow} ModifierRow */
 /** @typedef {BaseRow & {
-* mirrored?: boolean,
-* dualof?: (number|null)
-* }} OutcomeRow */
+ * mirrored?: boolean,
+ * dualof?: (number|null)
+ * }} OutcomeRow */
 
 /** Interactions mode: Actions×Inputs (AI) or Actions×Actions (AA). */
 /** @typedef {"AI"|"AA"} InteractionsMode */

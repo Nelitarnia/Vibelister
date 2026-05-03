@@ -72,9 +72,15 @@ function createInferenceDebugDetails({
     suggestionRows: Array.isArray(suggestionRows) ? suggestionRows.length : 0,
     targetRows: Array.isArray(suggestionRows) ? suggestionRows.length : 0,
     writableRows: Array.isArray(writableRows) ? writableRows.length : 0,
-    requestedTargets: Array.isArray(requestedTargets) ? requestedTargets.length : 0,
-    writableTargets: Array.isArray(writableTargets) ? writableTargets.length : 0,
-    suggestionTargets: Array.isArray(suggestionTargets) ? suggestionTargets.length : 0,
+    requestedTargets: Array.isArray(requestedTargets)
+      ? requestedTargets.length
+      : 0,
+    writableTargets: Array.isArray(writableTargets)
+      ? writableTargets.length
+      : 0,
+    suggestionTargets: Array.isArray(suggestionTargets)
+      ? suggestionTargets.length
+      : 0,
   };
 }
 
@@ -172,11 +178,12 @@ export function createInferenceController(options) {
 
   function applyInference(options) {
     const { indexAccess, suggestionRows, sourceRows, writableRows } =
-      indexAccessManager.resolveIndexAccess(
-      options,
-      targetResolver.getRows,
-    );
-    if (options.debugInference && options.inferToBypassed && !options.inferFromBypassed) {
+      indexAccessManager.resolveIndexAccess(options, targetResolver.getRows);
+    if (
+      options.debugInference &&
+      options.inferToBypassed &&
+      !options.inferFromBypassed
+    ) {
       const baseline = indexAccessManager.resolveIndexAccess(
         { ...options, inferToBypassed: false },
         targetResolver.getRows,
@@ -210,7 +217,9 @@ export function createInferenceController(options) {
         statusReason: "out-of-view",
       };
     }
-    const writableRowSet = new Set(Array.isArray(writableRows) ? writableRows : []);
+    const writableRowSet = new Set(
+      Array.isArray(writableRows) ? writableRows : [],
+    );
     const writableTargets = requestedTargets.filter((target) =>
       writableRowSet.has(target.row),
     );
@@ -247,7 +256,11 @@ export function createInferenceController(options) {
     });
     result.options = { debugInference: !!options.debugInference };
     result.statusReason = result.statusReason || "ok";
-    result.debug = { ...debugDetails, ...(result.debug || {}), statusReason: "ok" };
+    result.debug = {
+      ...debugDetails,
+      ...(result.debug || {}),
+      statusReason: "ok",
+    };
     return result;
   }
 

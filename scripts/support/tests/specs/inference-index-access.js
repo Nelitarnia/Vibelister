@@ -10,12 +10,30 @@ export function getInferenceIndexAccessTests() {
   const makeResolveFixture = () => {
     const basePairs = [
       { kind: "AI", aId: 1, iId: 1, variantSig: "" },
-      { kind: "AI", aId: 1, iId: 2, variantSig: "mod:enabled", isBypassVariant: false },
+      {
+        kind: "AI",
+        aId: 1,
+        iId: 2,
+        variantSig: "mod:enabled",
+        isBypassVariant: false,
+      },
     ];
     const bypassPairs = [
       ...basePairs,
-      { kind: "AI", aId: 1, iId: 2, variantSig: "mod:enabled", isBypassVariant: true },
-      { kind: "AI", aId: 2, iId: 1, variantSig: "mod:enabled", isBypassVariant: true },
+      {
+        kind: "AI",
+        aId: 1,
+        iId: 2,
+        variantSig: "mod:enabled",
+        isBypassVariant: true,
+      },
+      {
+        kind: "AI",
+        aId: 2,
+        iId: 1,
+        variantSig: "mod:enabled",
+        isBypassVariant: true,
+      },
     ];
     const model = {
       interactionsIndexVersion: 1,
@@ -43,7 +61,6 @@ export function getInferenceIndexAccessTests() {
   };
 
   return [
-
     {
       name: "classifies baseline visibility for bypass and non-bypass variant rows",
       run(assert) {
@@ -82,30 +99,42 @@ export function getInferenceIndexAccessTests() {
       name: "classifies empty/non-empty signatures with bypass and non-bypass rows",
       run(assert) {
         const rows = [
-          { kind: "AI", aId: 1, iId: 1, variantSig: "", isBypassVariant: false },
+          {
+            kind: "AI",
+            aId: 1,
+            iId: 1,
+            variantSig: "",
+            isBypassVariant: false,
+          },
           { kind: "AI", aId: 1, iId: 1, variantSig: "", isBypassVariant: true },
-          { kind: "AI", aId: 1, iId: 2, variantSig: "mod:x", isBypassVariant: false },
-          { kind: "AI", aId: 1, iId: 2, variantSig: "mod:x", isBypassVariant: true },
+          {
+            kind: "AI",
+            aId: 1,
+            iId: 2,
+            variantSig: "mod:x",
+            isBypassVariant: false,
+          },
+          {
+            kind: "AI",
+            aId: 1,
+            iId: 2,
+            variantSig: "mod:x",
+            isBypassVariant: true,
+          },
         ];
 
-        assert.deepStrictEqual(rows.map((pair) => isVariantRow(pair)), [
-          false,
-          false,
-          true,
-          true,
-        ]);
-        assert.deepStrictEqual(rows.map((pair) => isBypassRow(pair)), [
-          false,
-          true,
-          false,
-          true,
-        ]);
-        assert.deepStrictEqual(rows.map((pair) => isBaselineVisibleRow(pair)), [
-          true,
-          false,
-          true,
-          false,
-        ]);
+        assert.deepStrictEqual(
+          rows.map((pair) => isVariantRow(pair)),
+          [false, false, true, true],
+        );
+        assert.deepStrictEqual(
+          rows.map((pair) => isBypassRow(pair)),
+          [false, true, false, true],
+        );
+        assert.deepStrictEqual(
+          rows.map((pair) => isBaselineVisibleRow(pair)),
+          [true, false, true, false],
+        );
       },
     },
     {
@@ -183,12 +212,17 @@ export function getInferenceIndexAccessTests() {
           const { manager, resolveRows } = makeResolveFixture();
           return {
             options,
-            resolved: manager.resolveIndexAccess({ scope: "project", ...options }, resolveRows),
+            resolved: manager.resolveIndexAccess(
+              { scope: "project", ...options },
+              resolveRows,
+            ),
           };
         });
         const key = ({ inferFromBypassed, inferToBypassed }) =>
           `${inferFromBypassed}/${inferToBypassed}`;
-        const lookup = new Map(results.map((entry) => [key(entry.options), entry.resolved]));
+        const lookup = new Map(
+          results.map((entry) => [key(entry.options), entry.resolved]),
+        );
 
         const noBypass = lookup.get("false/false");
         const inferToOnly = lookup.get("false/true");
@@ -256,7 +290,13 @@ export function getInferenceIndexAccessTests() {
           interactionsIndexBypass: {
             baseVersion: 1,
             pairs: [
-              { kind: "AI", aId: 10, iId: 20, variantSig: "mod:x", isBypassVariant: true },
+              {
+                kind: "AI",
+                aId: 10,
+                iId: 20,
+                variantSig: "mod:x",
+                isBypassVariant: true,
+              },
             ],
           },
         };
@@ -266,7 +306,9 @@ export function getInferenceIndexAccessTests() {
           return basePairs[rowIndex];
         };
         const getInteractionsRowCount = (_model, opts = {}) =>
-          opts.includeBypass ? (opts.index?.pairs || []).length : basePairs.length;
+          opts.includeBypass
+            ? (opts.index?.pairs || []).length
+            : basePairs.length;
         const manager = createInferenceIndexAccess({
           model,
           sel: { r: 0 },
@@ -281,7 +323,10 @@ export function getInferenceIndexAccessTests() {
         );
         assert.strictEqual(Array.isArray(result.writableRows), true);
         assert.strictEqual(Array.isArray(result.sourceRows), true);
-        assert.strictEqual(result.sourceRows.length, result.suggestionRows.length);
+        assert.strictEqual(
+          result.sourceRows.length,
+          result.suggestionRows.length,
+        );
       },
     },
   ];

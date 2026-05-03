@@ -35,8 +35,12 @@ export function migrateToSchemaV2(model) {
     if (!note || typeof note !== "object") continue;
 
     if (!Number.isFinite(note.outcomeId) && typeof note.result === "string") {
-      const resolvedOutcomeId = resolveUniqueIdByName(outcomeByName, note.result);
-      if (Number.isFinite(resolvedOutcomeId)) note.outcomeId = resolvedOutcomeId;
+      const resolvedOutcomeId = resolveUniqueIdByName(
+        outcomeByName,
+        note.result,
+      );
+      if (Number.isFinite(resolvedOutcomeId))
+        note.outcomeId = resolvedOutcomeId;
     }
     delete note.result;
 
@@ -44,7 +48,10 @@ export function migrateToSchemaV2(model) {
       !Number.isFinite(note.endActionId) &&
       typeof note.endFree === "string"
     ) {
-      const resolvedActionId = resolveUniqueIdByName(actionByName, note.endFree);
+      const resolvedActionId = resolveUniqueIdByName(
+        actionByName,
+        note.endFree,
+      );
       if (Number.isFinite(resolvedActionId)) {
         note.endActionId = resolvedActionId;
         if (typeof note.endVariantSig !== "string") note.endVariantSig = "";

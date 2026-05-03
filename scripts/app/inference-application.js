@@ -193,15 +193,20 @@ export function applySuggestions({
     );
   }
   if (!result.applied) {
-    if (debug.writableTargets === 0) debug.noChangeReason = "no-writable-targets";
-    else if (debug.evidenceTargets === 0) debug.noChangeReason = "no-evidence-targets";
+    if (debug.writableTargets === 0)
+      debug.noChangeReason = "no-writable-targets";
+    else if (debug.evidenceTargets === 0)
+      debug.noChangeReason = "no-evidence-targets";
     else if (debug.suggestionMapSize === 0)
       debug.noChangeReason = "no-suggestions-generated";
     else if (result.empty > 0 && result.empty === debug.writableTargets)
       debug.noChangeReason = "targets-had-no-applicable-suggestions";
     else if (result.skippedExisting === debug.writableTargets)
       debug.noChangeReason = "all-skipped-existing";
-    else if (result.skippedManual + result.skippedManualOutcome === debug.writableTargets)
+    else if (
+      result.skippedManual + result.skippedManualOutcome ===
+      debug.writableTargets
+    )
       debug.noChangeReason = "all-skipped-manual";
     else debug.noChangeReason = "no-applicable-changes";
   }

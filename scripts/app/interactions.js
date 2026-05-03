@@ -838,7 +838,7 @@ export function clearInteractionsSelection(
   let cleared = 0;
   const tagEvents = [];
   function clearField(note, key, pk, context = {}) {
-  if (pk && pk.field === "outcome") {
+    if (pk && pk.field === "outcome") {
       if ("outcomeId" in note) {
         delete note.outcomeId;
         cleared++;

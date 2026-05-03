@@ -91,7 +91,10 @@ export function initColorPicker(ctx = {}) {
     const cells = getPreviewTargets();
     const values = new Map();
     cells.forEach(({ r, c }) => {
-      values.set(makeCellKey(r, c), normalizeColor(getColorValue?.(r, c)) || "");
+      values.set(
+        makeCellKey(r, c),
+        normalizeColor(getColorValue?.(r, c)) || "",
+      );
     });
     previewBaseline = { cells, values };
   }
@@ -328,7 +331,11 @@ export function initColorPicker(ctx = {}) {
         state.explicitlyChanged = true;
         state.current = normalized;
         updateInputs(normalized);
-        applyColor(normalized, { closeAfter: true, closeCommit: true, recordRecent: true });
+        applyColor(normalized, {
+          closeAfter: true,
+          closeCommit: true,
+          recordRecent: true,
+        });
       }
     });
 
@@ -337,17 +344,27 @@ export function initColorPicker(ctx = {}) {
       const fromHex = normalizeColor(hexInput.value);
       const normalized =
         fromHex ||
-        (state.explicitlyChanged ? normalizeColor(state.current || colorInput.value) : "");
+        (state.explicitlyChanged
+          ? normalizeColor(state.current || colorInput.value)
+          : "");
       if (!normalized) return;
       state.explicitlyChanged = true;
       state.current = normalized;
       updateInputs(normalized);
-      applyColor(normalized, { closeAfter: true, closeCommit: true, recordRecent: true });
+      applyColor(normalized, {
+        closeAfter: true,
+        closeCommit: true,
+        recordRecent: true,
+      });
     };
 
     clearBtn.onclick = (e) => {
       e.preventDefault();
-      applyColor("", { closeAfter: true, closeCommit: true, recordRecent: false });
+      applyColor("", {
+        closeAfter: true,
+        closeCommit: true,
+        recordRecent: false,
+      });
     };
   }
 

@@ -27,7 +27,11 @@ export function getCleanupTests() {
           actionIds: [CLEANUP_ACTION_IDS.orphanNotes],
           apply: true,
         });
-        assert.strictEqual(result.totalRemoved, 0, "reachable legacy keys should be retained");
+        assert.strictEqual(
+          result.totalRemoved,
+          0,
+          "reachable legacy keys should be retained",
+        );
         assert.ok(model.notes[legacyKey], "legacy key remains");
         assert.ok(model.notes[canonicalKey], "canonical key remains");
       },

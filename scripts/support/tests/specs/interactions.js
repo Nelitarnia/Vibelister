@@ -4403,8 +4403,16 @@ export function getInteractionsTests() {
 
         const res = controller.runClear({ scope: "selection" });
 
-        assert.strictEqual(res.cleared, 1, "colsAll clears one inferred phase note");
-        assert.strictEqual(model.notes[noteKey], undefined, "note removed fully");
+        assert.strictEqual(
+          res.cleared,
+          1,
+          "colsAll clears one inferred phase note",
+        );
+        assert.strictEqual(
+          model.notes[noteKey],
+          undefined,
+          "note removed fully",
+        );
       },
     },
     {
@@ -4875,7 +4883,11 @@ export function getInteractionsTests() {
             /phase value/.test(clearResult.status || ""),
             "status reflects phase-level clears",
           );
-          assert.strictEqual(tagCapture.events.length, 1, "tag removal event emitted");
+          assert.strictEqual(
+            tagCapture.events.length,
+            1,
+            "tag removal event emitted",
+          );
           assert.strictEqual(
             tagCapture.events[0].type,
             INTERACTION_TAGS_EVENT,
@@ -4958,7 +4970,11 @@ export function getInteractionsTests() {
         });
 
         const res = actions.acceptInferred();
-        assert.strictEqual(res.promoted, 1, "note promoted from empty field selection");
+        assert.strictEqual(
+          res.promoted,
+          1,
+          "note promoted from empty field selection",
+        );
         assert.strictEqual(
           "source" in model.notes[noteKey],
           false,

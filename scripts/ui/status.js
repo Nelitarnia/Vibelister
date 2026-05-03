@@ -51,8 +51,9 @@ export function initStatusBar(element, opts = {}) {
   let shortcutHandler = null;
   let openerFocusEl = null;
   let pendingOpenerFocusEl = null;
-  let lastExternalFocusEl =
-    isHTMLElement(document.activeElement) ? document.activeElement : null;
+  let lastExternalFocusEl = isHTMLElement(document.activeElement)
+    ? document.activeElement
+    : null;
   let activeHistoryIndex = -1;
   const panelId = element.id
     ? `${element.id}-history`
@@ -105,7 +106,8 @@ export function initStatusBar(element, opts = {}) {
     const reversed = [...history].reverse();
     if (!reversed.length) activeHistoryIndex = -1;
     if (activeHistoryIndex < 0) activeHistoryIndex = 0;
-    if (activeHistoryIndex >= reversed.length) activeHistoryIndex = reversed.length - 1;
+    if (activeHistoryIndex >= reversed.length)
+      activeHistoryIndex = reversed.length - 1;
 
     reversed.forEach((entry, index) => {
       const item = document.createElement("li");
@@ -280,10 +282,9 @@ export function initStatusBar(element, opts = {}) {
   }
 
   function onPanelFocusIn(e) {
-    const item =
-      isHTMLElement(e.target)
-        ? e.target.closest(".status-history__item")
-        : null;
+    const item = isHTMLElement(e.target)
+      ? e.target.closest(".status-history__item")
+      : null;
     if (!item || !panel || !panel.contains(item)) return;
     const index = Number.parseInt(item.dataset.historyIndex || "-1", 10);
     if (!Number.isFinite(index) || index < 0) return;
@@ -292,8 +293,9 @@ export function initStatusBar(element, opts = {}) {
 
   function showHistory() {
     ensurePanel();
-    const activeEl =
-      isHTMLElement(document.activeElement) ? document.activeElement : null;
+    const activeEl = isHTMLElement(document.activeElement)
+      ? document.activeElement
+      : null;
     const shouldUseActive = activeEl && !isFocusWithinStatus(activeEl);
     openerFocusEl =
       pendingOpenerFocusEl ||
@@ -437,8 +439,9 @@ export function initStatusBar(element, opts = {}) {
   }
 
   function handlePointerDown() {
-    const activeEl =
-      isHTMLElement(document.activeElement) ? document.activeElement : null;
+    const activeEl = isHTMLElement(document.activeElement)
+      ? document.activeElement
+      : null;
     if (!activeEl) return;
     if (isFocusWithinStatus(activeEl)) return;
     pendingOpenerFocusEl = activeEl;

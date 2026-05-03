@@ -1,4 +1,7 @@
-import { applyInteractionMetadata, describeInteractionInference } from "./interactions.js";
+import {
+  applyInteractionMetadata,
+  describeInteractionInference,
+} from "./interactions.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
 const CLEARABLE_FIELDS = Object.freeze(["outcome", "end", "tag"]);
@@ -58,7 +61,12 @@ export function groupTargetsByNote(targets = [], notes = {}) {
  * that phase are removed and metadata is reset. `mode: "strict"` exists for callers that
  * need selected-field-only behavior.
  */
-export function clearInferredTargets({ notes, targets, mode = "phase", onFieldCleared }) {
+export function clearInferredTargets({
+  notes,
+  targets,
+  mode = "phase",
+  onFieldCleared,
+}) {
   const groupedTargets = groupTargetsByNote(targets, notes);
   const result = {
     cleared: 0,
@@ -103,9 +111,9 @@ export function clearInferredTargets({ notes, targets, mode = "phase", onFieldCl
             ? note.tags.slice()
             : []
           : field === "outcome"
-            ? note.outcomeId ?? null
+            ? (note.outcomeId ?? null)
             : field === "end"
-              ? note.endActionId ?? note.endVariantSig ?? null
+              ? (note.endActionId ?? note.endVariantSig ?? null)
               : null;
       const hadValue = hasStructuredValue(note, field);
       if (!hadValue) continue;

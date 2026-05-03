@@ -69,7 +69,6 @@ function eligibleForSuggestion(target) {
   return target.isInferred && target.allowInferredTargets;
 }
 
-
 function isEvidenceTarget(target) {
   if (!target?.currentValue) return false;
   return !!(target.isManual || target.allowInferredExisting);

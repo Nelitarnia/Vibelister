@@ -4,7 +4,10 @@ import {
 } from "../data/variants/variants.js";
 import { noteKeyForPair } from "./interactions.js";
 import { getInteractionsIndex } from "./interactions-data.js";
-import { isBaselineVisibleRow, isBypassRow } from "./interactions-row-classification.js";
+import {
+  isBaselineVisibleRow,
+  isBypassRow,
+} from "./interactions-row-classification.js";
 
 const BYPASS_INDEX_FIELD = "interactionsIndexBypass";
 const BYPASS_SCOPED_INDEX_FIELD = "interactionsIndexBypassScoped";
@@ -108,7 +111,8 @@ function mapRowsToIndex(rows, sourceAccess, targetAccess) {
 function warnOnMappedRowsInvariant(options, details) {
   if (!options?.debugInference) return;
   const scope = options?.scope;
-  if (scope !== "selection" && scope !== "action" && scope !== "actionGroup") return;
+  if (scope !== "selection" && scope !== "action" && scope !== "actionGroup")
+    return;
   const baselineCount = Number(details?.baselineCount) || 0;
   const mappedCount = Number(details?.mappedCount) || 0;
   if (baselineCount <= 0 || mappedCount > 0) return;
@@ -305,9 +309,14 @@ export function createInferenceIndexAccess(options) {
     const rows = (() => {
       const filterVisibleRows = (candidateRows) =>
         candidateRows.filter((row) =>
-          isBaselineVisibleRow(indexAccess.getPair(row), { includeBypass: false }),
+          isBaselineVisibleRow(indexAccess.getPair(row), {
+            includeBypass: false,
+          }),
         );
-      const allRows = Array.from({ length: indexAccess.getRowCount() }, (_, i) => i);
+      const allRows = Array.from(
+        { length: indexAccess.getRowCount() },
+        (_, i) => i,
+      );
       if (options.scope === "project") {
         const visibleRows = filterVisibleRows(allRows);
         const sourceRows = canReadBypassRows ? allRows : visibleRows;

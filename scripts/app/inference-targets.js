@@ -264,14 +264,15 @@ export function createInferenceTargetResolver({
         reason,
       };
     }
-    const { targets: broaderTargets, allowed: suggestionAllowed } = collectTargets(
-      plan.suggestion.scope,
-      options,
-      indexAccess,
-      plan.suggestion.scope === requestedScope
-        ? rowPlan.suggestionRows
-        : undefined,
-    );
+    const { targets: broaderTargets, allowed: suggestionAllowed } =
+      collectTargets(
+        plan.suggestion.scope,
+        options,
+        indexAccess,
+        plan.suggestion.scope === requestedScope
+          ? rowPlan.suggestionRows
+          : undefined,
+      );
     const suggestionTargets = (() => {
       if (!suggestionAllowed) return targets;
       if (plan.suggestion.scope === requestedScope) return broaderTargets;

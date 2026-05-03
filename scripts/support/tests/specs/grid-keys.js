@@ -367,7 +367,9 @@ export function getGridKeysTests() {
           tagName: "INPUT",
           isContentEditable: false,
           closest(selector) {
-            if (selector === ".status-history, [data-ui-scope='status-history']")
+            if (
+              selector === ".status-history, [data-ui-scope='status-history']"
+            )
               return { id: "statusHistory" };
             return null;
           },
@@ -411,7 +413,9 @@ export function getGridKeysTests() {
             tabCalls += 1;
           },
           ensureVisible: () => {},
-          viewDef: () => ({ columns: [{ key: "c0" }, { key: "c1" }, { key: "c2" }] }),
+          viewDef: () => ({
+            columns: [{ key: "c0" }, { key: "c1" }, { key: "c2" }],
+          }),
           getRowCount: () => 3,
           dataArray: () => [],
           isModColumn: () => false,

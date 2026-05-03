@@ -87,10 +87,7 @@ function isBypassVariantSignature(action, sig, includeBypass) {
     if (modStateActiveish(value) && !modStateIsOn(value)) bypassedIds.add(id);
   }
   if (!bypassedIds.size) return false;
-  const ids = String(sig)
-    .split("+")
-    .map(Number)
-    .filter(Number.isFinite);
+  const ids = String(sig).split("+").map(Number).filter(Number.isFinite);
   return ids.some((id) => bypassedIds.has(id));
 }
 
