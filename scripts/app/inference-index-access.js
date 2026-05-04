@@ -343,54 +343,66 @@ export function createInferenceIndexAccess(options) {
       const baselineSourceRows = baselineVisibleRows;
       const shouldFallbackToBaselineEvidence =
         !canReadBypassRows && mapped.length > 0 && visibleMapped.length === 0;
-      const sourceRows = shouldFallbackToBaselineEvidence
+      const sourceRows = strictManualOnly && !canReadBypassRows
         ? baselineSourceRows
-        : canReadBypassRows
-          ? mapped
-          : visibleMapped;
-      const suggestionRows = shouldFallbackToBaselineEvidence
+        : shouldFallbackToBaselineEvidence
+          ? baselineSourceRows
+          : canReadBypassRows
+            ? mapped
+            : visibleMapped;
+      const suggestionRows = strictManualOnly && !canReadBypassRows
         ? baselineSourceRows
-        : canReadBypassRows
-          ? mapped
-          : visibleMapped;
-      if (strictManualOnly && !canReadBypassRows) {
-        return {
-          sourceRows: baselineSourceRows,
-          suggestionRows: baselineSourceRows,
-          writableRows: canWriteBypassRows ? mapped : visibleMapped,
-        };
-      }
-      if (!canWriteBypassRows) {
-        const writableRows = visibleMapped;
-        return {
-          sourceRows,
-          suggestionRows,
-          writableRows,
-        };
-      }
-      const merged = new Set(mapped);
-      const totalRows = indexAccess.getRowCount();
-      if (
-        canWriteBypassRows &&
-        options.scope !== "selection" &&
-        Array.isArray(actionIds) &&
-        actionIds.length
-      ) {
-        const scoped = new Set(actionIds);
-        const preferredByAction = new Map();
-        for (let i = 0; i < totalRows; i++) {
-          const pair = indexAccess.getPair(i);
-          if (!pair || !scoped.has(pair.aId)) continue;
-          const key = `${pair.aId}|${pair.iId}`;
-          const bypassRow = isBypassRow(pair);
-          const existing = preferredByAction.get(key);
-          if (!existing || (bypassRow && !existing.isBypass)) {
-            preferredByAction.set(key, { row: i, isBypass: bypassRow });
+        : shouldFallbackToBaselineEvidence
+          ? baselineSourceRows
+          : canReadBypassRows
+            ? mapped
+            : visibleMapped;
+
+      const expandWritableRows = () => {
+        if (!canWriteBypassRows) return visibleMapped;
+        const merged = new Set(mapped);
+        const totalRows = indexAccess.getRowCount();
+        if (
+          options.scope !== "selection" &&
+          Array.isArray(actionIds) &&
+          actionIds.length
+        ) {
+          const scoped = new Set(actionIds);
+          const preferredByAction = new Map();
+          for (let i = 0; i < totalRows; i++) {
+            const pair = indexAccess.getPair(i);
+            if (!pair || !scoped.has(pair.aId)) continue;
+            const key = `${pair.aId}|${pair.iId}`;
+            const bypassRow = isBypassRow(pair);
+            const existing = preferredByAction.get(key);
+            if (!existing || (bypassRow && !existing.isBypass)) {
+              preferredByAction.set(key, { row: i, isBypass: bypassRow });
+            }
           }
+          for (const { row } of preferredByAction.values()) merged.add(row);
         }
-        for (const { row } of preferredByAction.values()) merged.add(row);
+        return Array.from(merged).sort((a, b) => a - b);
+      };
+
+      const writableRows = expandWritableRows();
+      if (strictManualOnly && options?.debugInference && !canReadBypassRows) {
+        const strictWritableRows = canWriteBypassRows ? mapped : visibleMapped;
+        const strictChangedWritableRows =
+          strictWritableRows.length !== writableRows.length ||
+          strictWritableRows.some((row, idx) => row !== writableRows[idx]);
+        if (strictChangedWritableRows) {
+          const message =
+            "Strict manual evidence changed writable rows; strict mode should only constrain evidence rows.";
+          console.warn?.("[inference-index-access] strict writable-row drift", {
+            scope: options.scope,
+            strictWritableRows,
+            writableRows,
+            inferToBypassed: canWriteBypassRows,
+            inferFromBypassed: canReadBypassRows,
+          });
+          statusBar?.set?.(message);
+        }
       }
-      const writableRows = Array.from(merged).sort((a, b) => a - b);
       return { sourceRows, suggestionRows, writableRows };
     })();
     const sourceRows = rows.sourceRows;
