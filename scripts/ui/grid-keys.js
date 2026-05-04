@@ -52,7 +52,6 @@ export function initGridKeys(deps) {
     openFromDisk,
     newProject,
     doGenerate,
-    runSelfTests,
     // deletion
     deleteRows,
     clearCells,
@@ -543,11 +542,6 @@ export function initGridKeys(deps) {
     if (e.altKey && (e.key === "g" || e.key === "G")) {
       e.preventDefault();
       doGenerate();
-      return;
-    }
-    if (e.altKey && (e.key === "t" || e.key === "T")) {
-      e.preventDefault();
-      runSelfTests();
       return;
     }
     if (
