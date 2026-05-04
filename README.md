@@ -173,6 +173,7 @@ Explanation of the various options:
 - Include End-Column / Include Tag-Column: Inference automatically attempts filling cells on Outcome columns. These two options allow you to choose if you also want the heuristic to guess values on End and Tag columns. They are on by default.
 - Infer from/to Bypassed Modifiers: Whether modifiers that are set to "Bypassed" in Action view influence or receive inference. These options are off by default.
 - Overwrite existing inferred values: Whether inference will update any cells that have existing inference metadata during a new inference pass, or if it will only make new guesses. It makes sense to have this on if you want your previously inferred predictions to improve as you add data to the project. This option is on by default.
+- Strict deterministic (manual-only evidence): When enabled, inference only uses manual/user-set cells as evidence. Re-running inference with the same manual dataset and settings stays stable instead of snowballing from previously inferred cells. This option is on by default.
 - Only fill empty cells: This option will make inference skip any cells which already have a value, like a pre-set Outcome, End or Tag. It's a niche option with lets you control the scope of the inference when needed. It's off by default.
 - Skip phases with manual Outcome: Inference skips End/Tag inference for phases where Outcome is manually set, even if End or Tag is empty. This can be useful f.e. if you prefer making notes which don't use End or Tag columns in a particularly systematic way, and you suspect trying to infer them would only add noise to your notes. This option is off by default.
 - Clear inferred: A button which lets you clear inference data from the current scope.
@@ -225,10 +226,6 @@ To save time without sacrificing formality, you could create placeholder Actions
 ---
 
 # To do
-
-## Known Bugs
-
-- Inferring two times in a row with same settings can give expanded results on 2nd run, as if some heuristic used inferred / unverified notes as evidence.
 
 ## Ideas for later
 

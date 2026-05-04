@@ -652,9 +652,9 @@ export async function openInferenceDialog(options = {}) {
     debugInferenceLabel.style.marginTop = "8px";
     runOptions.append(
       overwriteLabel,
+      strictManualOnlyLabel,
       onlyEmptyLabel,
       skipManualOutcomeLabel,
-      strictManualOnlyLabel,
       debugInferenceLabel,
     );
 
