@@ -27,15 +27,17 @@ function extractFieldValue(target) {
 }
 
 function resolveEvidencePolicy(policy = {}) {
-  const strictManualOnly = !!policy.strictManualOnly;
+  const normalizedPolicy =
+    policy && typeof policy === "object" ? policy : {};
+  const strictManualOnly = !!normalizedPolicy.strictManualOnly;
   return {
     strictManualOnly,
     allowInferredExisting: strictManualOnly
       ? false
-      : !!policy.allowInferredExisting,
+      : normalizedPolicy.allowInferredExisting !== false,
     allowInferredTargets: strictManualOnly
       ? false
-      : !!policy.allowInferredTargets,
+      : normalizedPolicy.allowInferredTargets !== false,
   };
 }
 
