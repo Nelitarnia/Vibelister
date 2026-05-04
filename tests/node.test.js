@@ -26,6 +26,7 @@ import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference
 import { getInferenceIndexAccessTests } from "../scripts/support/tests/specs/inference-index-access.js";
 import { getInferenceStrategyTests } from "../scripts/support/tests/specs/inference-strategies.js";
 import { getInferenceControllerTests } from "../scripts/support/tests/specs/inference-controller.js";
+import { getInferenceIntegrationTests } from "../scripts/support/tests/specs/inference-integration.js";
 import { getAppInitTests } from "../scripts/support/tests/specs/app-init.js";
 import { getVariantNormalizationTests } from "../scripts/support/tests/specs/variant-normalization.js";
 import { getVariantCombinatoricsTests } from "../scripts/support/tests/specs/variant-combinatorics.js";
@@ -60,7 +61,7 @@ for (const spec of getInferenceUtilsTests()) {
 }
 
 for (const spec of getInferenceIndexAccessTests()) {
-  test(`Inference index access › ${spec.name}`, () => spec.run(sharedAssert));
+  test(`Inference index › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getInferenceStrategyTests()) {
@@ -69,6 +70,10 @@ for (const spec of getInferenceStrategyTests()) {
 
 for (const spec of getInferenceControllerTests()) {
   test(`Inference controller › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInferenceIntegrationTests()) {
+  test(`Inference integration › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getAppInitTests()) {

@@ -256,9 +256,10 @@ function captureInteractionTagEvents() {
   };
 }
 
+
 export function getInteractionsTests() {
   return [
-    {
+{
       name: "note key handles missing pairs",
       run(assert) {
         assert.strictEqual(
@@ -273,7 +274,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "stable ids required for outcome and end cells",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -321,7 +322,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "cached pair lookup scales across thousands of rows",
       run(assert) {
         let accessCount = 0;
@@ -414,7 +415,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "clearing selection spans multiple columns",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -483,7 +484,7 @@ export function getInteractionsTests() {
         assert.ok(!model.notes[notesKey], "notes entry removed after clearing");
       },
     },
-    {
+{
       name: "horizontal selection clears all editable columns",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -553,7 +554,7 @@ export function getInteractionsTests() {
         assert.ok(!model.notes[notesKey], "notes entry removed after clearing");
       },
     },
-    {
+{
       name: "structured copy paste round trip",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -624,7 +625,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "structured notes payload keeps note text",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
@@ -677,78 +678,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
-      name: "structured metadata defaults and inference preservation",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        addAction("Block");
-        addInput("Jab");
-        const outcome = addOutcome("Hit");
-        buildInteractionsPairs(model);
-        const viewDef = makeInteractionsView();
-
-        setInteractionsCell(model, { set() {} }, viewDef, 0, 2, outcome.id);
-        const pair0 = getPair(model, 0);
-        const noteKey0 = noteKeyForPair(pair0, 1);
-        assert.ok(!("confidence" in model.notes[noteKey0]));
-        assert.ok(!("source" in model.notes[noteKey0]));
-
-        const payloadDefault = getStructuredCellInteractions(
-          model,
-          viewDef,
-          0,
-          2,
-        );
-        assert.deepStrictEqual(
-          payloadDefault,
-          { type: "outcome", data: { outcomeId: outcome.id } },
-          "default metadata omitted",
-        );
-
-        setInteractionsCell(model, { set() {} }, viewDef, 0, 2, {
-          outcomeId: outcome.id,
-          confidence: 0.6,
-          source: "model",
-        });
-        const metaPayload = getStructuredCellInteractions(model, viewDef, 0, 2);
-        assert.deepStrictEqual(
-          metaPayload,
-          {
-            type: "outcome",
-            data: { outcomeId: outcome.id, confidence: 0.6, source: "model" },
-          },
-          "non-default metadata exported",
-        );
-
-        const sanitized = sanitizeStructuredPayload(metaPayload);
-        assert.deepStrictEqual(
-          sanitized,
-          {
-            type: "outcome",
-            data: { outcomeId: outcome.id, confidence: 0.6, source: "model" },
-          },
-          "metadata survives sanitize",
-        );
-
-        addInput("Kick");
-        buildInteractionsPairs(model);
-        const applied = applyStructuredCellInteractions(
-          (r, c, v) =>
-            setInteractionsCell(model, { set() {} }, viewDef, r, c, v),
-          viewDef,
-          1,
-          2,
-          sanitized,
-          model,
-        );
-        assert.ok(applied, "metadata payload applied");
-        const pair1 = getPair(model, 1);
-        const noteKey1 = noteKeyForPair(pair1, 1);
-        assert.strictEqual(model.notes[noteKey1].confidence, 0.6);
-        assert.strictEqual(model.notes[noteKey1].source, "model");
-      },
-    },
-    {
+{
       name: "tag cells normalize, copy, and clear values",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
@@ -847,7 +777,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "interaction tag edits dispatch tag update events",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
@@ -943,7 +873,7 @@ export function getInteractionsTests() {
         }
       },
     },
-    {
+{
       name: "interaction tag manager renames and deletes tags via mutation runner",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
@@ -1085,7 +1015,7 @@ export function getInteractionsTests() {
         }
       },
     },
-    {
+{
       name: "AA phase 0 palette edits mirror and clear",
       run(assert) {
         const { model, addAction, addOutcome } = makeModelFixture();
@@ -1188,7 +1118,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "AA phase 0 command clears mirror both directions",
       run(assert) {
         const { model, addAction, addOutcome } = makeModelFixture();
@@ -1285,7 +1215,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "clearInteractionsSelection removes stored comments",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
@@ -1329,7 +1259,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "AA variant pairs cover all modifier combinations",
       run(assert) {
         const { model, addAction, addModifier, groupExact } =
@@ -1440,7 +1370,7 @@ export function getInteractionsTests() {
         }
       },
     },
-    {
+{
       name: "phase availability respects action phases",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
@@ -1474,7 +1404,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "end display canonicalizes variant signatures",
       run(assert) {
         const { model, addAction, addInput, addModifier } = makeModelFixture();
@@ -1524,7 +1454,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "action column emits colored modifier segments",
       run(assert) {
         const { model, addAction, addInput, addModifier } = makeModelFixture();
@@ -1573,7 +1503,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "AA action columns emit colored modifier segments",
       run(assert) {
         const { model, addAction, addModifier } = makeModelFixture();
@@ -1660,7 +1590,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "palette renders colored modifier spans for end actions",
       run(assert) {
         const { model, addAction, addModifier, addInput } = makeModelFixture();
@@ -1757,7 +1687,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "palette lists variants for parenthesized action names",
       run(assert) {
         const { model, addAction, addModifier, addInput, groupExact } =
@@ -1843,7 +1773,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "tag palette suggests existing tags",
       run(assert) {
         const { model, addAction, addInput } = makeModelFixture();
@@ -1949,281 +1879,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
-      name: "inference helper flags non-manual notes",
-      run(assert) {
-        const defaults = describeInteractionInference({});
-        assert.strictEqual(defaults.inferred, false, "empty note not inferred");
-
-        const inferred = describeInteractionInference({
-          source: "model",
-          confidence: 0.4,
-          sourceMetadata: { sources: ["phase-adjacency"] },
-        });
-        assert.strictEqual(
-          inferred.inferred,
-          true,
-          "non-manual source inferred",
-        );
-        assert.strictEqual(inferred.source, "model");
-        assert.strictEqual(inferred.confidence, 0.4);
-        assert.deepStrictEqual(
-          inferred.sourceMetadata,
-          { sources: ["phase-adjacency"] },
-          "source metadata returned",
-        );
-
-        const confOnly = describeInteractionInference({ confidence: 0.25 });
-        assert.strictEqual(
-          confOnly.inferred,
-          true,
-          "low confidence still inferred",
-        );
-      },
-    },
-    {
-      name: "inference heuristics propagate modifier agreements",
-      run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome } =
-          makeModelFixture();
-        const action = addAction("Slash");
-        const modifier = addModifier("Heavy");
-        const outcome = addOutcome("Hit");
-        const inputA = addInput("Light");
-        const inputB = addInput("Fierce");
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 4,
-              variants: [
-                { variantSig: "", rowIndex: 0, rowCount: 2 },
-                { variantSig: `${modifier.id}`, rowIndex: 2, rowCount: 2 },
-              ],
-            },
-          ],
-          totalRows: 4,
-          actionsOrder: [action.id],
-          inputsOrder: [inputA.id, inputB.id],
-          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
-        };
-
-        const basePair = getPair(model, 0);
-        const baseKey = noteKeyForPair(basePair, 1);
-        model.notes[baseKey] = { outcomeId: outcome.id };
-
-        const targets = [];
-        for (let r = 0; r < 4; r++) {
-          const pair = getPair(model, r);
-          const key = noteKeyForPair(pair, 1);
-          targets.push({
-            key,
-            field: "outcome",
-            phase: 1,
-            note: model.notes[key],
-            pair,
-            row: r,
-          });
-        }
-
-        const suggestions = proposeInteractionInferences(targets);
-        const modPair = getPair(model, 2);
-        const modSuggestion = suggestions.get(
-          noteKeyForPair(modPair, 1),
-        )?.outcome;
-        assert.ok(modSuggestion, "modifier row received suggestion");
-        assert.strictEqual(
-          modSuggestion.source,
-          HEURISTIC_SOURCES.modifierPropagation,
-          "propagation uses modifier source",
-        );
-        assert.strictEqual(
-          modSuggestion.value.outcomeId,
-          outcome.id,
-          "propagation carries base outcome",
-        );
-      },
-    },
-    {
-      name: "higher-confidence suggestions replace earlier heuristics",
-      run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome } =
-          makeModelFixture();
-        const action = addAction("Blend");
-        const modifier = addModifier("Charged");
-        const outcome = addOutcome("Stun");
-        const input = addInput("Heavy");
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 2,
-              variants: [
-                { variantSig: "", rowIndex: 0, rowCount: 1 },
-                { variantSig: `${modifier.id}`, rowIndex: 1, rowCount: 1 },
-              ],
-            },
-          ],
-          totalRows: 2,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
-        };
-
-        const basePair = getPair(model, 0);
-        const baseKey = noteKeyForPair(basePair, 1);
-        model.notes[baseKey] = { outcomeId: outcome.id };
-
-        const targets = [];
-        for (let r = 0; r < 2; r++) {
-          const pair = getPair(model, r);
-          const key = noteKeyForPair(pair, 1);
-          targets.push({
-            key,
-            field: "outcome",
-            phase: 1,
-            note: model.notes[key],
-            pair,
-            row: r,
-          });
-        }
-
-        const inputKey = `in:${input.id}`;
-        const profiles = {
-          input: {
-            [inputKey]: {
-              outcome: {
-                phases: {
-                  1: {
-                    change: 10,
-                    noop: 0,
-                    clear: 0,
-                    values: {
-                      [`o:${outcome.id}`]: {
-                        count: 10,
-                        value: { outcomeId: outcome.id },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        };
-
-        const suggestions = proposeInteractionInferences(targets, profiles, {
-          profileTrendMinObservations: 1,
-          profileTrendMinPreferenceRatio: 0,
-        });
-        const inferredPair = getPair(model, 1);
-        const suggestion = suggestions.get(
-          noteKeyForPair(inferredPair, 1),
-        )?.outcome;
-
-        assert.ok(suggestion, "modifier row receives a suggestion");
-        assert.strictEqual(
-          suggestion.source,
-          HEURISTIC_SOURCES.profileTrend,
-          "profile trend overrides earlier consensus",
-        );
-        assert.ok(suggestion.confidence > 0.6, "higher-confidence source wins");
-      },
-    },
-    {
-      name: "consensus ignores inferred anchors unless opted in",
-      run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome } =
-          makeModelFixture();
-        const action = addAction("Resin");
-        const modifierA = addModifier("Twist");
-        const modifierB = addModifier("Jab");
-        const input = addInput("Strong");
-        const outcome = addOutcome("Poison");
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 3,
-              variants: [
-                { variantSig: "", rowIndex: 0, rowCount: 1 },
-                { variantSig: `${modifierA.id}`, rowIndex: 1, rowCount: 1 },
-                { variantSig: `${modifierB.id}`, rowIndex: 2, rowCount: 1 },
-              ],
-            },
-          ],
-          totalRows: 3,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: {
-            [action.id]: ["", `${modifierA.id}`, `${modifierB.id}`],
-          },
-        };
-
-        const manualPair = getPair(model, 0);
-        const manualKey = noteKeyForPair(manualPair, 1);
-        model.notes[manualKey] = { outcomeId: outcome.id };
-
-        const inferredPair = getPair(model, 1);
-        const inferredKey = noteKeyForPair(inferredPair, 1);
-        model.notes[inferredKey] = {
-          outcomeId: outcome.id,
-          source: "model",
-          confidence: 0.4,
-        };
-
-        const targets = [];
-        for (let r = 0; r < 3; r++) {
-          const pair = getPair(model, r);
-          const key = noteKeyForPair(pair, 1);
-          targets.push({
-            key,
-            field: "outcome",
-            phase: 1,
-            note: model.notes[key],
-            pair,
-            row: r,
-          });
-        }
-
-        const suggestions = proposeInteractionInferences(targets);
-        const emptyKey = noteKeyForPair(getPair(model, 2), 1);
-
-        assert.strictEqual(
-          suggestions.get(emptyKey)?.outcome,
-          undefined,
-          "inferred sources do not drive consensus",
-        );
-        assert.strictEqual(
-          suggestions.get(inferredKey)?.outcome,
-          undefined,
-          "inferred targets stay untouched without opt-in",
-        );
-
-        const optInTargets = targets.map((t) =>
-          t.key === inferredKey
-            ? { ...t, allowInferredExisting: true, allowInferredTargets: true }
-            : t,
-        );
-        const optInSuggestions = proposeInteractionInferences(optInTargets);
-        const optedSuggestion = optInSuggestions.get(emptyKey)?.outcome;
-
-        assert.strictEqual(
-          optedSuggestion?.value.outcomeId,
-          outcome.id,
-          "opt-in allows inferred value to seed consensus",
-        );
-      },
-    },
-    {
+{
       name: "lower-confidence suggestions cannot displace existing ones",
       run(assert) {
         const { model, addAction, addInput, addModifier, addOutcome } =
@@ -2288,7 +1944,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "phase adjacency fills single missing phase between matching anchors",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -2352,7 +2008,7 @@ export function getInteractionsTests() {
         });
       },
     },
-    {
+{
       name: "phase adjacency ignores divergent anchors",
       run(assert) {
         const setupGapTargets = (actionsPhases) => {
@@ -2425,82 +2081,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
-      name: "phase adjacency ignores inferred anchors unless opted in",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        const action = addAction("Anchor");
-        action.phases = { ids: [0, 1, 2], labels: {} };
-        const input = addInput("High");
-        const outcome = addOutcome("Connect");
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 1,
-              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
-            },
-          ],
-          totalRows: 1,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: { [action.id]: [""] },
-        };
-
-        const pair = getPair(model, 0);
-        const phase0Key = noteKeyForPair(pair, 0);
-        const phase2Key = noteKeyForPair(pair, 2);
-        model.notes[phase0Key] = {
-          outcomeId: outcome.id,
-          source: "model",
-          confidence: 0.35,
-        };
-        model.notes[phase2Key] = {
-          outcomeId: outcome.id,
-          source: "model",
-          confidence: 0.38,
-        };
-
-        const targets = [];
-        for (let p = 0; p < 3; p++) {
-          const key = noteKeyForPair(pair, p);
-          targets.push({
-            key,
-            field: "outcome",
-            phase: p,
-            note: model.notes[key],
-            pair,
-            actionGroup: null,
-          });
-        }
-
-        const suggestions = proposeInteractionInferences(targets);
-        assert.strictEqual(
-          suggestions.get(noteKeyForPair(pair, 1))?.outcome,
-          undefined,
-          "inferred anchors do not seed adjacency",
-        );
-
-        const optInTargets = targets.map((t) => ({
-          ...t,
-          allowInferredExisting: true,
-        }));
-        const optInSuggestions = proposeInteractionInferences(optInTargets);
-        const adjacencySuggestion = optInSuggestions.get(
-          noteKeyForPair(pair, 1),
-        )?.outcome;
-
-        assert.strictEqual(
-          adjacencySuggestion?.value.outcomeId,
-          outcome.id,
-          "opt-in re-enables adjacency from inferred anchors",
-        );
-      },
-    },
-    {
+{
       name: "phase adjacency fills multi-phase gaps with scaled confidence and respects eligibility",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -2592,7 +2173,7 @@ export function getInteractionsTests() {
         });
       },
     },
-    {
+{
       name: "phase adjacency avoids gaps with conflicting interior phases",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -2659,7 +2240,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
+{
       name: "phase adjacency can be disabled via threshold overrides",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -2721,7 +2302,7 @@ export function getInteractionsTests() {
         assert.ok(!gap, "disabling phase adjacency suppresses gap suggestions");
       },
     },
-    {
+{
       name: "phase adjacency respects tightened max gap threshold",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -2789,285 +2370,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
-      name: "applyInference fills empty cells with heuristic metadata",
-      run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome } =
-          makeModelFixture();
-        const action = addAction("Strike");
-        const modifier = addModifier("Swift");
-        const outcome = addOutcome("Hit");
-        const input = addInput("Jab");
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p1:outcome" }],
-        };
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 2,
-              variants: [
-                { variantSig: "", rowIndex: 0, rowCount: 1 },
-                { variantSig: `${modifier.id}`, rowIndex: 1, rowCount: 1 },
-              ],
-            },
-          ],
-          totalRows: 2,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
-        };
-
-        const basePair = getPair(model, 0);
-        const baseKey = noteKeyForPair(basePair, 1);
-        model.notes[baseKey] = { outcomeId: outcome.id, source: "manual" };
-
-        const selection = { rows: new Set(), colsAll: true };
-        const controller = createInferenceController({
-          model,
-          selection,
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (opts.status) res.status = opts.status(res);
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-        });
-
-        const res = controller.runInference({ scope: "project" });
-        const inferredPair = getPair(model, 1);
-        const inferredKey = noteKeyForPair(inferredPair, 1);
-        const inferredNote = model.notes[inferredKey];
-
-        assert.strictEqual(
-          res.sources[HEURISTIC_SOURCES.modifierPropagation],
-          1,
-        );
-        assert.strictEqual(inferredNote.outcomeId, outcome.id);
-        assert.strictEqual(
-          inferredNote.source,
-          HEURISTIC_SOURCES.modifierPropagation,
-          "heuristic source stored on inferred note",
-        );
-        assert.strictEqual(
-          inferredNote.confidence,
-          0.41,
-          "heuristic confidence scales with agreement",
-        );
-        assert.ok(
-          /modifier propagation: 1/.test(res.status || ""),
-          "status text lists heuristic count",
-        );
-      },
-    },
-    {
-      name: "inference emits status once through mutation runner",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        addAction("Strike");
-        addInput("High");
-        addOutcome("Hit");
-        buildInteractionsPairs(model);
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
-        };
-
-        const statusBar = {
-          messages: [],
-          set(msg) {
-            this.messages.push(msg);
-          },
-        };
-
-        const controller = createInferenceController({
-          model,
-          selection: { rows: new Set([0]), colsAll: true },
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar,
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (typeof opts.status === "function") {
-              const message = opts.status(res);
-              if (message) statusBar.set(message);
-            }
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-        });
-
-        const res = controller.runInference({ scope: "project" });
-        assert.ok(res.status, "status text produced by formatter");
-        assert.deepStrictEqual(
-          statusBar.messages,
-          [res.status],
-          "status applied exactly once",
-        );
-      },
-    },
-    {
-      name: "inference debug status is included without extra status emissions",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        addAction("Strike");
-        addInput("High");
-        addOutcome("Hit");
-        buildInteractionsPairs(model);
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
-        };
-
-        const statusBar = {
-          messages: [],
-          set(msg) {
-            this.messages.push(msg);
-          },
-        };
-
-        const controller = createInferenceController({
-          model,
-          selection: { rows: new Set([0]), colsAll: true },
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar,
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (typeof opts.status === "function") {
-              const message = opts.status(res);
-              if (message) statusBar.set(message);
-            }
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-        });
-
-        const res = controller.runInference({
-          scope: "project",
-          debugInference: true,
-        });
-        assert.ok(
-          /Debug — sourceRows:/.test(res.status || ""),
-          "status text includes debug details",
-        );
-        assert.deepStrictEqual(
-          statusBar.messages,
-          [res.status],
-          "debug mode still emits one status message",
-        );
-      },
-    },
-    {
-      name: "bypass inference respects selection rows from base index",
-      run(assert) {
-        const {
-          model,
-          addAction,
-          addInput,
-          addModifier,
-          addOutcome,
-          groupExact,
-        } = makeModelFixture();
-        const modifier = addModifier("Bypassable");
-        addAction("Base", { [modifier.id]: MOD_STATE_ID.BYPASS });
-        const target = addAction("Target");
-        const inputA = addInput("High");
-        addInput("Low");
-        const outcome = addOutcome("Hit");
-
-        groupExact(1, [modifier], { required: false, name: "Bypassable" });
-
-        buildInteractionsPairs(model);
-        buildInteractionsPairs(model, {
-          includeBypass: true,
-          targetIndexField: "interactionsIndexBypass",
-        });
-
-        const sourcePair = getInteractionsPair(model, 0);
-        const sourceKey = noteKeyForPair(sourcePair, 0);
-        model.notes[sourceKey] = {
-          outcomeId: outcome.id,
-          source: DEFAULT_INTERACTION_SOURCE,
-        };
-
-        const targetPair = getInteractionsPair(model, 2);
-        const targetKey = noteKeyForPair(targetPair, 0);
-        assert.ok(!model.notes[targetKey], "target row starts empty");
-
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
-        };
-        const includeBypassCalls = [];
-        const controller = createInferenceController({
-          model,
-          selection: { rows: new Set([2]), colsAll: true },
-          sel: { r: 2, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate) => mutate(),
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r, opts) => {
-            includeBypassCalls.push(!!opts?.includeBypass);
-            return getInteractionsPair(m, r, opts);
-          },
-          getInteractionsRowCount: (m, opts) => {
-            includeBypassCalls.push(!!opts?.includeBypass);
-            return getInteractionsRowCount(m, opts);
-          },
-        });
-
-        const res = controller.runInference({
-          scope: "selection",
-          inferFromBypassed: true,
-          inferToBypassed: true,
-          thresholdOverrides: {
-            consensusMinGroupSize: 1,
-            consensusMinExistingRatio: 0,
-            actionGroupMinGroupSize: 1,
-            actionGroupMinExistingRatio: 0,
-            inputDefaultMinGroupSize: 1,
-            inputDefaultMinExistingRatio: 0,
-          },
-        });
-
-        assert.strictEqual(
-          model.notes[targetKey]?.outcomeId,
-          outcome.id,
-          "selection row mapped into bypass index targets expected pair",
-        );
-        assert.ok(res.applied >= 1, "inference applied after bypass remap");
-        assert.ok(
-          includeBypassCalls.some(Boolean),
-          "bypass flags forwarded through selection run",
-        );
-        assert.strictEqual(
-          targetPair?.aId,
-          target.id,
-          "selection still resolves to target action id",
-        );
-        assert.strictEqual(
-          targetPair?.iId,
-          inputA.id,
-          "selection still resolves to target input id",
-        );
-      },
-    },
-    {
+{
       name: "selection scope with inferToBypassed keeps writable targets bounded to selection keys",
       run(assert) {
         const { model, addAction, addInput, addModifier, groupExact } =
@@ -3133,109 +2436,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
-      name: "rebuilds bypass indexes after cleanup before inference",
-      run(assert) {
-        const {
-          model,
-          addAction,
-          addInput,
-          addModifier,
-          addOutcome,
-          groupExact,
-        } = makeModelFixture();
-        const modifier = addModifier("Bypassable");
-        const source = addAction("Base", {
-          [modifier.id]: MOD_STATE_ID.BYPASS,
-        });
-        const target = addAction("Target");
-        const input = addInput("High");
-        const outcome = addOutcome("Hit");
-
-        groupExact(1, [modifier], { required: false, name: "Bypassable" });
-
-        buildInteractionsPairs(model);
-
-        const bypassPair = {
-          kind: "AI",
-          aId: source.id,
-          iId: input.id,
-          variantSig: String(modifier.id),
-        };
-        const bypassKey = noteKeyForPair(bypassPair, 0);
-        model.notes[bypassKey] = {
-          outcomeId: outcome.id,
-          source: DEFAULT_INTERACTION_SOURCE,
-        };
-
-        delete model.interactionsIndexBypass;
-        delete model.interactionsIndexBypassScoped;
-        delete model.interactionsIndexBypassCache;
-        delete model.interactionsIndexBypassScopedCache;
-
-        const targetRow = findPairIndex(model, (p) => p.aId === target.id);
-        assert.ok(targetRow >= 0, "target row found in base index");
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
-        };
-        const controller = createInferenceController({
-          model,
-          selection: { rows: new Set([targetRow]), colsAll: true },
-          sel: { r: targetRow, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate) => mutate(),
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r, opts) => getInteractionsPair(m, r, opts),
-          getInteractionsRowCount: (m, opts) =>
-            getInteractionsRowCount(m, opts),
-        });
-
-        const res = controller.runInference({
-          scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
-          thresholdOverrides: {
-            consensusMinGroupSize: 1,
-            consensusMinExistingRatio: 0,
-            actionGroupMinGroupSize: 1,
-            actionGroupMinExistingRatio: 0,
-            inputDefaultMinGroupSize: 1,
-            inputDefaultMinExistingRatio: 0,
-          },
-        });
-
-        const bypassIndex = model.interactionsIndexBypass;
-        const rebuiltPair = (() => {
-          const total = Number(bypassIndex?.totalRows) || 0;
-          for (let i = 0; i < total; i++) {
-            const pair = getInteractionsPair(model, i, {
-              includeBypass: true,
-              index: bypassIndex,
-            });
-            if (
-              pair?.aId === source.id &&
-              pair?.variantSig === String(modifier.id)
-            )
-              return pair;
-          }
-          return null;
-        })();
-
-        assert.ok(
-          Array.isArray(bypassIndex?.groups),
-          "bypass index rebuilt for inference run",
-        );
-        assert.ok(rebuiltPair, "rebuilt bypass index exposes bypass pair");
-        assert.ok(
-          model.notes[noteKeyForPair(rebuiltPair, 0)],
-          "bypass note remains accessible after rebuild",
-        );
-        assert.ok(res, "inference run completed after bypass rebuild");
-      },
-    },
-    {
+{
       name: "bypass cache invalidates after base index rebuild",
       run(assert) {
         const {
@@ -3321,111 +2522,7 @@ export function getInteractionsTests() {
         assert.ok(res.applied >= 1, "inference applied after cache rebuild");
       },
     },
-    {
-      name: "inference can source bypass variants when opted in",
-      run(assert) {
-        const {
-          model,
-          addAction,
-          addInput,
-          addModifier,
-          addOutcome,
-          groupExact,
-        } = makeModelFixture();
-        const modifier = addModifier("Bypassable");
-        const action = addAction("Strike", {
-          [modifier.id]: MOD_STATE_ID.BYPASS,
-        });
-        const input = addInput("High");
-        const outcome = addOutcome("Hit");
-
-        groupExact(1, [modifier], { required: false, name: "Bypassable" });
-
-        buildInteractionsPairs(model);
-        buildInteractionsPairs(model, {
-          includeBypass: true,
-          targetIndexField: "interactionsIndexBypass",
-        });
-
-        const bypassPair = getInteractionsPair(model, 1, {
-          includeBypass: true,
-        });
-        assert.ok(
-          bypassPair,
-          "bypass pair available when opt-in index is built",
-        );
-        const bypassKey = noteKeyForPair(bypassPair, 0);
-        model.notes[bypassKey] = {
-          outcomeId: outcome.id,
-          source: DEFAULT_INTERACTION_SOURCE,
-        };
-
-        const basePair = getInteractionsPair(model, 0, { includeBypass: true });
-        const baseKey = noteKeyForPair(basePair, 0);
-
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
-        };
-        const includeBypassCalls = [];
-        const controller = createInferenceController({
-          model,
-          selection: { rows: new Set([0]), colsAll: true },
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (opts.status) res.status = opts.status(res);
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r, opts) => {
-            includeBypassCalls.push(!!opts?.includeBypass);
-            return getInteractionsPair(m, r, opts);
-          },
-          getInteractionsRowCount: (m, opts) => {
-            includeBypassCalls.push(!!opts?.includeBypass);
-            return getInteractionsRowCount(m, opts);
-          },
-        });
-
-        controller.runInference({ scope: "project" });
-        assert.ok(
-          !model.notes[baseKey],
-          "legacy path ignores bypass-only sources",
-        );
-
-        const res = controller.runInference({
-          scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
-          thresholdOverrides: {
-            consensusMinGroupSize: 1,
-            consensusMinExistingRatio: 0,
-            actionGroupMinGroupSize: 1,
-            actionGroupMinExistingRatio: 0,
-            inputDefaultMinGroupSize: 1,
-            inputDefaultMinExistingRatio: 0,
-          },
-        });
-
-        assert.strictEqual(
-          model.notes[baseKey]?.outcomeId,
-          outcome.id,
-          "base variant inferred from bypass source when opt-in enabled",
-        );
-        assert.ok(
-          includeBypassCalls.some(Boolean),
-          "inference passes bypass-inclusive flag to accessors",
-        );
-        assert.ok(
-          (res?.applied || 0) >= 1,
-          "inference applied at least one change",
-        );
-      },
-    },
-    {
+{
       name: "project scope sources bypass notes without writing bypass rows unless inferToBypassed is enabled",
       run(assert) {
         function makeScenario(seedBypassSource) {
@@ -3592,830 +2689,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
-      name: "clear inference targets bypass rows when opted in",
-      run(assert) {
-        const {
-          model,
-          addAction,
-          addInput,
-          addModifier,
-          addOutcome,
-          groupExact,
-        } = makeModelFixture();
-        const modifier = addModifier("Bypassable");
-        const action = addAction("Sweep", {
-          [modifier.id]: MOD_STATE_ID.BYPASS,
-        });
-        addInput("Light");
-        const outcome = addOutcome("Graze");
-
-        groupExact(1, [modifier], { required: false, name: "Bypassable" });
-
-        buildInteractionsPairs(model);
-        buildInteractionsPairs(model, {
-          includeBypass: true,
-          targetIndexField: "interactionsIndexBypass",
-        });
-
-        const bypassPair = getInteractionsPair(model, 1, {
-          includeBypass: true,
-        });
-        assert.ok(
-          bypassPair,
-          "bypass row present when index includes marked modifiers",
-        );
-        const bypassKey = noteKeyForPair(bypassPair, 0);
-        model.notes[bypassKey] = {
-          outcomeId: outcome.id,
-          source: HEURISTIC_SOURCES.modifierPropagation,
-        };
-
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p0:outcome" }],
-        };
-        const includeBypassCalls = [];
-        const controller = createInferenceController({
-          model,
-          selection: { rows: new Set([0]), colsAll: true },
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate) => mutate(),
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r, opts) => getInteractionsPair(m, r, opts),
-          getInteractionsRowCount: (m, opts) => {
-            includeBypassCalls.push(!!opts?.includeBypass);
-            return getInteractionsRowCount(m, opts);
-          },
-        });
-
-        const baseClear = controller.runClear({ scope: "project" });
-        assert.strictEqual(
-          baseClear.cleared,
-          0,
-          "legacy clear ignores bypass rows",
-        );
-        assert.ok(
-          !includeBypassCalls.some(Boolean),
-          "bypass flag stays off by default",
-        );
-
-        const bypassClear = controller.runClear({
-          scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
-        });
-
-        assert.strictEqual(
-          bypassClear.cleared,
-          1,
-          "bypass-inclusive clear removes inferred bypass note",
-        );
-        assert.ok(
-          includeBypassCalls.some(Boolean),
-          "bypass-inclusive flag forwarded to row counter",
-        );
-        assert.ok(
-          !model.notes[bypassKey],
-          "bypass note cleared after opt-in run",
-        );
-      },
-    },
-    {
-      name: "bypass inference on large selections matches baseline speed and counts",
-      run(assert) {
-        function buildRun(options = {}) {
-          const {
-            model,
-            addAction,
-            addInput,
-            addModifier,
-            addOutcome,
-            groupExact,
-          } = makeModelFixture();
-          const modifier = addModifier("Bypassable");
-          const outcome = addOutcome("Hit");
-          groupExact(1, [modifier], { required: false, name: "Bypassable" });
-
-          Array.from({ length: 4 }, (_, idx) => addInput(`Input ${idx + 1}`));
-          const bypassActionIds = new Set();
-          Array.from({ length: 24 }, (_, idx) => {
-            const modSet =
-              idx % 2 ? { [modifier.id]: MOD_STATE_ID.BYPASS } : {};
-            const action = addAction(`Action ${idx + 1}`, modSet);
-            if (modSet[modifier.id] === MOD_STATE_ID.BYPASS)
-              bypassActionIds.add(action.id);
-          });
-
-          buildInteractionsPairs(model);
-          buildInteractionsPairs(model, {
-            includeBypass: true,
-            targetIndexField: "interactionsIndexBypass",
-          });
-
-          const baseRowCount = getInteractionsRowCount(model);
-          for (let row = 0; row < baseRowCount; row += 6) {
-            const pair = getInteractionsPair(model, row);
-            const key = noteKeyForPair(pair, 0);
-            model.notes[key] = {
-              outcomeId: outcome.id,
-              source: DEFAULT_INTERACTION_SOURCE,
-            };
-          }
-
-          const selectionRows = new Set(
-            Array.from(
-              { length: Math.min(baseRowCount, 120) },
-              (_, idx) => idx,
-            ),
-          );
-          const bypassRow = findPairIndex(
-            model,
-            (pair) => pair?.variantSig === String(modifier.id),
-          );
-          if (bypassRow >= 0) selectionRows.add(bypassRow);
-          const viewDef = {
-            columns: [
-              { key: "action" },
-              { key: "input" },
-              { key: "p1:outcome" },
-            ],
-          };
-
-          const calls = [];
-          const controller = createInferenceController({
-            model,
-            selection: { rows: selectionRows, colsAll: true },
-            sel: { r: 0, c: 2 },
-            getActiveView: () => "interactions",
-            viewDef: () => viewDef,
-            statusBar: { set() {} },
-            runModelMutation: (label, mutate) => mutate(),
-            makeUndoConfig: () => ({}),
-            getInteractionsPair: (m, r, opts) =>
-              getInteractionsPair(m, r, opts),
-            getInteractionsRowCount: (m, opts = {}) => {
-              const count = getInteractionsRowCount(m, opts);
-              calls.push({
-                includeBypass: !!opts?.includeBypass,
-                indexTotal: opts?.index?.totalRows,
-                count,
-              });
-              return count;
-            },
-          });
-
-          const start = performance.now();
-          const res = controller.runInference({
-            scope: "selection",
-            thresholdOverrides: {
-              consensusMinGroupSize: 1,
-              consensusMinExistingRatio: 0,
-              actionGroupMinGroupSize: 1,
-              actionGroupMinExistingRatio: 0,
-              inputDefaultMinGroupSize: 1,
-              inputDefaultMinExistingRatio: 0,
-            },
-            ...options,
-          });
-          const elapsed = performance.now() - start;
-          const bypassSelected = Array.from(selectionRows).some((row) => {
-            const pair = getInteractionsPair(model, row);
-            return pair?.aId && bypassActionIds.has(pair.aId);
-          });
-
-          return {
-            res,
-            elapsed,
-            model,
-            calls,
-            selectionSize: selectionRows.size,
-            bypassSelected,
-          };
-        }
-
-        const baseRun = buildRun();
-        const bypassRun = buildRun({
-          inferFromBypassed: true,
-          inferToBypassed: true,
-        });
-
-        assert.ok(baseRun.selectionSize > 30, "covers large selection set");
-        assert.ok(
-          baseRun.bypassSelected,
-          "selection includes bypassed actions",
-        );
-        assert.strictEqual(
-          baseRun.res?.applied || 0,
-          bypassRun.res?.applied || 0,
-          "bypass inference matches applied count from baseline run",
-        );
-        const bypassIndexSize =
-          bypassRun.model.interactionsIndexBypass?.totalRows;
-        const bypassCounts = bypassRun.calls
-          .filter(
-            (call) => call.includeBypass && Number.isFinite(call.indexTotal),
-          )
-          .map((call) => call.indexTotal);
-        assert.ok(
-          bypassCounts.length > 0 &&
-            bypassCounts.every(
-              (count) => count > 0 && count <= Number(bypassIndexSize || 0),
-            ),
-          "bypass inference uses bounded bypass index sizes",
-        );
-
-        const runtimeBuffer = Math.max(5, baseRun.elapsed * 0.5);
-        assert.ok(
-          bypassRun.elapsed <= baseRun.elapsed + runtimeBuffer,
-          "bypass run stays within baseline runtime budget",
-        );
-      },
-    },
-    {
-      name: "bypass inference honors scoped selection suggestions",
-      run(assert) {
-        function buildRun(enableBypass = false) {
-          const {
-            model,
-            addAction,
-            addInput,
-            addModifier,
-            addOutcome,
-            groupExact,
-          } = makeModelFixture();
-
-          const modifier = addModifier("Bypassable");
-          const outcome = addOutcome("Hit");
-          const inputs = Array.from({ length: 6 }, (_, idx) =>
-            addInput(`Input ${idx + 1}`),
-          );
-
-          groupExact(1, [modifier], { required: false, name: "Bypassable" });
-
-          const sharedActions = Array.from({ length: 4 }, (_, idx) => {
-            const action = addAction(`Shared ${idx + 1}`, {});
-            action.actionGroup = "Shared";
-            return action;
-          });
-
-          Array.from({ length: 24 }, (_, idx) => {
-            const modSet =
-              idx % 3 === 0 ? { [modifier.id]: MOD_STATE_ID.BYPASS } : {};
-            const action = addAction(`Action ${idx + 1}`, modSet);
-          });
-
-          buildInteractionsPairs(model);
-          buildInteractionsPairs(model, {
-            includeBypass: true,
-            targetIndexField: "interactionsIndexBypass",
-          });
-
-          const viewDef = {
-            columns: [
-              { key: "action" },
-              { key: "input" },
-              { key: "p0:outcome" },
-            ],
-          };
-
-          const sourceRow = findPairIndex(
-            model,
-            (pair) =>
-              pair?.aId === sharedActions[0].id && pair?.iId === inputs[0].id,
-          );
-          const sourcePair = getInteractionsPair(model, sourceRow, {
-            includeBypass: enableBypass,
-          });
-          const sourceKey = noteKeyForPair(sourcePair, 0);
-          model.notes[sourceKey] = {
-            outcomeId: outcome.id,
-            source: DEFAULT_INTERACTION_SOURCE,
-          };
-
-          const targetRow = findPairIndex(
-            model,
-            (pair) =>
-              pair?.aId === sharedActions[1].id && pair?.iId === inputs[0].id,
-          );
-          const selectionRows = new Set();
-          const selectedActions = new Set([
-            sharedActions[0].id,
-            sharedActions[1].id,
-          ]);
-          const baseRowCount = getInteractionsRowCount(model);
-          for (let r = 0; r < baseRowCount; r++) {
-            const pair = getInteractionsPair(model, r);
-            if (pair && selectedActions.has(pair.aId)) selectionRows.add(r);
-          }
-          const selection = { rows: selectionRows, colsAll: true };
-
-          let pairCalls = 0;
-          const controller = createInferenceController({
-            model,
-            selection,
-            sel: { r: targetRow, c: 2 },
-            getActiveView: () => "interactions",
-            viewDef: () => viewDef,
-            statusBar: { set() {} },
-            runModelMutation: (label, mutate) => mutate(),
-            makeUndoConfig: () => ({}),
-            getInteractionsPair: (m, r, opts) => {
-              pairCalls++;
-              return getInteractionsPair(m, r, opts);
-            },
-            getInteractionsRowCount: (m, opts) =>
-              getInteractionsRowCount(m, opts),
-          });
-
-          const totalRows = getInteractionsRowCount(model, {
-            includeBypass: enableBypass,
-          });
-
-          const res = controller.runInference({
-            scope: "selection",
-            inferFromBypassed: enableBypass,
-            inferToBypassed: enableBypass,
-            thresholdOverrides: {
-              consensusMinGroupSize: 1,
-              consensusMinExistingRatio: 0,
-              actionGroupMinGroupSize: 1,
-              actionGroupMinExistingRatio: 0,
-            },
-          });
-
-          return { res, pairCalls, totalRows };
-        }
-
-        const baseline = buildRun(false);
-        const bypass = buildRun(true);
-
-        assert.ok(
-          baseline.res.applied >= 1,
-          "baseline inference applies within scoped selection",
-        );
-        assert.strictEqual(
-          bypass.res.applied,
-          baseline.res.applied,
-          "bypass run keeps applied count stable",
-        );
-        assert.strictEqual(
-          bypass.res.empty,
-          baseline.res.empty,
-          "bypass run preserves empty count",
-        );
-        assert.ok(
-          bypass.pairCalls <= baseline.pairCalls * 4,
-          `bypass run avoids ballooning lookups on scoped selections (baseline: ${baseline.pairCalls}, bypass: ${bypass.pairCalls})`,
-        );
-      },
-    },
-    {
-      name: "profile trends ignore reverted inference edits",
-      run(assert) {
-        const { model, addAction, addInput, addModifier, addOutcome } =
-          makeModelFixture();
-        resetInferenceProfiles(model.inferenceProfiles);
-        const action = addAction("Strike");
-        const modifier = addModifier("Swift");
-        const outcome = addOutcome("Hit");
-        const input = addInput("Jab");
-        const viewDef = {
-          columns: [{ key: "action" }, { key: "input" }, { key: "p1:outcome" }],
-        };
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 2,
-              variants: [
-                { variantSig: "", rowIndex: 0, rowCount: 1 },
-                { variantSig: `${modifier.id}`, rowIndex: 1, rowCount: 1 },
-              ],
-            },
-          ],
-          totalRows: 2,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: { [action.id]: ["", `${modifier.id}`] },
-        };
-
-        const status = { set() {} };
-        setInteractionsCell(model, status, viewDef, 0, 2, {
-          outcomeId: outcome.id,
-          source: "manual",
-        });
-
-        const inputKey = `in:${input.id}`;
-        const manualSnapshot = captureInferenceProfilesSnapshot(
-          model.inferenceProfiles,
-        );
-        const manualChange = manualSnapshot.input[inputKey].outcome.all.change;
-        const decayFactor = 0.94;
-        assert.ok(
-          manualChange > 0.9 && manualChange <= 1,
-          "manual edits populate profile counts once",
-        );
-
-        const undoStack = [];
-        const runModelMutation = (label, mutate, options = {}) => {
-          const beforeNotes = structuredClone(model.notes);
-          const result = mutate();
-          const shouldRecord =
-            typeof options.shouldRecord === "function"
-              ? options.shouldRecord(result)
-              : typeof options.undo?.shouldRecord === "function"
-                ? options.undo.shouldRecord(result)
-                : true;
-          if (shouldRecord) {
-            undoStack.push(() => {
-              model.notes = structuredClone(beforeNotes);
-            });
-          }
-          if (typeof options.status === "function") {
-            result.status = options.status(result);
-          }
-          return result;
-        };
-
-        const selection = { rows: new Set(), colsAll: true };
-        const controller = createInferenceController({
-          model,
-          selection,
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: status,
-          runModelMutation,
-          makeUndoConfig: (opts = {}) => opts,
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-          heuristicThresholds: { profileTrendMinObservations: 1 },
-        });
-
-        const res = controller.runInference({ scope: "project" });
-        assert.strictEqual(
-          res.applied,
-          1,
-          "inference applies propagated value",
-        );
-
-        const snapshotAfterInference = captureInferenceProfilesSnapshot(
-          model.inferenceProfiles,
-        );
-        const inferenceChange =
-          snapshotAfterInference.input[inputKey].outcome.all.change;
-        assert.ok(
-          Math.abs(inferenceChange / manualChange - decayFactor * decayFactor) <
-            1e-9,
-          "inferred edits do not inflate profile counts",
-        );
-
-        const undo = undoStack.pop();
-        if (undo) undo();
-
-        const snapshotAfterUndo = captureInferenceProfilesSnapshot(
-          model.inferenceProfiles,
-        );
-        const undoChange = snapshotAfterUndo.input[inputKey].outcome.all.change;
-        assert.ok(
-          Math.abs(undoChange / inferenceChange - decayFactor) < 1e-9,
-          "undoing inference leaves profiles with manual edits only",
-        );
-
-        const inferredPair = getPair(model, 1);
-        const inferredKey = noteKeyForPair(inferredPair, 1);
-        const targets = [
-          {
-            key: inferredKey,
-            field: "outcome",
-            phase: 1,
-            note: model.notes[inferredKey],
-            pair: inferredPair,
-            actionGroup: "",
-          },
-        ];
-        const suggestions = proposeInteractionInferences(
-          targets,
-          snapshotAfterUndo,
-          {
-            profileTrendMinObservations: 2,
-            profileTrendMinPreferenceRatio: 0,
-          },
-        );
-        const suggestion = suggestions.get(inferredKey)?.outcome;
-        assert.ok(
-          suggestion == null ||
-            suggestion.source !== HEURISTIC_SOURCES.profileTrend,
-          "profile trend is gated without additional manual observations",
-        );
-      },
-    },
-    {
-      name: "inference ignores phases not defined on the action",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        const action = addAction("Guard");
-        action.phases = { ids: [0], labels: {} };
-        const input = addInput("Brace");
-        const outcome = addOutcome("Hold");
-        const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-            { key: "p1:outcome" },
-          ],
-        };
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 1,
-              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
-            },
-          ],
-          totalRows: 1,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: { [action.id]: [""] },
-        };
-
-        const pair = getPair(model, 0);
-        const allowedKey = noteKeyForPair(pair, 0);
-        const blockedKey = noteKeyForPair(pair, 1);
-        model.notes[allowedKey] = { outcomeId: outcome.id, source: "auto" };
-        model.notes[blockedKey] = { outcomeId: outcome.id, source: "auto" };
-
-        const selection = { rows: new Set([0]), colsAll: true };
-        const controller = createInferenceController({
-          model,
-          selection,
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (opts.status) res.status = opts.status(res);
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-        });
-
-        const res = controller.runClear({ scope: "project" });
-
-        assert.strictEqual(res.cleared, 1);
-        assert.ok(!model.notes[allowedKey], "clears phases defined for action");
-        assert.deepStrictEqual(
-          model.notes[blockedKey],
-          { outcomeId: outcome.id, source: "auto" },
-          "preserves notes for phases outside action range",
-        );
-      },
-    },
-    {
-      name: "clear inference with single selected column uses canonical phase-level clear",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        const action = addAction("Strike");
-        const followUp = addAction("Follow");
-        const input = addInput("High");
-        const outcome = addOutcome("Hit");
-        const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-            { key: "p0:end" },
-            { key: "p0:tag" },
-          ],
-        };
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 1,
-              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
-            },
-          ],
-          totalRows: 1,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: { [action.id]: [""] },
-        };
-
-        const pair = getPair(model, 0);
-        const noteKey = noteKeyForPair(pair, 0);
-        model.notes[noteKey] = {
-          outcomeId: outcome.id,
-          endActionId: followUp.id,
-          endVariantSig: "",
-          tags: ["Pressure"],
-          source: "auto",
-        };
-
-        const selection = {
-          rows: new Set([0]),
-          cols: new Set([3]),
-          colsAll: false,
-        };
-        const controller = createInferenceController({
-          model,
-          selection,
-          sel: { r: 0, c: 3 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (opts.status) res.status = opts.status(res);
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-        });
-
-        const res = controller.runClear({ scope: "selection" });
-
-        assert.strictEqual(res.cleared, 1, "clears one inferred phase note");
-        assert.strictEqual(
-          model.notes[noteKey],
-          undefined,
-          "single-column selection still clears outcome/end/tag for that phase",
-        );
-      },
-    },
-    {
-      name: "clear inference with multi-column selection still clears one phase note",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        const action = addAction("Strike");
-        const followUp = addAction("Follow");
-        const input = addInput("High");
-        const outcome = addOutcome("Hit");
-        const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-            { key: "p0:end" },
-            { key: "p0:tag" },
-          ],
-        };
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 1,
-              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
-            },
-          ],
-          totalRows: 1,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: { [action.id]: [""] },
-        };
-
-        const pair = getPair(model, 0);
-        const noteKey = noteKeyForPair(pair, 0);
-        model.notes[noteKey] = {
-          outcomeId: outcome.id,
-          endActionId: followUp.id,
-          endVariantSig: "",
-          tags: ["Pressure"],
-          source: "auto",
-        };
-
-        const selection = {
-          rows: new Set([0]),
-          cols: new Set([2, 4]),
-          colsAll: false,
-        };
-        const controller = createInferenceController({
-          model,
-          selection,
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (opts.status) res.status = opts.status(res);
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-        });
-
-        const res = controller.runClear({ scope: "selection" });
-
-        assert.strictEqual(res.cleared, 1, "phase-level clear counts one note");
-        assert.strictEqual(
-          model.notes[noteKey],
-          undefined,
-          "multi-column selection clears all clearable fields in the phase",
-        );
-      },
-    },
-    {
-      name: "clear inference with colsAll clears inferred phase note",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        const action = addAction("Strike");
-        const followUp = addAction("Follow");
-        const input = addInput("High");
-        const outcome = addOutcome("Hit");
-        const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-            { key: "p0:end" },
-            { key: "p0:tag" },
-          ],
-        };
-
-        model.interactionsIndex = {
-          mode: "AI",
-          groups: [
-            {
-              actionId: action.id,
-              rowIndex: 0,
-              totalRows: 1,
-              variants: [{ variantSig: "", rowIndex: 0, rowCount: 1 }],
-            },
-          ],
-          totalRows: 1,
-          actionsOrder: [action.id],
-          inputsOrder: [input.id],
-          variantCatalog: { [action.id]: [""] },
-        };
-
-        const pair = getPair(model, 0);
-        const noteKey = noteKeyForPair(pair, 0);
-        model.notes[noteKey] = {
-          outcomeId: outcome.id,
-          endActionId: followUp.id,
-          endVariantSig: "",
-          tags: ["Pressure"],
-          source: "auto",
-        };
-
-        const selection = {
-          rows: new Set([0]),
-          colsAll: true,
-        };
-        const controller = createInferenceController({
-          model,
-          selection,
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (opts.status) res.status = opts.status(res);
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-        });
-
-        const res = controller.runClear({ scope: "selection" });
-
-        assert.strictEqual(
-          res.cleared,
-          1,
-          "colsAll clears one inferred phase note",
-        );
-        assert.strictEqual(
-          model.notes[noteKey],
-          undefined,
-          "note removed fully",
-        );
-      },
-    },
-    {
+{
       name: "controller and bulk metadata clear produce equivalent phase-level results",
       run(assert) {
         const { model, addAction, addInput, addOutcome } = makeModelFixture();
@@ -4528,71 +2802,7 @@ export function getInteractionsTests() {
         );
       },
     },
-    {
-      name: "inference skips end/tag when manual outcome uses defaults and skip option",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        addAction("Strike");
-        addInput("Jab");
-        const outcome = addOutcome("Hit");
-        buildInteractionsPairs(model);
-        const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p0:outcome" },
-            { key: "p0:end" },
-            { key: "p0:tag" },
-          ],
-        };
-
-        const pair = getPair(model, 0);
-        const noteKey = noteKeyForPair(pair, 0);
-        model.notes[noteKey] = { outcomeId: outcome.id };
-
-        const selection = { rows: new Set(), colsAll: true };
-        const controller = createInferenceController({
-          model,
-          selection,
-          sel: { r: 0, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef: () => viewDef,
-          statusBar: { set() {} },
-          runModelMutation: (label, mutate, opts = {}) => {
-            const res = mutate();
-            if (opts.status) res.status = opts.status(res);
-            return res;
-          },
-          makeUndoConfig: () => ({}),
-          getInteractionsPair: (m, r) => getInteractionsPair(m, r),
-          getInteractionsRowCount: (m) => getInteractionsRowCount(m),
-        });
-
-        const res = controller.runInference({
-          scope: "project",
-          skipManualOutcome: true,
-        });
-
-        assert.strictEqual(
-          res.applied,
-          0,
-          "no inference applied to manual phase",
-        );
-        assert.strictEqual(res.skippedManual, 1, "manual outcome skipped");
-        assert.strictEqual(
-          res.skippedManualOutcome,
-          2,
-          "end and tag skipped when manual outcome present",
-        );
-        assert.strictEqual(res.empty, 0, "skipped cells not treated as empty");
-        assert.deepStrictEqual(
-          model.notes[noteKey],
-          { outcomeId: outcome.id },
-          "notes unchanged when skipping manual outcome phase",
-        );
-      },
-    },
-    {
+{
       name: "selection scope infers end/tag when toggles enabled",
       run(assert) {
         const { model, addAction, addInput, addModifier } = makeModelFixture();
@@ -4683,309 +2893,6 @@ export function getInteractionsTests() {
           HEURISTIC_SOURCES.modifierPropagation,
         );
       },
-    },
-    {
-      name: "bulk actions promote or clear inferred values without touching manual cells",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        const action = addAction("Strike");
-        const followUp = addAction("Follow");
-        const inputPrimary = addInput("High");
-        const inputSecondary = addInput("Low");
-        const inferredOutcome = addOutcome("Hit");
-        const manualOutcome = addOutcome("Block");
-        buildInteractionsPairs(model);
-        const viewDef = makeInteractionsView();
-
-        const inferredRow = findPairIndex(
-          model,
-          (pair) => pair.aId === action.id && pair.iId === inputPrimary.id,
-        );
-        const manualRow = findPairIndex(
-          model,
-          (pair) => pair.aId === followUp.id && pair.iId === inputSecondary.id,
-        );
-        assert.ok(inferredRow >= 0 && manualRow >= 0, "target rows exist");
-
-        setInteractionsCell(model, { set() {} }, viewDef, inferredRow, 2, {
-          outcomeId: inferredOutcome.id,
-          confidence: 0.6,
-          source: "model",
-        });
-        setInteractionsCell(model, { set() {} }, viewDef, manualRow, 2, {
-          outcomeId: manualOutcome.id,
-        });
-
-        const selection = {
-          rows: new Set([inferredRow, manualRow]),
-          cols: new Set([2]),
-          colsAll: false,
-        };
-        const sel = { r: inferredRow, c: 2 };
-
-        const runModelMutation = (label, mutate, options = {}) => {
-          const res = mutate();
-          if (options.status) res.status = options.status(res);
-          return res;
-        };
-
-        const actions = createInteractionBulkActions({
-          model,
-          selection,
-          sel,
-          getActiveView: () => "interactions",
-          viewDef,
-          runModelMutation,
-          getInteractionsPair: (m, r) => getPair(m, r),
-        });
-
-        const acceptResult = actions.acceptInferred();
-        const inferredKey = noteKeyForPair(getPair(model, inferredRow), 1);
-        const manualKey = noteKeyForPair(getPair(model, manualRow), 1);
-
-        assert.strictEqual(acceptResult.promoted, 1, "inferred cell promoted");
-        assert.ok(
-          /Promoted/.test(acceptResult.status || ""),
-          "status conveys promotion",
-        );
-        assert.strictEqual(
-          "source" in model.notes[inferredKey],
-          false,
-          "manual source cleared after promotion",
-        );
-        assert.strictEqual(
-          "confidence" in model.notes[inferredKey],
-          false,
-          "default confidence omitted after promotion",
-        );
-
-        setInteractionsCell(model, { set() {} }, viewDef, inferredRow, 2, {
-          outcomeId: inferredOutcome.id,
-          confidence: 0.5,
-          source: "model",
-        });
-
-        const clearResult = actions.clearInferenceMetadata();
-        assert.strictEqual(clearResult.cleared, 1, "inferred value cleared");
-        assert.strictEqual(
-          model.notes[inferredKey],
-          undefined,
-          "inferred note removed after clearing",
-        );
-        assert.strictEqual(
-          model.notes[manualKey].outcomeId,
-          manualOutcome.id,
-          "manual note left intact",
-        );
-        assert.ok(
-          /Cleared/.test(clearResult.status || ""),
-          "status conveys clearing",
-        );
-      },
-    },
-    {
-      name: "clearing inferred metadata removes full phase values, preserves manual phases, and deletes empty notes",
-      run(assert) {
-        const { model, addAction, addInput, addOutcome } = makeModelFixture();
-        const action = addAction("Strike");
-        const followUp = addAction("Follow");
-        const inputPrimary = addInput("High");
-        const inputSecondary = addInput("Low");
-        const inferredOutcome = addOutcome("Hit");
-        const manualOutcome = addOutcome("Block");
-        buildInteractionsPairs(model);
-        const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p1:outcome" },
-            { key: "p1:end" },
-            { key: "p1:tag" },
-          ],
-        };
-
-        const inferredRow = findPairIndex(
-          model,
-          (pair) => pair.aId === action.id && pair.iId === inputPrimary.id,
-        );
-        const manualRow = findPairIndex(
-          model,
-          (pair) => pair.aId === followUp.id && pair.iId === inputSecondary.id,
-        );
-        assert.ok(inferredRow >= 0 && manualRow >= 0, "target rows exist");
-
-        const inferredKey = noteKeyForPair(getPair(model, inferredRow), 1);
-        const manualKey = noteKeyForPair(getPair(model, manualRow), 1);
-
-        model.notes[inferredKey] = {
-          outcomeId: inferredOutcome.id,
-          endActionId: followUp.id,
-          endVariantSig: "",
-          tags: ["Stun"],
-          confidence: 0.5,
-          source: "model",
-        };
-        model.notes[manualKey] = {
-          outcomeId: manualOutcome.id,
-          endActionId: action.id,
-          endVariantSig: "",
-          tags: ["Safe"],
-          source: "manual",
-        };
-
-        const selection = {
-          rows: new Set([inferredRow, manualRow]),
-          cols: new Set([2]),
-          colsAll: false,
-        };
-        const sel = { r: inferredRow, c: 2 };
-        const runModelMutation = (label, mutate, options = {}) => {
-          const res = mutate();
-          if (options.status) res.status = options.status(res);
-          return res;
-        };
-        const tagCapture = captureInteractionTagEvents();
-
-        try {
-          const actions = createInteractionBulkActions({
-            model,
-            selection,
-            sel,
-            getActiveView: () => "interactions",
-            viewDef,
-            runModelMutation,
-            getInteractionsPair: (m, r) => getPair(m, r),
-          });
-
-          const clearResult = actions.clearInferenceMetadata();
-          assert.strictEqual(
-            clearResult.cleared,
-            1,
-            "selecting one field clears all inferred values in that phase",
-          );
-          assert.strictEqual(
-            model.notes[inferredKey],
-            undefined,
-            "inferred phase note deleted after clearing all phase values and metadata",
-          );
-          assert.deepStrictEqual(
-            model.notes[manualKey],
-            {
-              outcomeId: manualOutcome.id,
-              endActionId: action.id,
-              endVariantSig: "",
-              tags: ["Safe"],
-              source: "manual",
-            },
-            "manual phase remains unchanged",
-          );
-          assert.ok(
-            /phase value/.test(clearResult.status || ""),
-            "status reflects phase-level clears",
-          );
-          assert.strictEqual(
-            tagCapture.events.length,
-            1,
-            "tag removal event emitted",
-          );
-          assert.strictEqual(
-            tagCapture.events[0].type,
-            INTERACTION_TAGS_EVENT,
-            "tag event type matches",
-          );
-          assert.deepStrictEqual(
-            tagCapture.events[0].detail?.tags,
-            ["Stun"],
-            "removed inferred tags are reported",
-          );
-          assert.strictEqual(
-            tagCapture.events[0].detail?.noteKey,
-            inferredKey,
-            "event targets inferred phase note",
-          );
-        } finally {
-          tagCapture.restore();
-        }
-      },
-    },
-    {
-      name: "promoting inferred notes works when selection field is empty but sibling inferred value exists",
-      run(assert) {
-        const { model, addAction, addInput } = makeModelFixture();
-        const action = addAction("Strike");
-        const follow = addAction("Follow");
-        const input = addInput("High");
-        buildInteractionsPairs(model);
-        const viewDef = {
-          columns: [
-            { key: "action" },
-            { key: "input" },
-            { key: "p1:outcome" },
-            { key: "p1:end" },
-            { key: "p1:tag" },
-          ],
-        };
-        const row = findPairIndex(
-          model,
-          (pair) => pair.aId === action.id && pair.iId === input.id,
-        );
-        assert.ok(row >= 0, "target row exists");
-
-        setInteractionsCell(model, { set() {} }, viewDef, row, 3, {
-          endActionId: follow.id,
-          endVariantSig: "",
-          confidence: 0.5,
-          source: "model",
-        });
-        const noteKey = noteKeyForPair(getPair(model, row), 1);
-        assert.strictEqual(
-          model.notes[noteKey].source,
-          "model",
-          "note starts inferred",
-        );
-        assert.strictEqual(
-          "outcomeId" in model.notes[noteKey],
-          false,
-          "selected field is initially empty",
-        );
-
-        const selection = {
-          rows: new Set([row]),
-          cols: new Set([2]),
-          colsAll: false,
-        };
-        const runModelMutation = (label, mutate, options = {}) => {
-          const res = mutate();
-          if (options.status) res.status = options.status(res);
-          return res;
-        };
-        const actions = createInteractionBulkActions({
-          model,
-          selection,
-          sel: { r: row, c: 2 },
-          getActiveView: () => "interactions",
-          viewDef,
-          runModelMutation,
-          getInteractionsPair: (m, r) => getPair(m, r),
-        });
-
-        const res = actions.acceptInferred();
-        assert.strictEqual(
-          res.promoted,
-          1,
-          "note promoted from empty field selection",
-        );
-        assert.strictEqual(
-          "source" in model.notes[noteKey],
-          false,
-          "promotion resets source to manual default",
-        );
-        assert.strictEqual(
-          "confidence" in model.notes[noteKey],
-          false,
-          "promotion resets confidence to manual default",
-        );
-      },
-    },
+    }
   ];
 }

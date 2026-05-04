@@ -321,3 +321,16 @@ This document outlines a maintainable directory layout tailored to the current c
 ## Transition tips
 
 Adopting this layout keeps domain, UI, and support code clearly separated while remaining flexible for future expansion.
+
+### Inference test-category boundary
+
+Inference suites are split from general interaction behavior using this boundary:
+
+- **Interaction specs** (`scripts/support/tests/specs/interactions.js`): core cell editing, selection, tags, clipboard, and bulk interaction behavior that does not require running inference pipelines.
+- **Inference suites** (`scripts/support/tests/specs/inference-*.js`): all inference-specific coverage, grouped contiguously as:
+  1. `Inference utils`
+  2. `Inference index`
+  3. `Inference strategies`
+  4. `Inference controller`
+  5. `Inference integration`
+- **Inference integration specs** (`scripts/support/tests/specs/inference-integration.js`): higher-level end-to-end inference behavior (proposal/application/clear/promote flows) separated from baseline interactions tests.
