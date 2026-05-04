@@ -633,6 +633,12 @@ export async function openInferenceDialog(options = {}) {
         !!defaults.skipManualOutcome,
         "When enabled, inference leaves End/Tag untouched for phases where Outcome is already manual.",
       );
+    const { label: strictManualOnlyLabel, input: strictManualOnlyInput } =
+      buildCheckbox(
+        "Strict deterministic (manual-only evidence)",
+        !!defaults.strictManualOnly,
+        "When enabled, only manual cells are used as evidence and repeated runs with unchanged manual data stay stable.",
+      );
     const { label: debugInferenceLabel, input: debugInferenceInput } =
       buildCheckbox(
         "Debug inference status",
@@ -642,11 +648,13 @@ export async function openInferenceDialog(options = {}) {
     overwriteLabel.style.marginTop = "8px";
     onlyEmptyLabel.style.marginTop = "8px";
     skipManualOutcomeLabel.style.marginTop = "8px";
+    strictManualOnlyLabel.style.marginTop = "8px";
     debugInferenceLabel.style.marginTop = "8px";
     runOptions.append(
       overwriteLabel,
       onlyEmptyLabel,
       skipManualOutcomeLabel,
+      strictManualOnlyLabel,
       debugInferenceLabel,
     );
 
@@ -928,6 +936,7 @@ export async function openInferenceDialog(options = {}) {
         overwriteInferred: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
         skipManualOutcome: skipManualOutcomeInput.checked,
+        strictManualOnly: strictManualOnlyInput.checked,
         debugInference: debugInferenceInput.checked,
         thresholdOverrides: buildThresholdOverrides(),
       };

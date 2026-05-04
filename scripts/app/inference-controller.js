@@ -21,6 +21,7 @@ const DEFAULT_OPTIONS = Object.freeze({
   overwriteInferred: true,
   onlyFillEmpty: false,
   skipManualOutcome: false,
+  strictManualOnly: false,
   debugInference: false,
 });
 
@@ -42,6 +43,7 @@ function normalizeOptions(payload = {}) {
     overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
     skipManualOutcome: !!payload.skipManualOutcome,
+    strictManualOnly: !!payload.strictManualOnly,
     debugInference:
       payload.debugInference == null
         ? DEFAULT_OPTIONS.debugInference
@@ -385,6 +387,7 @@ export function createInferenceController(options) {
           overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
           onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
           skipManualOutcome: DEFAULT_OPTIONS.skipManualOutcome,
+          strictManualOnly: DEFAULT_OPTIONS.strictManualOnly,
           debugInference: isInferenceDebugEnabledBySettings(),
           scope: DEFAULT_OPTIONS.scope,
           thresholdOverrides: lastThresholdOverrides,
