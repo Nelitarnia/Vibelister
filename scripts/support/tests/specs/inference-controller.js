@@ -11,6 +11,28 @@ function makeIndexAccess(includeBypass, pairs) {
 export function getInferenceControllerTests() {
   return [
     {
+      name: "strict selection evidence scope is stable across writable-scope toggles",
+      run(assert) {
+        const selection = { rows: new Set([0]) };
+        const base = {
+          requestedScope: "selection",
+          selection,
+          indexAccess: makeIndexAccess(true, [{ aId: 7, iId: 2 }]),
+          options: { strictManualOnly: true, inferFromBypassed: false },
+        };
+        const withoutBypassWrites = buildScopePlan({
+          ...base,
+          options: { ...base.options, inferToBypassed: false },
+        });
+        const withBypassWrites = buildScopePlan({
+          ...base,
+          options: { ...base.options, inferToBypassed: true },
+        });
+        assert.strictEqual(withoutBypassWrites.suggestion.scope, "selection");
+        assert.strictEqual(withBypassWrites.suggestion.scope, "selection");
+      },
+    },
+    {
       name: "selection suggestion scope matrix across inferFrom/inferTo bypass options",
       run(assert) {
         const selection = { rows: new Set([0]) };

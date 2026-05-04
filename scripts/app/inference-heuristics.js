@@ -26,7 +26,23 @@ function extractFieldValue(target) {
   return extractNoteFieldValue(target?.note, target?.field);
 }
 
-function prepareTargets(targets) {
+function resolveEvidencePolicy(policy = {}) {
+  const normalizedPolicy =
+    policy && typeof policy === "object" ? policy : {};
+  const strictManualOnly = !!normalizedPolicy.strictManualOnly;
+  return {
+    strictManualOnly,
+    allowInferredExisting: strictManualOnly
+      ? false
+      : normalizedPolicy.allowInferredExisting !== false,
+    allowInferredTargets: strictManualOnly
+      ? false
+      : normalizedPolicy.allowInferredTargets !== false,
+  };
+}
+
+function prepareTargets(targets, policy) {
+  const effectivePolicy = resolveEvidencePolicy(policy);
   return targets.map((target) => {
     const actionId = normalizeActionId(target.pair);
     const variantSig = normalizeVariantSig(target.pair);
@@ -35,8 +51,10 @@ function prepareTargets(targets) {
     const info = describeInteractionInference(target.note);
     const source = normalizeInteractionSource(info?.source);
     const isInferred = !!info?.inferred;
-    const allowInferredExisting = !!target?.allowInferredExisting;
-    const allowInferredTargets = !!target?.allowInferredTargets;
+    const allowInferredExisting =
+      effectivePolicy.allowInferredExisting && !!target?.allowInferredExisting;
+    const allowInferredTargets =
+      effectivePolicy.allowInferredTargets && !!target?.allowInferredTargets;
     const properties = normalizePropertyKeys(target.action?.properties);
     const sourceIsManual = source === DEFAULT_INTERACTION_SOURCE;
     // Evidence must come from manual/user-set cells, unless opt-in is explicit.
@@ -571,9 +589,10 @@ export function runInferenceStrategies(
   profiles,
   thresholdOverrides,
   strategies = DEFAULT_INFERENCE_STRATEGIES,
+  policy = null,
 ) {
   const thresholds = normalizeThresholds(thresholdOverrides);
-  const prepared = prepareTargets(targets || []);
+  const prepared = prepareTargets(targets || [], policy);
   const suggestions = new Map();
 
   const profilePrefs = profiles
@@ -627,11 +646,13 @@ export function proposeInteractionInferences(
   targets,
   profiles,
   thresholdOverrides,
+  policy = null,
 ) {
   return runInferenceStrategies(
     targets,
     profiles,
     thresholdOverrides,
     DEFAULT_INFERENCE_STRATEGIES,
+    policy,
   );
 }
