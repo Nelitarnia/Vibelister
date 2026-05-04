@@ -47,7 +47,7 @@ export function setupInputHandlers({
   } = modelApi;
   const { undo, redo } = historyApi;
   const { newProject, openFromDisk, saveToDisk } = persistenceApi;
-  const { doGenerate, runSelfTests } = generationApi;
+  const { doGenerate } = generationApi;
   const {
     getStructuredCell,
     applyStructuredCell,
@@ -152,7 +152,6 @@ export function setupInputHandlers({
     openFromDisk,
     newProject,
     doGenerate,
-    runSelfTests,
     deleteRows: modelApi.deleteSelectedRows,
     clearCells: modelApi.clearSelectedCells,
     addRowsAbove: modelApi.addRowsAbove,

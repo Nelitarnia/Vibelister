@@ -1,3 +1,12 @@
+# Test strategy
+
+Supported automated testing paths are:
+
+1. **Node test suite** via `tests/node.test.js` for unit/integration logic.
+2. **Playwright suite** for browser/end-to-end behavior.
+
+In-app/browser self-test harness entrypoints are intentionally removed.
+
 # Playwright smoke tests
 
 This repo uses a small Playwright smoke suite for browser-critical workflows. Keep it intentionally small, deterministic, and focused on high-signal regressions.

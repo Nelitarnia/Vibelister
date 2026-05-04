@@ -26,7 +26,6 @@ export function bootstrapMenus(Ids) {
     toolsGenerate: el(Ids.toolsGenerate),
     toolsCleanup: el(Ids.toolsCleanup),
     toolsInference: el(Ids.toolsInference),
-    toolsTests: el(Ids.toolsTests),
     toolsRules: el(Ids.toolsRules),
     viewActions: el(Ids.viewActions),
     viewInputs: el(Ids.viewInputs),

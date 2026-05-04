@@ -9,7 +9,6 @@ export function initMenus(deps) {
     openFromDisk,
     saveToDisk,
     doGenerate,
-    runSelfTests,
     model, // for Rules dialog
     openSettings,
     openProjectInfo,
@@ -212,10 +211,6 @@ export function initMenus(deps) {
     if (typeof openInference === "function") {
       await openInference();
     }
-  });
-  items.toolsTests?.addEventListener("click", () => {
-    closeAllMenus();
-    runSelfTests();
   });
   items.toolsRules?.addEventListener("click", async () => {
     closeAllMenus();

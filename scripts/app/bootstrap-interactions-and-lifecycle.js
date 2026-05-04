@@ -106,7 +106,7 @@ export function bootstrapInteractionsAndLifecycle({
   const { newProject, openFromDisk, saveToDisk, updateProjectNameWidget } =
     persistenceApi;
 
-  const { doGenerate, runSelfTests } = generationApi;
+  const { doGenerate } = generationApi;
 
   const {
     getStructuredCell,
@@ -235,7 +235,7 @@ export function bootstrapInteractionsAndLifecycle({
       },
       historyApi: { undo, redo },
       persistenceApi: { newProject, openFromDisk, saveToDisk },
-      generationApi: { doGenerate, runSelfTests },
+      generationApi: { doGenerate },
       clipboardApi: {
         getStructuredCell,
         applyStructuredCell,
@@ -255,7 +255,6 @@ export function bootstrapInteractionsAndLifecycle({
     openFromDisk,
     saveToDisk,
     doGenerate,
-    runSelfTests,
     model,
     openSettings: openSettingsDialog,
     openProjectInfo,
@@ -356,7 +355,6 @@ export function bootstrapInteractionsAndLifecycle({
     resizeObserver.observe(sheet);
     setActiveView("actions");
     updateProjectNameWidget();
-    if (location.hash.includes("test")) runSelfTests();
   }
 
   appContext.setLifecycle({

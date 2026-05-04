@@ -250,7 +250,6 @@ export function createApp() {
     getSuggestedName,
   } = persistenceApi;
 
-  const { runSelfTests } = diagnosticsApi;
 
   // Edit
 
@@ -385,7 +384,7 @@ export function createApp() {
       saveToDisk,
       updateProjectNameWidget,
     },
-    generationApi: { doGenerate, runSelfTests },
+    generationApi: { doGenerate },
     clipboardApi: {
       getStructuredCell,
       applyStructuredCell,
