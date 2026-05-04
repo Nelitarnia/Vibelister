@@ -166,6 +166,8 @@ Inferred cells are marked with a border inside the Interactions-view. The color 
 
 There are multiple different modes for Inference, including deducing results from similarity between Actions (through both modified Actions and user-set Action Groups), commonly seen Input or Modifier patterns as well as a trend of recently set Actions.
 
+Strict deterministic mode keeps inference evidence manual-only and stable: inferred cells are never used as evidence, and writable scope toggles (selection/action/project or infer-to-bypassed) do not implicitly expand or shrink the evidence pool. With the same manual dataset, thresholds and options, repeated runs produce the same suggestions. Permissive/iterative mode is broader: it can intentionally include inferred/bypassed context when configured, which may produce expanded follow-up suggestions between runs.
+
 Explanation of the various options:
 
 - Include End-Column / Include Tag-Column: Inference automatically attempts filling cells on Outcome columns. These two options allow you to choose if you also want the heuristic to guess values on End and Tag columns. They are on by default.

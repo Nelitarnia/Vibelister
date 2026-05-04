@@ -257,17 +257,21 @@ export function createInferenceIndexAccess(options) {
   }
 
   function resolveIndexAccess(options, resolveRows) {
+    const strictManualOnly = !!options?.strictManualOnly;
     const includeBypass = shouldUseBypassIndex(options);
     const canWriteBypassRows = !!options?.inferToBypassed;
     const canReadBypassRows = !!options?.inferFromBypassed;
     const baseAccess = getBaseIndexAccess();
     const baseRows = resolveRows(options.scope, baseAccess);
+    const baselineVisibleRows = baseRows.filter((row) =>
+      isBaselineVisibleRow(baseAccess.getPair(row), { includeBypass: false }),
+    );
     if (!includeBypass) {
       return {
         indexAccess: baseAccess,
         rows: baseRows,
-        sourceRows: baseRows,
-        suggestionRows: baseRows,
+        sourceRows: strictManualOnly ? baselineVisibleRows : baseRows,
+        suggestionRows: strictManualOnly ? baselineVisibleRows : baseRows,
         targetRows: baseRows,
         writableRows: baseRows,
       };
@@ -336,9 +340,7 @@ export function createInferenceIndexAccess(options) {
         actionIds,
       });
       const visibleMapped = filterVisibleRows(mapped);
-      const baselineSourceRows = baseRows.filter((row) =>
-        isBaselineVisibleRow(baseAccess.getPair(row), { includeBypass: false }),
-      );
+      const baselineSourceRows = baselineVisibleRows;
       const shouldFallbackToBaselineEvidence =
         !canReadBypassRows && mapped.length > 0 && visibleMapped.length === 0;
       const sourceRows = shouldFallbackToBaselineEvidence
@@ -351,6 +353,13 @@ export function createInferenceIndexAccess(options) {
         : canReadBypassRows
           ? mapped
           : visibleMapped;
+      if (strictManualOnly && !canReadBypassRows) {
+        return {
+          sourceRows: baselineSourceRows,
+          suggestionRows: baselineSourceRows,
+          writableRows: canWriteBypassRows ? mapped : visibleMapped,
+        };
+      }
       if (!canWriteBypassRows) {
         const writableRows = visibleMapped;
         return {

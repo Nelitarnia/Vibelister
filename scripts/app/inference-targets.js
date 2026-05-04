@@ -107,6 +107,7 @@ export function buildScopePlan({
   indexAccess,
   options,
 }) {
+  const strictManualOnly = !!options?.strictManualOnly;
   const selectionActionIds = collectSelectionActionIds(
     selection,
     requestedScope,
@@ -114,6 +115,7 @@ export function buildScopePlan({
   );
   const canReadBypassRows = !!options?.inferFromBypassed;
   const suggestionScope = (() => {
+    if (strictManualOnly) return requestedScope;
     if (requestedScope === "project") return "project";
     if (requestedScope === "actionGroup") return "actionGroup";
     if (requestedScope === "action") return "action";

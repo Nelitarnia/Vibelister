@@ -52,6 +52,35 @@ function makeTarget({
 export function getInferenceStrategyTests() {
   return [
     {
+      name: "strict mode suggestions are deterministic across repeated runs",
+      run(assert) {
+        const targets = [
+          makeTarget({ actionId: 1, inputId: 1, value: { outcomeId: 9 } }),
+          makeTarget({ actionId: 1, inputId: 2 }),
+          makeTarget({ actionId: 2, inputId: 1, value: { outcomeId: 9 } }),
+          makeTarget({ actionId: 2, inputId: 2 }),
+        ];
+        const strategies = [consensusStrategy, inputDefaultStrategy];
+        const thresholds = {
+          consensusMinGroupSize: 2,
+          consensusMinExistingRatio: 0.5,
+        };
+        const runOnce = () =>
+          JSON.stringify(
+            Array.from(
+              runInferenceStrategies(targets, null, thresholds, strategies, {
+                strictManualOnly: true,
+              }).entries(),
+            ),
+          );
+        assert.strictEqual(
+          runOnce(),
+          runOnce(),
+          "repeat runs must match exactly",
+        );
+      },
+    },
+    {
       name: "consensus replaces weaker input default",
       run(assert) {
         const targets = [

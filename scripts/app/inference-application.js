@@ -67,6 +67,9 @@ export function applySuggestions({
     suggestionTargets,
     profileSnapshot,
     thresholdOverrides,
+    {
+      strictManualOnly: !!options?.strictManualOnly,
+    },
   );
   const suggestionMapSize = suggestions.size;
   const result = {
@@ -171,16 +174,18 @@ export function applySuggestions({
     if (appliedChange) {
       result.applied++;
       const nextValue = extractNoteFieldValue(dest, target.field);
-      recordProfileImpact({
-        store: inferenceProfiles,
-        pair: target.pair,
-        field: target.field,
-        previousValue,
-        nextValue,
-        phase: target.phase,
-        inferred: true,
-        manualOnly: true,
-      });
+      if (!options?.strictManualOnly) {
+        recordProfileImpact({
+          store: inferenceProfiles,
+          pair: target.pair,
+          field: target.field,
+          previousValue,
+          nextValue,
+          phase: target.phase,
+          inferred: true,
+          manualOnly: true,
+        });
+      }
     }
   }
   if (tagsChanged) {
