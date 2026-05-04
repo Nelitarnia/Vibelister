@@ -85,7 +85,6 @@ export const Ids = Object.freeze({
   sheetDeleteRows: "sheet-delete-rows",
   toolsGenerate: "tools-generate",
   toolsInference: "tools-inference",
-  toolsTests: "tools-tests",
   toolsRules: "tools-rules",
   toolsCleanup: "tools-cleanup",
   viewActions: "view-actions",
