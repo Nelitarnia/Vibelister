@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createNodeAsserts } from "../scripts/support/tests/specs/assertions.js";
 import { getModelVariantTests } from "../scripts/support/tests/specs/model-variants.js";
-import { getInteractionsTests } from "../scripts/support/tests/specs/interactions.js";
+import { getInteractionsCoreTests } from "../scripts/support/tests/specs/interactions-core.js";
+import { getInteractionsTagTests } from "../scripts/support/tests/specs/interactions-tags.js";
+import { getInteractionsPaletteTests } from "../scripts/support/tests/specs/interactions-palette.js";
 import { getPersistenceTests } from "../scripts/support/tests/specs/persistence.js";
 import { getUiGridMouseTests } from "../scripts/support/tests/specs/ui-grid-mouse.js";
 import { getUiRowDragTests } from "../scripts/support/tests/specs/ui-row-drag.js";
@@ -52,7 +54,15 @@ for (const spec of getVariantConstraintTests()) {
   test(`Variant constraints › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
-for (const spec of getInteractionsTests()) {
+for (const spec of getInteractionsCoreTests()) {
+  test(`Interactions › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInteractionsTagTests()) {
+  test(`Interactions › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInteractionsPaletteTests()) {
   test(`Interactions › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
