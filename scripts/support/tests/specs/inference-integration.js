@@ -5,8 +5,8 @@ function isInferenceIntegrationSpec(spec) {
   return /(inference|inferred|heuristic|profile trend)/.test(name);
 }
 
-export function getInteractionsTests() {
-  return INTERACTION_AND_INFERENCE_SPECS.filter(
-    (spec) => !isInferenceIntegrationSpec(spec),
+export function getInferenceIntegrationTests() {
+  return INTERACTION_AND_INFERENCE_SPECS.filter((spec) =>
+    isInferenceIntegrationSpec(spec),
   );
 }
