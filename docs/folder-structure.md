@@ -120,6 +120,10 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       │   ├── inference-utils.js
 │   │       │   ├── inference-index-access.js
 │   │       │   ├── interactions.js
+│   │       │   ├── interactions-all.js
+│   │       │   ├── interactions-core.js
+│   │       │   ├── interactions-palette.js
+│   │       │   ├── interactions-tags.js
 │   │       │   ├── mod-state.js
 │   │       │   ├── model-fixtures.js
 │   │       │   ├── model-snapshot.js
@@ -189,6 +193,13 @@ This document outlines a maintainable directory layout tailored to the current c
 
 - `dev-server.js` spins up the lightweight Node-based static server used by `npm start` to serve the `public/` directory during development.
 - `build-entry.js` bundles and minifies the browser entry module with esbuild so production builds can consume a single optimized asset.
+
+#### `scripts/support/tests/specs/`
+
+- Holds Node-side spec modules consumed by `tests/node.test.js`.
+- `interactions-all.js` is the canonical source list for interaction specs.
+- `interactions-core.js`, `interactions-tags.js`, and `interactions-palette.js` split interaction coverage by concern while keeping legacy test names intact for traceability.
+- `interactions.js` remains a compatibility aggregator that composes those split interaction spec groups.
 
 #### `scripts/app/`
 
