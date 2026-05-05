@@ -1,5 +1,6 @@
 import { parsePhaseKey } from "../data/utils.js";
 import { noteKeyForPair } from "./interactions.js";
+import { isBypassRow } from "./interactions-row-classification.js";
 
 function getRelevantColumns(def, options, selection) {
   const cols = Array.isArray(def?.columns) ? def.columns : [];
@@ -228,10 +229,19 @@ export function createInferenceTargetResolver({
           pair,
           row: r,
           action: getActionRecord(model, pair.aId),
-          actionGroup: indexAccess.includeBypass
-            ? getActionGroupForAction(actionGroupCache, model, pair.aId) ||
-              "__bypass__"
-            : getActionGroupForAction(actionGroupCache, model, pair.aId),
+          actionGroup: (() => {
+            const actionGroup = getActionGroupForAction(
+              actionGroupCache,
+              model,
+              pair.aId,
+            );
+            if (actionGroup) return actionGroup;
+            const strictReadBaselineOnly =
+              !!options?.strictManualOnly && !options?.inferFromBypassed;
+            if (indexAccess.includeBypass && !strictReadBaselineOnly)
+              return "__bypass__";
+            return isBypassRow(pair) ? "__bypass__" : "";
+          })(),
           allowInferredTargets: options?.overwriteInferred !== false,
         });
       }
