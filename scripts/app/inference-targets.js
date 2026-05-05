@@ -236,6 +236,10 @@ export function createInferenceTargetResolver({
               pair.aId,
             );
             if (actionGroup) return actionGroup;
+            const strictReadBaselineOnly =
+              !!options?.strictManualOnly && !options?.inferFromBypassed;
+            if (indexAccess.includeBypass && !strictReadBaselineOnly)
+              return "__bypass__";
             return isBypassRow(pair) ? "__bypass__" : "";
           })(),
           allowInferredTargets: options?.overwriteInferred !== false,
