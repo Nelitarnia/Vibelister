@@ -1,7 +1,3 @@
-import {
-  normalizeInteractionConfidence,
-  normalizeInteractionSource,
-} from "./interactions.js";
 import { DEFAULT_HEURISTIC_THRESHOLDS } from "./inference-heuristics.js";
 import {
   createInferenceProfileStore,
@@ -11,58 +7,7 @@ import { applySuggestions, HEURISTIC_LABELS } from "./inference-application.js";
 import { createInferenceIndexAccess } from "./inference-index-access.js";
 import { createInferenceTargetResolver } from "./inference-targets.js";
 import { clearInferredTargets } from "./inference-clear-helpers.js";
-
-const DEFAULT_OPTIONS = Object.freeze({
-  scope: "selection",
-  includeEnd: true,
-  includeTag: true,
-  inferFromBypassed: false,
-  inferToBypassed: false,
-  overwriteInferred: true,
-  onlyFillEmpty: false,
-  skipManualOutcome: false,
-  strictManualOnly: false,
-  debugInference: false,
-});
-
-function normalizeOptions(payload = {}) {
-  const hasDefaultConfidence = Object.prototype.hasOwnProperty.call(
-    payload,
-    "defaultConfidence",
-  );
-  const hasDefaultSource = Object.prototype.hasOwnProperty.call(
-    payload,
-    "defaultSource",
-  );
-  return {
-    scope: payload.scope || DEFAULT_OPTIONS.scope,
-    includeEnd: payload.includeEnd !== false,
-    includeTag: payload.includeTag !== false,
-    inferFromBypassed: !!payload.inferFromBypassed,
-    inferToBypassed: !!payload.inferToBypassed,
-    overwriteInferred: payload.overwriteInferred !== false,
-    onlyFillEmpty: !!payload.onlyFillEmpty,
-    skipManualOutcome: !!payload.skipManualOutcome,
-    strictManualOnly:
-      payload.strictManualOnly == null
-        ? DEFAULT_OPTIONS.strictManualOnly
-        : !!payload.strictManualOnly,
-    debugInference:
-      payload.debugInference == null
-        ? DEFAULT_OPTIONS.debugInference
-        : !!payload.debugInference,
-    defaultConfidence: hasDefaultConfidence
-      ? normalizeInteractionConfidence(payload.defaultConfidence)
-      : null,
-    defaultSource: hasDefaultSource
-      ? normalizeInteractionSource(payload.defaultSource)
-      : null,
-    thresholdOverrides:
-      payload && typeof payload.thresholdOverrides === "object"
-        ? payload.thresholdOverrides
-        : null,
-  };
-}
+import { createInferencePolicy } from "./inference-policy.js";
 
 function createInferenceDebugDetails({
   sourceRows,
@@ -88,6 +33,19 @@ function createInferenceDebugDetails({
       : 0,
   };
 }
+
+
+const DEFAULT_DIALOG_OPTIONS = Object.freeze({
+  includeEnd: true,
+  includeTag: true,
+  inferFromBypassed: false,
+  inferToBypassed: false,
+  overwriteInferred: true,
+  onlyFillEmpty: false,
+  skipManualOutcome: false,
+  strictManualOnly: true,
+  scope: "selection",
+});
 
 export function createInferenceController(options) {
   const {
@@ -176,21 +134,21 @@ export function createInferenceController(options) {
     const debug = result.debug;
     const debugText =
       debug && result.options?.debugInference
-        ? ` Debug — sourceRows:${debug.sourceRows ?? 0}, targetRows:${debug.targetRows ?? 0}, writableRows:${debug.writableRows ?? 0}, requestedTargets:${debug.requestedTargets ?? 0}, evidence:${debug.evidenceTargets}, suggestionTargets:${debug.suggestionTargets}, writable:${debug.writableTargets}, suggestionMap:${debug.suggestionMapSize}${debug.statusReason ? `, statusReason:${debug.statusReason}` : ""}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}.`
+        ? ` Debug — sourceRows:${debug.sourceRows ?? 0}, targetRows:${debug.targetRows ?? 0}, writableRows:${debug.writableRows ?? 0}, requestedTargets:${debug.requestedTargets ?? 0}, evidence:${debug.evidenceTargets}, suggestionTargets:${debug.suggestionTargets}, writable:${debug.writableTargets}, suggestionMap:${debug.suggestionMapSize}${debug.statusReason ? `, statusReason:${debug.statusReason}` : ""}${debug.noChangeReason ? `, reason:${debug.noChangeReason}` : ""}${result.options?.policySnapshot ? `, policy:${JSON.stringify(result.options.policySnapshot)}` : ""}.`
         : "";
     return `${actionLabel || "Inference"}: ${actions.join(", ")}${suffix}.${sourceText}${debugText}`;
   }
 
-  function applyInference(options) {
+  function applyInference(policy) {
     const { indexAccess, suggestionRows, sourceRows, writableRows } =
-      indexAccessManager.resolveIndexAccess(options, targetResolver.getRows);
+      indexAccessManager.resolveIndexAccess(policy, targetResolver.getRows);
     if (
-      options.debugInference &&
-      options.inferToBypassed &&
-      !options.inferFromBypassed
+      policy.debugInference &&
+      policy.inferToBypassed &&
+      !policy.inferFromBypassed
     ) {
       const baseline = indexAccessManager.resolveIndexAccess(
-        { ...options, inferToBypassed: false },
+        { ...policy, inferToBypassed: false },
         targetResolver.getRows,
       );
       const baselineEvidenceCount = Array.isArray(baseline?.sourceRows)
@@ -208,7 +166,7 @@ export function createInferenceController(options) {
       }
     }
     const { requestedTargets, suggestionTargets, allowed, reason } =
-      targetResolver.resolveScopes(options, indexAccess, {
+      targetResolver.resolveScopes(policy, indexAccess, {
         requestedRows: writableRows,
         suggestionRows,
       });
@@ -244,7 +202,7 @@ export function createInferenceController(options) {
         status: NO_TARGETS_STATUS,
         statusReason: "no-writable-targets",
         debug: debugDetails,
-        options: { debugInference: !!options.debugInference },
+        options: { debugInference: !!policy.debugInference, policySnapshot: policy },
       };
     }
     const { result } = applySuggestions({
@@ -252,14 +210,14 @@ export function createInferenceController(options) {
       targets: writableTargets,
       suggestionTargets,
       evidenceTargets: sourceRows,
-      options,
+      options: policy,
       baseThresholds,
       setLastThresholdOverrides: (overrides) => {
         lastThresholdOverrides = overrides;
       },
       inferenceProfiles,
     });
-    result.options = { debugInference: !!options.debugInference };
+    result.options = { debugInference: !!policy.debugInference, policySnapshot: policy };
     result.statusReason = result.statusReason || "ok";
     result.debug = {
       ...debugDetails,
@@ -269,14 +227,14 @@ export function createInferenceController(options) {
     return result;
   }
 
-  function clearInference(options) {
+  function clearInference(policy) {
     const { indexAccess, writableRows } = indexAccessManager.resolveIndexAccess(
-      options,
+      policy,
       targetResolver.getRows,
     );
     const { targets, allowed, reason } = targetResolver.collectTargets(
-      options.scope,
-      options,
+      policy.scope,
+      policy,
       indexAccess,
       writableRows,
     );
@@ -353,7 +311,7 @@ export function createInferenceController(options) {
   }
 
   function runInference(payload) {
-    const opts = normalizeOptions({
+    const opts = createInferencePolicy({
       ...payload,
       debugInference:
         payload?.debugInference == null
@@ -369,7 +327,7 @@ export function createInferenceController(options) {
   }
 
   function runClear(payload) {
-    const opts = normalizeOptions(payload);
+    const opts = createInferencePolicy(payload);
     return runWithHistory(
       "Clear inference",
       () => clearInference(opts),
@@ -383,16 +341,8 @@ export function createInferenceController(options) {
       const mod = await import("../ui/inference-dialog.js");
       return await mod.openInferenceDialog({
         defaults: {
-          includeEnd: DEFAULT_OPTIONS.includeEnd,
-          includeTag: DEFAULT_OPTIONS.includeTag,
-          inferFromBypassed: DEFAULT_OPTIONS.inferFromBypassed,
-          inferToBypassed: DEFAULT_OPTIONS.inferToBypassed,
-          overwriteInferred: DEFAULT_OPTIONS.overwriteInferred,
-          onlyFillEmpty: DEFAULT_OPTIONS.onlyFillEmpty,
-          skipManualOutcome: DEFAULT_OPTIONS.skipManualOutcome,
-          strictManualOnly: true,
+          ...DEFAULT_DIALOG_OPTIONS,
           debugInference: isInferenceDebugEnabledBySettings(),
-          scope: DEFAULT_OPTIONS.scope,
           thresholdOverrides: lastThresholdOverrides,
         },
         defaultThresholds: baseThresholds,

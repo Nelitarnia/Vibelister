@@ -128,7 +128,7 @@ function warnOnMappedRowsInvariant(options, details) {
 }
 
 function shouldUseBypassIndex(options) {
-  return !!(options?.inferFromBypassed || options?.inferToBypassed);
+  return !!(options?.expandReadableBypass || options?.expandWritableBypass);
 }
 
 export function createInferenceIndexAccess(options) {
@@ -257,10 +257,10 @@ export function createInferenceIndexAccess(options) {
   }
 
   function resolveIndexAccess(options, resolveRows) {
-    const strictManualOnly = !!options?.strictManualOnly;
+    const strictManualOnly = !!options?.manualOnlyEvidence;
     const includeBypass = shouldUseBypassIndex(options);
-    const canWriteBypassRows = !!options?.inferToBypassed;
-    const canReadBypassRows = !!options?.inferFromBypassed;
+    const canWriteBypassRows = !!options?.expandWritableBypass;
+    const canReadBypassRows = !!options?.expandReadableBypass;
     const baseAccess = getBaseIndexAccess();
     const baseRows = resolveRows(options.scope, baseAccess);
     const baselineVisibleRows = baseRows.filter((row) =>
@@ -287,14 +287,14 @@ export function createInferenceIndexAccess(options) {
       if (Array.isArray(scopedIds)) {
         for (const id of scopedIds) combined.add(id);
       }
-      if (options.inferFromBypassed) {
+      if (options.expandReadableBypass) {
         const notedIds = collectActionIdsWithNotes();
         for (const id of notedIds) combined.add(id);
       }
       return combined.size ? Array.from(combined) : null;
     })();
     const useFullBypassIndex =
-      options.inferToBypassed || options.inferFromBypassed;
+      options.expandWritableBypass || options.expandReadableBypass;
     const index = ensureBypassIndex(useFullBypassIndex ? null : actionIds);
     const indexAccess = {
       includeBypass,
@@ -397,8 +397,8 @@ export function createInferenceIndexAccess(options) {
             scope: options.scope,
             strictWritableRows,
             writableRows,
-            inferToBypassed: canWriteBypassRows,
-            inferFromBypassed: canReadBypassRows,
+            expandWritableBypass: canWriteBypassRows,
+            expandReadableBypass: canReadBypassRows,
           });
           statusBar?.set?.(message);
         }

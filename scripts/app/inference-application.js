@@ -68,7 +68,9 @@ export function applySuggestions({
     profileSnapshot,
     thresholdOverrides,
     {
-      strictManualOnly: !!options?.strictManualOnly,
+      manualOnlyEvidence: !!options?.manualOnlyEvidence,
+      allowInferredEvidence: !!options?.allowInferredEvidence,
+      allowInferredOverwrite: !!options?.allowInferredOverwrite,
     },
   );
   const suggestionMapSize = suggestions.size;
@@ -115,7 +117,7 @@ export function applySuggestions({
       result.skippedManual++;
       continue;
     }
-    if (!options.overwriteInferred && info?.inferred) {
+    if (!options.allowInferredOverwrite && info?.inferred) {
       result.skippedExisting++;
       continue;
     }
@@ -174,7 +176,7 @@ export function applySuggestions({
     if (appliedChange) {
       result.applied++;
       const nextValue = extractNoteFieldValue(dest, target.field);
-      if (!options?.strictManualOnly) {
+      if (options?.profileLearningEnabled) {
         recordProfileImpact({
           store: inferenceProfiles,
           pair: target.pair,
