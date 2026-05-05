@@ -128,7 +128,15 @@ function warnOnMappedRowsInvariant(options, details) {
 }
 
 function shouldUseBypassIndex(options) {
-  return !!(options?.expandReadableBypass || options?.expandWritableBypass);
+  const canRead =
+    options?.expandReadableBypass != null
+      ? !!options.expandReadableBypass
+      : !!options?.inferFromBypassed;
+  const canWrite =
+    options?.expandWritableBypass != null
+      ? !!options.expandWritableBypass
+      : !!options?.inferToBypassed;
+  return !!(canRead || canWrite);
 }
 
 export function createInferenceIndexAccess(options) {
@@ -257,10 +265,19 @@ export function createInferenceIndexAccess(options) {
   }
 
   function resolveIndexAccess(options, resolveRows) {
-    const strictManualOnly = !!options?.manualOnlyEvidence;
+    const strictManualOnly =
+      options?.manualOnlyEvidence != null
+        ? !!options.manualOnlyEvidence
+        : !!options?.strictManualOnly;
     const includeBypass = shouldUseBypassIndex(options);
-    const canWriteBypassRows = !!options?.expandWritableBypass;
-    const canReadBypassRows = !!options?.expandReadableBypass;
+    const canWriteBypassRows =
+      options?.expandWritableBypass != null
+        ? !!options.expandWritableBypass
+        : !!options?.inferToBypassed;
+    const canReadBypassRows =
+      options?.expandReadableBypass != null
+        ? !!options.expandReadableBypass
+        : !!options?.inferFromBypassed;
     const baseAccess = getBaseIndexAccess();
     const baseRows = resolveRows(options.scope, baseAccess);
     const baselineVisibleRows = baseRows.filter((row) =>
@@ -287,14 +304,13 @@ export function createInferenceIndexAccess(options) {
       if (Array.isArray(scopedIds)) {
         for (const id of scopedIds) combined.add(id);
       }
-      if (options.expandReadableBypass) {
+      if (canReadBypassRows) {
         const notedIds = collectActionIdsWithNotes();
         for (const id of notedIds) combined.add(id);
       }
       return combined.size ? Array.from(combined) : null;
     })();
-    const useFullBypassIndex =
-      options.expandWritableBypass || options.expandReadableBypass;
+    const useFullBypassIndex = canWriteBypassRows || canReadBypassRows;
     const index = ensureBypassIndex(useFullBypassIndex ? null : actionIds);
     const indexAccess = {
       includeBypass,

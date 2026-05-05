@@ -108,13 +108,19 @@ export function buildScopePlan({
   indexAccess,
   options,
 }) {
-  const strictManualOnly = !!options?.manualOnlyEvidence;
+  const strictManualOnly =
+    options?.manualOnlyEvidence != null
+      ? !!options.manualOnlyEvidence
+      : !!options?.strictManualOnly;
   const selectionActionIds = collectSelectionActionIds(
     selection,
     requestedScope,
     indexAccess,
   );
-  const canReadBypassRows = !!options?.expandReadableBypass;
+  const canReadBypassRows =
+    options?.expandReadableBypass != null
+      ? !!options.expandReadableBypass
+      : !!options?.inferFromBypassed;
   const suggestionScope = (() => {
     if (strictManualOnly) return requestedScope;
     if (requestedScope === "project") return "project";
@@ -237,12 +243,20 @@ export function createInferenceTargetResolver({
             );
             if (actionGroup) return actionGroup;
             const strictReadBaselineOnly =
-              !!options?.manualOnlyEvidence && !options?.expandReadableBypass;
+              (options?.manualOnlyEvidence != null
+                ? !!options.manualOnlyEvidence
+                : !!options?.strictManualOnly) &&
+              !(options?.expandReadableBypass != null
+                ? !!options.expandReadableBypass
+                : !!options?.inferFromBypassed);
             if (indexAccess.includeBypass && !strictReadBaselineOnly)
               return "__bypass__";
             return isBypassRow(pair) ? "__bypass__" : "";
           })(),
-          allowInferredTargets: !!options?.allowInferredOverwrite,
+          allowInferredTargets:
+            options?.allowInferredOverwrite != null
+              ? !!options.allowInferredOverwrite
+              : options?.overwriteInferred !== false,
         });
       }
     }
