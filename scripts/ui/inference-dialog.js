@@ -620,7 +620,7 @@ export async function openInferenceDialog(options = {}) {
     const { label: overwriteLabel, input: overwriteInput } = buildCheckbox(
       "Overwrite existing inferred values",
       defaults.allowInferredOverwrite !== false,
-      "When enabled, reruns can replace previously inferred metadata (manual values are never overwritten).",
+      "When enabled, reruns can replace previously inferred metadata (manual values are never overwritten). This only controls writable targets; it does not broaden evidence sources.",
     );
     const { label: onlyEmptyLabel, input: onlyEmptyInput } = buildCheckbox(
       "Only fill empty cells",
@@ -637,7 +637,7 @@ export async function openInferenceDialog(options = {}) {
       buildCheckbox(
         "Strict deterministic (manual-only evidence)",
         !!defaults.manualOnlyEvidence,
-        "When enabled, only manual cells are used as evidence and repeated runs with unchanged manual data stay stable.",
+        "When enabled, only manual cells are used as evidence and repeated runs with unchanged manual data stay stable. This does not disable overwriting inferred targets.",
       );
     const { label: debugInferenceLabel, input: debugInferenceInput } =
       buildCheckbox(
@@ -936,10 +936,9 @@ export async function openInferenceDialog(options = {}) {
         onlyFillEmpty: onlyEmptyInput.checked,
         skipManualOutcome: skipManualOutcomeInput.checked,
         manualOnlyEvidence: strictManualOnlyInput.checked,
-        profileLearningEnabled: !strictManualOnlyInput.checked,
-        allowInferredEvidence: !strictManualOnlyInput.checked,
-        allowInferredOverwrite:
-          strictManualOnlyInput.checked ? false : overwriteInput.checked,
+        profileLearningEnabled: profileLearningInput.checked,
+        allowInferredEvidence: strictManualOnlyInput.checked ? false : true,
+        allowInferredOverwrite: overwriteInput.checked,
         debugInference: debugInferenceInput.checked,
         thresholdOverrides: buildThresholdOverrides(),
       };

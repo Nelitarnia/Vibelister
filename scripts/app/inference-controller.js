@@ -43,12 +43,12 @@ const DEFAULT_DIALOG_OPTIONS = Object.freeze({
   includeTag: true,
   expandReadableBypass: false,
   expandWritableBypass: false,
-  allowInferredOverwrite: false,
+  allowInferredOverwrite: true,
   allowInferredEvidence: false,
   onlyFillEmpty: false,
   skipManualOutcome: false,
   manualOnlyEvidence: true,
-  profileLearningEnabled: false,
+  profileLearningEnabled: true,
   scope: "selection",
 });
 

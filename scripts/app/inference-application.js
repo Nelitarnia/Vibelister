@@ -8,10 +8,7 @@ import {
   HEURISTIC_SOURCES,
   proposeInteractionInferences,
 } from "./inference-heuristics.js";
-import {
-  captureInferenceProfilesSnapshot,
-  recordProfileImpact,
-} from "./inference-profiles.js";
+import { captureInferenceProfilesSnapshot } from "./inference-profiles.js";
 import { extractNoteFieldValue } from "./inference-utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
@@ -175,19 +172,6 @@ export function applySuggestions({
     }
     if (appliedChange) {
       result.applied++;
-      const nextValue = extractNoteFieldValue(dest, target.field);
-      if (options?.profileLearningEnabled) {
-        recordProfileImpact({
-          store: inferenceProfiles,
-          pair: target.pair,
-          field: target.field,
-          previousValue,
-          nextValue,
-          phase: target.phase,
-          inferred: true,
-          manualOnly: true,
-        });
-      }
     }
   }
   if (tagsChanged) {
