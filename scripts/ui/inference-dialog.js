@@ -603,13 +603,13 @@ export async function openInferenceDialog(options = {}) {
     const { label: inferFromBypassLabel, input: inferFromBypassInput } =
       buildCheckbox(
         "Infer from bypassed modifiers",
-        !!defaults.inferFromBypassed,
+        !!defaults.expandReadableBypass,
         "When enabled, bypass/marked modifiers participate when mining inference sources.",
       );
     const { label: inferToBypassLabel, input: inferToBypassInput } =
       buildCheckbox(
         "Infer to bypassed modifiers",
-        !!defaults.inferToBypassed,
+        !!defaults.expandWritableBypass,
         "When enabled, bypass/marked modifier rows are eligible inference targets.",
       );
     bypassRow.append(inferFromBypassLabel, inferToBypassLabel);
@@ -619,7 +619,7 @@ export async function openInferenceDialog(options = {}) {
       "display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start;";
     const { label: overwriteLabel, input: overwriteInput } = buildCheckbox(
       "Overwrite existing inferred values",
-      defaults.overwriteInferred !== false,
+      defaults.allowInferredOverwrite !== false,
       "When enabled, reruns can replace previously inferred metadata (manual values are never overwritten).",
     );
     const { label: onlyEmptyLabel, input: onlyEmptyInput } = buildCheckbox(
@@ -636,7 +636,7 @@ export async function openInferenceDialog(options = {}) {
     const { label: strictManualOnlyLabel, input: strictManualOnlyInput } =
       buildCheckbox(
         "Strict deterministic (manual-only evidence)",
-        !!defaults.strictManualOnly,
+        !!defaults.manualOnlyEvidence,
         "When enabled, only manual cells are used as evidence and repeated runs with unchanged manual data stay stable.",
       );
     const { label: debugInferenceLabel, input: debugInferenceInput } =
@@ -931,12 +931,14 @@ export async function openInferenceDialog(options = {}) {
         scope: getScope(),
         includeEnd: includeEndInput.checked,
         includeTag: includeTagInput.checked,
-        inferFromBypassed: inferFromBypassInput.checked,
-        inferToBypassed: inferToBypassInput.checked,
-        overwriteInferred: overwriteInput.checked,
+        expandReadableBypass: inferFromBypassInput.checked,
+        expandWritableBypass: inferToBypassInput.checked,
+        allowInferredOverwrite: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
         skipManualOutcome: skipManualOutcomeInput.checked,
-        strictManualOnly: strictManualOnlyInput.checked,
+        manualOnlyEvidence: strictManualOnlyInput.checked,
+        profileLearningEnabled: !strictManualOnlyInput.checked,
+        allowInferredEvidence: !strictManualOnlyInput.checked,
         debugInference: debugInferenceInput.checked,
         thresholdOverrides: buildThresholdOverrides(),
       };
