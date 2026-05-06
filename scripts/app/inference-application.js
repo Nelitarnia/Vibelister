@@ -8,10 +8,7 @@ import {
   HEURISTIC_SOURCES,
   proposeInteractionInferences,
 } from "./inference-heuristics.js";
-import {
-  captureInferenceProfilesSnapshot,
-  recordProfileImpact,
-} from "./inference-profiles.js";
+import { captureInferenceProfilesSnapshot } from "./inference-profiles.js";
 import { extractNoteFieldValue } from "./inference-utils.js";
 import { emitInteractionTagChangeEvent } from "./tag-events.js";
 
@@ -68,7 +65,9 @@ export function applySuggestions({
     profileSnapshot,
     thresholdOverrides,
     {
-      strictManualOnly: !!options?.strictManualOnly,
+      manualOnlyEvidence: !!options?.manualOnlyEvidence,
+      allowInferredEvidence: !!options?.allowInferredEvidence,
+      allowInferredOverwrite: !!options?.allowInferredOverwrite,
     },
   );
   const suggestionMapSize = suggestions.size;
@@ -115,7 +114,7 @@ export function applySuggestions({
       result.skippedManual++;
       continue;
     }
-    if (!options.overwriteInferred && info?.inferred) {
+    if (!options.allowInferredOverwrite && info?.inferred) {
       result.skippedExisting++;
       continue;
     }
@@ -173,19 +172,6 @@ export function applySuggestions({
     }
     if (appliedChange) {
       result.applied++;
-      const nextValue = extractNoteFieldValue(dest, target.field);
-      if (!options?.strictManualOnly) {
-        recordProfileImpact({
-          store: inferenceProfiles,
-          pair: target.pair,
-          field: target.field,
-          previousValue,
-          nextValue,
-          phase: target.phase,
-          inferred: true,
-          manualOnly: true,
-        });
-      }
     }
   }
   if (tagsChanged) {

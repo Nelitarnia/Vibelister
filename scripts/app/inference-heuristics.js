@@ -29,15 +29,11 @@ function extractFieldValue(target) {
 function resolveEvidencePolicy(policy = {}) {
   const normalizedPolicy =
     policy && typeof policy === "object" ? policy : {};
-  const strictManualOnly = !!normalizedPolicy.strictManualOnly;
+  const manualOnlyEvidence = !!normalizedPolicy.manualOnlyEvidence;
   return {
-    strictManualOnly,
-    allowInferredExisting: strictManualOnly
-      ? false
-      : normalizedPolicy.allowInferredExisting !== false,
-    allowInferredTargets: strictManualOnly
-      ? false
-      : normalizedPolicy.allowInferredTargets !== false,
+    manualOnlyEvidence,
+    allowInferredExisting: !!normalizedPolicy.allowInferredEvidence,
+    allowInferredTargets: !!normalizedPolicy.allowInferredOverwrite,
   };
 }
 

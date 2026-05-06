@@ -175,3 +175,45 @@
  * @property {function():Object} viewDef
  * @property {string=} activeView
  */
+
+/**
+ * Inference policy payload accepted by `createInferencePolicy`.
+ * Legacy keys remain accepted for normalization, but new callsites should
+ * prefer normalized policy fields.
+ * @typedef {Object} InferencePolicyInput
+ * @property {('selection'|'action'|'actionGroup'|'project')=} scope
+ * @property {boolean=} includeEnd
+ * @property {boolean=} includeTag
+ * @property {boolean=} onlyFillEmpty
+ * @property {boolean=} skipManualOutcome
+ * @property {boolean=} debugInference
+ * @property {number|null=} defaultConfidence
+ * @property {string|null=} defaultSource
+ * @property {Record<string, (number|boolean)>|null=} thresholdOverrides
+ * @property {boolean=} manualOnlyEvidence
+ * @property {boolean=} allowInferredEvidence
+ * @property {boolean=} allowInferredOverwrite
+ * @property {boolean=} expandWritableBypass
+ * @property {boolean=} expandReadableBypass
+ * @property {boolean=} profileLearningEnabled
+ */
+
+/**
+ * Canonical normalized inference policy consumed by inference modules.
+ * @typedef {Object} InferencePolicy
+ * @property {'selection'|'action'|'actionGroup'|'project'} scope
+ * @property {boolean} includeEnd
+ * @property {boolean} includeTag
+ * @property {boolean} onlyFillEmpty
+ * @property {boolean} skipManualOutcome
+ * @property {boolean} debugInference
+ * @property {number|null} defaultConfidence
+ * @property {string|null} defaultSource
+ * @property {Record<string, (number|boolean)>|null} thresholdOverrides
+ * @property {boolean} manualOnlyEvidence
+ * @property {boolean} allowInferredEvidence
+ * @property {boolean} allowInferredOverwrite
+ * @property {boolean} expandWritableBypass
+ * @property {boolean} expandReadableBypass
+ * @property {boolean} profileLearningEnabled
+ */

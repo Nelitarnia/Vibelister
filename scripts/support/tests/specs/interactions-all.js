@@ -2370,7 +2370,7 @@ export function getAllInteractionsTests() {
       },
     },
     {
-      name: "selection scope with inferToBypassed keeps writable targets bounded to selection keys",
+      name: "selection scope with expandWritableBypass keeps writable targets bounded to selection keys",
       run(assert) {
         const { model, addAction, addInput, addModifier, groupExact } =
           makeModelFixture();
@@ -2413,8 +2413,8 @@ export function getAllInteractionsTests() {
 
         const res = controller.runInference({
           scope: "selection",
-          inferFromBypassed: false,
-          inferToBypassed: true,
+          expandReadableBypass: false,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -2501,8 +2501,8 @@ export function getAllInteractionsTests() {
 
         const res = controller.runInference({
           scope: "selection",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -2522,7 +2522,7 @@ export function getAllInteractionsTests() {
       },
     },
     {
-      name: "project scope sources bypass notes without writing bypass rows unless inferToBypassed is enabled",
+      name: "project scope sources bypass notes without writing bypass rows unless expandWritableBypass is enabled",
       run(assert) {
         function makeScenario(seedBypassSource) {
           const {
@@ -2608,8 +2608,8 @@ export function getAllInteractionsTests() {
         const sourceBypassOnly = makeScenario(true);
         const baseTargetOnly = sourceBypassOnly.controller.runInference({
           scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: false,
+          expandReadableBypass: true,
+          expandWritableBypass: false,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -2631,14 +2631,14 @@ export function getAllInteractionsTests() {
         assert.strictEqual(
           sourceBypassOnly.model.notes[sourceBypassOnly.bypassKey]?.source,
           DEFAULT_INTERACTION_SOURCE,
-          "bypass row remains original source note when inferToBypassed is false",
+          "bypass row remains original source note when expandWritableBypass is false",
         );
 
         const sourceBaseOnly = makeScenario(false);
         const bothTargets = sourceBaseOnly.controller.runInference({
           scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -2650,7 +2650,7 @@ export function getAllInteractionsTests() {
         });
         assert.ok(
           (bothTargets?.applied || 0) >= 1,
-          "project run applies to bypass targets when inferToBypassed is true",
+          "project run applies to bypass targets when expandWritableBypass is true",
         );
         assert.strictEqual(
           sourceBaseOnly.model.notes[sourceBaseOnly.baseKey]?.outcomeId,
@@ -2660,14 +2660,14 @@ export function getAllInteractionsTests() {
         assert.strictEqual(
           sourceBaseOnly.model.notes[sourceBaseOnly.bypassKey]?.outcomeId,
           sourceBaseOnly.outcome.id,
-          "bypass row receives inferred value when inferToBypassed is true",
+          "bypass row receives inferred value when expandWritableBypass is true",
         );
 
         const inferToOnly = makeScenario(true);
         const inferToOnlyResult = inferToOnly.controller.runInference({
           scope: "project",
-          inferFromBypassed: false,
-          inferToBypassed: true,
+          expandReadableBypass: false,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -2680,11 +2680,11 @@ export function getAllInteractionsTests() {
         assert.strictEqual(
           inferToOnlyResult?.applied || 0,
           0,
-          "inferToBypassed alone does not source from bypass rows",
+          "expandWritableBypass alone does not source from bypass rows",
         );
         assert.ok(
           !inferToOnly.model.notes[inferToOnly.baseKey],
-          "base row stays empty when only inferToBypassed is enabled",
+          "base row stays empty when only expandWritableBypass is enabled",
         );
       },
     },

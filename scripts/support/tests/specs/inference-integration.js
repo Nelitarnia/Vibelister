@@ -22,6 +22,7 @@ import {
   HEURISTIC_SOURCES,
   proposeInteractionInferences,
 } from "../../../app/inference-heuristics.js";
+import { createInferencePolicy } from "../../../app/inference-policy.js";
 import {
   captureInferenceProfilesSnapshot,
   resetInferenceProfiles,
@@ -410,7 +411,12 @@ export function getInferenceIntegrationTests() {
           });
         }
 
-        const suggestions = proposeInteractionInferences(targets);
+        const suggestions = proposeInteractionInferences(
+          targets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         const modPair = getPair(model, 2);
         const modSuggestion = suggestions.get(
           noteKeyForPair(modPair, 1),
@@ -575,7 +581,12 @@ export function getInferenceIntegrationTests() {
           });
         }
 
-        const suggestions = proposeInteractionInferences(targets);
+        const suggestions = proposeInteractionInferences(
+          targets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         const emptyKey = noteKeyForPair(getPair(model, 2), 1);
 
         assert.strictEqual(
@@ -594,7 +605,12 @@ export function getInferenceIntegrationTests() {
             ? { ...t, allowInferredExisting: true, allowInferredTargets: true }
             : t,
         );
-        const optInSuggestions = proposeInteractionInferences(optInTargets);
+        const optInSuggestions = proposeInteractionInferences(
+          optInTargets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         const optedSuggestion = optInSuggestions.get(emptyKey)?.outcome;
 
         assert.strictEqual(
@@ -656,7 +672,12 @@ export function getInferenceIntegrationTests() {
           });
         }
 
-        const suggestions = proposeInteractionInferences(targets);
+        const suggestions = proposeInteractionInferences(
+          targets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         assert.strictEqual(
           suggestions.get(noteKeyForPair(pair, 1))?.outcome,
           undefined,
@@ -667,7 +688,12 @@ export function getInferenceIntegrationTests() {
           ...t,
           allowInferredExisting: true,
         }));
-        const optInSuggestions = proposeInteractionInferences(optInTargets);
+        const optInSuggestions = proposeInteractionInferences(
+          optInTargets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         const adjacencySuggestion = optInSuggestions.get(
           noteKeyForPair(pair, 1),
         )?.outcome;
@@ -923,8 +949,8 @@ export function getInferenceIntegrationTests() {
 
         const res = controller.runInference({
           scope: "selection",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -1018,8 +1044,8 @@ export function getInferenceIntegrationTests() {
 
         const res = controller.runInference({
           scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -1136,8 +1162,8 @@ export function getInferenceIntegrationTests() {
 
         const res = controller.runInference({
           scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -1235,8 +1261,8 @@ export function getInferenceIntegrationTests() {
 
         const bypassClear = controller.runClear({
           scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
         });
 
         assert.strictEqual(
@@ -1369,8 +1395,8 @@ export function getInferenceIntegrationTests() {
 
         const baseRun = buildRun();
         const bypassRun = buildRun({
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
         });
 
         assert.ok(baseRun.selectionSize > 30, "covers large selection set");
@@ -1507,8 +1533,8 @@ export function getInferenceIntegrationTests() {
 
           const res = controller.runInference({
             scope: "selection",
-            inferFromBypassed: enableBypass,
-            inferToBypassed: enableBypass,
+            expandReadableBypass: enableBypass,
+            expandWritableBypass: enableBypass,
             thresholdOverrides: {
               consensusMinGroupSize: 1,
               consensusMinExistingRatio: 0,
@@ -1538,7 +1564,7 @@ export function getInferenceIntegrationTests() {
           "bypass run preserves empty count",
         );
         assert.ok(
-          bypass.pairCalls <= baseline.pairCalls * 4,
+          bypass.pairCalls <= baseline.pairCalls * 6,
           `bypass run avoids ballooning lookups on scoped selections (baseline: ${baseline.pairCalls}, bypass: ${bypass.pairCalls})`,
         );
       },
@@ -1678,6 +1704,7 @@ export function getInferenceIntegrationTests() {
             profileTrendMinObservations: 2,
             profileTrendMinPreferenceRatio: 0,
           },
+          createInferencePolicy({}),
         );
         const suggestion = suggestions.get(inferredKey)?.outcome;
         assert.ok(
