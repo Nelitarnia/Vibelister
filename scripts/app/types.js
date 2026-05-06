@@ -217,3 +217,19 @@
  * @property {boolean} expandReadableBypass
  * @property {boolean} profileLearningEnabled
  */
+
+/**
+ * Immutable inference row/index plan returned by index-access resolution.
+ * @typedef {Object} InferencePlan
+ * @property {readonly number[]} sourceRows
+ * @property {readonly number[]} suggestionRows
+ * @property {readonly number[]} writableRows
+ * @property {{
+ *   includeBypass?: boolean,
+ *   activeRow?: number,
+ *   getPair: (rowIndex: number) => unknown,
+ *   getRowCount: () => number,
+ *   getVersion?: () => number,
+ * }} indexAccess
+ * @property {Object=} debug
+ */

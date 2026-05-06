@@ -145,8 +145,12 @@ export function createInferenceController(options) {
   }
 
   function applyInference(policy) {
+    const inferencePlan = indexAccessManager.resolveIndexAccess(
+      policy,
+      targetResolver.getRows,
+    );
     const { indexAccess, suggestionRows, sourceRows, writableRows } =
-      indexAccessManager.resolveIndexAccess(policy, targetResolver.getRows);
+      inferencePlan;
     if (
       policy.debugInference &&
       policy.expandWritableBypass &&
@@ -156,10 +160,8 @@ export function createInferenceController(options) {
         { ...policy, expandWritableBypass: false },
         targetResolver.getRows,
       );
-      const baselineEvidenceCount = Array.isArray(baseline?.sourceRows)
-        ? baseline.sourceRows.length
-        : 0;
-      const evidenceCount = Array.isArray(sourceRows) ? sourceRows.length : 0;
+      const baselineEvidenceCount = baseline.sourceRows.length;
+      const evidenceCount = sourceRows.length;
       if (evidenceCount < baselineEvidenceCount) {
         console.warn(
           `[inference] expandWritableBypass guard: evidence rows dropped (${evidenceCount} < ${baselineEvidenceCount}).`,
