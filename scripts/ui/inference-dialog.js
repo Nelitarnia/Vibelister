@@ -936,7 +936,7 @@ export async function openInferenceDialog(options = {}) {
         onlyFillEmpty: onlyEmptyInput.checked,
         skipManualOutcome: skipManualOutcomeInput.checked,
         manualOnlyEvidence: strictManualOnlyInput.checked,
-        profileLearningEnabled: profileLearningInput.checked,
+        profileLearningEnabled: false,
         allowInferredEvidence: strictManualOnlyInput.checked ? false : true,
         allowInferredOverwrite: overwriteInput.checked,
         debugInference: debugInferenceInput.checked,
