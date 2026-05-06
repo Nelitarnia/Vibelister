@@ -32,9 +32,9 @@ function hasStructuredValue(note, field) {
 
 export function applySuggestions({
   model,
-  targets,
+  writableTargets,
   suggestionTargets,
-  evidenceTargets,
+  evidenceMetadata,
   options,
   baseThresholds,
   setLastThresholdOverrides,
@@ -80,20 +80,44 @@ export function applySuggestions({
     sources: {},
   };
   const debug = {
-    evidenceTargets: Array.isArray(evidenceTargets)
-      ? evidenceTargets.length
-      : Array.isArray(suggestionTargets)
-        ? suggestionTargets.length
-        : 0,
+    evidenceTargets: Number(evidenceMetadata?.evidenceRowCount || 0),
     suggestionTargets: Array.isArray(suggestionTargets)
       ? suggestionTargets.length
       : 0,
-    writableTargets: Array.isArray(targets) ? targets.length : 0,
+    writableTargets: Array.isArray(writableTargets) ? writableTargets.length : 0,
     suggestionMapSize,
     noChangeReason: null,
   };
   let tagsChanged = false;
-  for (const target of targets) {
+  const debugInference = !!options?.debugInference;
+  if (debugInference) {
+    const writableRowSet = new Set(
+      Array.isArray(evidenceMetadata?.writableRows)
+        ? evidenceMetadata.writableRows
+        : [],
+    );
+    for (const target of writableTargets || []) {
+      if (!writableRowSet.has(target.row)) {
+        console.warn("inference.contract.write_outside_writable", target);
+        throw new Error("inference.contract.write_outside_writable");
+      }
+    }
+    const suggestionRowSet = new Set(
+      Array.isArray(evidenceMetadata?.suggestionRows)
+        ? evidenceMetadata.suggestionRows
+        : [],
+    );
+    for (const target of suggestionTargets || []) {
+      if (!suggestionRowSet.has(target.row)) {
+        console.warn(
+          "inference.contract.score_outside_suggestion_rows",
+          target,
+        );
+        throw new Error("inference.contract.score_outside_suggestion_rows");
+      }
+    }
+  }
+  for (const target of writableTargets) {
     const note = notes[target.key];
     const previousValue = extractNoteFieldValue(note, target.field);
     const hasValue = hasStructuredValue(note, target.field);
