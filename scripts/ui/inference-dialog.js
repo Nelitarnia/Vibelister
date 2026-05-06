@@ -933,12 +933,13 @@ export async function openInferenceDialog(options = {}) {
         includeTag: includeTagInput.checked,
         expandReadableBypass: inferFromBypassInput.checked,
         expandWritableBypass: inferToBypassInput.checked,
-        allowInferredOverwrite: overwriteInput.checked,
         onlyFillEmpty: onlyEmptyInput.checked,
         skipManualOutcome: skipManualOutcomeInput.checked,
         manualOnlyEvidence: strictManualOnlyInput.checked,
         profileLearningEnabled: !strictManualOnlyInput.checked,
         allowInferredEvidence: !strictManualOnlyInput.checked,
+        allowInferredOverwrite:
+          strictManualOnlyInput.checked ? false : overwriteInput.checked,
         debugInference: debugInferenceInput.checked,
         thresholdOverrides: buildThresholdOverrides(),
       };
