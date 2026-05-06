@@ -131,6 +131,28 @@ function shouldUseBypassIndex(options) {
   return !!(options?.expandReadableBypass || options?.expandWritableBypass);
 }
 
+function normalizeRows(rows) {
+  if (!Array.isArray(rows) || !rows.length) return Object.freeze([]);
+  const normalized = Array.from(
+    new Set(
+      rows
+        .map((row) => Number(row))
+        .filter((row) => Number.isInteger(row) && row >= 0),
+    ),
+  ).sort((a, b) => a - b);
+  return Object.freeze(normalized);
+}
+
+function buildInferencePlan({ sourceRows, suggestionRows, writableRows, indexAccess, debug }) {
+  return Object.freeze({
+    sourceRows: normalizeRows(sourceRows),
+    suggestionRows: normalizeRows(suggestionRows),
+    writableRows: normalizeRows(writableRows),
+    indexAccess,
+    ...(debug ? { debug: Object.freeze({ ...debug }) } : {}),
+  });
+}
+
 export function createInferenceIndexAccess(options) {
   const {
     model,
@@ -267,14 +289,12 @@ export function createInferenceIndexAccess(options) {
       isBaselineVisibleRow(baseAccess.getPair(row), { includeBypass: false }),
     );
     if (!includeBypass) {
-      return {
+      return buildInferencePlan({
         indexAccess: baseAccess,
-        rows: baseRows,
         sourceRows: strictManualOnly ? baselineVisibleRows : baseRows,
         suggestionRows: strictManualOnly ? baselineVisibleRows : baseRows,
-        targetRows: baseRows,
         writableRows: baseRows,
-      };
+      });
     }
     const scopedIds = getScopedActionIds(
       options.scope,
@@ -404,17 +424,12 @@ export function createInferenceIndexAccess(options) {
       }
       return { sourceRows, suggestionRows, writableRows };
     })();
-    const sourceRows = rows.sourceRows;
-    const suggestionRows = rows.suggestionRows;
-    const writableRows = rows.writableRows;
-    return {
+    return buildInferencePlan({
       indexAccess,
-      rows: writableRows,
-      sourceRows,
-      suggestionRows,
-      targetRows: writableRows,
-      writableRows,
-    };
+      sourceRows: rows.sourceRows,
+      suggestionRows: rows.suggestionRows,
+      writableRows: rows.writableRows,
+    });
   }
 
   return { resolveIndexAccess, shouldUseBypassIndex, getBaseIndexAccess };
