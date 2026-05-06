@@ -22,6 +22,7 @@ import {
   HEURISTIC_SOURCES,
   proposeInteractionInferences,
 } from "../../../app/inference-heuristics.js";
+import { createInferencePolicy } from "../../../app/inference-policy.js";
 import {
   captureInferenceProfilesSnapshot,
   resetInferenceProfiles,
@@ -410,7 +411,12 @@ export function getInferenceIntegrationTests() {
           });
         }
 
-        const suggestions = proposeInteractionInferences(targets);
+        const suggestions = proposeInteractionInferences(
+          targets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         const modPair = getPair(model, 2);
         const modSuggestion = suggestions.get(
           noteKeyForPair(modPair, 1),
@@ -575,7 +581,12 @@ export function getInferenceIntegrationTests() {
           });
         }
 
-        const suggestions = proposeInteractionInferences(targets);
+        const suggestions = proposeInteractionInferences(
+          targets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         const emptyKey = noteKeyForPair(getPair(model, 2), 1);
 
         assert.strictEqual(
@@ -594,7 +605,12 @@ export function getInferenceIntegrationTests() {
             ? { ...t, allowInferredExisting: true, allowInferredTargets: true }
             : t,
         );
-        const optInSuggestions = proposeInteractionInferences(optInTargets);
+        const optInSuggestions = proposeInteractionInferences(
+          optInTargets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         const optedSuggestion = optInSuggestions.get(emptyKey)?.outcome;
 
         assert.strictEqual(
@@ -656,7 +672,12 @@ export function getInferenceIntegrationTests() {
           });
         }
 
-        const suggestions = proposeInteractionInferences(targets);
+        const suggestions = proposeInteractionInferences(
+          targets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         assert.strictEqual(
           suggestions.get(noteKeyForPair(pair, 1))?.outcome,
           undefined,
@@ -667,7 +688,12 @@ export function getInferenceIntegrationTests() {
           ...t,
           allowInferredExisting: true,
         }));
-        const optInSuggestions = proposeInteractionInferences(optInTargets);
+        const optInSuggestions = proposeInteractionInferences(
+          optInTargets,
+          undefined,
+          undefined,
+          createInferencePolicy({}),
+        );
         const adjacencySuggestion = optInSuggestions.get(
           noteKeyForPair(pair, 1),
         )?.outcome;
@@ -1678,6 +1704,7 @@ export function getInferenceIntegrationTests() {
             profileTrendMinObservations: 2,
             profileTrendMinPreferenceRatio: 0,
           },
+          createInferencePolicy({}),
         );
         const suggestion = suggestions.get(inferredKey)?.outcome;
         assert.ok(

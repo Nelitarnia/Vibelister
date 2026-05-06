@@ -128,15 +128,7 @@ function warnOnMappedRowsInvariant(options, details) {
 }
 
 function shouldUseBypassIndex(options) {
-  const canRead =
-    options?.expandReadableBypass != null
-      ? !!options.expandReadableBypass
-      : !!options?.inferFromBypassed;
-  const canWrite =
-    options?.expandWritableBypass != null
-      ? !!options.expandWritableBypass
-      : !!options?.inferToBypassed;
-  return !!(canRead || canWrite);
+  return !!(options?.expandReadableBypass || options?.expandWritableBypass);
 }
 
 export function createInferenceIndexAccess(options) {
@@ -265,19 +257,10 @@ export function createInferenceIndexAccess(options) {
   }
 
   function resolveIndexAccess(options, resolveRows) {
-    const strictManualOnly =
-      options?.manualOnlyEvidence != null
-        ? !!options.manualOnlyEvidence
-        : !!options?.strictManualOnly;
+    const strictManualOnly = !!options?.manualOnlyEvidence;
     const includeBypass = shouldUseBypassIndex(options);
-    const canWriteBypassRows =
-      options?.expandWritableBypass != null
-        ? !!options.expandWritableBypass
-        : !!options?.inferToBypassed;
-    const canReadBypassRows =
-      options?.expandReadableBypass != null
-        ? !!options.expandReadableBypass
-        : !!options?.inferFromBypassed;
+    const canWriteBypassRows = !!options?.expandWritableBypass;
+    const canReadBypassRows = !!options?.expandReadableBypass;
     const baseAccess = getBaseIndexAccess();
     const baseRows = resolveRows(options.scope, baseAccess);
     const baselineVisibleRows = baseRows.filter((row) =>
