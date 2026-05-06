@@ -25,6 +25,7 @@ import { getDataUtilsTests } from "../scripts/support/tests/specs/data-utils.js"
 import { getDataVersionTests } from "../scripts/support/tests/specs/data-version.js";
 import { getPropertiesPaletteTests } from "../scripts/support/tests/specs/properties-palette.js";
 import { getInferenceUtilsTests } from "../scripts/support/tests/specs/inference-utils.js";
+import { getInferencePolicyTests } from "../scripts/support/tests/specs/inference-policy.js";
 import { getInferenceIndexAccessTests } from "../scripts/support/tests/specs/inference-index-access.js";
 import { getInferenceStrategyTests } from "../scripts/support/tests/specs/inference-strategies.js";
 import { getInferenceControllerTests } from "../scripts/support/tests/specs/inference-controller.js";
@@ -68,6 +69,10 @@ for (const spec of getInteractionsPaletteTests()) {
 
 for (const spec of getInferenceUtilsTests()) {
   test(`Inference utils › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInferencePolicyTests()) {
+  test(`Inference policy › ${spec.name}`, () => spec.run(sharedAssert));
 }
 
 for (const spec of getInferenceIndexAccessTests()) {

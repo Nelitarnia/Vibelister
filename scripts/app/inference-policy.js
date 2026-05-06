@@ -33,6 +33,31 @@ export function createInferencePolicy(payload = {}) {
   const inferFromBypassed = !!payload.inferFromBypassed;
   const inferToBypassed = !!payload.inferToBypassed;
 
+  const manualOnlyEvidence =
+    payload.manualOnlyEvidence == null
+      ? strictManualOnly
+      : !!payload.manualOnlyEvidence;
+  const allowInferredEvidence =
+    payload.allowInferredEvidence == null
+      ? !manualOnlyEvidence
+      : !!payload.allowInferredEvidence;
+  const allowInferredOverwrite =
+    payload.allowInferredOverwrite == null
+      ? !manualOnlyEvidence
+      : !!payload.allowInferredOverwrite;
+  const expandWritableBypass =
+    payload.expandWritableBypass == null
+      ? inferToBypassed
+      : !!payload.expandWritableBypass;
+  const expandReadableBypass =
+    payload.expandReadableBypass == null
+      ? inferFromBypassed
+      : !!payload.expandReadableBypass;
+  const profileLearningEnabled =
+    payload.profileLearningEnabled == null
+      ? !manualOnlyEvidence
+      : !!payload.profileLearningEnabled;
+
   return {
     scope: payload.scope || DEFAULT_OPTIONS.scope,
     includeEnd: payload.includeEnd !== false,
@@ -58,11 +83,11 @@ export function createInferencePolicy(payload = {}) {
         ? payload.thresholdOverrides
         : null,
     // Explicit normalized policy controls.
-    manualOnlyEvidence: strictManualOnly,
-    allowInferredEvidence: !strictManualOnly,
-    allowInferredOverwrite: !strictManualOnly,
-    expandWritableBypass: inferToBypassed,
-    expandReadableBypass: inferFromBypassed,
-    profileLearningEnabled: !strictManualOnly,
+    manualOnlyEvidence,
+    allowInferredEvidence,
+    allowInferredOverwrite,
+    expandWritableBypass,
+    expandReadableBypass,
+    profileLearningEnabled,
   };
 }

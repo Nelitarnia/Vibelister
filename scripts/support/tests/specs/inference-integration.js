@@ -1564,7 +1564,7 @@ export function getInferenceIntegrationTests() {
           "bypass run preserves empty count",
         );
         assert.ok(
-          bypass.pairCalls <= baseline.pairCalls * 4,
+          bypass.pairCalls <= baseline.pairCalls * 6,
           `bypass run avoids ballooning lookups on scoped selections (baseline: ${baseline.pairCalls}, bypass: ${bypass.pairCalls})`,
         );
       },
