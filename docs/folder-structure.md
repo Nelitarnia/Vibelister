@@ -41,6 +41,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── inference-controller.js
 │   │   ├── inference-heuristics.js
 │   │   ├── inference-index-access.js
+│   │   ├── inference-policy.js
 │   │   ├── interactions-row-classification.js
 │   │   ├── inference-targets.js
 │   │   ├── inference-profiles.js
@@ -119,6 +120,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       │   ├── grid-keys.js
 │   │       │   ├── inference-utils.js
 │   │       │   ├── inference-index-access.js
+│   │       │   ├── inference-policy.js
 │   │       │   ├── interactions.js
 │   │       │   ├── interactions-all.js
 │   │       │   ├── interactions-core.js
@@ -200,6 +202,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `interactions-all.js` is the canonical source list for interaction specs.
 - `interactions-core.js`, `interactions-tags.js`, and `interactions-palette.js` split interaction coverage by concern while keeping legacy test names intact for traceability.
 - `interactions.js` remains a compatibility aggregator that composes those split interaction spec groups.
+- `inference-policy.js` verifies policy normalization and override behavior so inference tests can isolate the policy contract from strategy/application behavior.
 
 #### `scripts/app/`
 
@@ -228,6 +231,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `inference-controller.js` scopes interaction cells for inference runs, applies or clears inferred metadata with undo/status wiring, and skips manual edits so bulk operations respect source flags.
 - `inference-application.js` applies the proposed suggestions to interaction notes, coordinating metadata updates, profile impact tracking, and tag-change events while honoring overwrite/skip rules.
 - `inference-index-access.js` encapsulates index construction and selection mapping for regular vs. bypass interactions, including scoped bypass caches and active-row remapping.
+- `inference-policy.js` normalizes inference payloads into the canonical policy shape and exposes policy validation helpers so downstream modules can rely on explicit boolean semantics.
 - `interactions-row-classification.js` centralizes stable row predicates (`isBypassRow`, `isVariantRow`, `isBaselineVisibleRow`) so inference and related callsites share documented bypass/baseline semantics.
 - `inference-targets.js` resolves requested vs. suggestion scopes, gathers eligible cells for inference, and shares scope-plan metadata so the controller can log intent.
 - `inference-heuristics.js` hosts the inference runner that composes discrete strategy modules, normalizes thresholds, and exposes the suggestion entry point.
