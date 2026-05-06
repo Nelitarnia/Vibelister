@@ -41,12 +41,14 @@ function createInferenceDebugDetails({
 const DEFAULT_DIALOG_OPTIONS = Object.freeze({
   includeEnd: true,
   includeTag: true,
-  inferFromBypassed: false,
-  inferToBypassed: false,
-  overwriteInferred: true,
+  expandReadableBypass: false,
+  expandWritableBypass: false,
+  allowInferredOverwrite: true,
+  allowInferredEvidence: true,
   onlyFillEmpty: false,
   skipManualOutcome: false,
-  strictManualOnly: true,
+  manualOnlyEvidence: true,
+  profileLearningEnabled: false,
   scope: "selection",
 });
 

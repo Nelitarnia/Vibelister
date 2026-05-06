@@ -3,20 +3,35 @@ import {
   normalizeInteractionSource,
 } from "./interactions.js";
 
-const DEFAULT_OPTIONS = Object.freeze({
+const DEFAULT_POLICY = Object.freeze({
   scope: "selection",
   includeEnd: true,
   includeTag: true,
-  inferFromBypassed: false,
-  inferToBypassed: false,
-  overwriteInferred: true,
   onlyFillEmpty: false,
   skipManualOutcome: false,
-  strictManualOnly: false,
   debugInference: false,
+  manualOnlyEvidence: false,
+  allowInferredEvidence: true,
+  allowInferredOverwrite: true,
+  expandWritableBypass: false,
+  expandReadableBypass: false,
+  profileLearningEnabled: true,
 });
 
+const LEGACY_KEYS = Object.freeze([
+  "strictManualOnly",
+  "inferFromBypassed",
+  "inferToBypassed",
+  "overwriteInferred",
+]);
+
 export function createInferencePolicy(payload = {}) {
+  for (const key of LEGACY_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      throw new Error(`Legacy inference policy key is no longer supported: ${key}`);
+    }
+  }
+
   const hasDefaultConfidence = Object.prototype.hasOwnProperty.call(
     payload,
     "defaultConfidence",
@@ -26,47 +41,15 @@ export function createInferencePolicy(payload = {}) {
     "defaultSource",
   );
 
-  const strictManualOnly =
-    payload.strictManualOnly == null
-      ? DEFAULT_OPTIONS.strictManualOnly
-      : !!payload.strictManualOnly;
-  const inferFromBypassed = !!payload.inferFromBypassed;
-  const inferToBypassed = !!payload.inferToBypassed;
-
-  const manualOnlyEvidence =
-    payload.manualOnlyEvidence == null
-      ? strictManualOnly
-      : !!payload.manualOnlyEvidence;
-  const allowInferredEvidence =
-    payload.allowInferredEvidence == null
-      ? !manualOnlyEvidence
-      : !!payload.allowInferredEvidence;
-  const allowInferredOverwrite =
-    payload.allowInferredOverwrite == null
-      ? !manualOnlyEvidence
-      : !!payload.allowInferredOverwrite;
-  const expandWritableBypass =
-    payload.expandWritableBypass == null
-      ? inferToBypassed
-      : !!payload.expandWritableBypass;
-  const expandReadableBypass =
-    payload.expandReadableBypass == null
-      ? inferFromBypassed
-      : !!payload.expandReadableBypass;
-  const profileLearningEnabled =
-    payload.profileLearningEnabled == null
-      ? !manualOnlyEvidence
-      : !!payload.profileLearningEnabled;
-
   return {
-    scope: payload.scope || DEFAULT_OPTIONS.scope,
+    scope: payload.scope || DEFAULT_POLICY.scope,
     includeEnd: payload.includeEnd !== false,
     includeTag: payload.includeTag !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
     skipManualOutcome: !!payload.skipManualOutcome,
     debugInference:
       payload.debugInference == null
-        ? DEFAULT_OPTIONS.debugInference
+        ? DEFAULT_POLICY.debugInference
         : !!payload.debugInference,
     defaultConfidence: hasDefaultConfidence
       ? normalizeInteractionConfidence(payload.defaultConfidence)
@@ -78,16 +61,32 @@ export function createInferencePolicy(payload = {}) {
       payload && typeof payload.thresholdOverrides === "object"
         ? payload.thresholdOverrides
         : null,
-    // Explicit normalized policy controls.
-    manualOnlyEvidence,
-    allowInferredEvidence,
-    allowInferredOverwrite,
-    expandWritableBypass,
-    expandReadableBypass,
-    profileLearningEnabled,
+    manualOnlyEvidence:
+      payload.manualOnlyEvidence == null
+        ? DEFAULT_POLICY.manualOnlyEvidence
+        : !!payload.manualOnlyEvidence,
+    allowInferredEvidence:
+      payload.allowInferredEvidence == null
+        ? DEFAULT_POLICY.allowInferredEvidence
+        : !!payload.allowInferredEvidence,
+    allowInferredOverwrite:
+      payload.allowInferredOverwrite == null
+        ? DEFAULT_POLICY.allowInferredOverwrite
+        : !!payload.allowInferredOverwrite,
+    expandWritableBypass:
+      payload.expandWritableBypass == null
+        ? DEFAULT_POLICY.expandWritableBypass
+        : !!payload.expandWritableBypass,
+    expandReadableBypass:
+      payload.expandReadableBypass == null
+        ? DEFAULT_POLICY.expandReadableBypass
+        : !!payload.expandReadableBypass,
+    profileLearningEnabled:
+      payload.profileLearningEnabled == null
+        ? DEFAULT_POLICY.profileLearningEnabled
+        : !!payload.profileLearningEnabled,
   };
 }
-
 
 export function assertNormalizedInferencePolicy(policy) {
   if (!policy || typeof policy !== "object") {

@@ -50,24 +50,24 @@ export function getInferenceControllerTests() {
   return [
 
     {
-      name: "inferToBypassed writable expansion matches strict on/off for same selection scope",
+      name: "expandWritableBypass writable expansion matches strict on/off for same selection scope",
       run(assert) {
         const { manager, resolveRows } = makeBypassResolveFixture();
         const strictOff = manager.resolveIndexAccess(
           toPolicy({
             scope: "action",
-            inferToBypassed: true,
-            inferFromBypassed: false,
-            strictManualOnly: false,
+            expandWritableBypass: true,
+            expandReadableBypass: false,
+            manualOnlyEvidence: false,
           }),
           resolveRows,
         );
         const strictOn = manager.resolveIndexAccess(
           toPolicy({
             scope: "action",
-            inferToBypassed: true,
-            inferFromBypassed: false,
-            strictManualOnly: true,
+            expandWritableBypass: true,
+            expandReadableBypass: false,
+            manualOnlyEvidence: true,
           }),
           resolveRows,
         );
@@ -85,18 +85,18 @@ export function getInferenceControllerTests() {
         const strictOff = manager.resolveIndexAccess(
           toPolicy({
             scope: "action",
-            inferToBypassed: true,
-            inferFromBypassed: false,
-            strictManualOnly: false,
+            expandWritableBypass: true,
+            expandReadableBypass: false,
+            manualOnlyEvidence: false,
           }),
           resolveRows,
         );
         const strictOn = manager.resolveIndexAccess(
           toPolicy({
             scope: "action",
-            inferToBypassed: true,
-            inferFromBypassed: false,
-            strictManualOnly: true,
+            expandWritableBypass: true,
+            expandReadableBypass: false,
+            manualOnlyEvidence: true,
           }),
           resolveRows,
         );
@@ -120,15 +120,15 @@ export function getInferenceControllerTests() {
           requestedScope: "selection",
           selection,
           indexAccess: makeIndexAccess(true, [{ aId: 7, iId: 2 }]),
-          options: toPolicy({ strictManualOnly: true, inferFromBypassed: false }),
+          options: toPolicy({ manualOnlyEvidence: true, expandReadableBypass: false }),
         };
         const withoutBypassWrites = buildScopePlan({
           ...base,
-          options: toPolicy({ ...base.options, inferToBypassed: false }),
+          options: toPolicy({ ...base.options, expandWritableBypass: false }),
         });
         const withBypassWrites = buildScopePlan({
           ...base,
-          options: toPolicy({ ...base.options, inferToBypassed: true }),
+          options: toPolicy({ ...base.options, expandWritableBypass: true }),
         });
         assert.strictEqual(withoutBypassWrites.suggestion.scope, "selection");
         assert.strictEqual(withBypassWrites.suggestion.scope, "selection");
@@ -140,23 +140,23 @@ export function getInferenceControllerTests() {
         const selection = { rows: new Set([0]) };
         const combinations = [
           {
-            inferFromBypassed: false,
-            inferToBypassed: false,
+            expandReadableBypass: false,
+            expandWritableBypass: false,
             expectedScope: "selection",
           },
           {
-            inferFromBypassed: true,
-            inferToBypassed: false,
+            expandReadableBypass: true,
+            expandWritableBypass: false,
             expectedScope: "project",
           },
           {
-            inferFromBypassed: false,
-            inferToBypassed: true,
+            expandReadableBypass: false,
+            expandWritableBypass: true,
             expectedScope: "selection",
           },
           {
-            inferFromBypassed: true,
-            inferToBypassed: true,
+            expandReadableBypass: true,
+            expandWritableBypass: true,
             expectedScope: "project",
           },
         ];
@@ -171,7 +171,7 @@ export function getInferenceControllerTests() {
           assert.strictEqual(
             plan.suggestion.scope,
             options.expectedScope,
-            `scope mismatch for inferFrom=${options.inferFromBypassed} inferTo=${options.inferToBypassed}`,
+            `scope mismatch for inferFrom=${options.expandReadableBypass} inferTo=${options.expandWritableBypass}`,
           );
         }
       },
@@ -199,21 +199,21 @@ export function getInferenceControllerTests() {
           requestedScope: "selection",
           selection,
           indexAccess: makeIndexAccess(true, [{ aId: 7, iId: 2 }]),
-          options: toPolicy({ inferFromBypassed: true, inferToBypassed: true }),
+          options: toPolicy({ expandReadableBypass: true, expandWritableBypass: true }),
         });
         assert.strictEqual(plan.suggestion.scope, "project");
         assert.strictEqual(plan.suggestion.reason, "bypassSelection");
       },
     },
     {
-      name: "inferToBypassed alone does not broaden selection suggestions",
+      name: "expandWritableBypass alone does not broaden selection suggestions",
       run(assert) {
         const selection = { rows: new Set([0]) };
         const plan = buildScopePlan({
           requestedScope: "selection",
           selection,
           indexAccess: makeIndexAccess(true, [{ aId: 7, iId: 2 }]),
-          options: toPolicy({ inferFromBypassed: false, inferToBypassed: true }),
+          options: toPolicy({ expandReadableBypass: false, expandWritableBypass: true }),
         });
         assert.strictEqual(plan.suggestion.scope, "selection");
         assert.strictEqual(plan.suggestion.reason, "requested");
@@ -230,7 +230,7 @@ export function getInferenceControllerTests() {
             { aId: 3, iId: 1 },
             { aId: 4, iId: 1 },
           ]),
-          options: toPolicy({ inferFromBypassed: true, inferToBypassed: true }),
+          options: toPolicy({ expandReadableBypass: true, expandWritableBypass: true }),
         });
         assert.strictEqual(plan.suggestion.scope, "selection");
         assert.strictEqual(plan.suggestion.reason, "requested");

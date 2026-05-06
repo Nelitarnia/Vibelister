@@ -196,10 +196,6 @@
  * @property {boolean=} expandWritableBypass
  * @property {boolean=} expandReadableBypass
  * @property {boolean=} profileLearningEnabled
- * @property {boolean=} strictManualOnly     // legacy input alias
- * @property {boolean=} inferFromBypassed    // legacy input alias
- * @property {boolean=} inferToBypassed      // legacy input alias
- * @property {boolean=} overwriteInferred    // legacy input alias
  */
 
 /**

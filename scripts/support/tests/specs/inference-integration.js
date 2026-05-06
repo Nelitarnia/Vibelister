@@ -949,8 +949,8 @@ export function getInferenceIntegrationTests() {
 
         const res = controller.runInference({
           scope: "selection",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -1044,8 +1044,8 @@ export function getInferenceIntegrationTests() {
 
         const res = controller.runInference({
           scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -1162,8 +1162,8 @@ export function getInferenceIntegrationTests() {
 
         const res = controller.runInference({
           scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
           thresholdOverrides: {
             consensusMinGroupSize: 1,
             consensusMinExistingRatio: 0,
@@ -1261,8 +1261,8 @@ export function getInferenceIntegrationTests() {
 
         const bypassClear = controller.runClear({
           scope: "project",
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
         });
 
         assert.strictEqual(
@@ -1395,8 +1395,8 @@ export function getInferenceIntegrationTests() {
 
         const baseRun = buildRun();
         const bypassRun = buildRun({
-          inferFromBypassed: true,
-          inferToBypassed: true,
+          expandReadableBypass: true,
+          expandWritableBypass: true,
         });
 
         assert.ok(baseRun.selectionSize > 30, "covers large selection set");
@@ -1533,8 +1533,8 @@ export function getInferenceIntegrationTests() {
 
           const res = controller.runInference({
             scope: "selection",
-            inferFromBypassed: enableBypass,
-            inferToBypassed: enableBypass,
+            expandReadableBypass: enableBypass,
+            expandWritableBypass: enableBypass,
             thresholdOverrides: {
               consensusMinGroupSize: 1,
               consensusMinExistingRatio: 0,

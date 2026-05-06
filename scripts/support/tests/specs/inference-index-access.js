@@ -209,10 +209,10 @@ export function getInferenceIndexAccessTests() {
       name: "resolves row universes across inferFrom/inferTo bypass combinations",
       run(assert) {
         const combinations = [
-          { inferFromBypassed: false, inferToBypassed: false },
-          { inferFromBypassed: true, inferToBypassed: false },
-          { inferFromBypassed: false, inferToBypassed: true },
-          { inferFromBypassed: true, inferToBypassed: true },
+          { expandReadableBypass: false, expandWritableBypass: false },
+          { expandReadableBypass: true, expandWritableBypass: false },
+          { expandReadableBypass: false, expandWritableBypass: true },
+          { expandReadableBypass: true, expandWritableBypass: true },
         ];
         const results = combinations.map((options) => {
           const { manager, resolveRows } = makeResolveFixture();
@@ -224,8 +224,8 @@ export function getInferenceIndexAccessTests() {
             ),
           };
         });
-        const key = ({ inferFromBypassed, inferToBypassed }) =>
-          `${inferFromBypassed}/${inferToBypassed}`;
+        const key = ({ expandReadableBypass, expandWritableBypass }) =>
+          `${expandReadableBypass}/${expandWritableBypass}`;
         const lookup = new Map(
           results.map((entry) => [key(entry.options), entry.resolved]),
         );
@@ -249,42 +249,42 @@ export function getInferenceIndexAccessTests() {
         assert.strictEqual(
           inferToOnly.sourceRows.length >= noBypass.sourceRows.length,
           true,
-          "inferToBypassed never reduces evidence universe",
+          "expandWritableBypass never reduces evidence universe",
         );
         assert.strictEqual(
           inferToOnly.suggestionRows.length >= noBypass.suggestionRows.length,
           true,
-          "inferToBypassed never reduces suggestion universe",
+          "expandWritableBypass never reduces suggestion universe",
         );
         assert.deepStrictEqual(
           inferToOnly.sourceRows,
           noBypass.sourceRows,
-          "inferToBypassed alone preserves existing source scope behavior",
+          "expandWritableBypass alone preserves existing source scope behavior",
         );
         assert.deepStrictEqual(
           inferToOnly.suggestionRows,
           noBypass.suggestionRows,
-          "inferToBypassed alone preserves existing suggestion scope behavior",
+          "expandWritableBypass alone preserves existing suggestion scope behavior",
         );
         assert.strictEqual(
           inferToOnly.writableRows.length >= noBypass.writableRows.length,
           true,
-          "writable universe does not shrink when inferToBypassed is true",
+          "writable universe does not shrink when expandWritableBypass is true",
         );
         assert.strictEqual(
           inferFromOnly.sourceRows.length >= noBypass.sourceRows.length,
           true,
-          "inferFromBypassed does not reduce evidence universe",
+          "expandReadableBypass does not reduce evidence universe",
         );
         assert.strictEqual(
           inferFromOnly.suggestionRows.length >= noBypass.suggestionRows.length,
           true,
-          "inferFromBypassed does not reduce suggestion universe",
+          "expandReadableBypass does not reduce suggestion universe",
         );
         assert.strictEqual(
           inferBoth.writableRows.length > inferFromOnly.writableRows.length,
           true,
-          "writable universe expands only when inferToBypassed=true",
+          "writable universe expands only when expandWritableBypass=true",
         );
       },
     },
@@ -324,7 +324,7 @@ export function getInferenceIndexAccessTests() {
         const resolveRows = (_scope, access) =>
           Array.from({ length: access.getRowCount() }, (_, i) => i);
         const result = manager.resolveIndexAccess(
-          toPolicy({ scope: "action", inferToBypassed: true, inferFromBypassed: false }),
+          toPolicy({ scope: "action", expandWritableBypass: true, expandReadableBypass: false }),
           resolveRows,
         );
         assert.strictEqual(Array.isArray(result.writableRows), true);

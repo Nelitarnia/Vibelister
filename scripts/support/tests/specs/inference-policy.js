@@ -3,13 +3,16 @@ import { createInferencePolicy } from "../../../app/inference-policy.js";
 export function getInferencePolicyTests() {
   return [
     {
-      name: "normalizes legacy bypass and strict flags",
+      name: "normalizes canonical policy fields",
       run(assert) {
         const policy = createInferencePolicy({
           scope: "action",
-          inferFromBypassed: true,
-          inferToBypassed: false,
-          strictManualOnly: true,
+          expandReadableBypass: true,
+          expandWritableBypass: false,
+          manualOnlyEvidence: true,
+          allowInferredEvidence: false,
+          allowInferredOverwrite: false,
+          profileLearningEnabled: false,
         });
         assert.strictEqual(policy.scope, "action");
         assert.strictEqual(policy.manualOnlyEvidence, true);
@@ -21,23 +24,18 @@ export function getInferencePolicyTests() {
       },
     },
     {
-      name: "allows normalized policy overrides",
+      name: "rejects legacy policy keys",
       run(assert) {
-        const policy = createInferencePolicy({
-          strictManualOnly: true,
-          manualOnlyEvidence: false,
-          allowInferredEvidence: true,
-          allowInferredOverwrite: true,
-          expandReadableBypass: true,
-          expandWritableBypass: true,
-          profileLearningEnabled: true,
-        });
-        assert.strictEqual(policy.manualOnlyEvidence, false);
-        assert.strictEqual(policy.allowInferredEvidence, true);
-        assert.strictEqual(policy.allowInferredOverwrite, true);
-        assert.strictEqual(policy.expandReadableBypass, true);
-        assert.strictEqual(policy.expandWritableBypass, true);
-        assert.strictEqual(policy.profileLearningEnabled, true);
+        let message = "";
+        try {
+          createInferencePolicy({ inferFromBypassed: true });
+        } catch (error) {
+          message = String(error?.message || error);
+        }
+        assert.ok(
+          message.includes("Legacy inference policy key is no longer supported"),
+          "legacy key usage should fail fast",
+        );
       },
     },
   ];

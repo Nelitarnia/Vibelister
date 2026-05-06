@@ -69,7 +69,7 @@ export function getInferenceStrategyTests() {
           JSON.stringify(
             Array.from(
               runInferenceStrategies(targets, null, thresholds, strategies, {
-                strictManualOnly: true,
+                manualOnlyEvidence: true,
               }).entries(),
             ),
           );
