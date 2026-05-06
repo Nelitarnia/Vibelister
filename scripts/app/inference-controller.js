@@ -7,7 +7,10 @@ import { applySuggestions, HEURISTIC_LABELS } from "./inference-application.js";
 import { createInferenceIndexAccess } from "./inference-index-access.js";
 import { createInferenceTargetResolver } from "./inference-targets.js";
 import { clearInferredTargets } from "./inference-clear-helpers.js";
-import { createInferencePolicy } from "./inference-policy.js";
+import {
+  assertNormalizedInferencePolicy,
+  createInferencePolicy,
+} from "./inference-policy.js";
 
 function createInferenceDebugDetails({
   sourceRows,
@@ -144,11 +147,11 @@ export function createInferenceController(options) {
       indexAccessManager.resolveIndexAccess(policy, targetResolver.getRows);
     if (
       policy.debugInference &&
-      policy.inferToBypassed &&
-      !policy.inferFromBypassed
+      policy.expandWritableBypass &&
+      !policy.expandReadableBypass
     ) {
       const baseline = indexAccessManager.resolveIndexAccess(
-        { ...policy, inferToBypassed: false },
+        { ...policy, expandWritableBypass: false },
         targetResolver.getRows,
       );
       const baselineEvidenceCount = Array.isArray(baseline?.sourceRows)
@@ -157,11 +160,11 @@ export function createInferenceController(options) {
       const evidenceCount = Array.isArray(sourceRows) ? sourceRows.length : 0;
       if (evidenceCount < baselineEvidenceCount) {
         console.warn(
-          `[inference] inferToBypassed guard: evidence rows dropped (${evidenceCount} < ${baselineEvidenceCount}).`,
+          `[inference] expandWritableBypass guard: evidence rows dropped (${evidenceCount} < ${baselineEvidenceCount}).`,
         );
       } else {
         console.debug?.(
-          `[inference] inferToBypassed guard: evidence rows preserved (${evidenceCount} >= ${baselineEvidenceCount}).`,
+          `[inference] expandWritableBypass guard: evidence rows preserved (${evidenceCount} >= ${baselineEvidenceCount}).`,
         );
       }
     }
@@ -311,13 +314,13 @@ export function createInferenceController(options) {
   }
 
   function runInference(payload) {
-    const opts = createInferencePolicy({
+    const opts = assertNormalizedInferencePolicy(createInferencePolicy({
       ...payload,
       debugInference:
         payload?.debugInference == null
           ? isInferenceDebugEnabledBySettings()
           : payload.debugInference,
-    });
+    }));
     return runWithHistory(
       "Inference",
       () => applyInference(opts),
@@ -327,7 +330,7 @@ export function createInferenceController(options) {
   }
 
   function runClear(payload) {
-    const opts = createInferencePolicy(payload);
+    const opts = assertNormalizedInferencePolicy(createInferencePolicy(payload));
     return runWithHistory(
       "Clear inference",
       () => clearInference(opts),

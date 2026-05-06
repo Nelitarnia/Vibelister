@@ -257,7 +257,7 @@ export function createInferenceIndexAccess(options) {
   }
 
   function resolveIndexAccess(options, resolveRows) {
-    const strictManualOnly = !!options?.manualOnlyEvidence;
+      const strictManualOnly = !!options?.manualOnlyEvidence;
     const includeBypass = shouldUseBypassIndex(options);
     const canWriteBypassRows = !!options?.expandWritableBypass;
     const canReadBypassRows = !!options?.expandReadableBypass;

@@ -62,12 +62,8 @@ export function createInferencePolicy(payload = {}) {
     scope: payload.scope || DEFAULT_OPTIONS.scope,
     includeEnd: payload.includeEnd !== false,
     includeTag: payload.includeTag !== false,
-    inferFromBypassed,
-    inferToBypassed,
-    overwriteInferred: payload.overwriteInferred !== false,
     onlyFillEmpty: !!payload.onlyFillEmpty,
     skipManualOutcome: !!payload.skipManualOutcome,
-    strictManualOnly,
     debugInference:
       payload.debugInference == null
         ? DEFAULT_OPTIONS.debugInference
@@ -90,4 +86,25 @@ export function createInferencePolicy(payload = {}) {
     expandReadableBypass,
     profileLearningEnabled,
   };
+}
+
+
+export function assertNormalizedInferencePolicy(policy) {
+  if (!policy || typeof policy !== "object") {
+    throw new Error("Inference policy must be an object.");
+  }
+  const required = [
+    "manualOnlyEvidence",
+    "allowInferredEvidence",
+    "allowInferredOverwrite",
+    "expandWritableBypass",
+    "expandReadableBypass",
+    "profileLearningEnabled",
+  ];
+  for (const key of required) {
+    if (typeof policy[key] !== "boolean") {
+      throw new Error(`Inference policy missing normalized boolean: ${key}`);
+    }
+  }
+  return policy;
 }
