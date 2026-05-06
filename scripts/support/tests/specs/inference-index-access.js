@@ -1,10 +1,16 @@
 import { mapRowsToIndex } from "../../../app/inference-index-access.js";
 import { createInferenceIndexAccess } from "../../../app/inference-index-access.js";
+import { createInferencePolicy } from "../../../app/inference-policy.js";
 import {
   isBaselineVisibleRow,
   isBypassRow,
   isVariantRow,
 } from "../../../app/interactions-row-classification.js";
+
+
+function toPolicy(options = {}) {
+  return createInferencePolicy(options);
+}
 
 export function getInferenceIndexAccessTests() {
   const makeResolveFixture = () => {
@@ -213,7 +219,7 @@ export function getInferenceIndexAccessTests() {
           return {
             options,
             resolved: manager.resolveIndexAccess(
-              { scope: "project", ...options },
+              toPolicy({ scope: "project", ...options }),
               resolveRows,
             ),
           };
@@ -318,7 +324,7 @@ export function getInferenceIndexAccessTests() {
         const resolveRows = (_scope, access) =>
           Array.from({ length: access.getRowCount() }, (_, i) => i);
         const result = manager.resolveIndexAccess(
-          { scope: "action", inferToBypassed: true, inferFromBypassed: false },
+          toPolicy({ scope: "action", inferToBypassed: true, inferFromBypassed: false }),
           resolveRows,
         );
         assert.strictEqual(Array.isArray(result.writableRows), true);
