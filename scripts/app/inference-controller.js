@@ -201,6 +201,20 @@ export function createInferenceController(options) {
       writableTargets,
       suggestionTargets,
     });
+    if (policy.debugInference) {
+      const suggestionRowSet = new Set(
+        Array.isArray(suggestionRows) ? suggestionRows : [],
+      );
+      for (const target of suggestionTargets) {
+        if (!suggestionRowSet.has(target.row)) {
+          console.warn(
+            "inference.contract.suggest_outside_suggestion_rows",
+            target,
+          );
+          throw new Error("inference.contract.suggest_outside_suggestion_rows");
+        }
+      }
+    }
     if (!writableTargets.length) {
       statusBar?.set?.(NO_TARGETS_STATUS);
       return {
@@ -214,9 +228,13 @@ export function createInferenceController(options) {
     }
     const { result } = applySuggestions({
       model,
-      targets: writableTargets,
+      writableTargets,
       suggestionTargets,
-      evidenceTargets: sourceRows,
+      evidenceMetadata: {
+        evidenceRowCount: Array.isArray(sourceRows) ? sourceRows.length : 0,
+        writableRows,
+        suggestionRows,
+      },
       options: policy,
       baseThresholds,
       setLastThresholdOverrides: (overrides) => {
