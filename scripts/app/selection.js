@@ -11,7 +11,7 @@ export const Selection = {
   horizontalMode: false,
 };
 export const sel = Selection.cell; // convenience alias {r,c}
-export const selection = Selection; // legacy alias for callers
+export const selection = Selection; // COMPAT shim; remove after 2026-09-01
 
 // ---- Change listeners
 const listeners = new Set();
@@ -27,7 +27,7 @@ function emit() {
   });
 }
 
-// ---- Namespace-style mutators (compatible with old call sites)
+// ---- Namespace-style mutators (COMPAT shim; remove after 2026-09-01)
 export const SelectionNS = {
   clear() {
     selection.rows.clear();
@@ -71,7 +71,7 @@ export const SelectionNS = {
   },
 };
 
-// Thin wrappers to preserve legacy call sites
+// Thin wrappers (COMPAT shim; remove after 2026-09-01)
 export function clearSelection() {
   SelectionNS.clear();
 }
@@ -87,6 +87,10 @@ export function isRowSelected(r) {
 
 // ---- Controller API (higher-level intents)
 export const SelectionCtl = {
+  clear() { SelectionNS.clear(); },
+  selectRow(r) { SelectionNS.selectRow(r); },
+  isRowSelected(r) { return SelectionNS.isSelected(r); },
+  setAllCols(v) { SelectionNS.setColsAll(v); },
   startSingle(r, c) {
     SelectionNS.clear();
     sel.r = r;

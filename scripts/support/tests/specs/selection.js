@@ -1,13 +1,12 @@
 import {
   Selection,
   SelectionCtl,
-  SelectionNS,
   sel,
 } from "../../../app/selection.js";
 
 function resetSelectionState() {
   SelectionCtl.setHorizontalMode(false);
-  SelectionNS.clear();
+  SelectionCtl.clear();
   sel.r = 0;
   sel.c = 0;
 }
@@ -30,7 +29,7 @@ export function getSelectionTests() {
           "row selection should include active row",
         );
 
-        SelectionNS.setColsAll(false);
+        SelectionCtl.setAllCols(false);
         assert.strictEqual(
           Selection.colsAll,
           true,
@@ -58,7 +57,7 @@ export function getSelectionTests() {
         resetSelectionState();
         SelectionCtl.startSingle(3, 0);
         SelectionCtl.setHorizontalMode(true);
-        SelectionNS.clear();
+        SelectionCtl.clear();
 
         assert.strictEqual(Selection.rows.size, 0);
 
