@@ -228,7 +228,7 @@ To save time without sacrificing formality, you could create placeholder Actions
 # To do
 
 ## Known bugs
-- Inference: the strict deterministic-option doesn't work perfectly when infer to bypassed-option is used alone without infer from bypassed also being active, sometimes resulting in the heuristic finding no matches even though it should. Strict deterministic-option can also make it more difficult for the heuristic to find matches in small selections. To get around this, disable strict deterministic in the above cases.
+- Inference: the strict deterministic-option doesn't have an effect at the moment.
 
 ## Ideas for later
 
