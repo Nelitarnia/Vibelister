@@ -22,7 +22,6 @@ function createGridRenderer({
   colHdrs,
   rowHdrs,
   selection,
-  SelectionNS,
   sel,
   getActiveView,
   viewDef,
@@ -30,6 +29,7 @@ function createGridRenderer({
   getRowCount,
   getCell,
   isRowSelected,
+  isAllCols,
   model,
   rebuildInteractionPhaseColumns,
   noteKeyForPair,
@@ -764,7 +764,7 @@ function createGridRenderer({
       const d = rowHeaderPool[rowIndex++];
       if (!d) continue;
       const colsAll =
-        (SelectionNS && SelectionNS.isAllCols && SelectionNS.isAllCols()) ||
+        (typeof isAllCols === "function" ? isAllCols() : !!selection.colsAll) ||
         !!selection.colsAll;
       const rowKey = [r, isRowSelected(r) ? 1 : 0, colsAll ? 1 : 0].join("|");
       if (d._rowKey !== rowKey) {
@@ -1001,7 +1001,7 @@ function createGridRenderer({
       const d = rowHeaderPool[rowIndex++];
       if (!d) continue;
       const colsAll =
-        (SelectionNS && SelectionNS.isAllCols && SelectionNS.isAllCols()) ||
+        (typeof isAllCols === "function" ? isAllCols() : !!selection.colsAll) ||
         !!selection.colsAll;
       const rowKey = [r, isRowSelected(r) ? 1 : 0, colsAll ? 1 : 0].join("|");
       if (d._rowKey !== rowKey) {
