@@ -20,7 +20,7 @@ export function setupInputHandlers({
 }) {
   const { cellsLayer, rowHdrs, sheet, editor, dragLine, colHdrs } = dom;
 
-  const { selection, sel, SelectionNS, SelectionCtl, clearSelection } =
+  const { selection, sel, SelectionCtl } =
     selectionApi;
   const { isEditing, beginEdit, endEdit, moveSel, moveSelectionForTab } =
     editingApi;
@@ -87,7 +87,6 @@ export function setupInputHandlers({
     editor,
     sel,
     selection,
-    SelectionNS,
     SelectionCtl,
     isEditing,
     beginEdit,
@@ -113,8 +112,7 @@ export function setupInputHandlers({
     clamp: modelApi.clamp,
     selection,
     sel,
-    clearSelection,
-    SelectionNS,
+    clearSelection: SelectionCtl.clear,
     render,
     layout,
     runModelMutation,
@@ -131,7 +129,7 @@ export function setupInputHandlers({
     selection,
     sel,
     editor,
-    clearSelection,
+    clearSelection: SelectionCtl.clear,
     render,
     beginEdit,
     endEdit,

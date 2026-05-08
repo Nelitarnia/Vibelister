@@ -15,7 +15,6 @@ export function createGridCommands(deps = {}) {
     viewDef,
     dataArray,
     selection,
-    SelectionNS,
     SelectionCtl,
     sel,
     model,
@@ -288,7 +287,7 @@ export function createGridCommands(deps = {}) {
   function clearSelectedCells(options = {}) {
     const { mode: requestedMode, reason, skipStatus = false } = options || {};
     if (currentView() === "interactions") {
-      const isAllCols = SelectionNS?.isAllCols?.() || false;
+      const isAllCols = SelectionCtl?.isAllCols?.() || false;
       const mode =
         requestedMode || (isAllCols ? "clearAllEditable" : "clearActiveCell");
       const extras = {};
@@ -337,7 +336,7 @@ export function createGridCommands(deps = {}) {
           }),
         },
       );
-      if (mode === "clearAllEditable") SelectionNS?.setColsAll?.(false);
+      if (mode === "clearAllEditable") SelectionCtl?.setAllCols?.(false);
       return result;
     }
 
