@@ -23,11 +23,8 @@ export function getSelectionTests() {
 
         SelectionCtl.setHorizontalMode(true);
         assert.strictEqual(Selection.horizontalMode, true);
-        assert.strictEqual(Selection.colsAll, true);
-        assert.ok(
-          Selection.rows.has(2),
-          "row selection should include active row",
-        );
+        assert.strictEqual(SelectionCtl.isAllCols(), true);
+        assert.ok(SelectionCtl.isRowSelected(2), "row selection should include active row");
 
         SelectionCtl.setAllCols(false);
         assert.strictEqual(
