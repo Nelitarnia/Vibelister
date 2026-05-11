@@ -1,6 +1,5 @@
-// selection.js — unified selection state, controller, and event bus
+// selection.js — unified canonical selection state and controller
 
-// ---- Core state
 export const Selection = {
   cell: { r: 0, c: 0 },
   anchor: null,
@@ -10,15 +9,15 @@ export const Selection = {
   colsAll: false,
   horizontalMode: false,
 };
-export const sel = Selection.cell; // convenience alias {r,c}
-export const selection = Selection; // legacy alias for callers
 
-// ---- Change listeners
+export const sel = Selection.cell;
+
 const listeners = new Set();
 export function onSelectionChanged(cb) {
   listeners.add(cb);
   return () => listeners.delete(cb);
 }
+
 function emit() {
   listeners.forEach((cb) => {
     try {
@@ -27,8 +26,7 @@ function emit() {
   });
 }
 
-// ---- Namespace-style mutators (compatible with old call sites)
-export const SelectionNS = {
+export const SelectionCtl = {
   clear() {
     Selection.rows.clear();
     Selection.cols.clear();
@@ -37,6 +35,7 @@ export const SelectionNS = {
     if (!Selection.horizontalMode) Selection.colsAll = false;
     emit();
   },
+
   selectRow(r) {
     this.clear();
     Selection.anchor = r;
@@ -46,65 +45,30 @@ export const SelectionNS = {
     Selection.colAnchor = null;
     emit();
   },
-  extendTo(r) {
+
+  extendRowsTo(r) {
     const a = Selection.anchor != null ? Selection.anchor : sel.r;
     this.clear();
-    const lo = Math.min(a, r);
-    const hi = Math.max(a, r);
-    for (let i = lo; i <= hi; i++) Selection.rows.add(i);
+    for (let i = Math.min(a, r); i <= Math.max(a, r); i += 1) Selection.rows.add(i);
     Selection.anchor = a;
     Selection.colsAll = !!Selection.horizontalMode;
     Selection.cols.clear();
     Selection.colAnchor = null;
     emit();
   },
-  isSelected(r) {
+
+  isRowSelected(r) {
     return Selection.rows.has(r);
   },
-  setColsAll(v) {
+
+  setAllCols(v) {
     if (!v && Selection.horizontalMode) return;
     Selection.colsAll = !!v;
     emit();
   },
+
   isAllCols() {
     return !!Selection.colsAll;
-  },
-};
-
-// Thin wrappers to preserve legacy call sites
-export function clearSelection() {
-  SelectionNS.clear();
-}
-export function selectSingleRow(r) {
-  SelectionNS.selectRow(r);
-}
-export function extendSelectionTo(r) {
-  SelectionNS.extendTo(r);
-}
-export function isRowSelected(r) {
-  return SelectionNS.isSelected(r);
-}
-
-// ---- Controller API (higher-level intents)
-export const SelectionCtl = {
-  // canonical controller methods
-  clear() {
-    SelectionNS.clear();
-  },
-  selectRow(r) {
-    SelectionNS.selectRow(r);
-  },
-  extendRowsTo(r) {
-    SelectionNS.extendTo(r);
-  },
-  isRowSelected(r) {
-    return SelectionNS.isSelected(r);
-  },
-  setAllCols(v) {
-    SelectionNS.setColsAll(v);
-  },
-  isAllCols() {
-    return SelectionNS.isAllCols();
   },
 
   startSingle(r, c) {
@@ -115,38 +79,36 @@ export const SelectionCtl = {
     Selection.cols.clear();
     Selection.cols.add(c);
     Selection.colAnchor = c;
-    // selectRow already emitted
   },
+
   extendBoxTo(r, c) {
     if (!Number.isFinite(r) || !Number.isFinite(c)) return;
     this.setAllCols(false);
 
     const rowAnchor = Selection.anchor != null ? Selection.anchor : sel.r;
     Selection.rows.clear();
-    const rLo = Math.min(rowAnchor, r);
-    const rHi = Math.max(rowAnchor, r);
-    for (let ri = rLo; ri <= rHi; ri++) Selection.rows.add(ri);
+    for (let ri = Math.min(rowAnchor, r); ri <= Math.max(rowAnchor, r); ri += 1)
+      Selection.rows.add(ri);
     Selection.anchor = rowAnchor;
 
-    const colAnchor =
-      typeof Selection.colAnchor === "number" ? Selection.colAnchor : sel.c;
+    const colAnchor = typeof Selection.colAnchor === "number" ? Selection.colAnchor : sel.c;
     Selection.cols.clear();
-    const cLo = Math.min(colAnchor, c);
-    const cHi = Math.max(colAnchor, c);
-    for (let ci = cLo; ci <= cHi; ci++) Selection.cols.add(ci);
+    for (let ci = Math.min(colAnchor, c); ci <= Math.max(colAnchor, c); ci += 1)
+      Selection.cols.add(ci);
     Selection.colAnchor = colAnchor;
 
     sel.r = r;
     sel.c = c;
-
     emit();
   },
+
   toggleRow(r) {
     if (Selection.rows.has(r)) Selection.rows.delete(r);
     else Selection.rows.add(r);
     if (Selection.anchor == null) Selection.anchor = r;
     emit();
   },
+
   setActiveCell(r, c) {
     sel.r = r;
     sel.c = c;
@@ -157,13 +119,16 @@ export const SelectionCtl = {
     }
     emit();
   },
+
   armAllCols(v = true) {
     this.setHorizontalMode(v);
   },
+
   clearAllColsFlag() {
     if (Selection.horizontalMode) return;
     this.setAllCols(false);
   },
+
   setHorizontalMode(enabled) {
     const next = !!enabled;
     if (Selection.horizontalMode === next) return;
@@ -178,12 +143,15 @@ export const SelectionCtl = {
       this.setAllCols(false);
     }
   },
+
   toggleHorizontalMode() {
     this.setHorizontalMode(!Selection.horizontalMode);
   },
+
   isHorizontalMode() {
     return !!Selection.horizontalMode;
   },
+
   applyHorizontalMode() {
     if (!Selection.horizontalMode) return;
     let changed = false;
@@ -198,9 +166,8 @@ export const SelectionCtl = {
     }
     if (changed) emit();
   },
+
   selectedRows() {
-    return Selection.rows.size
-      ? Array.from(Selection.rows).sort((a, b) => a - b)
-      : [sel.r];
+    return Selection.rows.size ? Array.from(Selection.rows).sort((a, b) => a - b) : [sel.r];
   },
 };
