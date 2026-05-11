@@ -42,9 +42,7 @@ export function bootstrapInteractionsAndLifecycle({
   const {
     selection,
     sel,
-    SelectionNS,
     SelectionCtl,
-    clearSelection,
     onSelectionChanged,
     disposeSelectionRender,
   } = selectionApi;
@@ -182,9 +180,7 @@ export function bootstrapInteractionsAndLifecycle({
       selectionApi: {
         selection,
         sel,
-        SelectionNS,
         SelectionCtl,
-        clearSelection,
       },
       editingApi: {
         isEditing,
@@ -299,7 +295,6 @@ export function bootstrapInteractionsAndLifecycle({
     closeAllMenus: state.menusAPI.closeAllMenus,
     updateViewMenuRadios: state.menusAPI.updateViewMenuRadios,
   };
-  const SelectionNSExport = SelectionNS;
   const IONS = { openFromDisk, saveToDisk };
   const VariantsNS = {
     canonicalSig,
@@ -376,7 +371,7 @@ export function bootstrapInteractionsAndLifecycle({
     ViewsNS,
     GridNS,
     MenusNS,
-    SelectionNS: SelectionNSExport,
+    SelectionCtl,
     IONS,
     VariantsNS,
   };
