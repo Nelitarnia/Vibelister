@@ -23,7 +23,6 @@ export function createEditingController({
   editor,
   selection,
   sel,
-  SelectionNS,
   SelectionCtl,
   viewDef,
   dataArray,
@@ -90,7 +89,7 @@ export function createEditingController({
   function beginEdit(r, c) {
     const palette = getPalette();
     if (palette?.closeColor) palette.closeColor();
-    if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
+    if (SelectionCtl?.setAllCols) SelectionCtl.setAllCols(false);
     const activeView = currentView();
     const vd = viewDef();
     const col = vd.columns?.[c];
@@ -249,7 +248,7 @@ export function createEditingController({
     nextR = Math.max(0, Math.min(maxR, nextR));
     nextC = Math.max(0, Math.min(maxC, nextC));
     if (collapseSelection) {
-      if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
+      if (SelectionCtl?.setAllCols) SelectionCtl.setAllCols(false);
       if (SelectionCtl?.startSingle) SelectionCtl.startSingle(nextR, nextC);
       else {
         sel.r = nextR;
@@ -301,7 +300,7 @@ export function createEditingController({
     if (useBoxExtend) {
       SelectionCtl.extendBoxTo(nextR, nextC);
     } else {
-      if (SelectionNS?.setColsAll) SelectionNS.setColsAll(false);
+      if (SelectionCtl?.setAllCols) SelectionCtl.setAllCols(false);
       SelectionCtl?.startSingle?.(nextR, nextC);
     }
     updateSelectionSnapshot?.({ row: sel.r, col: sel.c });

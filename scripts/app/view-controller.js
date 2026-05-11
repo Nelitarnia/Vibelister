@@ -5,7 +5,7 @@ export function createViewController({
   selection,
   saveCurrentViewState,
   restoreViewState,
-  clearSelection,
+  SelectionCtl,
   endEditIfOpen,
   VIEWS,
   interactionsOutline,
@@ -28,7 +28,7 @@ export function createViewController({
   function setActiveView(key) {
     endEditIfOpen(true);
     saveCurrentViewState({ sel, sheet });
-    clearSelection();
+    SelectionCtl.clear();
     if (!(key in VIEWS)) return;
     setActiveViewState(key);
     interactionsOutline?.setActive?.(key === "interactions");

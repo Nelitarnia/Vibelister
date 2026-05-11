@@ -20,11 +20,9 @@ import {
 import {
   Selection,
   sel,
-  selection,
-  SelectionNS,
+  Selection as selection,
   SelectionCtl,
   onSelectionChanged,
-  clearSelection,
 } from "./selection.js";
 import {
   noteKeyForPair,
@@ -272,7 +270,7 @@ export function createApp() {
       selection,
       saveCurrentViewState,
       restoreViewState,
-      clearSelection,
+      SelectionCtl,
       endEditIfOpen,
       VIEWS,
       interactionsOutline,
@@ -321,9 +319,7 @@ export function createApp() {
     selectionApi: {
       selection,
       sel,
-      SelectionNS,
       SelectionCtl,
-      clearSelection,
       onSelectionChanged: selectionListeners.onSelectionChanged,
       disposeSelectionRender: selectionRenderDisposer,
     },

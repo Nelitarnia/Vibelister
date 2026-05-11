@@ -1,4 +1,4 @@
-import { sel, selection, SelectionNS, isRowSelected } from "./selection.js";
+import { sel, Selection as selection, SelectionCtl } from "./selection.js";
 import { createGridRenderer } from "./grid-renderer.js";
 import {
   noteKeyForPair,
@@ -24,14 +24,14 @@ export function setupRenderer({
     colHdrs,
     rowHdrs,
     selection,
-    SelectionNS,
     sel,
     getActiveView: appContext.getActiveView,
     viewDef: viewState.viewDef,
     dataArray: viewState.dataArray,
     getRowCount: viewState.getRowCount,
     getCell,
-    isRowSelected,
+    isRowSelected: SelectionCtl.isRowSelected,
+    isAllCols: SelectionCtl.isAllCols,
     model,
     rebuildInteractionPhaseColumns: viewState.rebuildInteractionPhaseColumns,
     noteKeyForPair,

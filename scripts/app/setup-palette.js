@@ -1,7 +1,7 @@
 import { HEADER_HEIGHT, ROW_HEIGHT } from "../data/constants.js";
 import { initPalette } from "../ui/palette.js";
 import { initColorPicker } from "../ui/color-picker.js";
-import { selection } from "./selection.js";
+import { Selection as selection } from "./selection.js";
 
 export function setupPalette({
   appContext,

@@ -1,4 +1,4 @@
-import { sel, selection, SelectionCtl, SelectionNS } from "./selection.js";
+import { sel, Selection as selection, SelectionCtl } from "./selection.js";
 import { createGridCommands } from "./grid-commands.js";
 import {
   clearInteractionsSelection,
@@ -25,7 +25,6 @@ export function setupGridCommands({
     viewDef: viewState.viewDef,
     dataArray: viewState.dataArray,
     selection,
-    SelectionNS,
     SelectionCtl,
     sel,
     model: appContext.model,

@@ -1,4 +1,4 @@
-import { selection, sel } from "./selection.js";
+import { Selection as selection, sel } from "./selection.js";
 import { createProjectInfoController } from "./project-info-controller.js";
 import { createCleanupController } from "./cleanup-controller.js";
 import { createInferenceController } from "./inference-controller.js";

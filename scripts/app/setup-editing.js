@@ -1,4 +1,4 @@
-import { SelectionNS, SelectionCtl, selection, sel } from "./selection.js";
+import { SelectionCtl, Selection as selection, sel } from "./selection.js";
 import { HEADER_HEIGHT, ROW_HEIGHT } from "../data/constants.js";
 import { createEditingController } from "./editing-shortcuts.js";
 
@@ -16,7 +16,6 @@ export function setupEditing({
     editor: dom.editor,
     selection,
     sel,
-    SelectionNS,
     SelectionCtl,
     viewDef: viewState.viewDef,
     dataArray: viewState.dataArray,
