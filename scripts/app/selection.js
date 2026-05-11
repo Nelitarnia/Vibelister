@@ -11,7 +11,6 @@ export const Selection = {
 };
 
 export const sel = Selection.cell;
-export const selection = Selection; // compatibility alias for existing tests/callers
 
 const listeners = new Set();
 export function onSelectionChanged(cb) {
@@ -172,18 +171,3 @@ export const SelectionCtl = {
     return Selection.rows.size ? Array.from(Selection.rows).sort((a, b) => a - b) : [sel.r];
   },
 };
-
-// Compatibility exports for legacy test/caller imports
-export const SelectionNS = {
-  clear: () => SelectionCtl.clear(),
-  selectRow: (r) => SelectionCtl.selectRow(r),
-  extendTo: (r) => SelectionCtl.extendRowsTo(r),
-  isSelected: (r) => SelectionCtl.isRowSelected(r),
-  setColsAll: (v) => SelectionCtl.setAllCols(v),
-  isAllCols: () => SelectionCtl.isAllCols(),
-};
-
-export const clearSelection = () => SelectionCtl.clear();
-export const selectSingleRow = (r) => SelectionCtl.selectRow(r);
-export const extendSelectionTo = (r) => SelectionCtl.extendRowsTo(r);
-export const isRowSelected = (r) => SelectionCtl.isRowSelected(r);

@@ -6,9 +6,8 @@ import { initPalette } from "../../../ui/palette.js";
 import { MIME_RANGE } from "../../../app/clipboard-codec.js";
 import { createInteractionsOutline } from "../../../ui/interactions-outline.js";
 import {
-  selection as globalSelection,
+  Selection as globalSelection,
   sel as globalSel,
-  SelectionNS as globalSelectionNS,
   SelectionCtl as globalSelectionCtl,
 } from "../../../app/selection.js";
 
@@ -3578,7 +3577,7 @@ export function getGridKeysTests() {
           if (shiftMode && globalSelectionCtl.extendBoxTo) {
             globalSelectionCtl.extendBoxTo(nextR, nextC);
           } else {
-            globalSelectionNS?.setColsAll?.(false);
+            globalSelectionCtl?.setAllCols?.(false);
             globalSelectionCtl.startSingle(nextR, nextC);
           }
           globalSelectionCtl.applyHorizontalMode();
@@ -3921,7 +3920,7 @@ export function getGridKeysTests() {
           if (shiftMode && globalSelectionCtl.extendBoxTo) {
             globalSelectionCtl.extendBoxTo(nextR, nextC);
           } else {
-            globalSelectionNS?.setColsAll?.(false);
+            globalSelectionCtl?.setAllCols?.(false);
             globalSelectionCtl.startSingle(nextR, nextC);
           }
           globalSelectionCtl.applyHorizontalMode();
