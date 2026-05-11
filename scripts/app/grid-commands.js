@@ -597,32 +597,17 @@ export function createGridCommands(deps = {}) {
       ? Array.from(rowsSet).sort((a, b) => a - b)
       : [r];
 
-    const compatCols = selection?.colsAll
-      ? getHorizontalTargetColumns(c)
-      : typeof getHorizontalTargetColumns === "function"
-        ? getHorizontalTargetColumns(c)
-        : null;
-
     let targetCols;
-    const hasExplicitColumnRange =
-      selection?.cols &&
-      selection.cols.size > 1 &&
-      selection.cols.has(c) &&
-      !selection.colsAll;
-
     if (selection?.colsAll) {
-      targetCols = compatCols && compatCols.length ? compatCols.slice() : [c];
-    } else if (hasExplicitColumnRange) {
-      const selectedCols = Array.from(selection.cols).sort((a, b) => a - b);
-      const filtered =
-        compatCols && compatCols.length
-          ? selectedCols.filter((idx) => compatCols.includes(idx))
-          : selectedCols;
-      const set = new Set(filtered.length ? filtered : [c]);
-      set.add(c);
-      targetCols = Array.from(set);
+      const horizontalCols =
+        typeof getHorizontalTargetColumns === "function"
+          ? getHorizontalTargetColumns(c)
+          : [];
+      targetCols = horizontalCols && horizontalCols.length ? horizontalCols.slice() : [c];
     } else {
-      targetCols = [c];
+      const selectedCols = selection?.cols instanceof Set ? Array.from(selection.cols) : [];
+      targetCols = selectedCols.length ? selectedCols : [c];
+      if (!selectedCols.includes(c)) targetCols.push(c);
     }
 
     if (!targetCols || !targetCols.length) targetCols = [c];
