@@ -9,6 +9,21 @@ import {
 export function getInteractionKeyCodecTests() {
   return [
     {
+      name: "base key builder handles missing pairs",
+      run(assert) {
+        assert.strictEqual(
+          buildBaseInteractionKey(null),
+          "",
+          "null pair returns empty base key",
+        );
+        assert.strictEqual(
+          buildBaseInteractionKey(undefined),
+          "",
+          "undefined pair returns empty base key",
+        );
+      },
+    },
+    {
       name: "base key builder handles AI and AA forms",
       run(assert) {
         const ai = buildBaseInteractionKey({ aId: 3, iId: 9, variantSig: "2+1" });
