@@ -5,6 +5,12 @@ import {
   buildInteractionsPairs,
   canonicalSig,
 } from "../data/variants/variants.js";
+import {
+  baseKeyOf,
+  buildBaseInteractionKey,
+  parseInteractionKey,
+  parsePhaseSuffix,
+} from "../data/interaction-key-codec.js";
 import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
   INTERACTION_COMMENT_META_KEY,
@@ -63,18 +69,6 @@ const CLEANUP_ACTIONS = [
   },
 ];
 
-function parsePhaseSuffix(key) {
-  const text = String(key || "");
-  const match = /^(.*)\|p(\d+)$/.exec(text);
-  if (!match) return null;
-  return { baseKey: match[1], phase: Number(match[2]) };
-}
-
-function baseKeyOf(key) {
-  const text = String(key || "");
-  const index = text.indexOf("|p");
-  return index >= 0 ? text.slice(0, index) : text;
-}
 
 function buildVariantCatalogMap(model) {
   const catalog = new Map();
@@ -139,43 +133,7 @@ function collectValidBaseKeys(model) {
 }
 
 function parseNoteKey(baseKey) {
-  if (!baseKey) return null;
-  const parts = String(baseKey).split("|");
-  if (parts.length < 3) return null;
-  const prefix = parts[0].toLowerCase();
-  if (prefix === "ai" && parts.length >= 4) {
-    const actionId = Number(parts[1]);
-    const inputId = Number(parts[2]);
-    const variantSig = canonicalSig(parts[3] || "");
-    if (!Number.isFinite(actionId)) return null;
-    return { kind: "AI", actionId, inputId, variantSig, baseKey };
-  }
-  if (prefix === "aa" && parts.length >= 5) {
-    const lhsId = Number(parts[1]);
-    const rhsId = Number(parts[2]);
-    if (!Number.isFinite(lhsId) || !Number.isFinite(rhsId)) return null;
-    return {
-      kind: "AA",
-      actionId: lhsId,
-      rhsActionId: rhsId,
-      variantSig: canonicalSig(parts[3] || ""),
-      rhsVariantSig: canonicalSig(parts[4] || ""),
-      baseKey,
-    };
-  }
-  if (Number.isFinite(Number(prefix)) && parts.length === 3) {
-    const actionId = Number(parts[0]);
-    const inputId = Number(parts[1]);
-    if (!Number.isFinite(actionId)) return null;
-    return {
-      kind: "LEGACY_AI",
-      actionId,
-      inputId,
-      variantSig: canonicalSig(parts[2] || ""),
-      baseKey,
-    };
-  }
-  return null;
+  return parseInteractionKey(baseKey);
 }
 
 function readInteractionCommentMeta(rowId, rowValue) {
@@ -193,17 +151,7 @@ function isInteractionMetaKey(columnKey) {
 }
 
 function baseKeyFromInteractionMeta(meta) {
-  if (!meta || !meta.kind) return null;
-  const kind = String(meta.kind || "").toUpperCase();
-  if (kind === "AA") {
-    if (!Number.isFinite(meta.actionId) || !Number.isFinite(meta.rhsActionId))
-      return null;
-    return `aa|${meta.actionId}|${meta.rhsActionId}|${canonicalSig(meta.variantSig || "")}|${canonicalSig(meta.rhsVariantSig || "")}`;
-  }
-  const actionId = Number(meta.actionId);
-  const inputId = Number(meta.inputId);
-  if (!Number.isFinite(actionId) || !Number.isFinite(inputId)) return null;
-  return `ai|${actionId}|${inputId}|${canonicalSig(meta.variantSig || "")}`;
+  return buildBaseInteractionKey(meta);
 }
 
 function parsedNoteFromInteractionMeta(meta) {

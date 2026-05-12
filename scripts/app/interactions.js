@@ -2,7 +2,7 @@
 
 import { formatEndActionLabel } from "../data/column-kinds.js";
 import { deleteComment } from "./comments.js";
-import { canonicalSig } from "../data/variants/variants.js";
+import { buildBaseInteractionKey, encodePhaseSuffix } from "../data/interaction-key-codec.js";
 import { parsePhaseKey } from "../data/utils.js";
 import { invertOutcomeId } from "./outcomes.js";
 import {
@@ -84,20 +84,8 @@ export function describeInteractionInference(note) {
 
 // Key builder
 export function noteKeyForPair(pair, phase) {
-  if (!pair) return "";
-  const kind = pair && pair.kind ? String(pair.kind).toUpperCase() : "AI";
-  let base = "";
-  if (kind === "AA") {
-    // Directed key with both variant signatures for maximum granularity
-    const a = Number(pair.aId);
-    const b = Number(pair.rhsActionId);
-    const sa = canonicalSig(pair.variantSig || "");
-    const sb = canonicalSig(pair.rhsVariantSig || "");
-    base = `aa|${a}|${b}|${sa}|${sb}`;
-  } else {
-    base = `ai|${pair.aId}|${pair.iId}|${canonicalSig(pair.variantSig || "")}`;
-  }
-  return phase == null ? base : `${base}|p${phase}`;
+  const base = buildBaseInteractionKey(pair);
+  return encodePhaseSuffix(base, phase);
 }
 
 export function isInteractionPhaseColumnActiveForRow(
