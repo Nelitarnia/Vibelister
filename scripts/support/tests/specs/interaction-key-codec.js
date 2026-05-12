@@ -64,7 +64,13 @@ export function getInteractionKeyCodecTests() {
         const canonical = parseInteractionKey("aa|5|8|9+1|7+3");
         const legacy = parseInteractionKey("5|6|3+1");
         assert.strictEqual(canonical.kind, "AA");
+        assert.strictEqual(canonical.variantSig, "1+9");
         assert.strictEqual(canonical.canonicalKey, "aa|5|8|1+9|3+7");
+        assert.strictEqual(
+          canonical.canonicalKey.startsWith("aa|"),
+          true,
+          "canonicalKey is always a full interaction key",
+        );
         assert.strictEqual(legacy.kind, "LEGACY_AI");
         assert.strictEqual(legacy.canonicalKey, "ai|5|6|1+3");
       },
