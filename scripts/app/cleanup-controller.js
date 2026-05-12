@@ -5,13 +5,13 @@ import {
   buildInteractionsPairs,
   canonicalSig,
 } from "../data/variants/variants.js";
+import { isSignatureFullyBypassed } from "../data/variants/variant-constraints.js";
 import {
   baseKeyOf,
   buildBaseInteractionKey,
   parseInteractionKey,
   parsePhaseSuffix,
 } from "../data/interaction-key-codec.js";
-import { MOD_STATE_ID } from "../data/mod-state.js";
 import {
   INTERACTION_COMMENT_META_KEY,
   normalizeInteractionCommentMetadata,
@@ -172,15 +172,6 @@ function parsedNoteFromInteractionMeta(meta) {
   };
 }
 
-function parseSigParts(variantSig) {
-  if (!variantSig) return [];
-  return canonicalSig(variantSig)
-    .split("+")
-    .filter(Boolean)
-    .map(Number)
-    .filter(Number.isFinite);
-}
-
 function buildBypassLookup(model) {
   const lookup = new Map();
   const actions = Array.isArray(model?.actions) ? model.actions : [];
@@ -188,16 +179,7 @@ function buildBypassLookup(model) {
     if (!action || !Number.isFinite(action.id)) continue;
     const set = action.modSet;
     if (!set || typeof set !== "object") continue;
-    const bypassIds = [];
-    for (const [key, value] of Object.entries(set)) {
-      if (Number(value) === MOD_STATE_ID.BYPASS) {
-        const modId = Number(key);
-        if (Number.isFinite(modId)) bypassIds.push(modId);
-      }
-    }
-    if (bypassIds.length) {
-      lookup.set(String(action.id), new Set(bypassIds));
-    }
+    lookup.set(String(action.id), set);
   }
   return lookup;
 }
@@ -216,14 +198,8 @@ function buildIdSet(rows) {
 
 function isBypassedVariantSig(lookup, actionId, variantSig) {
   if (!Number.isFinite(actionId)) return false;
-  const set = lookup.get(String(actionId));
-  if (!set || !set.size) return false;
-  const parts = parseSigParts(variantSig);
-  if (!parts.length) return false;
-  for (const part of parts) {
-    if (!set.has(part)) return false;
-  }
-  return true;
+  const modSet = lookup.get(String(actionId));
+  return isSignatureFullyBypassed(canonicalSig(variantSig || ""), modSet);
 }
 
 function noteReferencesBypassedVariant(parsed, ctx) {
