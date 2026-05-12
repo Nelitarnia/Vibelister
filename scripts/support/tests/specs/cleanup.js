@@ -144,6 +144,32 @@ export function getCleanupTests() {
       },
     },
     {
+      name: "retains bypass-only notes with non-canonical signatures unless opted in",
+      run(assert) {
+        const { model, addAction, addInput, addModifier } = makeModelFixture();
+        const modA = addModifier("Bypass A");
+        const modB = addModifier("Bypass B");
+        const action = addAction("Attack", {
+          [modA.id]: MOD_STATE_ID.BYPASS,
+          [modB.id]: MOD_STATE_ID.BYPASS,
+        });
+        const input = addInput("Button");
+        const bypassKey = `ai|${action.id}|${input.id}|${modB.id}+${modA.id}+${modB.id}`;
+        model.notes[bypassKey] = { notes: "bypass canonicalized" };
+        const controller = createCleanupController({
+          model,
+          runModelMutation: (_label, fn) => fn(),
+          makeUndoConfig: () => ({}),
+        });
+        const defaultRun = controller.runCleanup({
+          actionIds: [CLEANUP_ACTION_IDS.orphanNotes],
+          apply: true,
+        });
+        assert.strictEqual(defaultRun.totalRemoved, 0, "bypass note preserved");
+        assert.ok(model.notes[bypassKey], "note remains with bypass excluded");
+      },
+    },
+    {
       name: "retains bypass-only end variants unless opted in",
       run(assert) {
         const { model, addAction, addInput, addModifier } = makeModelFixture();

@@ -1,4 +1,5 @@
 // variant-constraints.js - helpers for enforcing modifier constraints
+import { MOD_STATE_ID } from "../mod-state.js";
 
 function freezeMapOfSets(input) {
   const frozen = new Map();
@@ -53,4 +54,35 @@ export function violatesConstraints(setArr, maps) {
     if (rq) for (const y of rq) if (!s.has(y)) return true;
   }
   return false;
+}
+
+// Accepts canonical or non-canonical signatures and always returns
+// numeric ids in canonical order (ascending, deduped).
+export function splitCanonicalSignatureToModifierIds(variantSig) {
+  if (!variantSig) return [];
+  const ids = String(variantSig)
+    .split("+")
+    .filter(Boolean)
+    .map(Number)
+    .filter(Number.isFinite);
+  ids.sort((a, b) => a - b);
+  const out = [];
+  let prev;
+  for (const id of ids) {
+    if (id !== prev) {
+      out.push(id);
+      prev = id;
+    }
+  }
+  return out;
+}
+
+export function isSignatureFullyBypassed(variantSig, modSet) {
+  if (!modSet || typeof modSet !== "object") return false;
+  const ids = splitCanonicalSignatureToModifierIds(variantSig);
+  if (!ids.length) return false;
+  for (const modId of ids) {
+    if (Number(modSet[modId]) !== MOD_STATE_ID.BYPASS) return false;
+  }
+  return true;
 }
