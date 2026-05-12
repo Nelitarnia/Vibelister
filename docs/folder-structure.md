@@ -98,6 +98,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   │   └── v1.js
 │   │   └── variants/
 │   │       ├── mod-state-normalize.js
+│   │       ├── variant-cap-normalize.js
 │   │       ├── variant-combinatorics.js
 │   │       ├── variant-constraints.js
 │   │       ├── variant-settings.js
@@ -255,6 +256,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `settings-controller.js` owns user preference hydration, disk import/export, and dialog wiring so the bootstrap file only initializes it and exposes the entry point to menus.
 - `shell-coordinator.js` wraps shell bootstrap wiring (status, IDs) so the app entry point can inject dependencies without coupling to the implementation details.
 - `user-settings.js` defines the persisted defaults, schema metadata, and sanitizers for color preferences so both the controller and UI can trust incoming payloads.
+- `data/variants/variant-cap-normalize.js` centralizes variant-cap coercion and fallback behavior (`finite` → `floor` → `> 0` else fallback) so migrations, settings, and runtime flows apply identical limits.
 - `view-state.js` owns per-view selection snapshots and cached column layouts so `app.js` only orchestrates switching and rendering logic.
 - `view-controller.js` centralizes view switching, tab events, and layout updates so the bootstrap file can delegate cross-panel coordination.
 
@@ -264,7 +266,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `mutation-runner.js` centralizes layout/render/derived rebuild side effects for core model mutations, exposes a transaction helper so multi-step edits fire those hooks only once, and provides a canonical snapshot utility for history features.
 - `migrations/` contains versioned schema transforms plus a migration runner so persistence can upgrade legacy project files by stepping from their source schema to the current schema one version at a time.
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
-- `variants/` now houses the modifier set pipeline: `variants.js` remains the orchestrator while `mod-state-normalize.js` interprets stored flags, `variant-combinatorics.js` builds eligibility combinations, `variant-constraints.js` evaluates rule requirements, `variant-settings.js` normalizes per-action/group cap defaults, and `interactions-index-cache.js` reuses scoped indexes keyed by include-bypass and base-version metadata.
+- `variants/` now houses the modifier set pipeline: `variants.js` remains the orchestrator while `mod-state-normalize.js` interprets stored flags, `variant-combinatorics.js` builds eligibility combinations, `variant-constraints.js` evaluates rule requirements, `variant-cap-normalize.js` centralizes cap coercion/fallback policy, `variant-settings.js` normalizes per-action/group cap defaults, and `interactions-index-cache.js` reuses scoped indexes keyed by include-bypass and base-version metadata.
 - `interaction-key-codec.js` centralizes interaction note-key construction/parsing (AI + AA forms), legacy-key compatibility parsing, and phase suffix encode/decode so app and cleanup logic share one canonical codec.
 - `variants/variants-benchmark.js` stress-tests variant generation across large action/modifier sets so profiling and allocation comparisons stay repeatable.
 - `deletion.js` scrubs modifier groups and constraints after rows are removed so downstream consumers never see dangling references.

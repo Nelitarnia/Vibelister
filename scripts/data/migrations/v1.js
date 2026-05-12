@@ -1,5 +1,6 @@
 import { MOD, SCHEMA_VERSION } from "../constants.js";
 import { DEFAULT_VARIANT_CAPS } from "../variants/variant-settings.js";
+import { normalizeVariantCapsObject } from "../variants/variant-cap-normalize.js";
 import {
   enumerateModStates,
   MOD_STATE_BOOLEAN_TRUE_NAME,
@@ -73,25 +74,9 @@ function stripDefaultInteractionMetadataFromNotes(notes) {
 }
 
 function normalizeVariantCaps(raw) {
-  const caps = raw && typeof raw === "object" ? raw : {};
-  const fallback = DEFAULT_VARIANT_CAPS;
-  const normalizeCap = (value, fallbackValue) => {
-    const n = Number(value);
-    if (!Number.isFinite(n)) return fallbackValue;
-    const asInt = Math.floor(n);
-    return asInt > 0 ? asInt : fallbackValue;
-  };
-  return {
-    variantCapPerAction: normalizeCap(
-      caps.variantCapPerAction,
-      fallback.variantCapPerAction,
-    ),
-    variantCapPerGroup: normalizeCap(
-      caps.variantCapPerGroup,
-      fallback.variantCapPerGroup,
-    ),
-  };
+  return normalizeVariantCapsObject(raw, DEFAULT_VARIANT_CAPS);
 }
+
 
 function normalizeList(values) {
   if (!Array.isArray(values) || !values.length) return undefined;
