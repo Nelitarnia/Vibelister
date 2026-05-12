@@ -966,7 +966,7 @@ export function getGridKeysTests() {
       },
     },
     {
-      name: "Horizontal paste targets explicit selected columns when colsAll is false",
+      name: "Horizontal paste with explicit selection can expand to fit source width",
       run(assert) {
         const listeners = new Map();
         const windowStub = {
@@ -992,7 +992,7 @@ export function getGridKeysTests() {
           rows: new Set([1]),
           cols: new Set([2]),
           colsAll: false,
-          horizontalMode: true,
+          horizontalMode: false,
         };
         const sel = { r: 1, c: 2 };
 
@@ -1093,8 +1093,8 @@ export function getGridKeysTests() {
           );
           assert.deepStrictEqual(
             setCalls.map((call) => call.c),
-            [2],
-            "horizontal paste should target only explicit selected columns",
+            [2, 3],
+            "horizontal paste should expand rightward from explicit selection to fit source width",
           );
         } finally {
           dispose?.();
