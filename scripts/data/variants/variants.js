@@ -143,6 +143,7 @@ export function normalizeActionsAndInputs(model, options = {}) {
 // group modes
 export { GROUP_MODES } from "./variant-combinatorics.js";
 
+// canonicalSig is variant-scoped only; it is not a full interaction key codec.
 // canonical signature normalizer for strings (e.g., '5+1+5' -> '1+5')
 export function canonicalSig(sig) {
   if (!sig) return "";

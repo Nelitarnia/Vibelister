@@ -78,8 +78,8 @@ function buildVariantCatalogMap(model) {
     const key = String(actionId);
     const list = Array.isArray(variants) ? variants : [];
     const set = new Set();
-    for (const sig of list) {
-      set.add(canonicalSig(sig || ""));
+    for (const variantSig of list) {
+      set.add(canonicalSig(variantSig || ""));
     }
     catalog.set(key, set);
   }
@@ -98,11 +98,11 @@ function buildInteractionRowLookup(model) {
   return lookup;
 }
 
-function hasVariant(catalog, actionId, sig) {
+function hasVariant(catalog, actionId, variantSig) {
   if (!Number.isFinite(actionId)) return false;
   const set = catalog.get(String(actionId));
   if (!set || !set.size) return false;
-  return set.has(canonicalSig(sig || ""));
+  return set.has(canonicalSig(variantSig || ""));
 }
 
 function collectValidBaseKeys(model) {
@@ -115,15 +115,15 @@ function collectValidBaseKeys(model) {
       const base = noteKeyForPair(pair, undefined);
       if (base) valid.add(base);
       const kind = String(pair.kind || "AI").toUpperCase();
-      const sigA = canonicalSig(pair.variantSig || "");
+      const lhsVariantSigCanonical = canonicalSig(pair.variantSig || "");
       if (kind === "AI") {
-        valid.add(`${pair.aId}|${pair.iId}|${sigA}`);
+        valid.add(`${pair.aId}|${pair.iId}|${lhsVariantSigCanonical}`);
       } else if (kind === "AA") {
-        const sigB = canonicalSig(pair.rhsVariantSig || "");
-        valid.add(`aa|${pair.aId}|${pair.rhsActionId}|${sigA}|${sigB}`);
+        const rhsVariantSigCanonical = canonicalSig(pair.rhsVariantSig || "");
+        valid.add(`aa|${pair.aId}|${pair.rhsActionId}|${lhsVariantSigCanonical}|${rhsVariantSigCanonical}`);
         const lo = Math.min(Number(pair.aId), Number(pair.rhsActionId));
         const hi = Math.max(Number(pair.aId), Number(pair.rhsActionId));
-        valid.add(`aa|${lo}|${hi}|${sigA}`);
+        valid.add(`aa|${lo}|${hi}|${lhsVariantSigCanonical}`);
       }
     } catch (_error) {
       /* skip malformed pairs */
@@ -172,9 +172,9 @@ function parsedNoteFromInteractionMeta(meta) {
   };
 }
 
-function parseSigParts(sig) {
-  if (!sig) return [];
-  return canonicalSig(sig)
+function parseSigParts(variantSig) {
+  if (!variantSig) return [];
+  return canonicalSig(variantSig)
     .split("+")
     .filter(Boolean)
     .map(Number)
@@ -214,11 +214,11 @@ function buildIdSet(rows) {
   return set;
 }
 
-function isBypassedVariantSig(lookup, actionId, sig) {
+function isBypassedVariantSig(lookup, actionId, variantSig) {
   if (!Number.isFinite(actionId)) return false;
   const set = lookup.get(String(actionId));
   if (!set || !set.size) return false;
-  const parts = parseSigParts(sig);
+  const parts = parseSigParts(variantSig);
   if (!parts.length) return false;
   for (const part of parts) {
     if (!set.has(part)) return false;
@@ -390,9 +390,9 @@ function collectOrphanEndVariants(ctx) {
       invalidNoteKeys?.add(key);
       continue;
     }
-    const sig = canonicalSig(note.endVariantSig || "");
-    if (hasVariant(variantCatalog, actionId, sig)) continue;
-    if (skipBypass && isBypassedVariantSig(bypassLookup, actionId, sig)) {
+    const endVariantSigCanonical = canonicalSig(note.endVariantSig || "");
+    if (hasVariant(variantCatalog, actionId, endVariantSigCanonical)) continue;
+    if (skipBypass && isBypassedVariantSig(bypassLookup, actionId, endVariantSigCanonical)) {
       continue;
     }
     targets.push(key);

@@ -1,5 +1,10 @@
 import { canonicalSig } from "./variants/variants.js";
 
+/**
+ * `canonicalSig`: canonicalized variant-signature segment only (e.g. `"1+5"`).
+ * `canonicalKey`: canonicalized full interaction key (`ai|...` / `aa|...`) including ids + signature segments.
+ */
+
 export function isFiniteInteger(value) {
   const n = Number(value);
   return Number.isFinite(n) && Number.isInteger(n);
@@ -19,9 +24,9 @@ export function buildBaseInteractionKey(pairLike) {
       pairLike.rhsActionId ?? pairLike.bId ?? pairLike.otherActionId,
     );
     if (!Number.isFinite(actionId) || !Number.isFinite(rhsActionId)) return "";
-    const sigA = canonicalSig(pairLike.variantSig || "");
-    const sigB = canonicalSig(pairLike.rhsVariantSig || "");
-    return `aa|${actionId}|${rhsActionId}|${sigA}|${sigB}`;
+    const lhsVariantSigCanonical = canonicalSig(pairLike.variantSig || "");
+    const rhsVariantSigCanonical = canonicalSig(pairLike.rhsVariantSig || "");
+    return `aa|${actionId}|${rhsActionId}|${lhsVariantSigCanonical}|${rhsVariantSigCanonical}`;
   }
   const actionId = normalizeKeyInt(pairLike.aId ?? pairLike.actionId);
   const inputId = normalizeKeyInt(pairLike.iId ?? pairLike.inputId);
@@ -58,27 +63,36 @@ export function parseInteractionKey(baseKey) {
     const actionId = normalizeKeyInt(parts[1]);
     const inputId = normalizeKeyInt(parts[2]);
     if (!Number.isFinite(actionId) || !Number.isFinite(inputId)) return null;
+    const variantSigCanonical = canonicalSig(parts[3] || "");
     return {
+      /**
+       * `AI`: canonical `ai|actionId|inputId|variantSig` format.
+       * `AA`: canonical `aa|actionId|rhsActionId|variantSig|rhsVariantSig` format.
+       * `LEGACY_AI`: legacy `actionId|inputId|variantSig` input normalized to canonical AI output.
+       * `canonicalKey` always returns normalized full-key format (`ai|...` or `aa|...`).
+       */
       kind: "AI",
       actionId,
       inputId,
-      variantSig: canonicalSig(parts[3] || ""),
+      variantSig: variantSigCanonical,
       baseKey: String(baseKey),
-      canonicalKey: `ai|${actionId}|${inputId}|${canonicalSig(parts[3] || "")}`,
+      canonicalKey: `ai|${actionId}|${inputId}|${variantSigCanonical}`,
     };
   }
   if (prefix === "aa" && parts.length >= 5) {
     const lhsId = normalizeKeyInt(parts[1]);
     const rhsId = normalizeKeyInt(parts[2]);
     if (!Number.isFinite(lhsId) || !Number.isFinite(rhsId)) return null;
+    const variantSigCanonical = canonicalSig(parts[3] || "");
+    const rhsVariantSigCanonical = canonicalSig(parts[4] || "");
     return {
       kind: "AA",
       actionId: lhsId,
       rhsActionId: rhsId,
-      variantSig: canonicalSig(parts[3] || ""),
-      rhsVariantSig: canonicalSig(parts[4] || ""),
+      variantSig: variantSigCanonical,
+      rhsVariantSig: rhsVariantSigCanonical,
       baseKey: String(baseKey),
-      canonicalKey: `aa|${lhsId}|${rhsId}|${canonicalSig(parts[3] || "")}|${canonicalSig(parts[4] || "")}`,
+      canonicalKey: `aa|${lhsId}|${rhsId}|${variantSigCanonical}|${rhsVariantSigCanonical}`,
     };
   }
   if (Number.isFinite(Number(prefix)) && parts.length === 3) {
