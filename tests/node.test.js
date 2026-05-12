@@ -36,6 +36,7 @@ import { getVariantCombinatoricsTests } from "../scripts/support/tests/specs/var
 import { getVariantConstraintTests } from "../scripts/support/tests/specs/variant-constraints.js";
 import { getMigrationTests } from "../scripts/support/tests/specs/migrations.js";
 import { getStatusTests } from "../scripts/support/tests/specs/status.js";
+import { getInteractionKeyCodecTests } from "../scripts/support/tests/specs/interaction-key-codec.js";
 
 const sharedAssert = createNodeAsserts(assert);
 
@@ -177,4 +178,8 @@ for (const spec of getMigrationTests()) {
 
 for (const spec of getStatusTests()) {
   test(`Status › ${spec.name}`, () => spec.run(sharedAssert));
+}
+
+for (const spec of getInteractionKeyCodecTests()) {
+  test(`Interaction key codec › ${spec.name}`, () => spec.run(sharedAssert));
 }
