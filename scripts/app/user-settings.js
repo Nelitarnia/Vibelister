@@ -1,4 +1,5 @@
 import { DEFAULT_VARIANT_CAPS } from "../data/variants/variant-settings.js";
+import { normalizeVariantCapsObject } from "../data/variants/variant-cap-normalize.js";
 
 const SETTINGS_STORAGE_KEY = "vl.userSettings";
 const SETTINGS_FILE_NAME = "vibelister-settings.json";
@@ -29,13 +30,6 @@ const DEFAULT_UI_SETTINGS = {
     inferenceStatus: false,
   },
 };
-
-function normalizeCap(raw, fallback) {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return fallback;
-  const asInt = Math.floor(n);
-  return asInt > 0 ? asInt : fallback;
-}
 
 function normalizeHexColor(raw, fallback) {
   if (!raw) return fallback;
@@ -78,16 +72,7 @@ function sanitizeUiSettings(raw) {
       cell: normalizeHexColor(colors.cell, defaults.cell),
       cellAlt: normalizeHexColor(colors.cellAlt, defaults.cellAlt),
     },
-    variantCaps: {
-      variantCapPerAction: normalizeCap(
-        variantCaps.variantCapPerAction,
-        capDefaults.variantCapPerAction,
-      ),
-      variantCapPerGroup: normalizeCap(
-        variantCaps.variantCapPerGroup,
-        capDefaults.variantCapPerGroup,
-      ),
-    },
+    variantCaps: normalizeVariantCapsObject(variantCaps, capDefaults),
     debug: {
       enabled: !!debugSrc.enabled,
       inferenceStatus: !!debugSrc.inferenceStatus,
