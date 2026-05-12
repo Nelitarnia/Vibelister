@@ -85,6 +85,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │   ├── comments.js
 │   │   ├── column-kinds.js
 │   │   ├── constants.js
+│   │   ├── interaction-key-codec.js
 │   │   ├── mod-state.js
 │   │   ├── properties.js
 │   │   ├── deletion.js
@@ -121,6 +122,7 @@ This document outlines a maintainable directory layout tailored to the current c
 │   │       │   ├── inference-utils.js
 │   │       │   ├── inference-index-access.js
 │   │       │   ├── inference-policy.js
+│   │       │   ├── interaction-key-codec.js
 │   │       │   ├── interactions.js
 │   │       │   ├── interactions-all.js
 │   │       │   ├── interactions-core.js
@@ -263,6 +265,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `migrations/` contains versioned schema transforms plus a migration runner so persistence can upgrade legacy project files by stepping from their source schema to the current schema one version at a time.
 - `rows.js` centralizes helpers for creating and inserting blank rows so both the app and tests reuse the same logic.
 - `variants/` now houses the modifier set pipeline: `variants.js` remains the orchestrator while `mod-state-normalize.js` interprets stored flags, `variant-combinatorics.js` builds eligibility combinations, `variant-constraints.js` evaluates rule requirements, `variant-settings.js` normalizes per-action/group cap defaults, and `interactions-index-cache.js` reuses scoped indexes keyed by include-bypass and base-version metadata.
+- `interaction-key-codec.js` centralizes interaction note-key construction/parsing (AI + AA forms), legacy-key compatibility parsing, and phase suffix encode/decode so app and cleanup logic share one canonical codec.
 - `variants/variants-benchmark.js` stress-tests variant generation across large action/modifier sets so profiling and allocation comparisons stay repeatable.
 - `deletion.js` scrubs modifier groups and constraints after rows are removed so downstream consumers never see dangling references.
 - `mod-state.js` centralizes the modifier-state descriptor (IDs, glyphs, parsing tokens) so column kinds, palette UI, persistence, and tests reuse the same definitions.
@@ -308,6 +311,7 @@ This document outlines a maintainable directory layout tailored to the current c
 - `specs/data-utils.js` covers column offset helpers (e.g., `visibleCols`) so scroll-driven grid calculations keep working edge cases such as partial viewports and trailing gaps.
 - `specs/properties-palette.js` boots the app harness and asserts the properties palette opens and closes correctly on the first edit to guard against regression in palette wiring.
 - `specs/inference-utils.js` covers normalization, keying, and cloning behaviors so inference helpers stay stable across refactors.
+- `specs/interaction-key-codec.js` validates canonical + legacy interaction-key parsing, base-key generation, and phase suffix round-trips for the shared note-key codec.
 - `specs/variant-normalization.js`, `specs/variant-combinatorics.js`, and `specs/variant-constraints.js` isolate tests for the mod-state normalization, combination builder, and constraint evaluation helpers used by the variant generator.
 - If automated tooling (lint configs, coverage scripts) grows, place small utilities here or alongside them.
 
