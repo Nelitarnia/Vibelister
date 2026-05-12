@@ -966,7 +966,7 @@ export function getGridKeysTests() {
       },
     },
     {
-      name: "Horizontal paste targets full row when colsAll unset",
+      name: "Horizontal paste with explicit selection can expand to fit source width",
       run(assert) {
         const listeners = new Map();
         const windowStub = {
@@ -992,7 +992,7 @@ export function getGridKeysTests() {
           rows: new Set([1]),
           cols: new Set([2]),
           colsAll: false,
-          horizontalMode: true,
+          horizontalMode: false,
         };
         const sel = { r: 1, c: 2 };
 
@@ -1093,8 +1093,8 @@ export function getGridKeysTests() {
           );
           assert.deepStrictEqual(
             setCalls.map((call) => call.c),
-            [0, 1, 2, 3],
-            "horizontal paste should target full row when armed",
+            [2, 3],
+            "horizontal paste should expand rightward from explicit selection to fit source width",
           );
         } finally {
           dispose?.();
@@ -1243,7 +1243,7 @@ export function getGridKeysTests() {
       },
     },
     {
-      name: "Horizontal paste defaults to full row when colsAll stores only anchor",
+      name: "Horizontal paste still targets full row when colsAll is true with anchor-only cols set",
       run(assert) {
         const listeners = new Map();
         const windowStub = {

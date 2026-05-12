@@ -84,5 +84,22 @@ export function getSelectionTests() {
         );
       },
     },
+    {
+      name: "startSingle keeps an explicit selected column set",
+      run(assert) {
+        resetSelectionState();
+        SelectionCtl.startSingle(4, 2);
+        assert.deepStrictEqual(Array.from(Selection.cols), [2]);
+        assert.strictEqual(Selection.colsAll, false);
+
+        SelectionCtl.setHorizontalMode(true);
+        assert.strictEqual(Selection.colsAll, true);
+        assert.deepStrictEqual(
+          Array.from(Selection.cols),
+          [2],
+          "explicit selected column set should remain even when colsAll is enabled",
+        );
+      },
+    },
   ];
 }
