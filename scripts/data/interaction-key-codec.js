@@ -64,7 +64,7 @@ export function parseInteractionKey(baseKey) {
       inputId,
       variantSig: canonicalSig(parts[3] || ""),
       baseKey: String(baseKey),
-      canonicalSig: `ai|${actionId}|${inputId}|${canonicalSig(parts[3] || "")}`,
+      canonicalKey: `ai|${actionId}|${inputId}|${canonicalSig(parts[3] || "")}`,
     };
   }
   if (prefix === "aa" && parts.length >= 5) {
@@ -78,7 +78,7 @@ export function parseInteractionKey(baseKey) {
       variantSig: canonicalSig(parts[3] || ""),
       rhsVariantSig: canonicalSig(parts[4] || ""),
       baseKey: String(baseKey),
-      canonicalSig: `aa|${lhsId}|${rhsId}|${canonicalSig(parts[3] || "")}|${canonicalSig(parts[4] || "")}`,
+      canonicalKey: `aa|${lhsId}|${rhsId}|${canonicalSig(parts[3] || "")}|${canonicalSig(parts[4] || "")}`,
     };
   }
   if (Number.isFinite(Number(prefix)) && parts.length === 3) {
@@ -92,7 +92,7 @@ export function parseInteractionKey(baseKey) {
       inputId,
       variantSig,
       baseKey: String(baseKey),
-      canonicalSig: `ai|${actionId}|${inputId}|${variantSig}`,
+      canonicalKey: `ai|${actionId}|${inputId}|${variantSig}`,
     };
   }
   return null;

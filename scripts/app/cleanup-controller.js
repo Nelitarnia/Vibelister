@@ -132,10 +132,6 @@ function collectValidBaseKeys(model) {
   return valid;
 }
 
-function parseNoteKey(baseKey) {
-  return parseInteractionKey(baseKey);
-}
-
 function readInteractionCommentMeta(rowId, rowValue) {
   if (!rowValue || typeof rowValue !== "object") {
     return normalizeInteractionCommentMetadata(rowId, null);
@@ -320,7 +316,7 @@ function collectOrphanNotes(ctx) {
   const targets = [];
   for (const [key] of noteEntries) {
     const baseKey = baseKeyOf(key);
-    const parsed = parseNoteKey(baseKey);
+    const parsed = parseInteractionKey(baseKey);
     if (!baseKey || !validBases.has(baseKey)) {
       if (
         skipBypass &&
@@ -427,7 +423,7 @@ function collectOrphanComments(ctx) {
       continue;
     }
     if (skipBypass) {
-      const parsedFallback = parsed || parseNoteKey(baseKey);
+      const parsedFallback = parsed || parseInteractionKey(baseKey);
       if (
         noteReferencesBypassedVariant(parsedFallback, {
           bypassLookup,
@@ -494,7 +490,7 @@ function collectPhaseOverflowNotes(ctx) {
 
     if (!hasPhaseField(note)) continue;
 
-    const parsed = parseNoteKey(info.baseKey);
+    const parsed = parseInteractionKey(info.baseKey);
     if (!parsed) continue;
     if (skipBypass) {
       if (
@@ -524,7 +520,7 @@ function collectPhaseOverflowNotes(ctx) {
       const meta = readInteractionCommentMeta(rowId, rowValue);
       const parsed =
         parsedNoteFromInteractionMeta(meta) ||
-        parseNoteKey(baseKeyOf(String(rowId)));
+        parseInteractionKey(baseKeyOf(String(rowId)));
       const columnEntries = Object.entries(rowValue).filter(
         ([key]) => !isInteractionMetaKey(key),
       );
