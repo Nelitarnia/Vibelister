@@ -56,13 +56,25 @@ export function violatesConstraints(setArr, maps) {
   return false;
 }
 
+// Accepts canonical or non-canonical signatures and always returns
+// numeric ids in canonical order (ascending, deduped).
 export function splitCanonicalSignatureToModifierIds(variantSig) {
   if (!variantSig) return [];
-  return String(variantSig)
+  const ids = String(variantSig)
     .split("+")
     .filter(Boolean)
     .map(Number)
     .filter(Number.isFinite);
+  ids.sort((a, b) => a - b);
+  const out = [];
+  let prev;
+  for (const id of ids) {
+    if (id !== prev) {
+      out.push(id);
+      prev = id;
+    }
+  }
+  return out;
 }
 
 export function isSignatureFullyBypassed(variantSig, modSet) {

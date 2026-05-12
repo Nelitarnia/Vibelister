@@ -4,7 +4,6 @@ import {
   splitCanonicalSignatureToModifierIds,
   violatesConstraints,
 } from "../../../data/variants/variant-constraints.js";
-import { canonicalSig } from "../../../data/variants/variants.js";
 import { MOD_STATE_ID } from "../../../data/mod-state.js";
 
 export function getVariantConstraintTests() {
@@ -61,8 +60,8 @@ export function getVariantConstraintTests() {
     {
       name: "splits canonical signatures into modifier ids",
       run(assert) {
-        const ids = splitCanonicalSignatureToModifierIds(canonicalSig("7+2+7"));
-        assert.deepStrictEqual(ids, [2, 7], "canonicalized signature ids split");
+        const ids = splitCanonicalSignatureToModifierIds("7+2+7");
+        assert.deepStrictEqual(ids, [2, 7], "signature ids canonicalized and split");
         assert.deepStrictEqual(
           splitCanonicalSignatureToModifierIds(""),
           [],
