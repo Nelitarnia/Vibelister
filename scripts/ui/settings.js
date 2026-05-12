@@ -1,3 +1,5 @@
+import { normalizeVariantCapsObject } from "../data/variants/variant-cap-normalize.js";
+
 // settings.js - modal dialog for user-configurable preferences.
 
 const FALLBACK_DEFAULTS = {
@@ -65,13 +67,7 @@ function mergeSettings(defaults, overrides) {
   COLOR_FIELDS.forEach(({ key }) => {
     base.colors[key] = normalizeColor(colors[key], base.colors[key]);
   });
-  base.variantCaps = base.variantCaps || {};
-  CAP_FIELDS.forEach(({ key }) => {
-    const n = Number(variantCaps[key]);
-    const fallback = base.variantCaps[key];
-    base.variantCaps[key] =
-      Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
-  });
+  base.variantCaps = normalizeVariantCapsObject(variantCaps, base.variantCaps || {});
   base.debug = base.debug || {};
   base.debug.enabled = !!debug.enabled;
   base.debug.inferenceStatus = !!debug.inferenceStatus;
